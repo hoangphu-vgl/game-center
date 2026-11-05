@@ -21,7 +21,6 @@ interface FishData {
   typeId: string;
   name: string;
   emoji: string;
-  color: string;
   width: number;
   height: number;
   speed: number;
@@ -49,23 +48,24 @@ const GUN_TYPES: GunConfig[] = [
   { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 15, size: 17, color: '#ef4444' }
 ];
 
+// Thu nhỏ kích thước cá lại vừa vặn, dễ săn bắn
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', color: '#38bdf8', width: 75, height: 46, speedMin: 2.5, speedMax: 5.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small' },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', color: '#f97316', width: 85, height: 50, speedMin: 2.8, speedMax: 6.0, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small' },
-  { id: 's3', name: 'Cá Tôm', emoji: '🦐', color: '#ec4899', width: 65, height: 40, speedMin: 3.2, speedMax: 6.5, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 60, height: 38, speedMin: 2.5, speedMax: 5.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 65, height: 40, speedMin: 2.8, speedMax: 6.0, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's3', name: 'Tôm Sống', emoji: '🦐', width: 50, height: 32, speedMin: 3.2, speedMax: 6.5, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small' },
   
-  { id: 'm1', name: 'Cá Nóc', emoji: '🐡', color: '#eab308', width: 130, height: 90, speedMin: 1.0, speedMax: 2.8, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium' },
-  { id: 'm2', name: 'Cá Heo', emoji: '🐬', color: '#06b6d4', width: 160, height: 100, speedMin: 1.2, speedMax: 3.0, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium' },
+  { id: 'm1', name: 'Cá Nóc', emoji: '🐡', width: 95, height: 65, speedMin: 1.0, speedMax: 2.8, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium' },
+  { id: 'm2', name: 'Cá Heo', emoji: '🐬', width: 110, height: 70, speedMin: 1.2, speedMax: 3.0, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium' },
   
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', color: '#64748b', width: 280, height: 160, speedMin: 0.5, speedMax: 1.8, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large' },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', color: '#a855f7', width: 240, height: 160, speedMin: 0.6, speedMax: 2.0, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid' },
-  { id: 'l3', name: 'Rồng Biển', emoji: '🐉', color: '#ef4444', width: 320, height: 200, speedMin: 0.4, speedMax: 1.5, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large' }
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 180, height: 110, speedMin: 0.5, speedMax: 1.8, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 150, height: 100, speedMin: 0.6, speedMax: 2.0, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid' },
+  { id: 'l3', name: 'Rồng Biển', emoji: '🐉', width: 200, height: 130, speedMin: 0.4, speedMax: 1.5, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large' }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(400000);
+  const [jackpotPool, setJackpotPool] = useState<number>(450000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -147,9 +147,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 400000);
+        setJackpotPool(docSnap.data().amount || 450000);
       } else {
-        setDoc(jpRef, { amount: 400000 });
+        setDoc(jpRef, { amount: 450000 });
       }
     });
 
@@ -388,7 +388,6 @@ export default function BanCaPage() {
             typeId: template.id,
             name: template.name,
             emoji: template.emoji,
-            color: template.color,
             width: template.width * scaleFactor,
             height: template.height * scaleFactor,
             speed: randomSpeed,
@@ -530,7 +529,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(400000);
+                  updateJackpotInFirestore(450000);
                 }
 
                 setPoints(prev => {
@@ -561,7 +560,7 @@ export default function BanCaPage() {
 
         spawnFish(w, h);
 
-        // Vẽ hình dạng cá sinh động tuyệt đẹp trực tiếp bằng Canvas (100% không sợ lỗi load ảnh mạng)
+        // Vẽ Emoji cá sống động, sắc nét và vừa vặn
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
@@ -571,38 +570,7 @@ export default function BanCaPage() {
             ctx.filter = 'brightness(2.5) drop-shadow(0 0 15px #ffffff)';
           }
 
-          // Thân cá
-          ctx.beginPath();
-          ctx.ellipse(0, 0, f.width / 2.2, f.height / 2.2, 0, 0, Math.PI * 2);
-          ctx.fillStyle = f.color;
-          ctx.fill();
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = '#ffffff';
-          ctx.stroke();
-
-          // Vây đuôi
-          ctx.beginPath();
-          ctx.moveTo(-f.width / 2, 0);
-          ctx.lineTo(-f.width * 0.8, -f.height / 2.5);
-          ctx.lineTo(-f.width * 0.7, 0);
-          ctx.lineTo(-f.width * 0.8, f.height / 2.5);
-          ctx.closePath();
-          ctx.fillStyle = f.color;
-          ctx.fill();
-          ctx.stroke();
-
-          // Mắt cá
-          ctx.beginPath();
-          ctx.arc(f.width * 0.25, -f.height * 0.15, f.width * 0.08, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-          ctx.beginPath();
-          ctx.arc(f.width * 0.27, -f.height * 0.15, f.width * 0.04, 0, Math.PI * 2);
-          ctx.fillStyle = '#000000';
-          ctx.fill();
-
-          // Biểu tượng Emoji nổi bật ở giữa cá
-          ctx.font = `${f.height * 0.55}px Arial`;
+          ctx.font = `${f.height}px Arial`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(f.emoji, 0, 0);
