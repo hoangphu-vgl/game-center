@@ -205,7 +205,7 @@ export default function ChessthuPage() {
 
     const animal = ANIMAL_DATA[p];
     const color = animal.color;
-    const rank = animal.rank;
+    const rank: number = animal.rank;
 
     const steps = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
@@ -233,8 +233,9 @@ export default function ChessthuPage() {
                   const landTarget = currentBoard[jumpR][nc];
                   const landAnimal = landTarget ? ANIMAL_DATA[landTarget] : null;
                   if (!landTarget || landAnimal?.color !== color) {
-                    const targetRank = landAnimal ? (landAnimal.rank as number) : 0;
-                    if (!landTarget || rank >= targetRank || (rank === 8 && targetRank === 1)) {
+                    const targetRank = landAnimal ? landAnimal.rank : 0;
+                    const curRankNum: number = rank;
+                    if (!landTarget || curRankNum >= targetRank || (curRankNum === 8 && targetRank === 1)) {
                       moves.push({ r: jumpR, c: nc });
                     }
                   }
@@ -250,8 +251,9 @@ export default function ChessthuPage() {
                   const landTarget = currentBoard[nr][jumpC];
                   const landAnimal = landTarget ? ANIMAL_DATA[landTarget] : null;
                   if (!landTarget || landAnimal?.color !== color) {
-                    const targetRank = landAnimal ? (landAnimal.rank as number) : 0;
-                    if (!landTarget || rank >= targetRank || (rank === 8 && targetRank === 1)) {
+                    const targetRank = landAnimal ? landAnimal.rank : 0;
+                    const curRankNum: number = rank;
+                    if (!landTarget || curRankNum >= targetRank || (curRankNum === 8 && targetRank === 1)) {
                       moves.push({ r: nr, c: jumpC });
                     }
                   }
@@ -267,10 +269,11 @@ export default function ChessthuPage() {
         } else {
           if (targetAnimal?.color !== color) {
             let canEat = false;
-            const tRank = targetAnimal ? (targetAnimal.rank as number) : 0;
-            if (rank === 1 && tRank === 8) canEat = true;
-            else if (rank === 8 && tRank === 1) canEat = false;
-            else if (rank >= tRank) canEat = true;
+            const tRank = targetAnimal ? targetAnimal.rank : 0;
+            const curRankNum: number = rank;
+            if (curRankNum === 1 && tRank === 8) canEat = true;
+            else if (curRankNum === 8 && tRank === 1) canEat = false;
+            else if (curRankNum >= tRank) canEat = true;
 
             if (canEat) {
               moves.push({ r: nr, c: nc });
