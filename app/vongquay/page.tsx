@@ -113,7 +113,8 @@ export default function VongQuayPage() {
         if (userSnap.exists()) {
           const data = userSnap.data();
           setPoints(data.points || 0);
-          setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 3);
+          // Lấy đúng số lượt từ DB, nếu chưa có thì mặc định bằng 0 thật sự để tránh lỗi ảo
+          setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 0);
         }
       }
       setLoading(false);
@@ -125,8 +126,9 @@ export default function VongQuayPage() {
   const spinWheel = async () => {
     if (isSpinning) return;
     
+    // Kiểm tra gắt gao thực tế từ DB/State
     if (luckySpins <= 0) {
-      alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt!");
+      alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt hoặc điểm danh!");
       return;
     }
 
@@ -171,7 +173,6 @@ export default function VongQuayPage() {
 
     const canvas = canvasRef.current;
     if (canvas) {
-      // Gán trực tiếp transition và transform để trình duyệt kích hoạt animation mượt mà
       canvas.style.transition = "transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)";
       canvas.style.transform = `rotate(${rotationRef.current}deg)`;
     }
