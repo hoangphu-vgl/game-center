@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, onSnapshot, collection, getDocs, query, where, limit } from "firebase/firestore";
 
 interface GunConfig {
   level: number;
@@ -46,24 +46,23 @@ const GUN_TYPES: GunConfig[] = [
   { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' }
 ];
 
-// Tăng lượng máu (HP) và phần thưởng cho cá trâu hơn để thử thách độ khó
+// Tăng lượng máu (HP) cực trâu để thử thách độ khó
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 3, hpMax: 8, reward: 15, category: 'small' },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 4, hpMax: 10, reward: 20, category: 'small' },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 3, hpMax: 8, reward: 12, category: 'small' },
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 40, hpMax: 90, reward: 80, category: 'medium' },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 60, hpMax: 150, reward: 120, category: 'medium' },
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 500, hpMax: 1200, reward: 600, category: 'large' },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 400, hpMax: 1000, reward: 500, category: 'large' },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 800, hpMax: 1800, reward: 1000, category: 'large' }
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 5, hpMax: 12, reward: 15, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 6, hpMax: 15, reward: 20, category: 'small' },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 5, hpMax: 12, reward: 12, category: 'small' },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 80, hpMax: 180, reward: 80, category: 'medium' },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 120, hpMax: 250, reward: 120, category: 'medium' },
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 800, hpMax: 2000, reward: 600, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 600, hpMax: 1600, reward: 500, category: 'large' },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 1200, hpMax: 3000, reward: 1000, category: 'large' }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(20000); // Khởi điểm 20.000đ tích lũy
+  const [jackpotPool, setJackpotPool] = useState<number>(20000); // Khởi điểm 20.000đ
   
-  // Trạng thái phòng & chế độ
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
@@ -109,7 +108,6 @@ export default function BanCaPage() {
       }
     });
 
-    // Lắng nghe hũ Jackpot realtime
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -136,9 +134,7 @@ export default function BanCaPage() {
     try {
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, { points: newPts });
-    } catch (e) {
-      console.error("Lỗi lưu điểm:", e);
-    }
+    } catch (e) {}
   };
 
   const updateJackpotInFirestore = async (newAmount: number) => {
@@ -194,7 +190,6 @@ export default function BanCaPage() {
     } catch (e) {}
   };
 
-  // Khởi tạo bong bóng nước nền
   useEffect(() => {
     const bubbles = [];
     for (let i = 0; i < 35; i++) {
@@ -209,10 +204,8 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe phòng Realtime qua Firestore (giống Xì Dách)
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
-
     const roomRef = doc(db, "banca_rooms", activeRoomId);
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -222,11 +215,9 @@ export default function BanCaPage() {
         }
       }
     });
-
     return () => unsubscribe();
   }, [activeRoomId, isPVE]);
 
-  // Main Canvas Loop
   useEffect(() => {
     if (screenMode !== 'game') return;
     const canvas = canvasRef.current;
@@ -446,7 +437,6 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ các vị trí súng 4 góc phòng PVP / PVE
         const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
@@ -532,7 +522,6 @@ export default function BanCaPage() {
     playShootSound();
   };
 
-  // Tính năng phóng to toàn màn hình (Fullscreen) cho mobile màn hình ngang
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {});
@@ -542,6 +531,78 @@ export default function BanCaPage() {
         document.exitFullscreen();
       }
       setIsFullscreen(false);
+    }
+  };
+
+  // Tính năng Ghép Phòng Tự Động (Auto Matchmaking)
+  const handleAutoMatchmaking = async () => {
+    try {
+      showToast("⚡ Đang tìm phòng trống...");
+      const roomsRef = collection(db, "banca_rooms");
+      const q = query(roomsRef, where("status", "==", "playing"), limit(5));
+      const querySnapshot = await getDocs(q);
+
+      let foundRoomId: string | null = null;
+      let availableCorner: string | null = null;
+      let roomPlayersData: any = null;
+
+      querySnapshot.forEach((docSnap) => {
+        if (foundRoomId) return;
+        const data = docSnap.data();
+        const players = data.players || {};
+        
+        // Tìm góc trống trong phòng
+        const corners = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
+        for (const c of corners) {
+          if (!players[c] || !players[c].active) {
+            foundRoomId = docSnap.id;
+            availableCorner = c;
+            roomPlayersData = players;
+            break;
+          }
+        }
+      });
+
+      if (foundRoomId && availableCorner) {
+        // Vào phòng có sẵn
+        setActiveRoomId(foundRoomId);
+        setIsHost(false);
+        setIsPVE(false);
+        setMyCorner(availableCorner);
+
+        roomPlayersData[availableCorner] = { active: true, email: user?.email || 'Thành viên' };
+        roomPlayersRef.current = roomPlayersData;
+
+        await updateDoc(doc(db, "banca_rooms", foundRoomId), { players: roomPlayersData });
+        setScreenMode('game');
+        showToast(`🎉 Đã ghép vào phòng #${foundRoomId} thành công!`);
+      } else {
+        // Nếu không có phòng nào trống, tự động tạo phòng mới làm Host
+        const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        setActiveRoomId(newRoomId);
+        setIsHost(true);
+        setIsPVE(false);
+        setMyCorner('bottom-right');
+
+        const newPlayers = {
+          'top-left': { active: false, email: 'Trống' },
+          'top-right': { active: false, email: 'Trống' },
+          'bottom-left': { active: false, email: 'Trống' },
+          'bottom-right': { active: true, email: user?.email || 'Chủ phòng' }
+        };
+        roomPlayersRef.current = newPlayers;
+
+        await setDoc(doc(db, "banca_rooms", newRoomId), {
+          creator: user?.email || 'Host',
+          status: 'playing',
+          players: newPlayers
+        });
+
+        setScreenMode('game');
+        showToast(`✨ Không tìm thấy phòng trống. Đã tạo phòng mới #${newRoomId}!`);
+      }
+    } catch (e) {
+      showToast("Lỗi ghép phòng tự động!");
     }
   };
 
@@ -628,56 +689,62 @@ export default function BanCaPage() {
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-950 font-sans select-none flex flex-col">
       {screenMode === 'lobby' ? (
-        /* SẢNH CHỜ VÀO PHÒNG / MÃ PHÒNG (REALTIME Y CHANG XÌ DÁCH) */
         <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-blue-950 via-slate-900 to-slate-950">
-          <div className="bg-slate-900/90 border border-cyan-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl backdrop-blur-xl text-center space-y-6">
-            <div className="text-5xl animate-bounce">🦈 🌊 🪙</div>
+          <div className="bg-slate-900/90 border border-cyan-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl backdrop-blur-xl text-center space-y-5">
+            <div className="text-4xl animate-bounce">🦈 🌊 🪙</div>
             <div>
               <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-indigo-400 uppercase tracking-wide">
-                ĐẠI DƯƠNG BẮN CÁ KI-BLAST
+                BẮN CÁ KI-BLAST
               </h1>
-              <p className="text-xs text-slate-400 mt-1">Chơi đơn Solo hoặc kết nối phòng Realtime cùng bạn bè!</p>
+              <p className="text-xs text-slate-400 mt-1">Săn cá trâu, nổ hũ Jackpot & chiến PVP realtime!</p>
             </div>
 
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 text-amber-300 text-xs font-bold animate-pulse">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-2.5 text-amber-300 text-xs font-bold animate-pulse">
               👑 HŨ JACKPOT: {jackpotPool.toLocaleString()} đ 🪙
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
+              {/* Nút Ghép Phòng Tự Động */}
+              <button
+                onClick={handleAutoMatchmaking}
+                className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-110 text-slate-950 font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
+              >
+                ⚡ CHƠI NGAY (GHÉP PHÒNG TỰ ĐỘNG)
+              </button>
+
               <button
                 onClick={() => { setIsPVE(true); setScreenMode('game'); }}
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:brightness-110 text-slate-950 font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-bold rounded-2xl transition uppercase text-xs cursor-pointer"
               >
-                ⚡ CHƠI ĐƠN (SOLO PVE)
+                🛡️ CHƠI ĐƠN (SOLO PVE)
               </button>
 
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-800"></div>
-                <span className="flex-shrink mx-4 text-slate-500 text-[10px] font-bold uppercase">Hoặc Phòng PVP</span>
+                <span className="flex-shrink mx-4 text-slate-500 text-[10px] font-bold uppercase">Hoặc Tạo / Nhập Mã</span>
                 <div className="flex-grow border-t border-slate-800"></div>
               </div>
 
-              <button
-                onClick={handleCreateRoom}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl shadow-md transition text-xs cursor-pointer"
-              >
-                ✨ Tạo Phòng Mới
-              </button>
-
               <div className="flex gap-2">
+                <button
+                  onClick={handleCreateRoom}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl shadow transition text-xs cursor-pointer"
+                >
+                  ✨ Tạo Phòng
+                </button>
                 <input
                   type="text"
-                  placeholder="NHẬP MÃ PHÒNG (VD: AB12)"
+                  placeholder="MÃ PHÒNG"
                   maxLength={6}
                   value={roomCodeInput}
                   onChange={(e) => setRoomCodeInput(e.target.value)}
-                  className="flex-1 px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-center font-bold uppercase text-amber-300 outline-none focus:border-cyan-500"
+                  className="w-28 px-2 py-2 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-center font-bold uppercase text-amber-300 outline-none focus:border-cyan-500"
                 />
                 <button
                   onClick={handleJoinRoom}
-                  className="px-5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl shadow transition cursor-pointer"
+                  className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl shadow transition cursor-pointer"
                 >
-                  Vào Phòng
+                  Vào
                 </button>
               </div>
             </div>
@@ -690,7 +757,6 @@ export default function BanCaPage() {
           </div>
         </div>
       ) : (
-        /* GIAO DIỆN TRONG GAME (MÀN HÌNH NGANG MOBILE TỐI ƯU) */
         <div className="relative w-full h-full overflow-hidden flex flex-col">
           <canvas
             ref={canvasRef}
@@ -712,7 +778,6 @@ export default function BanCaPage() {
 
           {/* Top HUD Header */}
           <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
-            {/* Ví Điểm */}
             <div className="bg-slate-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl px-3 py-1.5 flex items-center gap-2 pointer-events-auto shadow-lg">
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center text-yellow-950 font-black text-xs shadow-md">
                 🪙
@@ -725,7 +790,6 @@ export default function BanCaPage() {
               </div>
             </div>
 
-            {/* Các nút điều khiển & Phóng to */}
             <div className="flex items-center gap-1.5 pointer-events-auto">
               {!isPVE && activeRoomId && (
                 <button
@@ -739,7 +803,6 @@ export default function BanCaPage() {
               <button
                 onClick={toggleFullscreen}
                 className="w-8 h-8 bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-300 text-xs shadow-md"
-                title="Phóng to màn hình"
               >
                 {isFullscreen ? '🗗' : '⛶'}
               </button>
@@ -764,8 +827,8 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Hũ Jackpot tích lũy ở giữa */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          {/* Hũ Jackpot dời xuống dưới một chút để không đè lên header */}
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
             <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-4 py-1 rounded-xl text-center shadow-xl animate-pulse">
               <div className="text-[8px] text-amber-300 font-extrabold uppercase tracking-widest">
                 👑 JACKPOT RỒNG THẦN 👑
@@ -776,7 +839,7 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Thanh công cụ súng dưới góc (tối ưu mobile ngang) */}
+          {/* Thanh công cụ súng dưới góc */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-auto">
             <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-3 py-1.5 rounded-2xl flex items-center gap-2.5 shadow-xl">
               <button
@@ -801,7 +864,7 @@ export default function BanCaPage() {
           </div>
 
           {toastMsg && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-red-950/90 border border-red-500/60 text-red-200 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xl animate-bounce pointer-events-none">
+            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 bg-red-950/90 border border-red-500/60 text-red-200 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xl animate-bounce pointer-events-none">
               ⚠️ {toastMsg}
             </div>
           )}
