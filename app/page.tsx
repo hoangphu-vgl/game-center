@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc, increment } from "firebase/firestore";
+import { doc, getDoc, setDoc, alert } from "firebase/firestore";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -24,7 +24,6 @@ export default function Home() {
           await loadOrInitUser(currentUser);
         } catch (error) {
           console.error("Lỗi tải dữ liệu Firestore:", error);
-          // Vẫn cho qua loading để người dùng không bị kẹt màn hình
         }
       } else {
         setPoints(0);
@@ -33,7 +32,6 @@ export default function Home() {
       setLoading(false);
     });
 
-    // Timeout phòng hờ 3 giây nếu Firebase chậm/treo thì ép tắt loading luôn
     const timer = setTimeout(() => {
       setLoading(false);
     }, 3000);
@@ -83,12 +81,21 @@ export default function Home() {
 
     const userRef = doc(db, "users", user.uid);
     try {
-      await updateDoc(userRef, {
-        points: increment(500),
-        lastCheckIn: today,
-      });
+      const newPoints = points + 500;
+      await setDoc(
+        userRef,
+        {
+          points: newPoints,
+          lastCheckIn: today,
+          uid: user.uid,
+          name: user.displayName || "Game thủ",
+          email: user.email,
+          photoURL: user.photoURL,
+        },
+        { merge: true }
+      );
 
-      setPoints((prev) => prev + 500);
+      setPoints(newPoints);
       setLastCheckIn(today);
       alert("🎉 Điểm danh thành công! Nhận ngay +500 điểm vào ví.");
     } catch (error) {
@@ -102,7 +109,6 @@ export default function Home() {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Lỗi đăng nhập:", error);
-      alert("Đăng nhập thất bại!");
     }
   };
 
@@ -112,8 +118,13 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900 text-white">
-        <p className="text-xl font-bold animate-pulse">Đang tải Game Center...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xl font-bold tracking-wider text-amber-400 animate-pulse">
+            Đang tải Game Center...
+          </p>
+        </div>
       </div>
     );
   }
@@ -121,16 +132,37 @@ export default function Home() {
   const isCheckedInToday = lastCheckIn === getTodayString();
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-slate-900 p-6 text-white">
-      <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
-        <h1 className="text-3xl font-extrabold text-amber-400 mb-6">🎮 GAME CENTER 🎮</h1>
+    <main
+      className="relative flex min-h-screen flex-col items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage:
+          "url('https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=2070&auto=format&fit=crop')",
+      }}
+    >
+      {/* Lớp phủ làm tối hình nền để nổi bật khung chính */}
+      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+
+      {/* Card chính phong cách Gaming Kính Mờ */}
+      <div className="relative z-10 max-w-md w-full bg-slate-900/90 backdrop-blur-md p-8 rounded-3xl border border-slate-700/60 shadow-[0_0_50px_rgba(245,158,11,0.25)] text-center transition-all duration-300">
+        
+        {/* Header Logo Game Center */}
+        <div className="mb-8">
+          <span className="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full text-xs font-semibold tracking-widest uppercase mb-2">
+            Arcade Station
+          </span>
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-500 drop-shadow">
+            GAME CENTER
+          </h1>
+        </div>
 
         {!user ? (
-          <div>
-            <p className="text-slate-300 mb-6">Đăng nhập để quản lý ví điểm và điểm danh mỗi ngày!</p>
+          <div className="space-y-6">
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Chào mừng bạn đến với Cổng Game Arcade! Đăng nhập ngay để tích điểm và mở khóa các trò chơi cực đỉnh.
+            </p>
             <button
               onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-semibold py-3 px-6 rounded-xl hover:bg-slate-100 transition-all shadow-md active:scale-95"
+              className="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-bold py-3.5 px-6 rounded-2xl hover:bg-amber-400 transition-all duration-300 shadow-xl hover:shadow-amber-400/20 active:scale-95"
             >
               <img
                 src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
@@ -142,43 +174,59 @@ export default function Home() {
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            {user.photoURL && (
-              <img
-                src={user.photoURL}
-                alt="Avatar"
-                className="w-20 h-20 rounded-full border-4 border-amber-400 mb-4 shadow-lg"
-              />
-            )}
-            <h2 className="text-xl font-bold text-white mb-1">
+            {/* Avatar & User Info */}
+            <div className="relative mb-3">
+              {user.photoURL && (
+                <img
+                  src={user.photoURL}
+                  alt="Avatar"
+                  className="w-20 h-20 rounded-full border-2 border-amber-400 p-1 shadow-lg object-cover ring-4 ring-amber-400/20"
+                />
+              )}
+            </div>
+            <h2 className="text-xl font-bold text-white tracking-wide">
               {user.displayName || "Game thủ"}
             </h2>
-            <p className="text-xs text-slate-400 mb-4">{user.email}</p>
+            <p className="text-xs text-slate-400 mb-6">{user.email}</p>
 
-            <div className="w-full bg-slate-700/60 p-4 rounded-xl mb-5 border border-slate-600 flex justify-between items-center">
+            {/* Ví Điểm thiết kế nổi bật */}
+            <div className="w-full bg-gradient-to-r from-amber-500/20 via-orange-500/10 to-amber-500/20 p-5 rounded-2xl mb-6 border border-amber-500/30 flex justify-between items-center shadow-inner">
               <div className="text-left">
-                <p className="text-xs text-slate-300 font-medium">Ví Điểm Của Bạn</p>
-                <p className="text-3xl font-black text-amber-400">{points} pts</p>
+                <p className="text-xs text-amber-300/80 font-semibold tracking-wider uppercase">Ví Điểm Chung</p>
+                <p className="text-3xl font-black text-amber-400 tracking-tight">{points.toLocaleString()} <span className="text-sm font-bold">PTS</span></p>
               </div>
-              <span className="text-2xl">💰</span>
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-2xl shadow">
+                🪙
+              </div>
             </div>
 
+            {/* Nút Điểm Danh */}
             <button
               onClick={handleCheckIn}
               disabled={isCheckedInToday}
-              className={`w-full font-bold py-3 px-4 rounded-xl transition-all shadow-lg mb-3 ${
+              className={`w-full font-extrabold py-4 px-6 rounded-2xl transition-all duration-300 shadow-lg mb-4 flex items-center justify-center gap-2 ${
                 isCheckedInToday
-                  ? "bg-slate-600 text-slate-400 cursor-not-allowed"
-                  : "bg-emerald-500 hover:bg-emerald-600 text-slate-950 active:scale-95"
+                  ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
+                  : "bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 shadow-emerald-500/20 active:scale-95 cursor-pointer"
               }`}
             >
-              {isCheckedInToday ? "✅ Đã điểm danh hôm nay" : "📅 Điểm danh nhận +500 Điểm"}
+              {isCheckedInToday ? (
+                <>
+                  <span>✅</span> Đã điểm danh hôm nay
+                </>
+              ) : (
+                <>
+                  <span>📅</span> Điểm danh (+500 Điểm)
+                </>
+              )}
             </button>
 
+            {/* Nút Đăng xuất */}
             <button
               onClick={handleLogout}
-              className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2 px-4 rounded-xl transition-all"
+              className="text-xs text-slate-400 hover:text-rose-400 transition-colors py-2 font-medium"
             >
-              Đăng xuất
+              Đăng xuất tài khoản
             </button>
           </div>
         )}
