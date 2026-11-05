@@ -67,6 +67,10 @@ export default function JackpotPage() {
   const [autoCount, setAutoCount] = useState<number>(0);
   const autoSpinRef = useRef<number>(0);
 
+  // DÙNG REF ĐỂ FIX DỨT ĐIỂM LỖI DẬM CHÂN X2 (CẬP NHẬT REALTIME CHUỖI)
+  const streakRef = useRef<number>(-1);
+  const [streakIndex, setStreakIndex] = useState<number>(-1);
+
   const [grid, setGrid] = useState<typeof DRAGON_SYMBOLS>(
     Array(24).fill(DRAGON_SYMBOLS[0])
   );
@@ -77,12 +81,10 @@ export default function JackpotPage() {
     minor: 40000,
   });
 
-  // Lưu chỉ mục (index) của chuỗi: 0 = x2, 1 = x4, 2 = x8, 3 = x16...
-  const [streakIndex, setStreakIndex] = useState<number>(-1);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Luật: Hàng đầu tiên (cột 1) BẮT BUỘC phải có mặt. Trúng liên tiếp sẽ nhân dồn chuỗi (x2 -> x4 -> x8...).",
+    text: "Luật: Hàng đầu tiên (cột 1) BẮT BUỘC có mặt. Thắng liên tiếp nhảy mốc x2 -> x4 -> x8 -> x16!",
     type: "normal",
   });
 
@@ -133,26 +135,23 @@ export default function JackpotPage() {
     generateValidGrid();
   }, []);
 
-  // Thuật toán chống trùng lặp gắt gao, phân phối đều biểu tượng trên lưới 4x6
+  // Thuật toán gắt chống trùng lặp bừa bãi
   const generateValidGrid = () => {
     const newGrid: typeof DRAGON_SYMBOLS = [];
     for (let r = 0; r < 4; r++) {
-      let prevSymbolId = "";
+      let prevId = "";
       for (let c = 0; c < 6; c++) {
         const rand = Math.random();
         let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
         if (rand > 0.55) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
         if (rand > 0.82) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
 
-        // Chống lặp hình liên tiếp quá nhiều trên cùng 1 hàng
         let selected = pool[Math.floor(Math.random() * pool.length)];
-        if (selected.id === prevSymbolId && Math.random() < 0.7) {
-          const alternativePool = pool.filter(s => s.id !== prevSymbolId);
-          if (alternativePool.length > 0) {
-            selected = alternativePool[Math.floor(Math.random() * alternativePool.length)];
-          }
+        if (selected.id === prevId && Math.random() < 0.75) {
+          const altPool = pool.filter((s) => s.id !== prevId);
+          if (altPool.length > 0) selected = altPool[Math.floor(Math.random() * altPool.length)];
         }
-        prevSymbolId = selected.id;
+        prevId = selected.id;
         newGrid.push(selected);
       }
     }
@@ -227,12 +226,12 @@ export default function JackpotPage() {
     }, 75);
   };
 
-  // THUẬT TOÁN CHUẨN XÁC: CỘT 1 BẮT BUỘC CÓ MẶT + CHUỖI NHÂN DỒN ĐÚNG CẤP SỐ (x2 -> x4 -> x8 -> x16...)
+  // THUẬT TOÁN CHẨN XÁC 100%: CHUỖI NHẢY BẬC REALTIME (x2 -> x4 -> x8 -> x16...)
   const evaluateStrictColumnLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    let winChance = 0.30;
-    if (currentBet <= 100) winChance = 0.38;
-    else if (currentBet <= 1000) winChance = 0.28;
-    else winChance = 0.20;
+    let winChance = 0.32;
+    if (currentBet <= 100) winChance = 0.40;
+    else if (currentBet <= 1000) winChance = 0.30;
+    else winChance = 0.22;
 
     const isTriggerWin = Math.random() < winChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
@@ -309,17 +308,21 @@ export default function JackpotPage() {
       }
     }
 
-    // 2. Xử lý Thắng / Thua / Nhảy mốc chuỗi chính xác
+    // 2. XỬ LÝ CHUỖI CHÍNH XÁC: NẾU THẮNG THÌ NHẢY TIẾP NẤC CHUỖI (NẾU LẦN ĐẦU -> x2, LẦN SAU -> x4, x8...)
     let finalTotalWin = 0;
 
     if (baseWinAmount > 0) {
-      // Tự động tăng mốc chuỗi lên 1 bậc (x2 -> x4 -> x8 -> x16...)
-      const nextIndex = streakIndex < 0 ? 0 : Math.min(streakIndex + 1, STREAK_STEPS.length - 1);
-      setStreakIndex(nextIndex);
-      const activeMultiplier = STREAK_STEPS[nextIndex];
+      // TĂNG NẤC CHUỖI CHUẨN XÁC QUA REF
+      const currentIdx = streakRef.current;
+      const nextIdx = currentIdx < 0 ? 0 : Math.min(currentIdx + 1, STREAK_STEPS.length - 1);
+      
+      streakRef.current = nextIdx;
+      setStreakIndex(nextIdx);
+
+      const activeMultiplier = STREAK_STEPS[nextIdx];
 
       finalTotalWin = baseWinAmount * activeMultiplier;
-      resultText = `🔥 KÍCH HOẠT CHUỖI x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
+      resultText = `🔥 CHUỖI NHÂN x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
 
       const finalPts = currentPts + finalTotalWin;
       await updatePointsInDB(finalPts);
@@ -328,8 +331,9 @@ export default function JackpotPage() {
       addHistory(resultText, true);
     } else {
       setWinningCoords([]);
-      if (streakIndex >= 0) {
-        // Đang trong chuỗi mà thua -> Đứt chuỗi, reset về -1
+      if (streakRef.current >= 0) {
+        // THUA KHI ĐANG CÓ CHUỖI -> RESET VỀ -1 (ĐỨT CHUỖI)
+        streakRef.current = -1;
         setStreakIndex(-1);
         const breakTaunt = STREAK_BROKEN_TAUNTS[Math.floor(Math.random() * STREAK_BROKEN_TAUNTS.length)];
         resultText = `${breakTaunt} (-${currentBet} PTS)`;
