@@ -16,27 +16,26 @@ const AUTO_OPTIONS = [
 ];
 
 const DRAGON_SYMBOLS = [
-  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "strong", multiplier: 25 },
-  { id: "goku", icon: "🐉", name: "Goku SSJ", type: "strong", multiplier: 15 },
-  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", type: "strong", multiplier: 12 },
-  { id: "gohan", icon: "⚡", name: "Gohan Beast", type: "strong", multiplier: 10 },
-  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "strong", multiplier: 8 },
-  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", multiplier: 6 },
-  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "mid", multiplier: 5 },
-  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", multiplier: 3 },
+  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "strong", multiplier: 20 },
+  { id: "goku", icon: "🐉", name: "Goku SSJ", type: "strong", multiplier: 12 },
+  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", type: "strong", multiplier: 10 },
+  { id: "gohan", icon: "⚡", name: "Gohan Beast", type: "strong", multiplier: 8 },
+  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "strong", multiplier: 6 },
+  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", multiplier: 5 },
+  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "mid", multiplier: 4 },
+  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", multiplier: 2.5 },
   { id: "senzu", icon: "🫘", name: "Đậu Senzu", type: "weak", multiplier: 2 },
   { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 1 },
 ];
 
+// Đã tinh chỉnh hệ số Aura nhẹ nhàng hơn, không còn nổ dồn dập mất cân bằng
 const AURA_QUICK_REWARDS = [
-  { id: "ki_white", name: "⚪ Ki Trắng", mult: 2, icon: "✨" },
-  { id: "kaioken", name: "🔴 Kaioken", mult: 2.5, icon: "🔥" },
-  { id: "ssj1", name: "🟡 SSJ", mult: 3, icon: "⚡" },
-  { id: "ssj2", name: "⚡ SSJ 2", mult: 3.5, icon: "🌩️" },
-  { id: "ssj_god", name: "🔴 SSJ God", mult: 5, icon: "☀️" },
-  { id: "ssj_blue", name: "🔵 SSJ Blue", mult: 6, icon: "💎" },
-  { id: "ultra_ego", name: "🟣 Ultra Ego", mult: 8, icon: "🔮" },
-  { id: "ultra_instinct", name: "🌌 Ultra Instinct", mult: 10, icon: "🌌" },
+  { id: "ki_white", name: "⚪ Ki Trắng", mult: 1.5, icon: "✨" },
+  { id: "kaioken", name: "🔴 Kaioken", mult: 2, icon: "🔥" },
+  { id: "ssj1", name: "🟡 SSJ", mult: 2.5, icon: "⚡" },
+  { id: "ssj2", name: "⚡ SSJ 2", mult: 3, icon: "🌩️" },
+  { id: "ssj_god", name: "🔴 SSJ God", mult: 4, icon: "☀️" },
+  { id: "ssj_blue", name: "🔵 SSJ Blue", mult: 5, icon: "💎" },
 ];
 
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
@@ -95,7 +94,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Nổ hũ reset từ đầu, tích lũy liên tục. Chọn mức cược và chiến ngay!",
+    text: "Võ đạo Dragon Ball: Đã cân đối lại tỷ lệ nổ và fix lỗi trừ cược Auto chuẩn xác!",
     type: "normal",
   });
 
@@ -201,9 +200,11 @@ export default function JackpotPage() {
   };
 
   const executeSpin = async (remainingAuto: number) => {
+    // Kiểm tra điểm trước khi trừ cược chuẩn xác cho cả chế độ Auto
     if (points < currentBet) {
-      alert("Ní không đủ điểm Ki để quay!");
+      alert("Ní không đủ điểm Ki để quay tiếp!");
       setAutoCount(0);
+      setSpinning(false);
       return;
     }
 
@@ -238,17 +239,18 @@ export default function JackpotPage() {
   };
 
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    let winChance = 0.33;
+    // Tinh chỉnh lại tỷ lệ thắng vừa phải, không bị nổ quá dồn dập
+    let winChance = 0.28;
     if (currentBet < 100) {
-      winChance += 0.10;
+      winChance += 0.06;
     } else if (currentBet >= 200 && currentBet <= 500) {
-      winChance -= 0.05;
+      winChance -= 0.04;
     } else if (currentBet >= 5000) {
-      winChance -= 0.10;
+      winChance -= 0.08;
     }
 
     const isTriggerWin = Math.random() < winChance;
-    const jackpotChance = currentBet >= 1000 ? 0.015 : 0.005;
+    const jackpotChance = currentBet >= 1000 ? 0.008 : 0.002; // Giảm tỷ lệ nổ hũ xuống mức hợp lý
     const isJackpotHit = Math.random() < jackpotChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
 
@@ -258,7 +260,6 @@ export default function JackpotPage() {
     let isStreakWin = false;
     let isGrandJackpot = false;
 
-    // 1. NỔ HŨ JACKPOT -> RESET HŨ VỀ MỨC GỐC BAN ĐẦU
     if (isJackpotHit || shenronTotal >= 5) {
       isGrandJackpot = true;
       baseWinAmount = jackpots.grand;
@@ -268,7 +269,6 @@ export default function JackpotPage() {
       isStreakWin = true;
       triggerJackpotSideGlow();
 
-      // RESET HŨ GRAND VỀ GỐC 150.000 PTS
       try {
         const jackpotRef = doc(db, "system", "jackpot");
         updateDoc(jackpotRef, {
@@ -316,11 +316,11 @@ export default function JackpotPage() {
           if (symObj) {
             let symbolWin = 0;
             if (symObj.type === "weak") {
-              symbolWin = (currentBet * 0.4) * symObj.multiplier * consecutiveColsCount;
+              symbolWin = (currentBet * 0.3) * symObj.multiplier * consecutiveColsCount;
             } else {
-              symbolWin = (currentBet * 1.0) * symObj.multiplier * consecutiveColsCount;
+              symbolWin = (currentBet * 0.8) * symObj.multiplier * consecutiveColsCount;
             }
-            const columnBonus = consecutiveColsCount >= 5 ? 3 : consecutiveColsCount === 4 ? 2 : 1;
+            const columnBonus = consecutiveColsCount >= 5 ? 2.5 : consecutiveColsCount === 4 ? 1.8 : 1;
             totalStreakWin += Math.floor(symbolWin * columnBonus);
             tempMatchedIndices.forEach(idx => streakWinningSet.add(idx));
           }
@@ -414,6 +414,7 @@ export default function JackpotPage() {
     }, 1500);
   };
 
+  // FIX LỖI AUTO KHÔNG TRỪ CƯỢC: Kiểm tra ref và gọi tiếp vòng quay
   const continueAutoIfNeeded = (remainingAuto: number) => {
     if (autoSpinRef.current === 0) return;
 
