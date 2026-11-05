@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { auth, googleProvider, db } from "@/lib/firebase";
-import { signInWithPopup, onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 const BET_OPTIONS = [50, 100, 500, 1000, 5000];
 
@@ -26,17 +26,14 @@ const INITIAL_BOARD = [
 
 export default function ChessPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  
   const [points, setPoints] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(50);
   const [screen, setScreen] = useState<'menu' | 'online' | 'game'>('menu');
   const [gameMode, setGameMode] = useState<'ai' | 'online'>('ai');
   
-  // Thông tin phòng Online & Realtime
   const [roomCode, setRoomCode] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');
-  const [playerRole, setPlayerRole] = useState<'w' | 'b'>('w'); // 'w' = Host (Trắng), 'b' = Khách (Đen)
+  const [playerRole, setPlayerRole] = useState<'w' | 'b'>('w');
 
   const [board, setBoard] = useState<string[][]>(INITIAL_BOARD);
   const [turn, setTurn] = useState<'w' | 'b'>('w');
@@ -49,7 +46,7 @@ export default function ChessPage() {
     msg: '',
   });
 
-  // 1. Kiểm tra đăng nhập Firebase & lấy điểm số thực tế từ DB
+  // Lấy thông tin user & điểm số từ Firebase
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -59,15 +56,11 @@ export default function ChessPage() {
         if (userSnap.exists()) {
           setPoints(userSnap.data().points || 0);
         }
-      } else {
-        setPoints(0);
       }
-      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // Hàm cập nhật điểm lên Firebase Firestore
   const updatePointsInDB = async (newPoints: number) => {
     if (!user) return;
     setPoints(newPoints);
@@ -77,7 +70,7 @@ export default function ChessPage() {
 
   const handleSelectBet = (amount: number) => {
     if (points < amount) {
-      alert('Bạn không đủ điểm để cược mức này!');
+      alert('Bạn không đủ điểm cược!');
       return;
     }
     setCurrentBet(amount);
@@ -96,7 +89,7 @@ export default function ChessPage() {
     setScreen('game');
   };
 
-  // 2. Tạo phòng Online Realtime
+  // Tạo phòng Online Realtime
   const handleCreateRoom = async () => {
     if (points < currentBet) {
       alert('Bạn không đủ điểm cược!');
@@ -105,24 +98,26 @@ export default function ChessPage() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setRoomCode(code);
     setGameMode('online');
-    setPlayerRole('w'); // Chủ phòng cầm quân Trắng
+    setPlayerRole('w');
 
     const roomRef = doc(db, "chessRooms", code);
     await setDoc(roomRef, {
       board: INITIAL_BOARD,
       turn: 'w',
-      status: 'waiting',
-      host: user?.displayName || 'Chủ phòng',
       bet: currentBet
     });
 
+    setBoard(INITIAL_BOARD.map(r => [...r]));
+    setTurn('w');
+    setSelectedSquare(null);
+    setValidMoves([]);
     setScreen('game');
   };
 
-  // 3. Vào phòng Online bằng mã (Realtime sync)
+  // Vào phòng Online bằng mã
   const handleJoinRoom = async () => {
     if (inputCode.length < 6) {
-      alert('Vui lòng nhập đầy đủ mã phòng 6 chữ số!');
+      alert('Vui lòng nhập mã phòng 6 chữ số!');
       return;
     }
     if (points < currentBet) {
@@ -134,17 +129,17 @@ export default function ChessPage() {
     const roomSnap = await getDoc(roomRef);
 
     if (!roomSnap.exists()) {
-      alert('Phòng không tồn tại hoặc đã kết thúc!');
+      alert('Phòng không tồn tại!');
       return;
     }
 
     setRoomCode(inputCode);
     setGameMode('online');
-    setPlayerRole('b'); // Người vào sau cầm quân Đen
+    setPlayerRole('b');
     setScreen('game');
   };
 
-  // Lắng nghe dữ liệu phòng realtime nếu đang ở chế độ online
+  // Lắng nghe realtime từ Firestore cho phòng Online
   useEffect(() => {
     if (gameMode !== 'online' || !roomCode) return;
 
@@ -261,13 +256,10 @@ export default function ChessPage() {
       setTurn(nextTurn);
       if (captured === 'bK') {
         endGame(true, 'Bạn đã hạ gục Vua Đen và chiến thắng!');
-        return;
       } else if (captured === 'wK') {
-        endGame(false, 'Vua Trắng đã bị tiêu diệt!');
-        return;
+        endGame(false, 'Vua Trắng của bạn đã bị tiêu diệt!');
       }
     } else if (gameMode === 'online') {
-      // Đồng bộ state trực tiếp lên Firestore cho đối thủ thấy realtime
       const roomRef = doc(db, "chessRooms", roomCode);
       await updateDoc(roomRef, {
         board: newBoard,
@@ -276,15 +268,15 @@ export default function ChessPage() {
 
       if (captured === 'bK' || captured === 'wK') {
         const isWin = (captured === 'bK' && playerRole === 'w') || (captured === 'wK' && playerRole === 'b');
-        endGame(isWin, isWin ? "Bạn đã chiếu tướng thành công!" : "Bạn đã thua cuộc!");
+        endGame(isWin, isWin ? "Bạn đã chiến thắng ván cược!" : "Bạn đã thua cuộc!");
       }
     }
   };
 
-  // AI tự động đánh trả khi đến lượt Đen
+  // AI đánh trả
   useEffect(() => {
     if (gameMode === 'ai' && turn === 'b' && !modal.open) {
-      const timer = setTimeout(async () => {
+      const timer = setTimeout(() => {
         const allAiMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
         
         for (let r = 0; r < 8; r++) {
@@ -312,7 +304,7 @@ export default function ChessPage() {
             endGame(false, 'Vua Trắng của bạn đã bị tiêu diệt!');
           }
         }
-      }, 600);
+      }, 500);
 
       return () => clearTimeout(timer);
     }
@@ -329,40 +321,10 @@ export default function ChessPage() {
     setModal({ open: true, win: isWin, msg });
   };
 
-  // MÀN HÌNH CHẶN NẾU CHƯA ĐĂNG NHẬP
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-amber-400 font-bold">
-        ĐANG XÁC THỰC TÀI KHOẢN...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center select-none">
-        <div className="bg-slate-900 border border-amber-500/30 p-8 rounded-2xl max-w-sm w-full flex flex-col gap-6 shadow-xl">
-          <div className="text-5xl">🔒</div>
-          <h1 className="text-2xl font-black text-amber-400">YÊU CẦU ĐĂNG NHẬP</h1>
-          <p className="text-sm text-slate-400">Ní cần phải đăng nhập tài khoản Google để tham gia bàn cờ và cược điểm!</p>
-          <button
-            onClick={() => signInWithPopup(auth, googleProvider)}
-            className="w-full py-3 bg-amber-400 text-slate-950 font-bold rounded-xl hover:bg-amber-300 transition cursor-pointer"
-          >
-            Đăng Nhập Bằng Google 🚀
-          </button>
-          <Link href="/" className="text-xs text-slate-500 hover:text-slate-300">
-            ← Quay lại trang chủ
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-neutral-900 text-white flex flex-col items-center p-4 select-none">
-      <header className="text-center mb-4">
-        <div className="flex justify-between items-center w-full max-w-md mb-2">
+      <header className="text-center mb-4 w-full max-w-md">
+        <div className="flex justify-between items-center mb-2">
           <Link href="/" className="text-xs text-amber-400 hover:underline">← Về Trang Chủ</Link>
           <div className="text-xs bg-neutral-800 px-3 py-1 rounded-lg border border-amber-500/30">
             🪙 <span className="font-bold text-amber-400">{points.toLocaleString()}</span> PTS
@@ -440,14 +402,14 @@ export default function ChessPage() {
           </div>
           <button
             onClick={() => setScreen('menu')}
-            className="w-full py-2 bg-neutral-900 border border-neutral-700 text-sm text-gray-400 rounded-lg hover:text-white transition"
+            className="w-full py-2 bg-neutral-900 border border-neutral-700 text-sm text-gray-400 rounded-lg hover:text-white transition cursor-pointer"
           >
             Quay Lại
           </button>
         </div>
       )}
 
-      {/* MÀN HÌNH BÀN CỜ */}
+      {/* BÀN CỜ GAME */}
       {screen === 'game' && (
         <div className="flex flex-col items-center w-full max-w-md">
           <div className="w-full flex justify-between items-center bg-neutral-800 px-4 py-2 rounded-t-lg text-sm border-b border-neutral-700">
