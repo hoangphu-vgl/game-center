@@ -48,10 +48,10 @@ const INITIAL_COTHU_BOARD: string[][] = [
 ];
 
 const TAUNT_MESSAGES = [
-  "Ta đã đổi hướng tấn công lên hang phía trên rồi nhé! Chuẩn bị tinh thần đi! 🦁🔥",
-  "Đội hình Xanh đang lao thẳng lên hang (0,3) của cậu đấy! ⚡",
-  "Đừng hòng cản đường ta tiến về phía trước! 🏴‍☠️",
-  "Tổng tấn công dồn dập, không lùi bước! 💀"
+  "Muốn bắt ta hả? Không dễ đâu ní ơi, ta biết né đấy! 🦁⚡",
+  "Nước đi sơ hở là ta xông ngay vào Hang Xanh (0,3) đấy nhé! 🔥",
+  "Thủ cẩn thận, đội hình Xanh đang bao vây toàn diện! 🏴‍☠️",
+  "Muốn ăn quân của ta à? Thử xem ai ăn ai trước! 💀"
 ];
 
 export default function ChessthuPage() {
@@ -70,7 +70,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("AI đã chỉnh lại hướng tiến công chuẩn xác!");
+  const [aiTaunt, setAiTaunt] = useState<string>("AI Siêu Trí Tuệ đã sẵn sàng nghênh chiến!");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -151,7 +151,7 @@ export default function ChessthuPage() {
 
   const handleJoinRoom = async () => {
     if (inputCode.length < 6) {
-      alert('Vui nhập mã phòng 6 chữ số!');
+      alert('Vui lòng nhập mã phòng 6 chữ số!');
       return;
     }
     if (points < currentBet) {
@@ -188,12 +188,12 @@ export default function ChessthuPage() {
     }
     setGameMode('ai');
     setRoomCode('');
-    setPlayerRole('r'); // Bạn ở dưới (quân Đỏ)
+    setPlayerRole('r'); // Bạn cầm quân Đỏ ở trên
     setBoard(INITIAL_COTHU_BOARD.map(r => [...r]));
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Trận chiến AI tấn công lên hang trên bắt đầu! 🦁");
+    setAiTaunt("AI Thông Minh nâng cấp đã mở khóa Hang! Bắt đầu nào! 🦁");
     setScreen('game');
   };
 
@@ -240,12 +240,12 @@ export default function ChessthuPage() {
     }
   };
 
-  // ĐIỀU CHỈNH LẠI HANG THỰC TẾ TRÊN MÀN HÌNH:
-  // - Hang Xanh (b) nằm ở TRÊN CÙNG: (0, 3) -> AI (quân xanh ở dưới) phải phi LÊN ĐÂY để thắng.
-  // - Hang Đỏ (r) nằm ở DƯỚI CÙNG: (8, 3) -> Bạn (quân đỏ ở dưới) phải bảo vệ hang này, và AI phi xuống đây thì AI thắng.
-  const isDen = (r: number, c: number, color: 'r' | 'b') => {
-    if (color === 'r') return r === 8 && c === 3; // Hang Đỏ ở dưới
-    return r === 0 && c === 3; // Hang Xanh ở trên
+  // KIỂM TRA HANG NHÀ CỦA CHÍNH MÌNH ĐỂ CẤM VÀO:
+  // - Quân Đỏ 'r' cấm chui vào Hang Đỏ ở dưới (8,3)
+  // - Quân Xanh 'b' cấm chui vào Hang Xanh ở trên (0,3)
+  const isOwnDen = (r: number, c: number, color: 'r' | 'b') => {
+    if (color === 'r') return r === 8 && c === 3;
+    return r === 0 && c === 3;
   };
 
   const getPieceMoves = (r: number, c: number, currentBoard: string[][]) => {
@@ -264,8 +264,8 @@ export default function ChessthuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
-        // Cấm quân cờ bước vào hang của chính mình
-        if (isDen(nr, nc, color)) return;
+        // CHỈ CẤM BƯỚC VÀO HANG NHÀ MÌNH, MỞ KHÓA CHO PHÉP XÔNG VÀO HANG ĐỐI PHƯƠNG
+        if (isOwnDen(nr, nc, color)) return;
 
         const target = currentBoard[nr][nc];
         const targetAnimal = target ? ANIMAL_DATA[target] : null;
@@ -331,7 +331,7 @@ export default function ChessthuPage() {
 
         if (isWater(r, c) && !isWater(nr, nc) && rank === 1) {
           if (target && targetAnimal && targetAnimal.rank === 8 && targetAnimal.color !== color) {
-            // Không được ăn Voi từ nước lên cạn
+            // Không ăn Voi từ nước lên cạn
           } else if (!target || targetAnimal?.color !== color) {
             moves.push({ r: nr, c: nc });
           }
@@ -415,46 +415,72 @@ export default function ChessthuPage() {
       }
     }
 
-    // LUẬT THẮNG THUA CHUẨN XÁC THEO GIAO DIỆN (BẠN Ở DƯỚI - AI Ở DƯỚI NHƯNG QUÂN XANH):
-    // - AI (quân Xanh 'b') xuất phát từ dưới, mục tiêu là phi LÊN TRÊN chiếm Hang Xanh ở (0, 3) -> AI Thắng!
-    // - Bạn (quân Đỏ 'r') xuất phát từ trên, mục tiêu là phi XUỐNG DƯỚI chiếm Hang Đỏ ở (8, 3) -> Bạn Thắng!
-    if (movingPiece.startsWith('b') && toR === 0 && toC === 3) {
-      endGame(false, "AI đã xông vào chiếm mất hang ở trên! Thất bại!");
-    } else if (movingPiece.startsWith('r') && toR === 8 && toC === 3) {
-      endGame(true, "Bạn đã xông vào chiếm hang ở dưới và thắng cược!");
+    // LUẬT THẮNG CHUẨN XÁC KHI XÔNG VÀO HANG ĐỐI PHƯƠNG:
+    // - Quân Đỏ (r) của bạn xông vào Hang Xanh ở TRÊN (0, 3) -> BẠN THẮNG!
+    // - Quân Xanh (b) của AI xông vào Hang Đỏ ở DƯỚI (8, 3) -> AI THẮNG!
+    if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
+      endGame(true, "Chúc mừng! Bạn đã xông vào chiếm Hang Xanh thành công!");
+    } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
+      endGame(false, "Rất tiếc! AI đã xông vào chiếm Hang Đỏ của bạn!");
     }
   };
 
+  // NÂNG CẤP AI THÔNG MINH, BIẾT NÉ BỊ ĂN & SĂN HANG CHUẨN
   const makeAiMove = () => {
     const allMoves: { fromR: number; fromC: number; toR: number; toC: number; score: number }[] = [];
+
+    // Tìm vị trí tất cả các quân cờ Đỏ (người chơi) để AI tính nguy hiểm
+    const playerPieces: { r: number; c: number; rank: number }[] = [];
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 7; c++) {
+        const p = board[r][c];
+        if (p && ANIMAL_DATA[p].color === 'r') {
+          playerPieces.push({ r, c, rank: ANIMAL_DATA[p].rank });
+        }
+      }
+    }
 
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 7; c++) {
         const p = board[r][c];
         if (p && ANIMAL_DATA[p].color === 'b') {
+          const aiRank = ANIMAL_DATA[p].rank;
           const moves = getPieceMoves(r, c, board);
-          moves.forEach((m) => {
-            // Cấm AI tuyệt đối không được tự ý chui vào Hang Xanh của nó ở (0, 3)
-            if (m.r === 0 && m.c === 3) return;
 
+          moves.forEach((m) => {
             let score = 0;
             const targetPiece = board[m.r][m.c];
 
-            // 1. ƯU TIÊN SỐ 1: AI Xanh (b) xông vào Hang Đỏ của bạn ở đáy (8, 3) để thắng
+            // 1. ƯU TIÊN HÀNG ĐẦU: Tiến vào Hang Đỏ (8, 3) để THẮNG NGAY
             if (m.r === 8 && m.c === 3) {
-              score += 2000000;
+              score += 1000000;
             }
 
-            // 2. Ưu tiên ăn quân địch (cấp càng cao điểm càng lớn)
+            // 2. Ưu tiên ăn quân địch
             if (targetPiece) {
               const targetRank = ANIMAL_DATA[targetPiece].rank;
-              score += targetRank * 600;
+              score += targetRank * 500;
             }
 
-            // 3. AI (quân xanh) hiện đang ở nửa dưới, muốn thắng nó phải tiến XUỐNG DƯỚI (hàng số tăng dần từ 0 đến 8)
-            score += m.r * 80;
+            // 3. TƯ DUY NÉ BỊ BẮT: Kiểm tra xem ô sắp đến có bị quân Đỏ cấp cao hơn đe dọa không
+            playerPieces.forEach((enemy) => {
+              const dist = Math.abs(enemy.r - m.r) + Math.abs(enemy.c - m.c);
+              if (dist === 1) { // Đứng sát cạnh quân địch
+                let canBeEaten = false;
+                if (enemy.rank === 8 && aiRank === 1) canBeEaten = false; // Chuột không sợ Voi
+                else if (enemy.rank === 1 && aiRank === 8) canBeEaten = true; // Voi sợ Chuột
+                else if (enemy.rank >= aiRank) canBeEaten = true;
 
-            score += Math.random() * 40;
+                if (canBeEaten) {
+                  score -= 800; // Trừ điểm nặng để AI tháo chạy, không đưa mặt ra cho ăn
+                }
+              }
+            });
+
+            // 4. Khuyến khích di chuyển xuống phía dưới (hướng về Hang Đỏ ở 8,3)
+            score += m.r * 60;
+
+            score += Math.random() * 20;
 
             allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
           });
@@ -499,7 +525,7 @@ export default function ChessthuPage() {
           ← Trang chủ
         </Link>
         <h1 className="text-lg font-black tracking-wider text-emerald-400 uppercase flex items-center gap-1">
-          🦁 CỜ THÚ CHUẨN XÁC
+          🦁 CỜ THÚ ONLINE
         </h1>
         <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-xl border border-amber-500/30 font-bold text-amber-400">
           🪙 {points.toLocaleString()} PTS
@@ -554,7 +580,7 @@ export default function ChessthuPage() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
-            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Săn Hũ & Chiếm Hang</label>
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Thông Minh (Đã Mở Hang)</label>
             <button
               onClick={startAiGame}
               className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm"
@@ -573,7 +599,7 @@ export default function ChessthuPage() {
             </span>
             <div className="flex items-center gap-3">
               <span className="text-slate-400">
-                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (Săn Hũ)`}
+                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (Thông Minh)`}
               </span>
               <button
                 onClick={() => setScreen('menu')}
@@ -597,8 +623,8 @@ export default function ChessthuPage() {
                 const isW = isWater(r, c);
                 const isTrapR = isTrap(r, c, 'r');
                 const isTrapB = isTrap(r, c, 'b');
-                const isDenRed = isDen(r, c, 'r');
-                const isDenBlue = isDen(r, c, 'b');
+                const isDenRed = r === 8 && c === 3;
+                const isDenBlue = r === 0 && c === 3;
                 const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
                 const isValidMove = validMoves.some((m) => m.r === r && m.c === c);
                 const animal = piece ? ANIMAL_DATA[piece] : null;
