@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { ref, onValue, set, push, remove } from "firebase/database";
+import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 interface GunConfig {
   level: number;
@@ -62,12 +61,6 @@ export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
   const [jackpotPool, setJackpotPool] = useState<number>(258900);
-  const [roomCodeInput, setRoomCodeInput] = useState<string>('');
-  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
-  const [isPVE, setIsPVE] = useState<boolean>(true);
-  const [isHost, setIsHost] = useState<boolean>(false);
-  const [myCorner, setMyCorner] = useState<string>('bottom-right');
-  
   const [currentGunIndex, setCurrentGunIndex] = useState<number>(1);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -80,14 +73,6 @@ export default function BanCaPage() {
   const explosionsRef = useRef<any[]>([]);
   const floatingTextsRef = useRef<any[]>([]);
   const bubblesRef = useRef<any[]>([]);
-
-  const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string } }>({
-    'top-left': { active: false, email: 'Trống' },
-    'top-right': { active: false, email: 'Trống' },
-    'bottom-left': { active: false, email: 'Trống' },
-    'bottom-right': { active: true, email: 'Bạn' }
-  });
-
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
@@ -106,12 +91,13 @@ export default function BanCaPage() {
       }
     });
 
-    const jpRef = ref(db, 'banca_pvp_jackpot');
-    const unsubJp = onValue(jpRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setJackpotPool(snapshot.val());
+    // Lắng nghe hũ Jackpot realtime từ Firestore
+    const jpRef = doc(db, "gameSettings", "bancaJackpot");
+    const unsubJp = onSnapshot(jpRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setJackpotPool(docSnap.data().amount || 258900);
       } else {
-        set(jpRef, 258900);
+        setDoc(jpRef, { amount: 258900 });
       }
     });
 
@@ -135,6 +121,14 @@ export default function BanCaPage() {
     } catch (e) {
       console.error("Lỗi lưu điểm:", e);
     }
+  };
+
+  const updateJackpotInFirestore = async (newAmount: number) => {
+    setJackpotPool(newAmount);
+    try {
+      const jpRef = doc(db, "gameSettings", "bancaJackpot");
+      await setDoc(jpRef, { amount: newAmount }, { merge: true });
+    } catch (e) {}
   };
 
   const initAudio = () => {
@@ -182,7 +176,6 @@ export default function BanCaPage() {
     } catch (e) {}
   };
 
-  // Khởi tạo bong bóng nước nền
   useEffect(() => {
     const bubbles = [];
     for (let i = 0; i < 35; i++) {
@@ -197,7 +190,6 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Main Canvas Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -258,19 +250,12 @@ export default function BanCaPage() {
             speed: template.speed,
             hp,
             maxHp: hp,
-            reward: isPVE ? Math.round(template.reward * 0.7) : template.reward,
+            reward: template.reward,
             category: template.category,
             x, y, vx, vy,
             hitTimer: 0
           };
-
-          if (isPVE) {
-            fishesRef.current.push(fishObj);
-          } else if (isHost && activeRoomId) {
-            const newRef = push(ref(db, `banca_rooms/${activeRoomId}/fishes`));
-            fishObj.id = newRef.key as string;
-            set(newRef, fishObj);
-          }
+          fishesRef.current.push(fishObj);
         }
       }
     };
@@ -280,13 +265,11 @@ export default function BanCaPage() {
         const w = canvas.width;
         const h = canvas.height;
 
-        // Cập nhật bong bóng
         bubblesRef.current.forEach(b => {
           b.y -= b.speed;
           if (b.y < -10) { b.y = h + 10; b.x = Math.random() * w; }
         });
 
-        // Cập nhật đạn
         bulletsRef.current.forEach(b => {
           b.x += b.vx;
           b.y += b.vy;
@@ -296,21 +279,18 @@ export default function BanCaPage() {
         });
         bulletsRef.current = bulletsRef.current.filter(b => b.alive);
 
-        // Cập nhật hiệu ứng nổ
         explosionsRef.current.forEach(ex => {
           ex.radius += 4;
           ex.alpha -= 0.06;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
-        // Cập nhật chữ nổi
         floatingTextsRef.current.forEach(ft => {
           ft.y += ft.vy;
           ft.alpha -= 0.02;
         });
         floatingTextsRef.current = floatingTextsRef.current.filter(ft => ft.alpha > 0);
 
-        // Cập nhật cá
         fishesRef.current.forEach(f => {
           f.x += f.vx;
           f.y += f.vy;
@@ -318,7 +298,6 @@ export default function BanCaPage() {
         });
         fishesRef.current = fishesRef.current.filter(f => f.x > -300 && f.x < w + 300 && f.y > -300 && f.y < h + 300);
 
-        // Va chạm đạn & cá
         bulletsRef.current.forEach(bullet => {
           if (!bullet.alive) return;
           fishesRef.current.forEach(fish => {
@@ -331,10 +310,6 @@ export default function BanCaPage() {
               fish.hp -= bullet.damage;
               fish.hitTimer = 4;
 
-              if (activeRoomId && !isPVE) {
-                set(ref(db, `banca_rooms/${activeRoomId}/fishes/${fish.id}/hp`), fish.hp);
-              }
-
               if (fish.hp <= 0 && !fish.dead) {
                 fish.dead = true;
                 let reward = fish.reward;
@@ -343,7 +318,7 @@ export default function BanCaPage() {
                 if (fish.category === 'large' && Math.random() < 0.15) {
                   reward += jackpotPool;
                   isJackpot = true;
-                  set(ref(db, 'banca_pvp_jackpot'), 20000);
+                  updateJackpotInFirestore(20000);
                 }
 
                 setPoints(prev => {
@@ -360,24 +335,16 @@ export default function BanCaPage() {
                 } else {
                   floatingTextsRef.current.push({ text: `+${reward}đ`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#facc15' });
                 }
-
-                if (activeRoomId && !isPVE) {
-                  remove(ref(db, `banca_rooms/${activeRoomId}/fishes/${fish.id}`));
-                }
               }
             }
           });
         });
         fishesRef.current = fishesRef.current.filter(f => !f.dead);
 
-        if (isPVE || isHost) {
-          spawnFish(w, h);
-        }
+        spawnFish(w, h);
 
-        // --- DRAW SECTION ---
         ctx.clearRect(0, 0, w, h);
 
-        // Vẽ bong bóng
         bubblesRef.current.forEach(b => {
           ctx.save();
           ctx.beginPath();
@@ -387,7 +354,6 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ cá
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
@@ -400,7 +366,6 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ đạn
         bulletsRef.current.forEach(b => {
           ctx.save();
           ctx.beginPath();
@@ -416,7 +381,6 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ nổ
         explosionsRef.current.forEach(ex => {
           if (ex.alpha <= 0) return;
           ctx.save();
@@ -431,7 +395,6 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ chữ điểm nổi
         floatingTextsRef.current.forEach(ft => {
           ctx.save();
           ctx.globalAlpha = Math.max(0, ft.alpha);
@@ -443,25 +406,21 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ các góc súng người chơi
-        const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
+        // Vẽ pháo súng dưới cùng
+        const drawTurret = (x: number, y: number, label: string) => {
           ctx.save();
           ctx.translate(x, y);
-          const pData = roomPlayersRef.current[cornerKey];
-          let angle = -Math.PI / 2;
-          if (pData.active) {
-            angle = Math.atan2(mousePosRef.current.y - y, mousePosRef.current.x - x);
-          }
+          const angle = Math.atan2(mousePosRef.current.y - y, mousePosRef.current.x - x);
           ctx.beginPath();
           ctx.arc(0, 0, 52, 0, Math.PI * 2);
-          ctx.fillStyle = pData.active ? '#0f172a' : '#1e293b';
+          ctx.fillStyle = '#0f172a';
           ctx.fill();
           ctx.lineWidth = 5;
-          ctx.strokeStyle = pData.active ? '#38bdf8' : '#475569';
+          ctx.strokeStyle = '#38bdf8';
           ctx.stroke();
 
           ctx.rotate(angle);
-          ctx.fillStyle = pData.active ? '#f59e0b' : '#64748b';
+          ctx.fillStyle = '#f59e0b';
           ctx.fillRect(0, -18, 68, 36);
           ctx.lineWidth = 3;
           ctx.strokeStyle = '#ffffff';
@@ -471,17 +430,12 @@ export default function BanCaPage() {
           ctx.restore();
 
           ctx.font = "bold 13px Fredoka, sans-serif";
-          ctx.fillStyle = pData.active ? "#facc15" : "#94a3b8";
+          ctx.fillStyle = "#facc15";
           ctx.textAlign = 'center';
-          ctx.fillText(pData.active ? label : "Đang trống", x, y + (y > h / 2 ? 62 : -48));
+          ctx.fillText(label, x, y + 62);
         };
 
-        if (!isPVE) {
-          drawTurret(80, 80, 'top-left', 'P2');
-          drawTurret(w - 80, 80, 'top-right', 'P3');
-          drawTurret(80, h - 80, 'bottom-left', 'P4');
-        }
-        drawTurret(w - 90, h - 90, 'bottom-right', isPVE ? 'P1 (Solo PVE)' : 'P1 (Bạn)');
+        drawTurret(w - 90, h - 90, 'P1 (Chiến Binh)');
       }
 
       animationFrameId = requestAnimationFrame(render);
@@ -493,9 +447,8 @@ export default function BanCaPage() {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [isPaused, isPVE, isHost, activeRoomId, jackpotPool, isMuted]);
+  }, [isPaused, jackpotPool, isMuted]);
 
-  // Bắn đạn
   const handleShoot = () => {
     initAudio();
     const gun = GUN_TYPES[currentGunIndex];
@@ -506,15 +459,12 @@ export default function BanCaPage() {
 
     const newPts = points - gun.cost;
     updatePointsInFirestore(newPts);
-
-    set(ref(db, 'banca_pvp_jackpot'), jackpotPool + Math.round(gun.cost * 0.2));
+    updateJackpotInFirestore(jackpotPool + Math.round(gun.cost * 0.2));
 
     const w = window.innerWidth;
     const h = window.innerHeight;
-    let startX = w - 90, startY = h - 90;
-    if (myCorner === 'bottom-left') { startX = 80; startY = h - 80; }
-    else if (myCorner === 'top-left') { startX = 80; startY = 80; }
-    else if (myCorner === 'top-right') { startX = w - 80; startY = 80; }
+    const startX = w - 90;
+    const startY = h - 90;
 
     const angle = Math.atan2(mousePosRef.current.y - startY, mousePosRef.current.x - startX);
     bulletsRef.current.push({
@@ -528,98 +478,11 @@ export default function BanCaPage() {
       alive: true
     });
 
-    playShootShootSound();
-
-    if (activeRoomId && !isPVE) {
-      push(ref(db, `banca_rooms/${activeRoomId}/shots`), {
-        corner: myCorner, x: startX, y: startY, angle, gunLevel: gun.level
-      });
-    }
-  };
-
-  const playShootShootSound = () => {
     playShootSound();
-  };
-
-  const handleCreateRoom = () => {
-    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setActiveRoomId(roomId);
-    setIsHost(true);
-    setIsPVE(false);
-    setMyCorner('bottom-right');
-
-    roomPlayersRef.current['bottom-right'].active = true;
-    roomPlayersRef.current['bottom-right'].email = user?.email || 'Chủ phòng';
-
-    set(ref(db, 'banca_rooms/' + roomId), {
-      creator: user?.email || 'Host',
-      status: 'playing',
-      players: {
-        'bottom-right': { email: user?.email || 'Host' }
-      }
-    });
-
-    showToast(`✨ Tạo phòng thành công! Mã phòng: ${roomId}`);
-  };
-
-  const handleJoinRoom = () => {
-    const roomId = roomCodeInput.trim().toUpperCase();
-    if (!roomId) {
-      showToast("Vui lòng nhập mã phòng!");
-      return;
-    }
-
-    const roomRef = ref(db, 'banca_rooms/' + roomId);
-    getDoc(doc(db, 'dummy', 'dummy')).then(() => {
-      // Dùng rtdb get
-    });
-
-    // Simple RTDB check
-    import('firebase/database').then(({ get, child }) => {
-      get(child(ref(db), `banca_rooms/${roomId}`)).then((snapshot) => {
-        if (!snapshot.exists()) {
-          showToast("Phòng không tồn tại!");
-          return;
-        }
-        const data = snapshot.val();
-        setActiveRoomId(roomId);
-        setIsHost(false);
-        setIsPVE(false);
-
-        const players = data.players || {};
-        let corner = 'bottom-right';
-        if (!players['bottom-left']) corner = 'bottom-left';
-        else if (!players['top-left']) corner = 'top-left';
-        else if (!players['top-right']) corner = 'top-right';
-
-        setMyCorner(corner);
-        roomPlayersRef.current[corner].active = true;
-        roomPlayersRef.current[corner].email = user?.email || 'Thành viên';
-
-        set(ref(db, `banca_rooms/${roomId}/players/${corner}`), {
-          email: user?.email || 'Thành viên'
-        });
-
-        showToast(`🎉 Vào phòng ${roomId} thành công!`);
-      });
-    });
-  };
-
-  const handleLeaveRoom = () => {
-    if (activeRoomId && !isPVE) {
-      remove(ref(db, `banca_rooms/${activeRoomId}/players/${myCorner}`));
-    }
-    setActiveRoomId(null);
-    setIsPVE(true);
-    setIsHost(false);
-    fishesRef.current = [];
-    bulletsRef.current = [];
-    showToast("Đã rời phòng, chuyển về chế độ Solo PVE.");
   };
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-950 font-sans select-none flex flex-col">
-      {/* Canvas Game */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
@@ -640,7 +503,6 @@ export default function BanCaPage() {
 
       {/* Top HUD Header */}
       <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
-        {/* Ví Điểm */}
         <div className="bg-slate-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl px-3 py-1.5 flex items-center gap-2.5 pointer-events-auto shadow-lg">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center text-yellow-950 font-black shadow-md ring-2 ring-yellow-200">
             🪙
@@ -653,7 +515,6 @@ export default function BanCaPage() {
           </div>
         </div>
 
-        {/* Nút điều hướng & phòng */}
         <div className="flex items-center gap-2 pointer-events-auto">
           <Link
             href="/"
@@ -661,16 +522,6 @@ export default function BanCaPage() {
           >
             ← Trang chủ
           </Link>
-
-          {!isPVE && activeRoomId && (
-            <button
-              onClick={handleLeaveRoom}
-              className="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 hover:bg-amber-900 text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold shadow-md transition"
-            >
-              Phòng: #{activeRoomId} (Rời)
-            </button>
-          )}
-
           <button
             onClick={() => setIsMuted(!isMuted)}
             className="w-9 h-9 bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-300 shadow-md"
@@ -690,7 +541,7 @@ export default function BanCaPage() {
       <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
         <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-6 py-1.5 rounded-2xl text-center shadow-xl animate-pulse">
           <div className="text-[9px] text-amber-300 font-extrabold uppercase tracking-widest">
-            👑 JACKPOT CHUNG 👑
+            👑 HŨ JACKPOT RỒNG THẦN 👑
           </div>
           <div className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
             {jackpotPool.toLocaleString()} đ
@@ -698,60 +549,28 @@ export default function BanCaPage() {
         </div>
       </div>
 
-      {/* Thanh công cụ súng và chế độ phòng ở góc dưới */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex flex-col sm:flex-row items-center gap-2 pointer-events-auto">
-        {/* Chọn Súng */}
+      {/* Thanh công cụ súng dưới góc */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-auto">
         <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-xl">
           <button
             onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
-            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition"
+            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition cursor-pointer"
           >
             -
           </button>
           <div className="text-center min-w-[140px]">
             <div className="text-xs text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
-            <div className="text-[10px] text-yellow-300 font-semibold">
-              {isPVE ? "Chế độ: Solo PVE" : `Phòng: #${activeRoomId} (${myCorner})`}
-            </div>
+            <div className="text-[10px] text-yellow-300 font-semibold">Chế độ: Solo Đại Dương</div>
           </div>
           <button
             onClick={() => setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length)}
-            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition"
+            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition cursor-pointer"
           >
             +
           </button>
         </div>
-
-        {/* Nút Tạo / Vào Phòng PVP nhanh */}
-        {isPVE && (
-          <div className="bg-slate-900/90 backdrop-blur-md border border-purple-500/40 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-xl">
-            <button
-              onClick={handleCreateRoom}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-2 rounded-xl shadow transition"
-            >
-              ✨ Tạo Phòng PVP
-            </button>
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                placeholder="Mã phòng"
-                maxLength={6}
-                value={roomCodeInput}
-                onChange={(e) => setRoomCodeInput(e.target.value)}
-                className="w-24 px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-center font-bold uppercase text-amber-300 outline-none"
-              />
-              <button
-                onClick={handleJoinRoom}
-                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition"
-              >
-                Vào
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Toast thông báo */}
       {toastMsg && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-red-950/90 border border-red-500/60 text-red-200 px-4 py-2 rounded-2xl text-xs font-bold shadow-2xl animate-bounce pointer-events-none">
           ⚠️ {toastMsg}
