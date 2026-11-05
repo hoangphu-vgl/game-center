@@ -354,7 +354,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              {/* Bắn Cá Ki-Blast (Chuyển trang đến /banca) */}
+              {/* Bắn Cá Ki-Blast (Đã mở khóa đường dẫn /banca) */}
               <div className="bg-slate-900/90 border border-cyan-500/40 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-cyan-400 transition">
                 <div>
                   <div className="text-4xl mb-2">🎯</div>
