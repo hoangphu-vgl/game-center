@@ -31,22 +31,22 @@ const DRAGON_SYMBOLS = [
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 const LOSE_TAUNTS = [
-  "Vegeta cười khẩy: 'Ngươi chỉ có thế thôi sao cùi bắp?'",
-  "Yamcha nằm đất lắc đầu ngán ngẩm trước cú quay này!",
+  "Vegeta cười khẩy: 'Hàng đầu tiên không có mặt thì tuổi gì đòi nổ?'",
+  "Yamcha lắc đầu ngán ngẩm vì cột đầu tiên bỏ trống!",
   "Hết Ki rồi chiến binh ơi, hít thở lấy lại sức đi!",
-  "Rồng thần lắc đầu ngao ngán vì các cột không liên kết từ cột 1!",
+  "Rồng thần lắc đầu ngao ngán vì hàng đầu tiên không xuất hiện biểu tượng mở bát!",
 ];
 
 const STREAK_BROKEN_TAUNTS = [
-  "💔 ĐỨT CHUỖI! Ki bộc phát ngược khiến chuỗi liên hoàn vỡ vụn! Rớt lại từ đầu.",
-  "⚡ BÙM! Chuỗi chiến thắng đã đứt đoạn giữa vũ trụ võ đạo!",
-  "💥 ĐỨT XÍCH! Các cột đứt quãng ở cột đầu tiên khiến chuỗi tan thành mây khói!",
+  "💔 ĐỨT CHUỖI! Hàng đầu tiên gãy khúc khiến chuỗi liên hoàn vỡ vụn! Rớt lại từ đầu.",
+  "⚡ BÙM! Chuỗi chiến thắng đã đứt đoạn do hàng đầu tiên không ra quân!",
+  "💥 ĐỨT XÍCH! Thiếu mặt ở hàng đầu tiên khiến chuỗi tích lũy tan thành mây khói!",
 ];
 
 const WIN_PRAISES = [
-  "Bùng nổ sức mạnh tiềm ẩn! Khai mở giới hạn cực đỉnh!",
-  "Kamehamehaaaaa! Liên kết từ cột 1 cực kỳ hoàn hảo!",
-  "Rồng thần ban phúc! Trúng liên tiếp các cột từ trái qua!",
+  "Bùng nổ sức mạnh tiềm ẩn! Hàng đầu tiên mở bát cực gắt!",
+  "Kamehamehaaaaa! Xuất phát từ hàng đầu tiên cực kỳ hoàn hảo!",
+  "Rồng thần ban phúc! Hàng đầu tiên có mặt, nổ tung tóe các cột sau!",
 ];
 
 interface HistoryItem {
@@ -81,7 +81,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Luật: Phải có mặt từ CỘT 1 (bên trái) và liên tiếp sang phải từ 3 cột trở lên mới nổ!",
+    text: "Luật: Hàng đầu tiên (cột 1) BẮT BUỘC phải có mặt thì mới được tính nổ liên tiếp sang phải!",
     type: "normal",
   });
 
@@ -209,18 +209,18 @@ export default function JackpotPage() {
       if (counter > 12) {
         clearInterval(interval);
         const finalGrid = generateValidGrid();
-        evaluateStrictColumnLogic(finalGrid, newPointsAfterBet, remainingAuto);
+        evaluateFirstColumnMandatory(finalGrid, newPointsAfterBet, remainingAuto);
         setSpinning(false);
       }
     }, 75);
   };
 
-  // THUẬT TOÁN CHUẨN XÁC: PHẢI XUẤT HIỆN TỪ CỘT 1 VÀ LIÊN TIẾP SANG PHẢI (TỪ 3 CỘT TRỞ LÊN)
-  const evaluateStrictColumnLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    let winChance = 0.32;
-    if (currentBet <= 100) winChance = 0.40;
-    else if (currentBet <= 1000) winChance = 0.30;
-    else winChance = 0.22;
+  // THUẬT TOÁN GẮT: BẮT BUỘC HÀNG ĐẦU TIÊN (CỘT 1) PHẢI CÓ MẶT THÌ MỚI ĐƯỢC TÍNH NỔ LIÊN TIẾP SANG PHẢI
+  const evaluateFirstColumnMandatory = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
+    let winChance = 0.30;
+    if (currentBet <= 100) winChance = 0.38;
+    else if (currentBet <= 1000) winChance = 0.28;
+    else winChance = 0.20;
 
     const isTriggerWin = Math.random() < winChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
@@ -237,7 +237,7 @@ export default function JackpotPage() {
       triggerExplosion();
     } 
     else if (isTriggerWin) {
-      // Đóng gói lưới thành 6 cột, mỗi cột 4 hàng (r từ 0 đến 3, c từ 0 đến 5)
+      // Đóng gói thành 6 cột, mỗi cột 4 hàng (r từ 0 đến 3, c từ 0 đến 5)
       // Index trong mảng phẳng grid = r * 6 + c
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
@@ -252,7 +252,7 @@ export default function JackpotPage() {
       let totalCalculatedWin = 0;
       let winningSet = new Set<number>();
 
-      // LẤY CÁC BIỂU TƯỢNG XUẤT HIỆN Ở CỘT 1 (c = 0) LÀM ĐIỂM TỰA BẮT ĐẦU
+      // LẤY CÁC BIỂU TƯỢNG XUẤT HIỆN Ở CỘT 1 (c = 0) LÀM ĐIỀU KIỆN TIÊN QUYẾT
       const firstColSymbols = columns[0].map(item => item.symbol.id);
       const uniqueSymbolsToCheck = Array.from(new Set(firstColSymbols));
 
@@ -260,21 +260,21 @@ export default function JackpotPage() {
         let consecutiveColsCount = 0;
         let tempMatchedIndices: number[] = [];
 
-        // Quét từ cột 0 sang phải (cột 0, 1, 2, 3, 4, 5)
+        // Quét liên tiếp từ cột 0 sang phải
         for (let c = 0; c < 6; c++) {
           const foundInCol = columns[c].filter(item => item.symbol.id === symId);
           if (foundInCol.length > 0) {
             consecutiveColsCount++;
             foundInCol.forEach(item => tempMatchedIndices.push(item.index));
           } else {
-            break; // Đứt mạch ngay lập tức nếu cột nào không có biểu tượng này
+            break; // Đứt mạch ngay lập tức nếu cột nào thiếu biểu tượng này
           }
         }
 
-        // BẮT BUỘC: Phải liên tiếp từ 3 cột trở lên VÀ PHẢI BẮT ĐẦU TỪ CỘT 1 (tức là cột 0 phải chứa symbol đó)
-        const startsAtCol1 = columns[0].some(item => item.symbol.id === symId);
+        // ĐIỀU KIỆN GẮT: Cột 1 (index 0) BẮT BUỘC phải có symbol này VÀ liên tiếp từ 3 cột trở lên
+        const mustExistInCol1 = columns[0].some(item => item.symbol.id === symId);
 
-        if (startsAtCol1 && consecutiveColsCount >= 3) {
+        if (mustExistInCol1 && consecutiveColsCount >= 3) {
           const symObj = DRAGON_SYMBOLS.find((s) => s.id === symId);
           if (symObj) {
             let symbolWin = 0;
