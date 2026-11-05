@@ -48,10 +48,10 @@ const INITIAL_COTHU_BOARD: string[][] = [
 ];
 
 const TAUNT_MESSAGES = [
-  "Cẩn thận đấy, ta đang càn quét và tìm đường xông vào hang (8,3) của cậu đây! 🦁🔥",
+  "Ta đã chỉnh lại hướng tiến công, hang (8,3) của cậu hãy đợi đấy! 🦁🔥",
   "Đừng hòng cản đường ta tiến xuống sân nhà cậu! ⚡",
-  "Chuẩn bị tinh thần mất điểm cược đi, hang của cậu đang hở kìa! 🏴‍☠️",
-  "AI đã chỉnh lại hướng đánh cực gắt, chuẩn bị thủ cho kỹ nhé! 💀"
+  "Chuẩn bị tinh thần mất điểm cược đi, AI đang lao thẳng về phía hang của cậu đấy! 🏴‍☠️",
+  "Không có chuyện đi lộn chuồng nữa đâu, chiến thuật tổng lực bắt đầu! 💀"
 ];
 
 export default function ChessthuPage() {
@@ -71,7 +71,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("AI đã fix hoàn toàn lỗi tọa độ hang! Sẵn sàng chiến đấu!");
+  const [aiTaunt, setAiTaunt] = useState<string>("AI đã định vị chính xác hang đối phương! Xung phong!");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -173,7 +173,6 @@ export default function ChessthuPage() {
       if (data.board) setBoard(JSON.parse(data.board));
       if (data.turn) setTurn(data.turn);
 
-      setGameMode('pvp');
       setRoomCode(inputCode);
       setPlayerRole('b');
       setScreen('game');
@@ -241,9 +240,12 @@ export default function ChessthuPage() {
     }
   };
 
+  // ĐÃ SỬA CHUẨN XÁC TỌA ĐỘ HANG:
+  // - Hang Đỏ (của bạn) nằm ở (8, 3)
+  // - Hang Xanh (của AI) nằm ở (0, 3)
   const isDen = (r: number, c: number, color: 'r' | 'b') => {
-    if (color === 'r') return r === 8 && c === 3; // Hang Đỏ
-    return r === 0 && c === 3; // Hang Xanh
+    if (color === 'r') return r === 8 && c === 3; 
+    return r === 0 && c === 3; 
   };
 
   const getPieceMoves = (r: number, c: number, currentBoard: string[][]) => {
@@ -262,7 +264,7 @@ export default function ChessthuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
-        // Không được bước vào hang của chính mình
+        // Cấm quân cờ tự bước vào hang của chính mình
         if (isDen(nr, nc, color)) return;
 
         const target = currentBoard[nr][nc];
@@ -413,7 +415,7 @@ export default function ChessthuPage() {
       }
     }
 
-    // ĐIỀU KIỆN THẮNG THUA CHUẨN XÁC 100%:
+    // ĐIỀU KIỆN THẮNG THUA CHUẨN XÁC TUYỆT ĐỐI:
     // - Quân Đỏ (r) bước vào Hang Xanh của AI tại (0, 3) -> Bạn Thắng!
     // - Quân Xanh (b) bước vào Hang Đỏ của Bạn tại (8, 3) -> AI Thắng / Bạn Thua!
     if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
@@ -435,9 +437,9 @@ export default function ChessthuPage() {
             let score = 0;
             const targetPiece = board[m.r][m.c];
 
-            // 1. ƯU TIÊN SỐ 1: AI Xanh (b) xông vào Hang Đỏ của Bạn tại (8, 3) để THẮNG NGAY LẬP TỨC
+            // 1. ƯU TIÊN SỐ 1: AI Xanh (b) xông vào Hang Đỏ của Bạn tại (8, 3) để THẮNG
             if (m.r === 8 && m.c === 3) {
-              score += 200000;
+              score += 500000;
             }
 
             // 2. Ưu tiên ăn quân địch (cấp càng cao điểm càng lớn)
@@ -446,8 +448,8 @@ export default function ChessthuPage() {
               score += targetRank * 400;
             }
 
-            // 3. Khuyến khích di chuyển linh hoạt, tiến xuống sân của bạn (hàng số tăng dần)
-            score += m.r * 30;
+            // 3. Khuyến khích tiến xuống sân của bạn (hàng số tăng dần từ 0 đến 8)
+            score += m.r * 40;
 
             score += Math.random() * 25;
 
@@ -549,7 +551,7 @@ export default function ChessthuPage() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
-            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Săn Thú & Chiếm Hang</label>
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Săn Hũ & Chiếm Hang</label>
             <button
               onClick={startAiGame}
               className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm"
