@@ -25,11 +25,11 @@ export default function VongQuayPage() {
   const [loading, setLoading] = useState(true);
 
   const [isSpinning, setIsSpinning] = useState(false);
-  const [wheelAngle, setWheelAngle] = useState(0);
   const [spinResultModal, setSpinResultModal] = useState<string | null>(null);
   const [lastIndex, setLastIndex] = useState<number | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rotationRef = useRef<number>(0);
 
   const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
 
@@ -165,12 +165,16 @@ export default function VongQuayPage() {
     const targetMiddleAngle = (winningSector.start + winningSector.end) / 2;
     const desiredDegree = 270 - targetMiddleAngle;
 
-    const currentNormalized = wheelAngle % 360;
+    const currentNormalized = rotationRef.current % 360;
     const extraOffset = (desiredDegree - currentNormalized + 360) % 360;
-    const newTotalAngle = wheelAngle + 360 * 8 + extraOffset;
+    rotationRef.current += 360 * 8 + extraOffset;
 
-    // Cập nhật state wheelAngle để React kích hoạt hiệu ứng quay mượt mà
-    setWheelAngle(newTotalAngle);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      // Gán trực tiếp transition và transform để trình duyệt kích hoạt animation mượt mà
+      canvas.style.transition = "transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)";
+      canvas.style.transform = `rotate(${rotationRef.current}deg)`;
+    }
 
     setTimeout(async () => {
       setIsSpinning(false);
@@ -252,10 +256,6 @@ export default function VongQuayPage() {
                 width={500}
                 height={500}
                 className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_40px_rgba(168,85,247,0.6)]"
-                style={{
-                  transform: `rotate(${wheelAngle}deg)`,
-                  transition: isSpinning ? "transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)" : "none",
-                }}
               />
               <div className="absolute z-20 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-4 border-slate-950 shadow-2xl flex items-center justify-center text-2xl font-black">
                 🐉
