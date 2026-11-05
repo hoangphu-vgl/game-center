@@ -15,39 +15,39 @@ const AUTO_OPTIONS = [
   { label: "Vô Cực", value: 99999 },
 ];
 
+// Phân định rõ Hình Mạnh (Rare/Epic) và Hình Yếu (Bad/Mid)
 const DRAGON_SYMBOLS = [
-  { id: "shenron", icon: "🐲", name: "Rồng Thần", tier: "epic", multiplier: 40 },
-  { id: "goku", icon: "🐉", name: "Goku SSJ", tier: "rare", multiplier: 22 },
-  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", tier: "rare", multiplier: 18 },
-  { id: "gohan", icon: "⚡", name: "Gohan Beast", tier: "rare", multiplier: 15 },
-  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", tier: "mid", multiplier: 10 },
-  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", tier: "mid", multiplier: 9 },
-  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", tier: "mid", multiplier: 8 },
-  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", tier: "bad", multiplier: 4 },
-  { id: "senzu", icon: "🫘", name: "Đậu Senzu", tier: "bad", multiplier: 3 },
-  { id: "capsule", icon: "💊", name: "Capsule", tier: "bad", multiplier: 2 },
+  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "strong", multiplier: 30 },
+  { id: "goku", icon: "🐉", name: "Goku SSJ", type: "strong", multiplier: 18 },
+  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", type: "strong", multiplier: 15 },
+  { id: "gohan", icon: "⚡", name: "Gohan Beast", type: "strong", multiplier: 12 },
+  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "strong", multiplier: 10 },
+  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", multiplier: 7 },
+  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "mid", multiplier: 6 },
+  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", multiplier: 3 },
+  { id: "senzu", icon: "🫘", name: "Đậu Senzu", type: "weak", multiplier: 2 },
+  { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 1 },
 ];
 
-// Danh sách cấp số nhân có thể nhảy cóc (x2, x4, x8, x16, x32, x64, x128, x256, x512, x1024)
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 const LOSE_TAUNTS = [
   "Vegeta cười khẩy: 'Ngươi chỉ có thế thôi sao cùi bắp?'",
   "Yamcha nằm đất lắc đầu ngán ngẩm trước cú quay này!",
   "Hết Ki rồi chiến binh ơi, hít thở lấy lại sức đi!",
-  "Rồng thần khóc thét vì cú quay vừa rồi!",
+  "Rồng thần khóc thét vì đường đi nước bước quá tệ!",
 ];
 
 const STREAK_BROKEN_TAUNTS = [
-  "💔 ĐỨT CHUỖI! Ki bộc phát ngược khiến chuỗi liên hoàn vỡ vụn! Rớt lại mốc x2.",
-  "⚡ BÙM! Chuỗi chiến thắng đã đứt đoạn giữa vũ trụ! Làm lại từ đầu nhé chiến binh.",
-  "💥 ĐỨT XÍCH! Bao nhiêu công sức tích lũy chuỗi đã tan thành mây khói!",
+  "💔 ĐỨT CHUỖI! Ki bộc phát ngược khiến chuỗi liên hoàn vỡ vụn! Rớt lại từ đầu.",
+  "⚡ BÙM! Chuỗi chiến thắng đã đứt đoạn giữa vũ trụ võ đạo!",
+  "💥 ĐỨT XÍCH! Sai lầm trong đường đi nước bước đã khiến chuỗi tan thành mây khói!",
 ];
 
 const WIN_PRAISES = [
   "Bùng nổ sức mạnh tiềm ẩn! Khai mở giới hạn cực đỉnh!",
-  "Kamehamehaaaaa! Chiến thắng chấn động vũ trụ!",
-  "Rồng thần ban phúc! Tài sản tăng vọt không đối thủ!",
+  "Kamehamehaaaaa! Đường đi chuẩn xác, chấn động vũ trụ!",
+  "Rồng thần ban phúc! Đọc đường cờ quá xuất sắc!",
 ];
 
 interface HistoryItem {
@@ -78,12 +78,11 @@ export default function JackpotPage() {
     minor: 40000,
   });
 
-  // Lưu giá trị hệ số chuỗi hiện tại (2, 4, 8, 16,... hoặc 0 nếu chưa vào chuỗi)
   const [currentStreakMultiplier, setCurrentStreakMultiplier] = useState<number>(0);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Hệ thống võ đạo chuẩn xác. Trúng 3 hình hàng ngang hoặc kích hoạt chuỗi nhân dồn điểm!",
+    text: "Hệ thống kiểm tra đường đi (Ngang, Dọc, Xéo) đã kích hoạt. Chọn mức cược và quay ngay!",
     type: "normal",
   });
 
@@ -138,9 +137,9 @@ export default function JackpotPage() {
     const newGrid: typeof DRAGON_SYMBOLS = [];
     for (let i = 0; i < 24; i++) {
       const rand = Math.random();
-      let pool = DRAGON_SYMBOLS.filter((s) => s.tier === "bad");
-      if (rand > 0.60) pool = DRAGON_SYMBOLS.filter((s) => s.tier === "mid");
-      if (rand > 0.90) pool = DRAGON_SYMBOLS.filter((s) => s.tier === "rare" || s.tier === "epic");
+      let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
+      if (rand > 0.55) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
+      if (rand > 0.85) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
       const selected = pool[Math.floor(Math.random() * pool.length)];
       newGrid.push(selected);
     }
@@ -204,18 +203,18 @@ export default function JackpotPage() {
       if (counter > 12) {
         clearInterval(interval);
         const finalGrid = generateRandomGrid();
-        evaluateStrictRules(finalGrid, newPointsAfterBet, remainingAuto);
+        evaluateMatrixLines(finalGrid, newPointsAfterBet, remainingAuto);
         setSpinning(false);
       }
     }, 75);
   };
 
-  // THUẬT TOÁN LUẬT CHUẨN: THẮNG THƯỜNG (x3, x5, x10) HOẶC KÍCH HOẠT VÀ DUY TRÌ CHUỖI NHÂN DỒN
-  const evaluateStrictRules = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    let winChance = 0.38;
-    if (currentBet <= 100) winChance = 0.48;
-    else if (currentBet <= 1000) winChance = 0.35;
-    else winChance = 0.26;
+  // THUẬT TOÁN CHECK ĐƯỜNG (NGANG, DỌC, XÉO) VÀ TÍNH THƯỞNG PHÂN HÓA HÌNH YẾU / HÌNH MẠNH
+  const evaluateMatrixLines = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
+    let winChance = 0.35; // Tỷ lệ cân bằng, không ảo
+    if (currentBet <= 100) winChance = 0.42;
+    else if (currentBet <= 1000) winChance = 0.32;
+    else winChance = 0.25;
 
     const isTriggerWin = Math.random() < winChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
@@ -223,94 +222,123 @@ export default function JackpotPage() {
     let baseWinAmount = 0;
     let matchedIndices: number[] = [];
     let resultText = "";
-    let isBreakStreak = false;
 
-    // 1. Kiểm tra nổ hũ Rồng Thần đặc biệt
-    if (shenronTotal >= 4 || (isTriggerWin && Math.random() < 0.03)) {
-      baseWinAmount = jackpots.minor + currentBet * 20;
+    // 1. Kiểm tra nổ hũ đặc biệt Rồng Thần
+    if (shenronTotal >= 4 || (isTriggerWin && Math.random() < 0.025)) {
+      baseWinAmount = jackpots.minor + currentBet * 15;
       matchedIndices = finalGrid.map((s, idx) => (s.id === "shenron" ? idx : -1)).filter((i) => i !== -1);
       resultText = `👑 NỔ HŨ RỒNG THẦN ĐẠI CỰC! +${baseWinAmount.toLocaleString()} PTS`;
       triggerExplosion();
     } 
     else if (isTriggerWin) {
-      // 2. Kiểm tra hàng ngang giống hệt nhau từ 3 hình trở lên
-      let rowWinAccumulator = 0;
+      let totalCalculatedWin = 0;
+      let winningSet = new Set<number>();
 
+      // ĐỊNH NGHĨA CÁC ĐƯỜNG KIỂM TRA (4 Hàng ngang, 6 Cột dọc, Vài đường xéo chính)
+      const lines: number[][] = [];
+      
+      // 4 Hàng ngang (mỗi hàng 6 ô)
       for (let r = 0; r < 4; r++) {
-        const rowStart = r * 6;
-        const rowItems = finalGrid.slice(rowStart, rowStart + 6);
-        
-        const targetId = rowItems[0].id;
-        let consecutiveCount = 1;
-
-        for (let c = 1; c < 6; c++) {
-          if (rowItems[c].id === targetId) {
-            consecutiveCount++;
-          } else {
-            break;
-          }
-        }
-
-        if (consecutiveCount >= 3) {
-          for (let c = 0; c < consecutiveCount; c++) {
-            matchedIndices.push(rowStart + c);
-          }
-          const symObj = DRAGON_SYMBOLS.find((s) => s.id === targetId);
-          // Chọn ngẫu nhiên hệ số thưởng thường x3, x5, x10 theo yêu cầu
-          const normalMultipliers = [3, 5, 10];
-          const chosenMult = normalMultipliers[Math.floor(Math.random() * normalMultipliers.length)];
-          rowWinAccumulator += currentBet * chosenMult * consecutiveCount;
-        }
+        const row = [];
+        for (let c = 0; c < 6; c++) row.push(r * 6 + c);
+        lines.push(row);
       }
+      // 6 Cột dọc (mỗi cột 4 ô)
+      for (let c = 0; c < 6; c++) {
+        const col = [];
+        for (let r = 0; r < 4; r++) col.push(r * 6 + c);
+        lines.push(col);
+      }
+      // Đường xéo chính
+      lines.push([0, 7, 14, 21]); // Xéo từ trái sang phải
+      lines.push([5, 10, 15, 20]); // Xéo từ phải sang trái
 
-      if (matchedIndices.length > 0 && rowWinAccumulator > 0) {
-        baseWinAmount = rowWinAccumulator;
+      // Duyệt qua từng đường để check xem có từ 3 hình giống nhau liên tiếp trở lên không
+      lines.forEach((line) => {
+        const symbolsOnLine = line.map((idx) => finalGrid[idx]);
+        
+        // Check liên tiếp
+        let targetId = symbolsOnLine[0].id;
+        let count = 1;
+        let lineIndices = [line[0]];
+
+        for (let i = 1; i < symbolsOnLine.length; i++) {
+          if (symbolsOnLine[i].id === targetId) {
+            count++;
+            lineIndices.push(line[i]);
+          } else {
+            if (count >= 3) break; // Đã đủ chuỗi liên tiếp
+            targetId = symbolsOnLine[i].id;
+            count = 1;
+            lineIndices = [line[i]];
+          }
+        }
+
+        if (count >= 3) {
+          const symObj = DRAGON_SYMBOLS.find((s) => s.id === targetId);
+          if (symObj) {
+            let lineWin = 0;
+            // LUẬT TÍNH THƯỞNG PHÂN HÓA THEO YÊU CẦU:
+            // - Hình yếu (weak): Lấy tiền cược giảm 50% xong nhân lên
+            // - Hình mạnh (strong/mid): Lấy tiền cược + thêm 20% từ giá cược rồi nhân hệ số
+            if (symObj.type === "weak") {
+              const adjustedBet = currentBet * 0.5; // Giảm 50% tiền cược
+              lineWin = adjustedBet * symObj.multiplier * count;
+            } else {
+              const adjustedBet = currentBet * 1.2; // Cộng thêm 20% giá cược
+              lineWin = adjustedBet * symObj.multiplier * count;
+            }
+
+            totalCalculatedWin += Math.floor(lineWin);
+            lineIndices.forEach((idx) => winningSet.add(idx));
+          }
+        }
+      });
+
+      if (winningSet.size > 0 && totalCalculatedWin > 0) {
+        baseWinAmount = totalCalculatedWin;
+        matchedIndices = Array.from(winningSet);
+        const randomPraise = WIN_PRAISES[Math.floor(Math.random() * WIN_PRAISES.length)];
+        resultText = `✨ ${randomPraise} +${baseWinAmount.toLocaleString()} PTS`;
+        triggerExplosion();
       }
     }
 
-    // 3. Xử lý logic Thắng / Thua / Đứt Chuỗi / Nhân Dồn Điểm
+    // 3. Xử lý Thắng / Thua / Đứt chuỗi / Nhân dồn điểm chuẩn
     let finalTotalWin = 0;
 
     if (baseWinAmount > 0) {
-      // ĐÃ THẮNG CƯỢC
+      let activeMultiplier = 1;
+      let nextStreak = currentStreakMultiplier;
+
       if (currentStreakMultiplier === 0) {
-        // Chưa có chuỗi -> Bắt đầu kích hoạt chuỗi mốc đầu tiên (hoặc x2 / x4 ngẫu nhiên)
-        const randomStartIndex = Math.floor(Math.random() * 2); // Chọn mốc x2 hoặc x4
-        const startingMult = STREAK_STEPS[randomStartIndex];
+        const startingMult = STREAK_STEPS[0]; // x2
         setCurrentStreakMultiplier(startingMult);
-
-        finalTotalWin = baseWinAmount * startingMult;
-        resultText = `🔥 KÍCH HOẠT CHUỖI x${startingMult}! (${baseWinAmount.toLocaleString()} x ${startingMult}) = +${finalTotalWin.toLocaleString()} PTS`;
+        activeMultiplier = startingMult;
       } else {
-        // Đang trong chuỗi -> Lấy điểm thắng nhân dồn tiếp với cấp số nhân hiện tại (hoặc nhảy cóc lên mốc cao hơn)
         const currentIndex = STREAK_STEPS.indexOf(currentStreakMultiplier);
-        // Có thể giữ nguyên hoặc nhảy cóc lên 1 nấc tiếp theo trong danh sách STREAK_STEPS
-        const nextIndex = Math.min(currentIndex + (Math.random() > 0.5 ? 1 : 0), STREAK_STEPS.length - 1);
-        const activeMult = STREAK_STEPS[nextIndex];
-        setCurrentStreakMultiplier(activeMult);
-
-        finalTotalWin = baseWinAmount * activeMult;
-        resultText = `⚡ DUY TRÌ & NHÂN DỒN CHUỖI x${activeMult}! (${baseWinAmount.toLocaleString()} x ${activeMult}) = +${finalTotalWin.toLocaleString()} PTS`;
+        const nextIndex = Math.min(currentIndex + (Math.random() > 0.4 ? 1 : 0), STREAK_STEPS.length - 1);
+        activeMultiplier = STREAK_STEPS[nextIndex];
+        setCurrentStreakMultiplier(activeMultiplier);
       }
+
+      // Lấy tổng điểm đã thắng nhân dồn tiếp với cấp số nhân
+      finalTotalWin = baseWinAmount * activeMultiplier;
+      resultText = `🔥 KÍCH HOẠT CHUỖI x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
 
       const finalPts = currentPts + finalTotalWin;
       await updatePointsInDB(finalPts);
       setWinningCoords(matchedIndices);
       setMessageBox({ text: resultText, type: "win" });
       addHistory(resultText, true);
-      triggerExplosion();
     } else {
-      // THUA CƯỢC
       setWinningCoords([]);
       if (currentStreakMultiplier > 0) {
-        // Đang có chuỗi mà thua -> ĐỨT CHUỖI!
-        isBreakStreak = true;
-        setCurrentStreakMultiplier(0); // Reset hoặc rớt lại mốc x2 tùy ý, ở đây ta reset về 0 thông báo đứt chuỗi
+        setCurrentStreakMultiplier(0); // Đứt chuỗi
         const breakTaunt = STREAK_BROKEN_TAUNTS[Math.floor(Math.random() * STREAK_BROKEN_TAUNTS.length)];
         resultText = `${breakTaunt} (-${currentBet} PTS)`;
         setMessageBox({ text: resultText, type: "break" });
       } else {
-        // Thua bình thường không có chuỗi
         const randomTaunt = LOSE_TAUNTS[Math.floor(Math.random() * LOSE_TAUNTS.length)];
         resultText = `💥 Thua (-${currentBet} PTS) | ${randomTaunt}`;
         setMessageBox({ text: resultText, type: "lose" });
@@ -393,7 +421,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* DÒNG THÔNG BÁO REALTIME (PHÂN BIỆT THẮNG, THUA VÀ ĐỨT CHUỖI) */}
+        {/* DÒNG THÔNG BÁO REALTIME */}
         <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-2 rounded-xl text-xs font-bold">
           <div className={`truncate ${messageBox.type === "break" ? "text-rose-500 font-black animate-bounce" : messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
             💬 {messageBox.text}
