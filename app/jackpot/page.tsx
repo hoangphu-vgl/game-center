@@ -16,11 +16,11 @@ const AUTO_OPTIONS = [
 ];
 
 const DRAGON_SYMBOLS = [
-  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "strong", multiplier: 20 },
-  { id: "goku", icon: "🐉", name: "Goku SSJ", type: "strong", multiplier: 12 },
-  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", type: "strong", multiplier: 10 },
-  { id: "gohan", icon: "⚡", name: "Gohan Beast", type: "strong", multiplier: 8 },
-  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "strong", multiplier: 6 },
+  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "strong", multiplier: 22 },
+  { id: "goku", icon: "🐉", name: "Goku SSJ", type: "strong", multiplier: 14 },
+  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", type: "strong", multiplier: 11 },
+  { id: "gohan", icon: "⚡", name: "Gohan Beast", type: "strong", multiplier: 9 },
+  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "strong", multiplier: 7 },
   { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", multiplier: 5 },
   { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "mid", multiplier: 4 },
   { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", multiplier: 2.5 },
@@ -76,7 +76,6 @@ export default function JackpotPage() {
   const [winningCoords, setWinningCoords] = useState<number[]>([]);
   const [autoCount, setAutoCount] = useState<number>(0);
   
-  // Dùng Ref để lưu trữ state điểm và auto mới nhất, tránh closure stale state
   const pointsRef = useRef<number>(0);
   const autoSpinRef = useRef<number>(0);
   const currentBetRef = useRef<number>(100);
@@ -97,7 +96,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Đã fix lỗi Auto trừ cược và khôi phục nút Dừng hoàn chỉnh!",
+    text: "Võ đạo Dragon Ball: Cược thấp dễ thắng, cược 5K thách thức đại gia săn hũ khủng!",
     type: "normal",
   });
 
@@ -198,7 +197,7 @@ export default function JackpotPage() {
   };
 
   const handleSpinClick = (targetAuto: number) => {
-    if (spinning && autoSpinRef.current > 0) return; // Nếu đang auto thì không bấm đè
+    if (spinning && autoSpinRef.current > 0) return;
     setAutoCount(targetAuto);
     autoSpinRef.current = targetAuto;
     if (!spinning) {
@@ -255,17 +254,26 @@ export default function JackpotPage() {
 
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
     const bet = currentBetRef.current;
+    
+    // THUẬT TOÁN TỈ LỆ THẮNG THEO MỨC CƯỢC:
+    // - Cược thấp (< 100 PTS): Tỉ lệ thắng cao (0.38) nhưng thắng nhỏ giữ vốn.
+    // - Cược trung bình (200 - 1000 PTS): Tỉ lệ cân bằng (0.28).
+    // - Cược khủng (2000 - 5000 PTS): Tỉ lệ thắng ít hơn hẳn (0.16) để thử thách đại gia.
     let winChance = 0.28;
-    if (bet < 100) {
-      winChance += 0.06;
-    } else if (bet >= 200 && bet <= 500) {
-      winChance -= 0.04;
+    if (bet <= 50) {
+      winChance = 0.38; // Thắng nhiều, tích tiểu thành đại
+    } else if (bet >= 100 && bet <= 500) {
+      winChance = 0.28; // Cân bằng
+    } else if (bet >= 1000 && bet <= 2000) {
+      winChance = 0.20; // Thách thức
     } else if (bet >= 5000) {
-      winChance -= 0.08;
+      winChance = 0.14; // Cực khó, ít thắng nhưng trúng là đổi đời
     }
 
     const isTriggerWin = Math.random() < winChance;
-    const jackpotChance = bet >= 1000 ? 0.008 : 0.002;
+    
+    // Tỉ lệ nổ hũ Grand: Cược càng lớn tỉ lệ hũ mở rộng càng cao một chút
+    const jackpotChance = bet >= 2000 ? 0.005 : bet >= 1000 ? 0.003 : 0.001;
     const isJackpotHit = Math.random() < jackpotChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
 
@@ -333,9 +341,9 @@ export default function JackpotPage() {
             if (symObj.type === "weak") {
               symbolWin = (bet * 0.3) * symObj.multiplier * consecutiveColsCount;
             } else {
-              symbolWin = (bet * 0.8) * symObj.multiplier * consecutiveColsCount;
+              symbolWin = (bet * 0.7) * symObj.multiplier * consecutiveColsCount;
             }
-            const columnBonus = consecutiveColsCount >= 5 ? 2.5 : consecutiveColsCount === 4 ? 1.8 : 1;
+            const columnBonus = consecutiveColsCount >= 5 ? 2.2 : consecutiveColsCount === 4 ? 1.6 : 1;
             totalStreakWin += Math.floor(symbolWin * columnBonus);
             tempMatchedIndices.forEach(idx => streakWinningSet.add(idx));
           }
@@ -429,7 +437,6 @@ export default function JackpotPage() {
     }, 1500);
   };
 
-  // QUẢN LÝ TIẾN TRÌNH AUTO CHUẨN XÁC, CÓ NÚT DỪNG RIÊNG BIỆT
   const continueAutoIfNeeded = (remainingAuto: number) => {
     const currentAutoSetting = autoSpinRef.current;
     if (currentAutoSetting === 0) return;
