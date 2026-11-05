@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, onSnapshot, deleteDoc } from "firebase/firestore";
 
 const BET_OPTIONS = [50, 100, 200, 500, 1000, 5000, 10000];
 
@@ -51,8 +51,10 @@ export default function ChessthuPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(50);
-  const [screen, setScreen] = useState<'menu' | 'online' | 'game'>('menu');
-  
+  const [gameMode, setGameMode] = useState<'pvp' | 'ai'>('pvp');
+  const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [screen, setScreen] = useState<'menu' | 'game'>('menu');
+
   const [roomCode, setRoomCode] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');
   const [playerRole, setPlayerRole] = useState<'r' | 'b'>('r');
@@ -61,7 +63,7 @@ export default function ChessthuPage() {
   const [turn, setTurn] = useState<'r' | 'b'>('r');
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
-  
+
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -106,8 +108,7 @@ export default function ChessthuPage() {
   };
 
   const handleCreateRoom = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
+    if (!auth.currentUser) {
       alert("Bạn chưa đăng nhập!");
       return;
     }
@@ -119,14 +120,16 @@ export default function ChessthuPage() {
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const roomRef = doc(db, "chessthuRooms", code);
-      
+
       await setDoc(roomRef, {
         board: JSON.stringify(INITIAL_COTHU_BOARD),
         turn: 'r',
         bet: currentBet,
-        hostUid: currentUser.uid
+        hostUid: auth.currentUser.uid,
+        status: 'playing'
       });
 
+      setGameMode('pvp');
       setRoomCode(code);
       setPlayerRole('r');
       setBoard(INITIAL_COTHU_BOARD.map(r => [...r]));
@@ -135,7 +138,6 @@ export default function ChessthuPage() {
       setValidMoves([]);
       setScreen('game');
     } catch (err: any) {
-      console.error("Lỗi tạo phòng:", err);
       alert("Lỗi tạo phòng: " + (err.message || "Không xác định"));
     }
   };
@@ -163,17 +165,33 @@ export default function ChessthuPage() {
       if (data.board) setBoard(JSON.parse(data.board));
       if (data.turn) setTurn(data.turn);
 
+      setGameMode('pvp');
       setRoomCode(inputCode);
       setPlayerRole('b');
       setScreen('game');
     } catch (err: any) {
-      console.error("Lỗi vào phòng:", err);
       alert("Không thể kết nối vào phòng: " + err.message);
     }
   };
 
+  const startAiGame = () => {
+    if (points < currentBet) {
+      alert('Bạn không đủ điểm cược!');
+      return;
+    }
+    setGameMode('ai');
+    setRoomCode('');
+    setPlayerRole('r');
+    setBoard(INITIAL_COTHU_BOARD.map(r => [...r]));
+    setTurn('r');
+    setSelectedSquare(null);
+    setValidMoves([]);
+    setScreen('game');
+  };
+
+  // Đồng bộ Realtime PvP
   useEffect(() => {
-    if (screen !== 'game' || !roomCode) return;
+    if (screen !== 'game' || gameMode !== 'pvp' || !roomCode) return;
 
     const roomRef = doc(db, "chessthuRooms", roomCode);
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
@@ -181,16 +199,38 @@ export default function ChessthuPage() {
         const data = docSnap.data();
         if (data.board) setBoard(JSON.parse(data.board));
         if (data.turn) setTurn(data.turn);
+        if (data.winner) {
+          if (data.winner === playerRole) {
+            endGame(true, "Đối thủ đã rời trận/đầu hàng! Bạn thắng cược!");
+          } else {
+            endGame(false, "Bạn đã thua cuộc!");
+          }
+        }
       }
-    }, (error) => {
-      console.error("Lỗi sync realtime:", error);
     });
 
     return () => unsubscribe();
-  }, [screen, roomCode]);
+  }, [screen, gameMode, roomCode, playerRole]);
+
+  // AI tự động đánh khi tới lượt 'b'
+  useEffect(() => {
+    if (screen === 'game' && gameMode === 'ai' && turn === 'b' && !modal.open) {
+      const timer = setTimeout(() => {
+        makeAiMove();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [screen, gameMode, turn, board, modal.open]);
 
   const isWater = (r: number, c: number) => {
     return (r >= 3 && r <= 5) && (c === 1 || c === 2 || c === 4 || c === 5);
+  };
+
+  const isTrap = (r: number, c: number) => {
+    return (
+      (r === 0 && (c === 2 || c === 4)) || (r === 1 && c === 3) || // Bẫy Đỏ
+      (r === 8 && (c === 2 || c === 4)) || (r === 7 && c === 3)    // Bẫy Xanh
+    );
   };
 
   const isDen = (r: number, c: number, color: 'r' | 'b') => {
@@ -287,10 +327,7 @@ export default function ChessthuPage() {
   };
 
   const handleSquareClick = async (r: number, c: number) => {
-    if (turn !== playerRole) {
-      alert("Chưa tới lượt của ní!");
-      return;
-    }
+    if (turn !== playerRole) return;
 
     const piece = board[r][c];
 
@@ -321,22 +358,94 @@ export default function ChessthuPage() {
     newBoard[fromR][fromC] = '';
 
     const nextTurn = turn === 'r' ? 'b' : 'r';
+    setBoard(newBoard);
+    setTurn(nextTurn);
 
-    try {
-      const roomRef = doc(db, "chessthuRooms", roomCode);
-      await updateDoc(roomRef, {
-        board: JSON.stringify(newBoard),
-        turn: nextTurn
-      });
-
-      if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
-        endGame(playerRole === 'r', playerRole === 'r' ? "Bạn đã chiếm hang địch và thắng cược!" : "Bạn đã thua cuộc!");
-      } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
-        endGame(playerRole === 'b', playerRole === 'b' ? "Bạn đã chiếm hang địch và thắng cược!" : "Bạn đã thua cuộc!");
+    if (gameMode === 'pvp' && roomCode) {
+      try {
+        const roomRef = doc(db, "chessthuRooms", roomCode);
+        await updateDoc(roomRef, {
+          board: JSON.stringify(newBoard),
+          turn: nextTurn
+        });
+      } catch (err) {
+        console.error("Lỗi cập nhật nước đi PvP:", err);
       }
-    } catch (err) {
-      console.error("Lỗi cập nhật nước đi cờ thú:", err);
     }
+
+    // Kiểm tra chiến thắng
+    if (movingPiece.startsWith('r') && toR === 8 && toC === 3) {
+      endGame(playerRole === 'r', playerRole === 'r' ? "Bạn đã chiếm hang địch và thắng cược!" : "Bạn đã thua cuộc!");
+    } else if (movingPiece.startsWith('b') && toR === 0 && toC === 3) {
+      endGame(playerRole === 'b', playerRole === 'b' ? "Bạn đã chiếm hang địch và thắng cược!" : "Bạn đã thua cuộc!");
+    }
+  };
+
+  // Logic AI máy tự đánh (3 cấp độ)
+  const makeAiMove = () => {
+    const allMoves: { fromR: number; fromC: number; toR: number; toC: number; score: number }[] = [];
+
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 7; c++) {
+        const p = board[r][c];
+        if (p && ANIMAL_DATA[p].color === 'b') {
+          const moves = getPieceMoves(r, c, board);
+          moves.forEach((m) => {
+            let score = 0;
+            const targetPiece = board[m.r][m.c];
+            if (targetPiece) {
+              score += ANIMAL_DATA[targetPiece].rank * 10;
+            }
+            if (m.r === 8 && m.c === 3) score += 1000; // Chiếm hang
+            allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
+          });
+        }
+      }
+    }
+
+    if (allMoves.length === 0) {
+      endGame(true, "AI không còn nước đi! Bạn thắng!");
+      return;
+    }
+
+    let selectedMove = allMoves[0];
+
+    if (aiDifficulty === 'easy') {
+      selectedMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+    } else if (aiDifficulty === 'medium') {
+      if (Math.random() > 0.4) {
+        allMoves.sort((a, b) => b.score - a.score);
+        selectedMove = allMoves[0];
+      } else {
+        selectedMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+      }
+    } else {
+      allMoves.sort((a, b) => b.score - a.score);
+      selectedMove = allMoves[0];
+    }
+
+    executeMove(selectedMove.fromR, selectedMove.fromC, selectedMove.toR, selectedMove.toC);
+  };
+
+  const handleSurrender = async () => {
+    if (!confirm('Bạn có chắc chắn muốn ĐẦU HÀNG và mất điểm cược?')) return;
+
+    if (gameMode === 'pvp' && roomCode) {
+      try {
+        const roomRef = doc(db, "chessthuRooms", roomCode);
+        await updateDoc(roomRef, {
+          winner: playerRole === 'r' ? 'b' : 'r'
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    endGame(false, "Bạn đã đầu hàng và bị trừ điểm cược!");
+  };
+
+  const handleLeaveRoom = async () => {
+    if (!confirm('Bạn có chắc muốn RỜI PHÒNG? Thoát giữa chừng sẽ tính là THUA CUỘC!')) return;
+    await handleSurrender();
   };
 
   const endGame = async (isWin: boolean, msg: string) => {
@@ -351,32 +460,34 @@ export default function ChessthuPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white flex flex-col items-center p-4 select-none">
-      <header className="text-center mb-4 w-full max-w-md">
-        <div className="flex justify-between items-center mb-2">
-          <Link href="/" className="text-xs text-amber-400 hover:underline">← Về Trang Chủ</Link>
-          <div className="text-xs bg-neutral-800 px-3 py-1 rounded-lg border border-amber-500/30">
-            🪙 <span className="font-bold text-amber-400">{points.toLocaleString()}</span> PTS
-          </div>
-        </div>
-        <h1 className="text-2xl font-black text-emerald-400 tracking-wider uppercase">
-          🦁 Đấu Trường Cờ Thú 🐅
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-2 sm:p-4 font-sans select-none">
+      {/* Header Bar */}
+      <header className="w-full max-w-xl flex justify-between items-center mb-3 bg-slate-900/90 border border-slate-800 p-3 rounded-2xl shadow-lg">
+        <Link href="/" className="text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1">
+          ← Trang chủ
+        </Link>
+        <h1 className="text-lg font-black tracking-wider text-emerald-400 uppercase flex items-center gap-1">
+          🦁 CỜ THÚ ONLINE
         </h1>
+        <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-xl border border-amber-500/30 font-bold text-amber-400">
+          🪙 {points.toLocaleString()} PTS
+        </div>
       </header>
 
+      {/* Screen Menu */}
       {screen === 'menu' && (
-        <div className="w-full max-w-sm flex flex-col gap-4">
-          <div className="bg-neutral-800 p-4 rounded-xl border border-neutral-700 text-center">
-            <label className="text-sm font-semibold text-gray-300">Chọn mức cược phòng đấu:</label>
+        <div className="w-full max-w-md flex flex-col gap-4">
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl text-center shadow-xl">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">1. Chọn mức cược PTS</label>
             <div className="grid grid-cols-4 gap-2 mt-3">
               {BET_OPTIONS.map((amt) => (
                 <button
                   key={amt}
                   onClick={() => handleSelectBet(amt)}
-                  className={`py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                  className={`py-2 text-xs font-extrabold rounded-xl border transition cursor-pointer ${
                     currentBet === amt
-                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
-                      : 'border-neutral-700 bg-neutral-900 text-gray-300 hover:bg-neutral-700'
+                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-md shadow-emerald-500/10'
+                      : 'border-slate-800 bg-slate-950 text-slate-400 hover:bg-slate-800'
                   }`}
                 >
                   {amt}
@@ -385,48 +496,90 @@ export default function ChessthuPage() {
             </div>
           </div>
 
-          <div className="bg-neutral-800 p-4 rounded-xl border border-neutral-700 flex flex-col gap-3">
+          {/* Đấu PvP Online */}
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
+            <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider">⚔️ Đấu Online 2 Người</label>
             <button
               onClick={handleCreateRoom}
-              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-neutral-950 font-bold rounded-lg shadow hover:opacity-90 active:scale-95 transition cursor-pointer"
+              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition cursor-pointer text-sm"
             >
               🚀 Tạo Phòng Online (Cược {currentBet})
             </button>
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="NHẬP MÃ PHÒNG"
                 maxLength={6}
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value)}
-                className="w-full p-3 bg-neutral-900 border border-neutral-700 rounded-lg text-center tracking-widest font-mono text-white focus:outline-none focus:border-emerald-500 text-xs"
+                className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-center tracking-widest font-mono text-white focus:outline-none focus:border-emerald-500 text-xs"
               />
               <button
                 onClick={handleJoinRoom}
-                className="px-5 bg-neutral-700 font-bold text-xs rounded-lg hover:bg-neutral-600 transition cursor-pointer"
+                className="px-5 bg-slate-800 hover:bg-slate-700 font-bold text-xs rounded-xl transition cursor-pointer border border-slate-700"
               >
-                Vào
+                Vào Phòng
               </button>
             </div>
+          </div>
+
+          {/* Đấu với AI Máy */}
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu Luyện Với AI Máy</label>
+            <div className="flex justify-center gap-2">
+              {(['easy', 'medium', 'hard'] as const).map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() => setAiDifficulty(diff)}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg border uppercase transition ${
+                    aiDifficulty === diff
+                      ? 'border-blue-500 bg-blue-500/20 text-blue-400'
+                      : 'border-slate-800 bg-slate-950 text-slate-500'
+                  }`}
+                >
+                  {diff === 'easy' ? 'Dễ' : diff === 'medium' ? 'Vừa' : 'Khó'}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={startAiGame}
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition cursor-pointer text-sm"
+            >
+              🎮 Đấu AI ({aiDifficulty === 'easy' ? 'Dễ' : aiDifficulty === 'medium' ? 'Vừa' : 'Khó'})
+            </button>
           </div>
         </div>
       )}
 
+      {/* Screen Game Bàn Cờ */}
       {screen === 'game' && (
-        <div className="flex flex-col items-center w-full max-w-md">
-          <div className="w-full flex justify-between items-center bg-neutral-800 px-4 py-2 rounded-t-lg text-sm border-b border-neutral-700">
-            <span className="font-semibold text-emerald-400">
-              Lượt: {turn === 'r' ? 'Đỏ' : 'Xanh'} {turn === playerRole ? '(Đến lượt bạn!)' : ''}
+        <div className="flex flex-col items-center w-full max-w-lg">
+          {/* Top Info Bar */}
+          <div className="w-full flex justify-between items-center bg-slate-900 px-4 py-2.5 rounded-t-2xl border border-slate-800 text-xs font-bold">
+            <span className="text-emerald-400 flex items-center gap-1">
+              ⚡ Lượt: {turn === 'r' ? 'Đỏ' : 'Xanh'} {turn === playerRole ? '(Đến lượt bạn!)' : ''}
             </span>
-            <span className="text-xs text-gray-400">
-              Phòng #{roomCode} ({playerRole === 'r' ? 'Đội Đỏ' : 'Đội Xanh'})
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-slate-400">
+                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (${aiDifficulty.toUpperCase()})`}
+              </span>
+              <button
+                onClick={handleLeaveRoom}
+                className="bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/40 px-2 py-0.5 rounded-md text-[10px] transition cursor-pointer"
+              >
+                Rời Phòng ✖
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 grid-rows-9 w-full aspect-[7/9] border-4 border-emerald-800 shadow-2xl bg-[#d4b483]">
+          {/* Bàn Cờ Thú Đồ Họa 3D Sống Động & To Rõ */}
+          <div className="grid grid-cols-7 grid-rows-9 w-full aspect-[7/9] border-4 border-amber-900/80 rounded-b-2xl shadow-2xl bg-[#52796f] p-1 gap-0.5 relative overflow-hidden">
             {board.map((row, r) =>
               row.map((piece, c) => {
                 const isW = isWater(r, c);
+                const isT = isTrap(r, c);
+                const isDenRed = isDen(r, c, 'r');
+                const isDenBlue = isDen(r, c, 'b');
                 const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
                 const isValidMove = validMoves.some((m) => m.r === r && m.c === c);
                 const animal = piece ? ANIMAL_DATA[piece] : null;
@@ -435,20 +588,39 @@ export default function ChessthuPage() {
                   <div
                     key={`${r}-${c}`}
                     onClick={() => handleSquareClick(r, c)}
-                    className={`relative flex flex-col items-center justify-center cursor-pointer transition-all border border-black/10 ${
-                      isW ? 'bg-[#5b92e5]/70' : (r === 0 || r === 8) && c === 3 ? 'bg-amber-600/80' : 'bg-[#e6ccb2]'
-                    } ${isSelected ? 'ring-4 ring-yellow-400 inset-0 z-10' : ''}`}
+                    className={`relative flex flex-col items-center justify-center cursor-pointer transition-all rounded-md ${
+                      isW
+                        ? 'bg-gradient-to-b from-blue-600 via-cyan-600 to-blue-700 shadow-inner border border-cyan-400/30'
+                        : isDenRed || isDenBlue
+                        ? 'bg-amber-800/90 border-2 border-yellow-500/80 shadow-lg'
+                        : isT
+                        ? 'bg-amber-900/40 border border-amber-700/50'
+                        : 'bg-[#84a98c] border border-black/10 hover:brightness-105'
+                    } ${isSelected ? 'ring-4 ring-yellow-400 z-10 scale-95 shadow-xl' : ''}`}
                   >
+                    {/* Họa tiết sông / hang ổ / bẫy */}
+                    {isW && <span className="absolute text-[10px] opacity-30 select-none">🌊</span>}
+                    {isDenRed && <span className="absolute text-[10px] text-yellow-300 font-black top-0.5">HANG ĐỎ</span>}
+                    {isDenBlue && <span className="absolute text-[10px] text-yellow-300 font-black bottom-0.5">HANG XANH</span>}
+                    {isT && <span className="absolute text-[9px] text-amber-200/50 font-bold">BẪY</span>}
+
+                    {/* Quân Cờ Thú */}
                     {animal && (
-                      <div className="flex flex-col items-center">
-                        <span className="text-2xl sm:text-3xl drop-shadow-md">{animal.icon}</span>
-                        <span className={`text-[9px] font-black ${animal.color === 'r' ? 'text-red-600' : 'text-blue-700'}`}>
+                      <div className={`flex flex-col items-center justify-center w-11/12 h-11/12 rounded-full shadow-md border-2 ${
+                        animal.color === 'r' 
+                          ? 'bg-gradient-to-br from-red-500 to-rose-700 border-yellow-400 text-white' 
+                          : 'bg-gradient-to-br from-blue-500 to-indigo-700 border-cyan-300 text-white'
+                      }`}>
+                        <span className="text-xl sm:text-2xl drop-shadow">{animal.icon}</span>
+                        <span className="text-[9px] font-black tracking-tighter leading-none mt-0.5 drop-shadow">
                           {animal.name.split(' ')[0]}
                         </span>
                       </div>
                     )}
+
+                    {/* Chấm gợi ý nước đi */}
                     {isValidMove && (
-                      <div className="absolute w-3 h-3 bg-green-500 rounded-full z-20 pointer-events-none animate-ping" />
+                      <div className="absolute w-4 h-4 bg-yellow-400/90 rounded-full z-20 pointer-events-none animate-ping border-2 border-white" />
                     )}
                   </div>
                 );
@@ -456,32 +628,32 @@ export default function ChessthuPage() {
             )}
           </div>
 
-          <button
-            onClick={() => {
-              if (confirm('Bạn có chắc muốn đầu hàng và mất điểm cược?')) {
-                endGame(false, "Bạn đã đầu hàng!");
-              }
-            }}
-            className="w-full mt-4 py-3 bg-red-600/80 hover:bg-red-600 font-bold rounded-lg transition cursor-pointer text-xs"
-          >
-            Thoát / Đầu Hàng (-{currentBet} PTS)
-          </button>
+          {/* Nút Đầu Hàng Riêng Biệt */}
+          <div className="w-full flex gap-3 mt-4">
+            <button
+              onClick={handleSurrender}
+              className="w-full py-3 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 font-extrabold text-white rounded-xl shadow-lg transition active:scale-95 cursor-pointer text-xs uppercase tracking-wider"
+            >
+              🏳️ Đầu Hàng (-{currentBet} PTS)
+            </button>
+          </div>
         </div>
       )}
 
+      {/* Modal Thông Báo Thắng / Thua */}
       {modal.open && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-800 border border-neutral-700 p-6 rounded-xl text-center max-w-xs w-full flex flex-col gap-4">
-            <h2 className={`text-xl font-extrabold ${modal.win ? 'text-green-400' : 'text-red-500'}`}>
-              {modal.win ? 'CHIẾN THẮNG!' : 'THẤT BẠI!'}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl text-center max-w-xs w-full flex flex-col gap-4 shadow-2xl">
+            <h2 className={`text-2xl font-black ${modal.win ? 'text-emerald-400' : 'text-rose-500'}`}>
+              {modal.win ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!'}
             </h2>
-            <p className="text-sm text-gray-300">{modal.msg}</p>
+            <p className="text-xs text-slate-300 font-medium">{modal.msg}</p>
             <button
               onClick={() => {
                 setModal({ open: false, win: false, msg: '' });
                 setScreen('menu');
               }}
-              className="w-full py-2 bg-emerald-500 font-bold text-neutral-950 rounded-lg hover:bg-emerald-400 transition cursor-pointer"
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 font-extrabold text-slate-950 rounded-xl hover:brightness-110 transition cursor-pointer text-xs"
             >
               Về Menu Chính
             </button>
