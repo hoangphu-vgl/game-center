@@ -48,24 +48,24 @@ const GUN_TYPES: GunConfig[] = [
   { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 15, size: 17, color: '#ef4444' }
 ];
 
-// Định nghĩa mức thưởng và khoảng tốc độ random cho từng loài
+// Giảm nhẹ HP toàn bộ để cá dễ chết hơn, tăng trải nghiệm săn bắn
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speedMin: 2.5, speedMax: 5.5, hpMin: 8, hpMax: 18, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speedMin: 2.8, speedMax: 6.0, hpMin: 10, hpMax: 22, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speedMin: 3.2, speedMax: 6.5, hpMin: 6, hpMax: 15, rewardMin: 10, rewardMax: 50, category: 'small', weight: 30 },
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speedMin: 2.5, speedMax: 5.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speedMin: 2.8, speedMax: 6.0, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speedMin: 3.2, speedMax: 6.5, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small', weight: 30 },
   
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speedMin: 1.0, speedMax: 2.8, hpMin: 90, hpMax: 200, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speedMin: 1.2, speedMax: 3.0, hpMin: 120, hpMax: 280, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speedMin: 1.0, speedMax: 2.8, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speedMin: 1.2, speedMax: 3.0, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
   
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speedMin: 0.5, speedMax: 1.8, hpMin: 1200, hpMax: 3000, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 12 },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speedMin: 0.6, speedMax: 2.0, hpMin: 2000, hpMax: 4500, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid', weight: 3 },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speedMin: 0.4, speedMax: 1.5, hpMin: 2500, hpMax: 5500, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 6 }
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speedMin: 0.5, speedMax: 1.8, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 12 },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speedMin: 0.6, speedMax: 2.0, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid', weight: 3 },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speedMin: 0.4, speedMax: 1.5, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 6 }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(250000);
+  const [jackpotPool, setJackpotPool] = useState<number>(300000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -147,9 +147,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 250000);
+        setJackpotPool(docSnap.data().amount || 300000);
       } else {
-        setDoc(jpRef, { amount: 250000 });
+        setDoc(jpRef, { amount: 300000 });
       }
     });
 
@@ -357,8 +357,6 @@ export default function BanCaPage() {
         if (template) {
           const dir = Math.floor(Math.random() * 4);
           let x = 0, y = 0, vx = 0, vy = 0;
-          
-          // Random tốc độ riêng cho từng con cá trong khoảng speedMin đến speedMax
           const randomSpeed = (Math.random() * (template.speedMax - template.speedMin) + template.speedMin) * scaleFactor;
 
           if (dir === 0) {
@@ -500,7 +498,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(250000);
+                  updateJackpotInFirestore(300000);
                 }
 
                 setPoints(prev => {
@@ -965,7 +963,7 @@ export default function BanCaPage() {
           />
 
           {/* Top HUD Header */}
-          <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
+          <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-25 pointer-events-none">
             <div className="bg-slate-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl px-3 py-1.5 flex items-center gap-2 pointer-events-auto shadow-lg">
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center text-yellow-950 font-black text-xs shadow-md">
                 🪙
@@ -1030,29 +1028,31 @@ export default function BanCaPage() {
             )}
           </div>
 
-          {/* Thanh chọn đạn bên góc trái dưới */}
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-2.5 py-1.5 rounded-2xl shadow-xl">
+          {/* Thanh chọn đạn to rõ, chống kẹt thao tác ở góc trái dưới */}
+          <div className="absolute bottom-3 left-3 z-30 flex items-center gap-2.5 pointer-events-auto bg-slate-900/95 backdrop-blur-md border-2 border-cyan-400/60 px-3.5 py-2.5 rounded-3xl shadow-2xl">
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 isHoldingRef.current = false;
                 setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length);
               }}
-              className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
+              className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 text-white border border-cyan-300 flex items-center justify-center font-black text-lg hover:scale-110 active:scale-95 transition shadow-lg cursor-pointer"
             >
               -
             </button>
-            <div className="text-center min-w-[90px]">
-              <div className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
-              <div className="text-[8px] text-yellow-300 font-semibold">
-                {isPVE ? "Solo PVE (Đè để bắn)" : `Phòng #${activeRoomId}`}
+            <div className="text-center min-w-[100px]">
+              <div className="text-xs text-cyan-300 font-black uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
+              <div className="text-[9px] text-yellow-300 font-bold mt-0.5">
+                {isPVE ? "Solo PVE" : `Phòng #${activeRoomId}`}
               </div>
             </div>
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 isHoldingRef.current = false;
                 setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length);
               }}
-              className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
+              className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 text-white border border-cyan-300 flex items-center justify-center font-black text-lg hover:scale-110 active:scale-95 transition shadow-lg cursor-pointer"
             >
               +
             </button>
