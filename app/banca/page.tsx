@@ -38,26 +38,25 @@ interface FishData {
 
 const GUN_TYPES: GunConfig[] = [
   { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 10, size: 5, color: '#a855f7' },
-  { level: 2, cost: 10, name: "Đạn 10đ", damage: 10, speed: 11, size: 6, color: '#38bdf8' },
-  { level: 3, cost: 20, name: "Đạn 20đ", damage: 20, speed: 11, size: 7, color: '#22d3ee' },
-  { level: 4, cost: 50, name: "Đạn 50đ", damage: 50, speed: 12, size: 8, color: '#4ade80' },
-  { level: 5, cost: 100, name: "Đạn 100đ", damage: 100, speed: 12, size: 9, color: '#facc15' },
-  { level: 6, cost: 200, name: "Đạn 200đ", damage: 200, speed: 13, size: 10, color: '#f97316' },
-  { level: 7, cost: 500, name: "Đạn 500đ", damage: 500, speed: 13, size: 12, color: '#ec4899' },
-  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 1000, speed: 14, size: 14, color: '#8b5cf6' },
-  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 2000, speed: 15, size: 17, color: '#ef4444' }
+  { level: 2, cost: 10, name: "Đạn 10đ", damage: 8, speed: 11, size: 6, color: '#38bdf8' },
+  { level: 3, cost: 20, name: "Đạn 20đ", damage: 16, speed: 11, size: 7, color: '#22d3ee' },
+  { level: 4, cost: 50, name: "Đạn 50đ", damage: 38, speed: 12, size: 8, color: '#4ade80' },
+  { level: 5, cost: 100, name: "Đạn 100đ", damage: 75, speed: 12, size: 9, color: '#facc15' },
+  { level: 6, cost: 200, name: "Đạn 200đ", damage: 150, speed: 13, size: 10, color: '#f97316' },
+  { level: 7, cost: 500, name: "Đạn 500đ", damage: 350, speed: 13, size: 12, color: '#ec4899' },
+  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 750, speed: 14, size: 14, color: '#8b5cf6' },
+  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1500, speed: 15, size: 17, color: '#ef4444' }
 ];
 
-// Tiền thưởng đã được nhân đôi x2, độ trâu (HP) cá lớn và tiên cá được tăng cường mạnh
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speed: 3.4, hpMin: 2, hpMax: 6, reward: 30, category: 'small', weight: 40 },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speed: 3.2, hpMin: 3, hpMax: 8, reward: 40, category: 'small', weight: 40 },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speed: 3.6, hpMin: 2, hpMax: 6, reward: 24, category: 'small', weight: 30 },
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 2.2, hpMin: 35, hpMax: 85, reward: 160, category: 'medium', weight: 50 },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 2.0, hpMin: 50, hpMax: 120, reward: 240, category: 'medium', weight: 50 },
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 1.2, hpMin: 500, hpMax: 1400, reward: 1200, category: 'large', weight: 12 },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 1.3, hpMin: 650, hpMax: 1800, reward: 1600, category: 'large', weight: 5 }, // Cực hiếm
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 1.0, hpMin: 800, hpMax: 2400, reward: 2400, category: 'large', weight: 8 }
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speed: 3.4, hpMin: 3, hpMax: 8, reward: 30, category: 'small', weight: 40 },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speed: 3.2, hpMin: 4, hpMax: 10, reward: 40, category: 'small', weight: 40 },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speed: 3.6, hpMin: 3, hpMax: 8, reward: 24, category: 'small', weight: 30 },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 2.2, hpMin: 45, hpMax: 100, reward: 160, category: 'medium', weight: 50 },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 2.0, hpMin: 60, hpMax: 140, reward: 240, category: 'medium', weight: 50 },
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 1.2, hpMin: 600, hpMax: 1600, reward: 1200, category: 'large', weight: 12 },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 1.3, hpMin: 800, hpMax: 2200, reward: 1600, category: 'large', weight: 5 },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 1.0, hpMin: 1000, hpMax: 3000, reward: 2400, category: 'large', weight: 8 }
 ];
 
 export default function BanCaPage() {
@@ -78,13 +77,15 @@ export default function BanCaPage() {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Hiệu ứng Combo & Hệ số nhân
   const [comboCount, setComboCount] = useState<number>(0);
   const [comboMultiplier, setComboMultiplier] = useState<number>(1);
   const comboTimerRef = useRef<any>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const touchPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isHoldingRef = useRef<boolean>(false);
+  const lastShootTimeRef = useRef<number>(0);
+
   const fishesRef = useRef<FishData[]>([]);
   const bulletsRef = useRef<any[]>([]);
   const explosionsRef = useRef<any[]>([]);
@@ -290,6 +291,21 @@ export default function BanCaPage() {
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
 
+  // Vòng lặp xử lý đè giữ bắn liên tục (Hold to Shoot)
+  useEffect(() => {
+    if (screenMode !== 'game') return;
+    const interval = setInterval(() => {
+      if (isHoldingRef.current && !isPaused) {
+        const now = Date.now();
+        if (now - lastShootTimeRef.current > 180) { // Tốc độ xả đạn liên tục vừa phải
+          lastShootTimeRef.current = now;
+          handleShoot(touchPosRef.current.x, touchPosRef.current.y);
+        }
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [screenMode, isPaused, currentGunIndex, points]);
+
   useEffect(() => {
     if (screenMode !== 'game') return;
     const canvas = canvasRef.current;
@@ -312,22 +328,18 @@ export default function BanCaPage() {
     const isMobile = window.innerWidth < 768;
     const scaleFactor = isMobile ? 0.75 : 1.0;
 
-    // Tỉ lệ sinh cá: Cá trung bình ra nhiều, cá nhỏ nhiều, cá lớn ít, tiên cá siêu hiếm
     const spawnFish = async (w: number, h: number) => {
       if ((isPVE || isHost) && fishesRef.current.length < 20 && Math.random() < 0.25) {
         const randWeight = Math.random() * 100;
         let template;
 
         if (randWeight < 3.5) {
-          // Nàng tiên cá & cá khủng (siêu hiếm)
           const rareFish = FISH_TYPES_BASE.filter(f => f.category === 'large');
           template = rareFish[Math.floor(Math.random() * rareFish.length)];
         } else if (randWeight < 45) {
-          // Cá trung bình (ra nhiều hơn)
           const medFish = FISH_TYPES_BASE.filter(f => f.category === 'medium');
           template = medFish[Math.floor(Math.random() * medFish.length)];
         } else {
-          // Cá nhỏ (ra nhiều)
           const smallFish = FISH_TYPES_BASE.filter(f => f.category === 'small');
           template = smallFish[Math.floor(Math.random() * smallFish.length)];
         }
@@ -399,8 +411,8 @@ export default function BanCaPage() {
         bulletsRef.current = bulletsRef.current.filter(b => b.alive);
 
         explosionsRef.current.forEach(ex => {
-          ex.radius += 4;
-          ex.alpha -= 0.1;
+          ex.radius += 5;
+          ex.alpha -= 0.08;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
@@ -424,16 +436,25 @@ export default function BanCaPage() {
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
             if (dist < bullet.radius + fish.width / 2.5) {
               bullet.alive = false;
-              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 10, maxRadius: 55, color: bullet.color, alpha: 1 });
 
-              fish.hp -= bullet.damage;
-              fish.hitTimer = 4;
+              // Hiệu ứng nổ sát thương lan rực rỡ hơn
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 14, maxRadius: 75, color: bullet.color, alpha: 1 });
+
+              // Cơ chế Chí mạng (Critical Hit - 12% tỉ lệ nhân x3 sát thương)
+              let finalDamage = bullet.damage;
+              const isCrit = Math.random() < 0.12;
+              if (isCrit) {
+                finalDamage *= 3;
+                floatingTextsRef.current.push({ text: `CRIT! -${finalDamage}`, x: fish.x, y: fish.y - 15, alpha: 1, vy: -1.8, color: '#ef4444' });
+              }
+
+              fish.hp -= finalDamage;
+              fish.hitTimer = 6; // Làm cá chớp sáng mạnh hơn khi trúng đạn
 
               if (fish.hp <= 0 && !fish.dead) {
                 fish.dead = true;
                 let baseReward = fish.reward;
 
-                // Tăng hệ thống Combo x2, x3, x5, x8, x10
                 setComboCount(prev => {
                   const nextCount = prev + 1;
                   let mult = 1;
@@ -455,11 +476,10 @@ export default function BanCaPage() {
                 let finalReward = baseReward * comboMultiplier;
                 let isJackpot = false;
 
-                // Jackpot cực kỳ khó nổ: Chỉ 2% từ cá lớn/tiên cá và thêm đệm kiểm tra ngẫu nhiên khắt khe
                 if (fish.category === 'large' && Math.random() < 0.02) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(50000); // Reset hũ về mốc khởi điểm
+                  updateJackpotInFirestore(50000);
                 }
 
                 setPoints(prev => {
@@ -497,11 +517,16 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
+        // Vẽ cá và hiệu ứng chớp sáng khi bị bắn trúng
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
           if (f.vx < 0) ctx.scale(-1, 1);
-          if (f.hitTimer > 0) ctx.filter = 'brightness(2.2)';
+
+          if (f.hitTimer > 0) {
+            ctx.filter = 'brightness(3.0) drop-shadow(0 0 10px #ffffff)';
+          }
+
           ctx.font = `${f.height}px Arial`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -512,10 +537,10 @@ export default function BanCaPage() {
         bulletsRef.current.forEach(b => {
           ctx.save();
           ctx.shadowColor = b.color;
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 15;
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.arc(b.x, b.y, b.radius + 5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
           ctx.fill();
 
           ctx.beginPath();
@@ -532,7 +557,7 @@ export default function BanCaPage() {
           ctx.beginPath();
           ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
           ctx.strokeStyle = ex.color;
-          ctx.lineWidth = 3;
+          ctx.lineWidth = 4;
           ctx.stroke();
           ctx.restore();
         });
@@ -542,8 +567,8 @@ export default function BanCaPage() {
           ctx.globalAlpha = Math.max(0, ft.alpha);
           ctx.font = '900 16px Fredoka, sans-serif';
           ctx.fillStyle = ft.color;
-          ctx.shadowColor = 'rgba(0,0,0,0.8)';
-          ctx.shadowBlur = 3;
+          ctx.shadowColor = 'rgba(0,0,0,0.9)';
+          ctx.shadowBlur = 4;
           ctx.fillText(ft.text, ft.x, ft.y);
           ctx.restore();
         });
@@ -647,7 +672,6 @@ export default function BanCaPage() {
     if (!isPVE) {
       const pData = roomPlayersRef.current[myCorner];
       if (!pData || !pData.active || !pData.email || pData.email === 'Trống') {
-        showToast("Ụ súng chưa sẵn sàng!");
         return;
       }
     }
@@ -656,6 +680,7 @@ export default function BanCaPage() {
     const gun = GUN_TYPES[currentGunIndex];
     if (points < gun.cost) {
       showToast("Ví của bạn không đủ điểm để bắn mức đạn này!");
+      isHoldingRef.current = false;
       return;
     }
 
@@ -796,6 +821,7 @@ export default function BanCaPage() {
   };
 
   const handleLeaveRoom = async () => {
+    isHoldingRef.current = false;
     if (activeRoomId && !isPVE) {
       const roomRef = doc(db, "banca_rooms", activeRoomId);
       try {
@@ -890,19 +916,26 @@ export default function BanCaPage() {
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full cursor-crosshair touch-none object-contain"
+            onTouchStart={(e) => {
+              e.preventDefault();
+              isHoldingRef.current = true;
+              if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                touchPosRef.current = { x: touch.clientX, y: touch.clientY };
+                handleShoot(touch.clientX, touch.clientY);
+              }
+            }}
             onTouchMove={(e) => {
               if (e.touches.length > 0) {
                 const touch = e.touches[0];
                 touchPosRef.current = { x: touch.clientX, y: touch.clientY };
               }
             }}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              if (e.touches.length > 0) {
-                const touch = e.touches[0];
-                touchPosRef.current = { x: touch.clientX, y: touch.clientY };
-                handleShoot(touch.clientX, touch.clientY);
-              }
+            onTouchEnd={() => {
+              isHoldingRef.current = false;
+            }}
+            onTouchCancel={() => {
+              isHoldingRef.current = false;
             }}
           />
 
@@ -954,7 +987,7 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Hũ Jackpot & Hiệu ứng Combo Hệ số */}
+          {/* Hũ Jackpot & Combo Hệ số */}
           <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center gap-1">
             <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-4 py-1 rounded-xl text-center shadow-xl animate-pulse">
               <div className="text-[8px] text-amber-300 font-extrabold uppercase tracking-widest">
@@ -975,7 +1008,10 @@ export default function BanCaPage() {
           {/* Thanh chọn đạn bên góc trái dưới */}
           <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-2.5 py-1.5 rounded-2xl shadow-xl">
             <button
-              onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
+              onClick={() => {
+                isHoldingRef.current = false;
+                setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length);
+              }}
               className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
             >
               -
@@ -983,11 +1019,14 @@ export default function BanCaPage() {
             <div className="text-center min-w-[90px]">
               <div className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
               <div className="text-[8px] text-yellow-300 font-semibold">
-                {isPVE ? "Solo PVE" : `Phòng #${activeRoomId}`}
+                {isPVE ? "Solo PVE (Đè để bắn)" : `Phòng #${activeRoomId}`}
               </div>
             </div>
             <button
-              onClick={() => setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length)}
+              onClick={() => {
+                isHoldingRef.current = false;
+                setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length);
+              }}
               className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
             >
               +
