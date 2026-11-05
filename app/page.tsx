@@ -278,10 +278,10 @@ export default function Home() {
                 </div>
               </Link>
 
-              {/* ĐẤU TRƯỜNG CỜ THÚ */}
+              {/* THẺ ĐẤU TRƯỜNG CỜ THÚ */}
               <Link
-                href="/cothu"
-                className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 hover:border-emerald-400 transition-all block group shadow-lg hover:-translate-y-1"
+                href="/chessthu"
+                className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 hover:border-emerald-400 transition-all block group shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-1"
               >
                 <div className="text-4xl mb-2">🦁</div>
                 <h3 className="font-black text-xl text-white group-hover:text-emerald-400 transition">
@@ -294,6 +294,17 @@ export default function Home() {
                   Vào Bàn Cờ Thú 🐅
                 </div>
               </Link>
+
+              <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 opacity-60 relative flex flex-col justify-between">
+                <div>
+                  <div className="text-4xl mb-2">🏮</div>
+                  <h3 className="font-bold text-xl text-slate-300">Cờ Tướng</h3>
+                  <p className="text-slate-500 text-sm mt-1">Trận chiến trí tuệ Phương Đông quy mô lớn.</p>
+                </div>
+                <div className="mt-4 text-xs font-bold text-slate-500 bg-slate-800/80 py-2 px-3 rounded-xl text-center">
+                  ⏳ Phụ lục đang phát triển
+                </div>
+              </div>
             </div>
           </section>
 
