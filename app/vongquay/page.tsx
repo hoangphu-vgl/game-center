@@ -1,20 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AuthGuard from "@/components/AuthGuard";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
+// Sắp xếp xen kẽ giữa Ô Quà Xịn và Ô Hụt Quà để cân đối, không bị trùng lặp liên tiếp
 const WHEEL_SLICES = [
   { id: 1, label: "🥤 Nước Suối", type: "water", prob: 0.05, color: "#06b6d4" },
-  { id: 2, label: "💵 1.000đ", type: "money", value: 1000, prob: 0.10, color: "#eab308" },
-  { id: 3, label: "💀 Yamcha Nằm Đất", type: "empty", prob: 0.17, color: "#ef4444" },
-  { id: 4, label: "🎟️ +1 Lượt Quay", type: "spin", value: 1, prob: 0.10, color: "#a855f7" },
-  { id: 5, label: "🍩 Majin Buu", type: "empty", prob: 0.18, color: "#f97316" },
-  { id: 6, label: "💵 2.000 VNĐ", type: "money", value: 2000, prob: 0.08, color: "#22c55e" },
-  { id: 7, label: "🌌 Zeno Xoá Sổ", type: "empty", prob: 0.17, color: "#64748b" },
+  { id: 2, label: "💀 Yamcha", type: "empty", prob: 0.17, color: "#ef4444" },
+  { id: 3, label: "💵 1.000đ", type: "money", value: 1000, prob: 0.10, color: "#eab308" },
+  { id: 4, label: "🍩 Majin Buu", type: "empty", prob: 0.18, color: "#f97316" },
+  { id: 5, label: "🎟️ +1 Lượt", type: "spin", value: 1, prob: 0.10, color: "#a855f7" },
+  { id: 6, label: "🌌 Zeno", type: "empty", prob: 0.17, color: "#64748b" },
+  { id: 7, label: "💵 2.000đ", type: "money", value: 2000, prob: 0.08, color: "#22c55e" },
   { id: 8, label: "🚀 Tàu Pảy Pảy", type: "empty", prob: 0.15, color: "#ec4899" },
 ];
 
@@ -27,6 +28,7 @@ export default function VongQuayPage() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [wheelAngle, setWheelAngle] = useState(0);
   const [spinResultModal, setSpinResultModal] = useState<string | null>(null);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -61,19 +63,30 @@ export default function VongQuayPage() {
       await setDoc(doc(db, "users", user.uid), { luckySpins: newSpins }, { merge: true });
     }
 
-    const rand = Math.random();
-    let cumulative = 0;
+    // Thuật toán quay có tỉ lệ và tránh lặp lại ô vừa trúng trước đó nếu có thể
     let selectedIndex = 0;
-    for (let i = 0; i < WHEEL_SLICES.length; i++) {
-      cumulative += WHEEL_SLICES[i].prob;
-      if (rand <= cumulative) {
-        selectedIndex = i;
+    let attempts = 0;
+    do {
+      const rand = Math.random();
+      let cumulative = 0;
+      for (let i = 0; i < WHEEL_SLICES.length; i++) {
+        cumulative += WHEEL_SLICES[i].prob;
+        if (rand <= cumulative) {
+          selectedIndex = i;
+          break;
+        }
+      }
+      attempts++;
+      // Nếu quay ra trùng ô trước đó và có nhiều hơn 1 lựa chọn, thử random lại 1 lần để tránh lặp
+      if (selectedIndex !== lastSelectedIndex || attempts > 3) {
         break;
       }
-    }
+    } while (true);
+
+    setLastSelectedIndex(selectedIndex);
 
     const sliceAngle = 360 / WHEEL_SLICES.length;
-    const randomFullRounds = 360 * (6 + Math.floor(Math.random() * 4));
+    const randomFullRounds = 360 * (6 + Math.floor(Math.random() * 3));
     const targetAngle = wheelAngle + randomFullRounds + (360 - (wheelAngle % 360)) + (360 - (selectedIndex * sliceAngle + sliceAngle / 2));
 
     setWheelAngle(targetAngle);
@@ -149,25 +162,27 @@ export default function VongQuayPage() {
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-            <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] flex items-center justify-center">
-              <div className="absolute -top-3 z-30 text-3xl animate-bounce">🔻</div>
+            {/* Vòng quay SVG chuẩn căn chỉnh chữ vào giữa */}
+            <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] flex items-center justify-center">
+              <div className="absolute -top-4 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
               <div
-                className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_35px_rgba(168,85,247,0.6)] relative overflow-hidden"
+                className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_40px_rgba(168,85,247,0.6)] relative overflow-hidden"
                 style={{
                   transform: `rotate(${wheelAngle}deg)`,
                   transition: isSpinning ? "transform 4s cubic-bezier(0.15, 0.9, 0.2, 1)" : "none",
-                  background: "conic-gradient(#06b6d4 0deg 45deg, #eab308 45deg 90deg, #ef4444 90deg 135deg, #a855f7 135deg 180deg, #f97316 180deg 225deg, #22c55e 225deg 270deg, #64748b 270deg 315deg, #ec4899 315deg 360deg)"
+                  background: "conic-gradient(#06b6d4 0deg 45deg, #ef4444 45deg 90deg, #eab308 90deg 135deg, #f97316 135deg 180deg, #a855f7 180deg 225deg, #64748b 225deg 270deg, #22c55e 270deg 315deg, #ec4899 315deg 360deg)"
                 }}
               >
-                <div className="absolute inset-0 flex items-center justify-center text-[12px] font-black text-slate-950">
-                  <div className="absolute top-5 transform -translate-y-1/2 rotate-0 drop-shadow-md">🥤 Nước Suối</div>
-                  <div className="absolute right-10 top-16 transform rotate-45 drop-shadow-md">💵 1.000đ</div>
-                  <div className="absolute right-5 bottom-20 transform rotate-90 drop-shadow-md">💀 Yamcha</div>
-                  <div className="absolute bottom-6 right-16 transform rotate-[135deg] drop-shadow-md">🎟️ +1 Lượt</div>
-                  <div className="absolute bottom-5 left-16 transform rotate-180 drop-shadow-md">🍩 Majin Buu</div>
-                  <div className="absolute left-5 bottom-20 transform rotate-[225deg] drop-shadow-md">💵 2.000đ</div>
-                  <div className="absolute left-8 top-16 transform rotate-[270deg] drop-shadow-md">🌌 Zeno</div>
-                  <div className="absolute top-5 left-16 transform rotate-[315deg] drop-shadow-md">🚀 Tàu Pảy Pảy</div>
+                {/* Các nhãn chữ được định vị chuẩn tâm ô */}
+                <div className="absolute inset-0 flex items-center justify-center text-[11px] sm:text-[13px] font-black text-slate-950">
+                  <div className="absolute top-7 transform -translate-y-1/2 rotate-0 drop-shadow-sm">🥤 Nước Suối</div>
+                  <div className="absolute right-9 top-20 transform rotate-45 drop-shadow-sm">💀 Yamcha</div>
+                  <div className="absolute right-5 bottom-28 transform rotate-90 drop-shadow-sm">💵 1.000đ</div>
+                  <div className="absolute bottom-7 right-20 transform rotate-[135deg] drop-shadow-sm">🍩 Majin Buu</div>
+                  <div className="absolute bottom-6 left-20 transform rotate-180 drop-shadow-sm">🎟️ +1 Lượt</div>
+                  <div className="absolute left-5 bottom-28 transform rotate-[225deg] drop-shadow-sm">🌌 Zeno</div>
+                  <div className="absolute left-9 top-20 transform rotate-[270deg] drop-shadow-sm">💵 2.000đ</div>
+                  <div className="absolute top-7 left-20 transform rotate-[315deg] drop-shadow-sm">🚀 Tàu Pảy Pảy</div>
                 </div>
               </div>
               <div className="absolute z-20 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-4 border-slate-950 shadow-2xl flex items-center justify-center text-2xl font-black">
