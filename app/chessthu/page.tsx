@@ -47,23 +47,12 @@ const INITIAL_COTHU_BOARD: string[][] = [
   ['bT', '', '', '', '', '', 'bL'],
 ];
 
-const TAUNT_MESSAGES = {
-  easy: [
-    "Hơi lóng ngóng nha ní ơi, cẩn thận mất quân đấy! 🐢",
-    "Nước vừa rồi làm tớ suýt ngáp ngủ! 😴",
-    "Cứ thong thả, máy chấp vài nước luôn! 🍼"
-  ],
-  medium: [
-    "Sông rộng thế kia, Chuột hoặc Sư Tử của cậu tính nhảy thế nào? 🌊",
-    "Cẩn thận bẫy nhà tớ đấy nhé, sập là mất tích con Voi đấy! 🦊",
-    "Trận địa đang dần khép lại rồi đấy! ♟️"
-  ],
-  hard: [
-    "Khôn hồn thì dâng Voi ra đây, Đại đế AI đang bao vây toàn bản đồ! 🦁👑",
-    "Hang của cậu sơ hở quá, Chuột và Sư Tử của ta đang phi nước đại vào rồi! ⚡",
-    "Thuật toán chuẩn quốc tế đã nhìn thấu mọi nước cờ của cậu rồi! 💀"
-  ]
-};
+const TAUNT_MESSAGES = [
+  "Cẩn thận đấy, đội hình của ta chuẩn bị tràn sang càn quét đây! 🦁🔥",
+  "Đứng thủ hoài sao thắng được ta? Xung phong nào! ⚡",
+  "Hang của cậu sơ hở quá, ta chuẩn bị phi vào ăn mừng đây! 🏴‍☠️",
+  "Sợ quá hả? Mau đem Voi ra đấu tay đôi với ta nào! 🐘"
+];
 
 export default function ChessthuPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -82,7 +71,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("Đã sẵn sàng tuân thủ luật Cờ Thú chuẩn! Mời bạn đi trước.");
+  const [aiTaunt, setAiTaunt] = useState<string>("AI Đã bật chế độ Tấn Công Tổng Lực! Sẵn sàng chiến đấu chưa?");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -205,7 +194,7 @@ export default function ChessthuPage() {
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Trận chiến Cờ Thú chuẩn luật bắt đầu! Chúc bạn may mắn! 🦁");
+    setAiTaunt("Trận chiến Cờ Thú tấn công bắt đầu! Đừng hòng ngăn cản ta! 🦁");
     setScreen('game');
   };
 
@@ -235,7 +224,7 @@ export default function ChessthuPage() {
     if (screen === 'game' && gameMode === 'ai' && turn === 'b' && !modal.open) {
       const timer = setTimeout(() => {
         makeAiMove();
-      }, 600);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [screen, gameMode, turn, board, modal.open]);
@@ -354,7 +343,6 @@ export default function ChessthuPage() {
         } else {
           if (targetAnimal?.color !== color) {
             let canEat = false;
-            // Ép kiểu an toàn chống lỗi TS18047
             const tRank = targetAnimal?.rank ?? 0;
             const curRankNum: number = rank;
 
@@ -424,15 +412,17 @@ export default function ChessthuPage() {
       }
     }
 
+    // KIỂM TRA ĐIỀU KIỆN THẮNG KHI VÀO HANG NGAY LẬP TỨC
     if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
       endGame(true, "Bạn đã chiếm hang địch và thắng cược!");
     } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
-      endGame(false, "AI đã chiếm mất hang của bạn! Thất bại!");
+      endGame(false, "AI đã xông vào chiếm hang của bạn! Thất bại!");
     }
   };
 
+  // NÂNG CẤP AI: TẤN CÔNG MẠNH MẼ, SĂN QUÂN VÀ LAO VÀO HANG
   const makeAiMove = () => {
-    const allMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
+    const allMoves: { fromR: number; fromC: number; toR: number; toC: number; score: number }[] = [];
 
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 7; c++) {
@@ -440,7 +430,26 @@ export default function ChessthuPage() {
         if (p && ANIMAL_DATA[p].color === 'b') {
           const moves = getPieceMoves(r, c, board);
           moves.forEach((m) => {
-            allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c });
+            let score = 0;
+            const targetPiece = board[m.r][m.c];
+
+            // 1. Nếu đi vào ô Hang Đỏ (0, 3) -> THẮNG NGAY LẬP TỨC (Ưu tiên điểm số cao nhất)
+            if (m.r === 0 && m.c === 3) {
+              score += 10000;
+            }
+
+            // 2. Nếu ăn được quân địch -> Điểm cộng cực cao dựa theo cấp bậc quân địch
+            if (targetPiece) {
+              score += ANIMAL_DATA[targetPiece].rank * 100;
+            }
+
+            // 3. Khuyến khích tấn công tiến về phía trước (tiến về hang địch hàng 0)
+            score += (9 - m.r) * 15;
+
+            // Thêm chút ngẫu nhiên để AI linh hoạt
+            score += Math.random() * 20;
+
+            allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
           });
         }
       }
@@ -451,11 +460,12 @@ export default function ChessthuPage() {
       return;
     }
 
-    const winMove = allMoves.find(m => m.toR === 8 && m.toC === 3);
-    const chosenMove = winMove || allMoves[Math.floor(Math.random() * allMoves.length)];
+    // Sắp xếp các nước đi từ điểm cao xuống thấp để AI luôn chọn nước Tấn công / Vào hang tốt nhất
+    allMoves.sort((a, b) => b.score - a.score);
+    const chosenMove = allMoves[0];
 
-    const tauntList = TAUNT_MESSAGES[aiDifficulty];
-    setAiTaunt(tauntList[Math.floor(Math.random() * tauntList.length)]);
+    const randomTaunt = TAUNT_MESSAGES[Math.floor(Math.random() * TAUNT_MESSAGES.length)];
+    setAiTaunt(randomTaunt);
 
     executeMove(chosenMove.fromR, chosenMove.fromC, chosenMove.toR, chosenMove.toC);
   };
@@ -483,7 +493,7 @@ export default function ChessthuPage() {
           ← Trang chủ
         </Link>
         <h1 className="text-lg font-black tracking-wider text-emerald-400 uppercase flex items-center gap-1">
-          🦁 CỜ THÚ CHUẨN LUẬT
+          🦁 CỜ THÚ TẤN CÔNG
         </h1>
         <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-xl border border-amber-500/30 font-bold text-amber-400">
           🪙 {points.toLocaleString()} PTS
@@ -538,27 +548,12 @@ export default function ChessthuPage() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
-            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu Luyện AI Chuẩn Luật</label>
-            <div className="flex justify-center gap-2">
-              {(['easy', 'medium', 'hard'] as const).map((diff) => (
-                <button
-                  key={diff}
-                  onClick={() => setAiDifficulty(diff)}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg border uppercase transition ${
-                    aiDifficulty === diff
-                      ? 'border-blue-500 bg-blue-500/20 text-blue-400 shadow'
-                      : 'border-slate-800 bg-slate-950 text-slate-500'
-                  }`}
-                >
-                  {diff === 'easy' ? 'Dễ' : diff === 'medium' ? 'Trung Bình' : 'Khó'}
-                </button>
-              ))}
-            </div>
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Tấn Công Tổng Lực</label>
             <button
               onClick={startAiGame}
               className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm"
             >
-              🎮 Chiến AI ({aiDifficulty === 'easy' ? 'Dễ' : aiDifficulty === 'medium' ? 'Trung Bình' : 'Khó'})
+              🎮 Chiến AI Tấn Công Ngay
             </button>
           </div>
         </div>
@@ -572,7 +567,7 @@ export default function ChessthuPage() {
             </span>
             <div className="flex items-center gap-3">
               <span className="text-slate-400">
-                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (${aiDifficulty.toUpperCase()})`}
+                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (Tấn Công)`}
               </span>
               <button
                 onClick={() => setScreen('menu')}
