@@ -38,31 +38,33 @@ interface FishData {
 
 const GUN_TYPES: GunConfig[] = [
   { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 10, size: 5, color: '#a855f7' },
-  { level: 2, cost: 10, name: "Đạn 10đ", damage: 8, speed: 11, size: 6, color: '#38bdf8' },
-  { level: 3, cost: 20, name: "Đạn 20đ", damage: 16, speed: 11, size: 7, color: '#22d3ee' },
-  { level: 4, cost: 50, name: "Đạn 50đ", damage: 38, speed: 12, size: 8, color: '#4ade80' },
-  { level: 5, cost: 100, name: "Đạn 100đ", damage: 75, speed: 12, size: 9, color: '#facc15' },
-  { level: 6, cost: 200, name: "Đạn 200đ", damage: 150, speed: 13, size: 10, color: '#f97316' },
-  { level: 7, cost: 500, name: "Đạn 500đ", damage: 350, speed: 13, size: 12, color: '#ec4899' },
-  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 750, speed: 14, size: 14, color: '#8b5cf6' },
-  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1500, speed: 15, size: 17, color: '#ef4444' }
+  { level: 2, cost: 10, name: "Đạn 10đ", damage: 6, speed: 11, size: 6, color: '#38bdf8' },
+  { level: 3, cost: 20, name: "Đạn 20đ", damage: 12, speed: 11, size: 7, color: '#22d3ee' },
+  { level: 4, cost: 50, name: "Đạn 50đ", damage: 28, speed: 12, size: 8, color: '#4ade80' },
+  { level: 5, cost: 100, name: "Đạn 100đ", damage: 55, speed: 12, size: 9, color: '#facc15' },
+  { level: 6, cost: 200, name: "Đạn 200đ", damage: 110, speed: 13, size: 10, color: '#f97316' },
+  { level: 7, cost: 500, name: "Đạn 500đ", damage: 260, speed: 13, size: 12, color: '#ec4899' },
+  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 550, speed: 14, size: 14, color: '#8b5cf6' },
+  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 15, size: 17, color: '#ef4444' }
 ];
 
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speed: 3.4, hpMin: 3, hpMax: 8, reward: 30, category: 'small', weight: 40 },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speed: 3.2, hpMin: 4, hpMax: 10, reward: 40, category: 'small', weight: 40 },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speed: 3.6, hpMin: 3, hpMax: 8, reward: 24, category: 'small', weight: 30 },
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 2.2, hpMin: 45, hpMax: 100, reward: 160, category: 'medium', weight: 50 },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 2.0, hpMin: 60, hpMax: 140, reward: 240, category: 'medium', weight: 50 },
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 1.2, hpMin: 600, hpMax: 1600, reward: 1200, category: 'large', weight: 12 },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 1.3, hpMin: 800, hpMax: 2200, reward: 1600, category: 'large', weight: 5 },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 1.0, hpMin: 1000, hpMax: 3000, reward: 2400, category: 'large', weight: 8 }
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speed: 3.4, hpMin: 8, hpMax: 18, rewardMin: 10, rewardMax: 30, category: 'small', weight: 40 },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speed: 3.2, hpMin: 10, hpMax: 22, rewardMin: 10, rewardMax: 30, category: 'small', weight: 40 },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speed: 3.6, hpMin: 6, hpMax: 15, rewardMin: 10, rewardMax: 30, category: 'small', weight: 30 },
+  
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 2.2, hpMin: 90, hpMax: 200, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 2.0, hpMin: 120, hpMax: 280, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
+  
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 1.2, hpMin: 1200, hpMax: 3000, rewardMin: 100, rewardMax: 500, category: 'large', weight: 12 },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 1.3, hpMin: 2000, hpMax: 4500, rewardList: [5000, 10000, 15000, 20000, 50000, 75000, 100000], category: 'mermaid', weight: 3 }, // Thưởng khủng random
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 1.0, hpMin: 2500, hpMax: 5500, rewardMin: 100, rewardMax: 500, category: 'large', weight: 6 }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(50000);
+  const [jackpotPool, setJackpotPool] = useState<number>(150000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -143,9 +145,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 50000);
+        setJackpotPool(docSnap.data().amount || 150000);
       } else {
-        setDoc(jpRef, { amount: 50000 });
+        setDoc(jpRef, { amount: 150000 });
       }
     });
 
@@ -210,7 +212,7 @@ export default function BanCaPage() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      const startFreq = reward >= 300 ? 523.25 : 392.00;
+      const startFreq = reward >= 1000 ? 523.25 : 392.00;
       osc.frequency.setValueAtTime(startFreq, now);
       osc.frequency.exponentialRampToValueAtTime(startFreq * 1.5, now + 0.15);
       gain.gain.setValueAtTime(0.4, now);
@@ -236,6 +238,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
+  // Lắng nghe realtime phòng PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -263,6 +266,7 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE, isHost, user]);
 
+  // Đồng bộ góc súng thời gian thực cho PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -291,13 +295,12 @@ export default function BanCaPage() {
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
 
-  // Vòng lặp xử lý đè giữ bắn liên tục (Hold to Shoot)
   useEffect(() => {
     if (screenMode !== 'game') return;
     const interval = setInterval(() => {
       if (isHoldingRef.current && !isPaused) {
         const now = Date.now();
-        if (now - lastShootTimeRef.current > 180) { // Tốc độ xả đạn liên tục vừa phải
+        if (now - lastShootTimeRef.current > 180) {
           lastShootTimeRef.current = now;
           handleShoot(touchPosRef.current.x, touchPosRef.current.y);
         }
@@ -329,12 +332,12 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.75 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if ((isPVE || isHost) && fishesRef.current.length < 20 && Math.random() < 0.25) {
+      if ((isPVE || isHost) && fishesRef.current.length < 20 && Math.random() < 0.22) {
         const randWeight = Math.random() * 100;
         let template;
 
-        if (randWeight < 3.5) {
-          const rareFish = FISH_TYPES_BASE.filter(f => f.category === 'large');
+        if (randWeight < 3.0) {
+          const rareFish = FISH_TYPES_BASE.filter(f => f.category === 'mermaid' || f.category === 'large');
           template = rareFish[Math.floor(Math.random() * rareFish.length)];
         } else if (randWeight < 45) {
           const medFish = FISH_TYPES_BASE.filter(f => f.category === 'medium');
@@ -364,6 +367,13 @@ export default function BanCaPage() {
           }
 
           const hp = Math.floor(Math.random() * (template.hpMax - template.hpMin + 1)) + template.hpMin;
+          let calculatedReward = 0;
+          if (template.rewardList) {
+            calculatedReward = template.rewardList[Math.floor(Math.random() * template.rewardList.length)];
+          } else if (template.rewardMin && template.rewardMax) {
+            calculatedReward = Math.floor(Math.random() * (template.rewardMax - template.rewardMin + 1)) + template.rewardMin;
+          }
+
           const fishObj: FishData = {
             id: 'f_' + Math.random().toString(36).substring(2, 9),
             typeId: template.id,
@@ -374,7 +384,7 @@ export default function BanCaPage() {
             speed: template.speed,
             hp,
             maxHp: hp,
-            reward: template.reward,
+            reward: calculatedReward,
             category: template.category,
             x, y, vx, vy,
             hitTimer: 0
@@ -437,10 +447,8 @@ export default function BanCaPage() {
             if (dist < bullet.radius + fish.width / 2.5) {
               bullet.alive = false;
 
-              // Hiệu ứng nổ sát thương lan rực rỡ hơn
               explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 14, maxRadius: 75, color: bullet.color, alpha: 1 });
 
-              // Cơ chế Chí mạng (Critical Hit - 12% tỉ lệ nhân x3 sát thương)
               let finalDamage = bullet.damage;
               const isCrit = Math.random() < 0.12;
               if (isCrit) {
@@ -449,7 +457,7 @@ export default function BanCaPage() {
               }
 
               fish.hp -= finalDamage;
-              fish.hitTimer = 6; // Làm cá chớp sáng mạnh hơn khi trúng đạn
+              fish.hitTimer = 6;
 
               if (fish.hp <= 0 && !fish.dead) {
                 fish.dead = true;
@@ -476,10 +484,12 @@ export default function BanCaPage() {
                 let finalReward = baseReward * comboMultiplier;
                 let isJackpot = false;
 
-                if (fish.category === 'large' && Math.random() < 0.02) {
+                // LUẬT JACKPOT MỚI: Đạn nào cũng có thể trúng Jackpot, nhưng đạn càng nhỏ thì tỉ lệ càng siêu hiếm (Đạn 1đ cực kỳ hiếm, đạn 2000đ dễ trúng hơn)
+                const jackpotChance = 0.0002 + (bullet.cost * 0.000003); // Tỉ lệ tăng dần theo giá trị đạn
+                if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(50000);
+                  updateJackpotInFirestore(150000);
                 }
 
                 setPoints(prev => {
@@ -517,7 +527,6 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ cá và hiệu ứng chớp sáng khi bị bắn trúng
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
@@ -718,6 +727,7 @@ export default function BanCaPage() {
       radius: gun.size,
       color: gun.color,
       damage: gun.damage,
+      cost: gun.cost,
       vx: Math.cos(angle) * gun.speed,
       vy: Math.sin(angle) * gun.speed,
       alive: true
@@ -991,7 +1001,7 @@ export default function BanCaPage() {
           <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center gap-1">
             <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-4 py-1 rounded-xl text-center shadow-xl animate-pulse">
               <div className="text-[8px] text-amber-300 font-extrabold uppercase tracking-widest">
-                👑 JACKPOT RỒNG THẦN 👑
+                👑 JACKPOT RỒNG THẦN (Mọi loại đạn) 👑
               </div>
               <div className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
                 {jackpotPool.toLocaleString()} đ
