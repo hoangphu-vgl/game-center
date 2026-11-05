@@ -66,7 +66,6 @@ export default function BanCaPage() {
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [isPVE, setIsPVE] = useState<boolean>(true);
-  const [isHost, setIsHost] = useState<boolean>(false);
   const [myCorner, setMyCorner] = useState<string>('bottom-right');
 
   const [currentGunIndex, setCurrentGunIndex] = useState<number>(1);
@@ -85,9 +84,9 @@ export default function BanCaPage() {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string } }>({
-    'top-left': { active: false, email: 'Trống' },
-    'top-right': { active: false, email: 'Trống' },
-    'bottom-left': { active: false, email: 'Trống' },
+    'top-left': { active: false, email: '' },
+    'top-right': { active: false, email: '' },
+    'bottom-left': { active: false, email: '' },
     'bottom-right': { active: true, email: 'Bạn' }
   });
 
@@ -201,6 +200,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
+  // Lắng nghe dữ liệu phòng PVP realtime chuẩn xác
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -232,7 +232,7 @@ export default function BanCaPage() {
     window.addEventListener('resize', handleResize);
 
     const spawnFish = (w: number, h: number) => {
-      if (fishesRef.current.length < 24 && Math.random() < 0.3) {
+      if (fishesRef.current.length < 28 && Math.random() < 0.35) {
         const rand = Math.random();
         let template;
         if (rand < 0.05) {
@@ -367,9 +367,8 @@ export default function BanCaPage() {
         });
         fishesRef.current = fishesRef.current.filter(f => !f.dead);
 
-        if (isPVE || isHost) {
-          spawnFish(w, h);
-        }
+        // Bất kể Solo hay PVP, mọi người chơi đều phụ trách sinh cá để màn hình luôn đông đúc
+        spawnFish(w, h);
 
         ctx.clearRect(0, 0, w, h);
 
@@ -434,22 +433,16 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // HÀM VẼ SÚNG RIÊNG BIỆT CHO TỪNG GÓC:
-        // - Nếu có người chơi: súng xoay theo chuột / cảm ứng.
-        // - Nếu chưa có người chơi (trống): súng đứng yên một chỗ, không quay lung tung.
+        // HÀM VẼ SÚNG CHUẨN XÁC: Ghế nào có người thật mới hiển thị tên và xoay súng
         const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
           const pData = roomPlayersRef.current[cornerKey];
-          const isActive = pData && pData.active;
+          const isActive = pData && pData.active && pData.email && pData.email !== 'Trống';
 
-          let angle = -Math.PI / 2; // Hướng mặc định đứng yên
+          let angle = -Math.PI / 2;
           if (isActive && cornerKey === myCorner) {
-            // Chỉ súng của chính mình mới xoay theo chuột
             angle = Math.atan2(mousePosRef.current.y - y, mousePosRef.current.x - x);
-          } else if (isActive) {
-            // Súng của người khác trong phòng giữ góc cố định hướng lên giữa màn hình
-            angle = -Math.PI / 2;
           }
 
           ctx.beginPath();
@@ -493,7 +486,7 @@ export default function BanCaPage() {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [screenMode, isPaused, isPVE, isHost, activeRoomId, jackpotPool, isMuted, myCorner]);
+  }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner]);
 
   const handleShoot = () => {
     initAudio();
@@ -541,7 +534,7 @@ export default function BanCaPage() {
     }
   };
 
-  // Ghép phòng tự động (Matchmaking) y chang Xì Dách
+  // Ghép phòng tự động chuẩn xác không bị đè tên
   const handleAutoMatchmaking = async () => {
     try {
       showToast("⚡ Đang tìm phòng trống...");
@@ -558,9 +551,9 @@ export default function BanCaPage() {
         const data = docSnap.data();
         const players = data.players || {};
         
-        const corners = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
+        const corners = ['bottom-right', 'bottom-left', 'top-left', 'top-right'];
         for (const c of corners) {
-          if (!players[c] || !players[c].active) {
+          if (!players[c] || !players[c].active || players[c].email === 'Trống') {
             foundRoomId = docSnap.id;
             availableCorner = c;
             roomPlayersData = players;
@@ -571,7 +564,6 @@ export default function BanCaPage() {
 
       if (foundRoomId && availableCorner) {
         setActiveRoomId(foundRoomId);
-        setIsHost(false);
         setIsPVE(false);
         setMyCorner(availableCorner);
 
@@ -584,7 +576,6 @@ export default function BanCaPage() {
       } else {
         const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
         setActiveRoomId(newRoomId);
-        setIsHost(true);
         setIsPVE(false);
         setMyCorner('bottom-right');
 
@@ -613,7 +604,6 @@ export default function BanCaPage() {
   const handleCreateRoom = async () => {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     setActiveRoomId(roomId);
-    setIsHost(true);
     setIsPVE(false);
     setMyCorner('bottom-right');
 
@@ -652,14 +642,14 @@ export default function BanCaPage() {
 
     const data = roomSnap.data();
     setActiveRoomId(roomId);
-    setIsHost(false);
     setIsPVE(false);
 
     const players = data.players || {};
-    let corner = 'bottom-right';
-    if (!players['bottom-left'] || !players['bottom-left'].active) corner = 'bottom-left';
-    else if (!players['top-left'] || !players['top-left'].active) corner = 'top-left';
-    else if (!players['top-right'] || !players['top-right'].active) corner = 'top-right';
+    let corner = 'bottom-left';
+    if (!players['bottom-left'] || !players['bottom-left'].active || players['bottom-left'].email === 'Trống') corner = 'bottom-left';
+    else if (!players['top-left'] || !players['top-left'].active || players['top-left'].email === 'Trống') corner = 'top-left';
+    else if (!players['top-right'] || !players['top-right'].active || players['top-right'].email === 'Trống') corner = 'top-right';
+    else corner = 'bottom-right';
 
     setMyCorner(corner);
     players[corner] = { active: true, email: user?.email || 'Thành viên' };
@@ -685,7 +675,6 @@ export default function BanCaPage() {
     }
     setActiveRoomId(null);
     setIsPVE(true);
-    setIsHost(false);
     setScreenMode('lobby');
     showToast("Đã rời phòng về sảnh chính.");
   };
