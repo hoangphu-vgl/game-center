@@ -48,10 +48,10 @@ const INITIAL_COTHU_BOARD: string[][] = [
 ];
 
 const TAUNT_MESSAGES = [
-  "Ta vừa lui về thủ Hang Xanh (0,3) đấy, ngon thì xông vào! 🦁⚡",
-  "Nước đi sơ hở là ta xông ngay xuống Hang Đỏ (8,3) của cậu đấy nhé! 🔥",
-  "Thủ cẩn thận, quân Xanh đang canh me chiếm hang đấy! 🏴‍☠️",
-  "Né bị bắt và tổng tấn công chuẩn luật luôn! 💀"
+  "Ta đang thủ Hang Xanh ở dưới rất kỹ đấy, đừng hòng xông vào! 🦁⚡",
+  "Đội hình Xanh đang chuẩn bị xông lên chiếm Hang Đỏ ở trên (0,3)! 🔥",
+  "Thủ hang chắc chắn và phản công chớp nhoáng! 🏴‍☠️",
+  "Không có chuyện nhầm lẫn màu hang nữa đâu, chiến thôi! 💀"
 ];
 
 export default function ChessthuPage() {
@@ -70,7 +70,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("AI đã cập nhật chuẩn luật thủ hang & chiếm hang!");
+  const [aiTaunt, setAiTaunt] = useState<string>("AI đã đồng bộ màu hang và chuẩn hóa luật chơi!");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -188,12 +188,12 @@ export default function ChessthuPage() {
     }
     setGameMode('ai');
     setRoomCode('');
-    setPlayerRole('r'); // Bạn cầm Đỏ
+    setPlayerRole('r'); // Bạn cầm Đỏ ở trên
     setBoard(INITIAL_COTHU_BOARD.map(r => [...r]));
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Đã cho phép thủ hang chuẩn luật! Trận đấu bắt đầu! 🦁");
+    setAiTaunt("Trận chiến AI đồng bộ màu hang bắt đầu! 🦁");
     setScreen('game');
   };
 
@@ -256,7 +256,7 @@ export default function ChessthuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
-        // TẤT CẢ QUÂN CỜ ĐỀU ĐƯỢC PHÉP ĐI VÀO BẤT KỲ Ô HANG NÀO (KỂ CẢ HANG NHÀ VÀ HANG ĐỊCH)
+        // Cho phép quân cờ đi vào mọi ô hang để thủ hang thoải mái
         const target = currentBoard[nr][nc];
         const targetAnimal = target ? ANIMAL_DATA[target] : null;
 
@@ -405,21 +405,20 @@ export default function ChessthuPage() {
       }
     }
 
-    // LUẬT THẮNG CHÍNH XÁC CHỈ KHI BƯỚC VÀO HANG CỦA ĐỐI PHƯƠNG:
-    // - Quân Đỏ 'r' bước vào Hang Xanh ở TRÊN (0, 3) -> BẠN THẮNG! (Trường hợp bước vào Hang Đỏ (8,3) là thủ hang, không tính thua!)
-    // - Quân Xanh 'b' bước vào Hang Đỏ ở DƯỚI (8, 3) -> AI THẮNG! (Trường hợp AI chui vào Hang Xanh (0,3) là AI thủ hang, không tính AI thắng!)
-    if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
-      endGame(true, "🎉 Chúc mừng! Bạn đã xông vào chiếm thành công Hang Xanh!");
-    } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
+    // ĐIỀU KIỆN THẮNG THUA ĐÚNG CHUẨN MÀU HANG:
+    // - Hang Đỏ (của bạn) nằm ở TRÊN: (0, 3)[cite: 3] -> Quân Xanh (AI) xông vào đây thì bạn thua!
+    // - Hang Xanh (của AI) nằm ở DƯỚI: (8, 3)[cite: 3] -> Quân Đỏ (Bạn) xông vào đây thì bạn thắng!
+    if (movingPiece.startsWith('r') && toR === 8 && toC === 3) {
+      endGame(true, "🎉 Chúc mừng! Bạn đã xông vào chiếm Hang Xanh thành công!");
+    } else if (movingPiece.startsWith('b') && toR === 0 && toC === 3) {
       endGame(false, "💀 Thất bại! AI đã xông vào chiếm Hang Đỏ của bạn!");
     }
   };
 
-  // AI THÔNG MINH: BẠN CÓ THỂ THỦ HANG LẪN TẤN CÔNG
+  // AI THÔNG MINH: BIẾT THỦ HANG XANH Ở DƯỚI VÀ TẤN CÔNG HANG ĐỎ Ở TRÊN
   const makeAiMove = () => {
     const allMoves: { fromR: number; fromC: number; toR: number; toC: number; score: number }[] = [];
 
-    // Tìm các quân Đỏ của người chơi
     const playerPieces: { r: number; c: number; rank: number }[] = [];
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 7; c++) {
@@ -441,14 +440,14 @@ export default function ChessthuPage() {
             let score = 0;
             const targetPiece = board[m.r][m.c];
 
-            // 1. TẤN CÔNG MỤC TIÊU TỐI THƯỢNG: Xông vào Hang Đỏ của Bạn ở dưới (8, 3) để THẮNG NGAY
-            if (m.r === 8 && m.c === 3) {
-              score += 1000000;
+            // 1. TẤN CÔNG MỤC TIÊU TỐI THƯỢNG: Xông vào Hang Đỏ ở TRÊN (0, 3) để THẮNG NGAY
+            if (m.r === 0 && m.c === 3) {
+              score += 2000000;
             }
 
-            // 2. Đi vào Hang Xanh (0, 3) của nó chỉ để phòng thủ (cho ít điểm nhẹ, không lạm dụng)
-            if (m.r === 0 && m.c === 3) {
-              score += 20;
+            // 2. Quay về thủ Hang Xanh ở DƯỚI (8, 3)
+            if (m.r === 8 && m.c === 3) {
+              score += 50;
             }
 
             // 3. Ưu tiên ăn quân cờ của Bạn
@@ -457,23 +456,23 @@ export default function ChessthuPage() {
               score += targetRank * 500;
             }
 
-            // 4. BIẾT NÉ BỊ BẮT: Kiểm tra xem ô sắp đi tới có bị quân Đỏ cấp cao hơn đe dọa không
+            // 4. NÉ BỊ BẮT: Tránh đưa mặt cho quân Đỏ cấp cao hơn ăn
             playerPieces.forEach((enemy) => {
               const dist = Math.abs(enemy.r - m.r) + Math.abs(enemy.c - m.c);
-              if (dist === 1) { // Sát cạnh quân Đỏ
+              if (dist === 1) {
                 let canBeEaten = false;
-                if (enemy.rank === 8 && aiRank === 1) canBeEaten = false; // Chuột không sợ Voi
-                else if (enemy.rank === 1 && aiRank === 8) canBeEaten = true; // Voi sợ Chuột
+                if (enemy.rank === 8 && aiRank === 1) canBeEaten = false;
+                else if (enemy.rank === 1 && aiRank === 8) canBeEaten = true;
                 else if (enemy.rank >= aiRank) canBeEaten = true;
 
                 if (canBeEaten) {
-                  score -= 800; // Trừ điểm để AI né tháo chạy chứ không cúng điểm
+                  score -= 900;
                 }
               }
             });
 
-            // 5. Thúc đẩy AI di chuyển xuống phía Hang Đỏ (8,3)
-            score += m.r * 50;
+            // 5. Thúc đẩy AI di chuyển lên phía trên (hướng về Hang Đỏ ở 0,3)
+            score += (8 - m.r) * 60;
 
             score += Math.random() * 20;
 
@@ -575,7 +574,7 @@ export default function ChessthuPage() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
-            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Thủ Hang & Tấn Công</label>
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Đồng Bộ Màu Hang</label>
             <button
               onClick={startAiGame}
               className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm"
@@ -594,7 +593,7 @@ export default function ChessthuPage() {
             </span>
             <div className="flex items-center gap-3">
               <span className="text-slate-400">
-                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (Chuẩn Luật)`}
+                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (Chuẩn Hãng)`}
               </span>
               <button
                 onClick={() => setScreen('menu')}
@@ -618,8 +617,13 @@ export default function ChessthuPage() {
                 const isW = isWater(r, c);
                 const isTrapR = isTrap(r, c, 'r');
                 const isTrapB = isTrap(r, c, 'b');
-                const isDenRed = r === 8 && c === 3;
-                const isDenBlue = r === 0 && c === 3;
+                
+                // ĐỒNG BỘ CHUẨN XÁC VỊ TRÍ VÀ TÊN GỌI CỦA HANG TRÊN MÀN HÌNH:
+                // - Hàng 0, Cột 3 là HANG ĐỎ (của bạn)[cite: 3]
+                // - Hàng 8, Cột 3 là HANG XANH (của AI)[cite: 3]
+                const isDenRed = r === 0 && c === 3;
+                const isDenBlue = r === 8 && c === 3;
+
                 const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
                 const isValidMove = validMoves.some((m) => m.r === r && m.c === c);
                 const animal = piece ? ANIMAL_DATA[piece] : null;
