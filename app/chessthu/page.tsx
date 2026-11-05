@@ -8,12 +8,10 @@ import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 const BET_OPTIONS = [50, 100, 200, 500, 1000, 5000, 10000];
 
-// Định nghĩa các quân thú: Điện tích lớn hơn ăn được điện tích nhỏ hơn (Chuột = 1, Voi = 8)
-// Red (Player 1) vs Blue (Player 2)
 interface AnimalPiece {
   name: string;
-  rank: number; // 1 đến 8
-  color: 'r' | 'b'; // r: Đỏ, b: Xanh
+  rank: number;
+  color: 'r' | 'b';
   icon: string;
 }
 
@@ -37,7 +35,6 @@ const ANIMAL_DATA: Record<string, AnimalPiece> = {
   bR: { name: 'Chuột Xanh', rank: 1, color: 'b', icon: '🐁' },
 };
 
-// Bàn cờ 9 hàng x 7 cột
 const INITIAL_COTHU_BOARD: string[][] = [
   ['rL', '', '', '', '', '', 'rT'],
   ['', 'rD', '', '', '', 'rC', ''],
@@ -50,7 +47,7 @@ const INITIAL_COTHU_BOARD: string[][] = [
   ['bT', '', '', '', '', '', 'bL'],
 ];
 
-export default function CoThuPage() {
+export default function ChessthuPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(50);
@@ -121,7 +118,7 @@ export default function CoThuPage() {
 
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const roomRef = doc(db, "cothuRooms", code);
+      const roomRef = doc(db, "chessthuRooms", code);
       
       await setDoc(roomRef, {
         board: JSON.stringify(INITIAL_COTHU_BOARD),
@@ -154,7 +151,7 @@ export default function CoThuPage() {
     }
 
     try {
-      const roomRef = doc(db, "cothuRooms", inputCode);
+      const roomRef = doc(db, "chessthuRooms", inputCode);
       const roomSnap = await getDoc(roomRef);
 
       if (!roomSnap.exists()) {
@@ -178,7 +175,7 @@ export default function CoThuPage() {
   useEffect(() => {
     if (screen !== 'game' || !roomCode) return;
 
-    const roomRef = doc(db, "cothuRooms", roomCode);
+    const roomRef = doc(db, "chessthuRooms", roomCode);
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -192,15 +189,10 @@ export default function CoThuPage() {
     return () => unsubscribe();
   }, [screen, roomCode]);
 
-  // Kiểm tra ô sông (Water)
   const isWater = (r: number, c: number) => {
-    // Hàng 3, 4, 5 và cột 1, 2 và 4, 5
     return (r >= 3 && r <= 5) && (c === 1 || c === 2 || c === 4 || c === 5);
   };
 
-  // Kiểm tra ô bẫy / hang (Trap / Den)
-  // Hang Đỏ: (8, 3), Bẫy Đỏ: (8, 2), (8, 4), (7, 3)
-  // Hang Xanh: (0, 3), Bẫy Xanh: (0, 2), (0, 4), (1, 3)
   const isDen = (r: number, c: number, color: 'r' | 'b') => {
     if (color === 'r') return r === 8 && c === 3;
     return r === 0 && c === 3;
@@ -222,20 +214,15 @@ export default function CoThuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
-        // Không được vào hang của chính mình
         if (isDen(nr, nc, color)) return;
 
         const target = currentBoard[nr][nc];
         const targetAnimal = target ? ANIMAL_DATA[target] : null;
 
-        // Xử lý sông (Chỉ Chuột - rank 1 mới được vào sông)
         if (isWater(nr, nc)) {
           if (rank !== 1) {
-            // Các con thú khác không được bước xuống nước
-            // Ngoại lệ: Sư Tử (7) và Hổ (6) có thể nhảy qua sông theo chiều dọc/ngang nếu không có chuột cản ở giữa sông
             if (rank === 6 || rank === 7) {
-              // Kiểm tra nhảy sông
-              if (dr !== 0) { // Nhảy dọc qua 3 ô sông
+              if (dr !== 0) {
                 let jumpR = r + dr;
                 let blocked = false;
                 while (jumpR >= 3 && jumpR <= 5) {
@@ -251,7 +238,7 @@ export default function CoThuPage() {
                     }
                   }
                 }
-              } else if (dc !== 0) { // Nhảy ngang qua 2 ô sông
+              } else if (dc !== 0) {
                 let jumpC = c + dc;
                 let blocked = false;
                 while (jumpC >= 1 && jumpC <= 5) {
@@ -270,23 +257,16 @@ export default function CoThuPage() {
               }
             }
             return;
-          } else {
-            // Chuột ở trong nước không được ăn voi trên cạn và ngược lại
-            // Chuột ăn chuột dưới nước bình thường
           }
         }
 
-        // Kiểm tra ăn quân thông thường
         if (!target) {
           moves.push({ r: nr, c: nc });
         } else {
           if (targetAnimal?.color !== color) {
-            // Quy luật ăn quân Cờ Thú: Quân lớn ăn quân nhỏ. 
-            // Ngoại lệ: Chuột (1) ăn được Voi (8). Voi (8) không ăn được Chuột (1).
-            // Nếu quân địch đứng ở ô bẫy (Trap) của đối phương, lực lượng bị giảm về 0 (bất kỳ con nào cũng ăn được)
             let canEat = false;
-            if (rank === 1 && targetAnimal?.rank === 8) canEat = true; // Chuột ăn Voi
-            else if (rank === 8 && targetAnimal?.rank === 1) canEat = false; // Voi không ăn Chuột
+            if (rank === 1 && targetAnimal?.rank === 8) canEat = true;
+            else if (rank === 8 && targetAnimal?.rank === 1) canEat = false;
             else if (rank >= targetAnimal!.rank) canEat = true;
 
             if (canEat) {
@@ -338,20 +318,16 @@ export default function CoThuPage() {
     const nextTurn = turn === 'r' ? 'b' : 'r';
 
     try {
-      const roomRef = doc(db, "cothuRooms", roomCode);
+      const roomRef = doc(db, "chessthuRooms", roomCode);
       await updateDoc(roomRef, {
         board: JSON.stringify(newBoard),
         turn: nextTurn
       });
 
-      // Kiểm tra thắng khi vào hang địch hoặc ăn hết thú
-      // Hang Đỏ: (8,3), Hang Xanh: (0,3)
       if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
         endGame(playerRole === 'r', playerRole === 'r' ? "Bạn đã chiếm hang địch và thắng cược!" : "Bạn đã thua cuộc!");
       } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
         endGame(playerRole === 'b', playerRole === 'b' ? "Bạn đã chiếm hang địch và thắng cược!" : "Bạn đã thua cuộc!");
-      } else if (target === 'rE' || target === 'bE') {
-        // Hoặc kiểm tra nếu tiêu diệt hết quân địch
       }
     } catch (err) {
       console.error("Lỗi cập nhật nước đi cờ thú:", err);
@@ -383,7 +359,6 @@ export default function CoThuPage() {
         </h1>
       </header>
 
-      {/* MENU CHÍNH */}
       {screen === 'menu' && (
         <div className="w-full max-w-sm flex flex-col gap-4">
           <div className="bg-neutral-800 p-4 rounded-xl border border-neutral-700 text-center">
@@ -432,7 +407,6 @@ export default function CoThuPage() {
         </div>
       )}
 
-      {/* BÀN CỜ THÚ GAME */}
       {screen === 'game' && (
         <div className="flex flex-col items-center w-full max-w-md">
           <div className="w-full flex justify-between items-center bg-neutral-800 px-4 py-2 rounded-t-lg text-sm border-b border-neutral-700">
@@ -490,7 +464,6 @@ export default function CoThuPage() {
         </div>
       )}
 
-      {/* POPUP KẾT QUẢ */}
       {modal.open && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-neutral-800 border border-neutral-700 p-6 rounded-xl text-center max-w-xs w-full flex flex-col gap-4">
