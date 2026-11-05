@@ -314,29 +314,15 @@ export default function Home() {
             </div>
           </section>
 
-          {/* PHỤ LỤC 4: GAME GIẢI TRÍ & MAY MẮN */}
+          {/* PHỤ LỤC 4: GAME GIẢI TRÍ & MAY MẮN (ĐÃ XÓA JACKPOT TRÙNG LẶP) */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
               <h2 className="text-xl font-black text-emerald-400 tracking-wider uppercase">
                 🎰 Game Giải Trí & May Mắn
               </h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
-              {/* Thẻ Nổ Hũ Jackpot */}
-              <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-amber-400 transition">
-                <div>
-                  <div className="text-4xl mb-2">👑</div>
-                  <h3 className="text-xl font-bold text-amber-300 mb-1">Jackpot Rồng Thần</h3>
-                  <p className="text-slate-400 text-sm mt-1 mb-4">
-                    Thử vận may quay hũ 4 hàng 6 cột tích tụ Ki nổ hũ Grand cực khủng!
-                  </p>
-                </div>
-                <Link href="/jackpot" className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black py-2.5 rounded-xl text-center text-sm shadow-md hover:brightness-110 transition">
-                  Vào Nổ Hũ Ngay 🎰
-                </Link>
-              </div>
-
               {/* Thẻ Xì Dách Multiplayer Realtime */}
               <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-emerald-400 transition">
                 <div>
