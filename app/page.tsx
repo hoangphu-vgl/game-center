@@ -242,7 +242,7 @@ export default function Home() {
               >
                 <div className="absolute -right-6 -bottom-6 text-7xl opacity-10 group-hover:opacity-20 transition">🎰</div>
                 <h3 className="text-xl font-bold text-amber-400 group-hover:text-amber-300 transition">
-                  🎰 Jackpot Rồng Thần 4x6
+                  🎰 Jackpot Rồng Thần
                 </h3>
                 <p className="text-slate-400 text-sm mt-1">
                   Thử vận may quay hũ 4 hàng 6 cột tích tụ Ki nổ hũ Grand cực khủng!

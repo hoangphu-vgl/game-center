@@ -28,16 +28,15 @@ const DRAGON_SYMBOLS = [
   { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 1 },
 ];
 
-// Thưởng nhanh Aura chuẩn các mốc yêu cầu (thấp hơn nổ chuỗi để giữ cân bằng)
 const AURA_QUICK_REWARDS = [
-  { id: "ki_white", name: "⚪ Aura Ki Trắng", mult: 2, icon: "✨" },
-  { id: "kaioken", name: "🔴 Aura Kaioken", mult: 2.5, icon: "🔥" },
-  { id: "ssj1", name: "🟡 Aura Super Saiyan", mult: 3, icon: "⚡" },
-  { id: "ssj2", name: "⚡ Aura Super Saiyan 2", mult: 3.5, icon: "🌩️" },
-  { id: "ssj_god", name: "🔴 Aura SSJ God", mult: 5, icon: "☀️" },
-  { id: "ssj_blue", name: "🔵 Aura SSJ Blue", mult: 6, icon: "💎" },
-  { id: "ultra_ego", name: "🟣 Aura Ultra Ego", mult: 8, icon: "🔮" },
-  { id: "ultra_instinct", name: "🌌 Aura Ultra Instinct", mult: 10, icon: "🌌" },
+  { id: "ki_white", name: "⚪ Ki Trắng", mult: 2, icon: "✨" },
+  { id: "kaioken", name: "🔴 Kaioken", mult: 2.5, icon: "🔥" },
+  { id: "ssj1", name: "🟡 SSJ", mult: 3, icon: "⚡" },
+  { id: "ssj2", name: "⚡ SSJ 2", mult: 3.5, icon: "🌩️" },
+  { id: "ssj_god", name: "🔴 SSJ God", mult: 5, icon: "☀️" },
+  { id: "ssj_blue", name: "🔵 SSJ Blue", mult: 6, icon: "💎" },
+  { id: "ultra_ego", name: "🟣 Ultra Ego", mult: 8, icon: "🔮" },
+  { id: "ultra_instinct", name: "🌌 Ultra Instinct", mult: 10, icon: "🌌" },
 ];
 
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
@@ -96,7 +95,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Cược nhỏ dễ trúng, cược lớn húp Jackpot khủng! Chọn mức cược và chiến ngay.",
+    text: "Võ đạo Dragon Ball: Nổ hũ reset từ đầu, tích lũy liên tục. Chọn mức cược và chiến ngay!",
     type: "normal",
   });
 
@@ -213,6 +212,7 @@ export default function JackpotPage() {
     const newPointsAfterBet = points - currentBet;
     await updatePointsInDB(newPointsAfterBet);
 
+    // Tích lũy hũ jackpot mỗi khi quay
     try {
       const jackpotRef = doc(db, "system", "jackpot");
       updateDoc(jackpotRef, {
@@ -237,21 +237,17 @@ export default function JackpotPage() {
     }, 75);
   };
 
-  // THUẬT TOÁN ĐIỀU CHỈNH TỶ LỆ THEO MỨC CƯỢC & HŨ JACKPOT GẮT GAO
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    // Tỷ lệ cơ bản 33%
     let winChance = 0.33;
     if (currentBet < 100) {
-      winChance += 0.10; // Đặt bé hơn 100: Tăng +10% tỷ lệ thắng
+      winChance += 0.10;
     } else if (currentBet >= 200 && currentBet <= 500) {
-      winChance -= 0.05; // Đặt 200-500: Giảm -5%
+      winChance -= 0.05;
     } else if (currentBet >= 5000) {
-      winChance -= 0.10; // Đặt 5k: Giảm -10% tỷ lệ thắng, rủi ro cao
+      winChance -= 0.10;
     }
 
     const isTriggerWin = Math.random() < winChance;
-    
-    // Tỷ lệ nổ Jackpot cực khó nhưng luôn có cơ hội (càng cược lớn cơ hội húp hũ Grand càng rõ ràng hơn chút)
     const jackpotChance = currentBet >= 1000 ? 0.015 : 0.005;
     const isJackpotHit = Math.random() < jackpotChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
@@ -262,18 +258,29 @@ export default function JackpotPage() {
     let isStreakWin = false;
     let isGrandJackpot = false;
 
-    // 1. Kiểm tra nổ hũ Jackpot
+    // 1. NỔ HŨ JACKPOT -> RESET HŨ VỀ MỨC GỐC BAN ĐẦU
     if (isJackpotHit || shenronTotal >= 5) {
       isGrandJackpot = true;
-      baseWinAmount = jackpots.grand + currentBet * 20;
+      baseWinAmount = jackpots.grand;
       matchedIndices = finalGrid.map((s, idx) => (s.id === "shenron" ? idx : -1)).filter((i) => i !== -1);
       if (matchedIndices.length === 0) matchedIndices = [0, 1, 2, 3, 4, 5];
-      resultText = `👑 NỔ HŨ GRAND JACKPOT VŨ TRỤ! +${baseWinAmount.toLocaleString()} PTS`;
+      resultText = `👑 NỔ HŨ GRAND JACKPOT VŨ TRỤ! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
+
+      // RESET HŨ GRAND VỀ GỐC 150.000 PTS
+      try {
+        const jackpotRef = doc(db, "system", "jackpot");
+        updateDoc(jackpotRef, {
+          grand: 150000,
+          major: 80000,
+          minor: 40000,
+        }).catch((e) => console.log(e));
+      } catch (e) {
+        console.error(e);
+      }
     } 
     else if (isTriggerWin) {
-      // CHECK LUẬT CHUỖI TỪ CỘT 1
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
         const colItems = [];
@@ -331,7 +338,6 @@ export default function JackpotPage() {
         if (streakRef.current >= 0) {
           baseWinAmount = 0;
         } else {
-          // THƯỞNG NHANH AURA VỚI HỆ SỐ CHUẨN X2, X2.5, X3, X3.5, X5, X6, X8, X10
           const chosenAura = AURA_QUICK_REWARDS[Math.floor(Math.random() * AURA_QUICK_REWARDS.length)];
           baseWinAmount = Math.floor(currentBet * chosenAura.mult);
           
@@ -434,56 +440,57 @@ export default function JackpotPage() {
 
   return (
     <div className={`min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-2 sm:p-4 overflow-x-hidden transition-all duration-300 ${explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""}`}>
-      {/* Top Bar */}
-      <div className="w-full max-w-4xl flex justify-between items-center mb-3 px-2">
+      
+      {/* Top Bar tối ưu mobile */}
+      <div className="w-full max-w-4xl flex justify-between items-center mb-2 px-2">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
         </Link>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleFullScreen}
-            className="bg-slate-900/90 border border-amber-500/50 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400 hover:bg-slate-800 transition cursor-pointer flex items-center gap-1 shadow-md"
+            className="bg-slate-900/90 border border-amber-500/50 px-2.5 py-1 rounded-xl text-xs font-bold text-amber-400 hover:bg-slate-800 transition cursor-pointer flex items-center gap-1 shadow-md"
           >
             <span>⛶</span> Full
           </button>
 
-          <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-500/50 px-3.5 py-1.5 rounded-xl shadow-lg">
+          <div className="flex items-center gap-1.5 bg-slate-900/90 border border-amber-500/50 px-3 py-1 rounded-xl shadow-lg">
             <span>🪙</span>
-            <span className="font-extrabold text-amber-400 tracking-wide">{points.toLocaleString()}</span>
-            <span className="text-xs text-amber-300/70">PTS</span>
+            <span className="font-extrabold text-amber-400 tracking-wide text-xs sm:text-sm">{points.toLocaleString()}</span>
+            <span className="text-[10px] text-amber-300/70">PTS</span>
           </div>
         </div>
       </div>
 
       {/* Main Game Container */}
-      <div className={`w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-3 sm:p-5 shadow-2xl flex flex-col gap-3 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
+      <div className={`w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-2.5 sm:p-5 shadow-2xl flex flex-col gap-2.5 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
         {/* 3 HŨ JACKPOT VỚI HIỆU ỨNG 2 BÊN KHI NỔ */}
-        <div className="grid grid-cols-3 gap-2 relative">
+        <div className="grid grid-cols-3 gap-1.5 relative">
           {jackpotSideGlow && (
             <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur-md opacity-75 animate-pulse -z-10"></div>
           )}
 
-          <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-2 text-center shadow-md">
-            <div className="text-[9px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MAJOR</div>
-            <div className="text-xs sm:text-base font-black text-white font-mono">{jackpots.major.toLocaleString()}</div>
+          <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-1.5 sm:p-2 text-center shadow-md">
+            <div className="text-[8px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MAJOR</div>
+            <div className="text-[11px] sm:text-base font-black text-white font-mono">{jackpots.major.toLocaleString()}</div>
           </div>
 
-          <div className="bg-gradient-to-b from-red-600 via-orange-600 to-amber-600 border border-yellow-200 rounded-xl p-2 text-center shadow-lg animate-pulse">
-            <div className="text-[10px] sm:text-xs font-black text-yellow-200 uppercase tracking-wider">👑 GRAND JACKPOT</div>
-            <div className="text-sm sm:text-xl font-black text-yellow-300 font-mono">{jackpots.grand.toLocaleString()}</div>
+          <div className="bg-gradient-to-b from-red-600 via-orange-600 to-amber-600 border border-yellow-200 rounded-xl p-1.5 sm:p-2 text-center shadow-lg animate-pulse">
+            <div className="text-[9px] sm:text-xs font-black text-yellow-200 uppercase tracking-wider">👑 GRAND HŨ</div>
+            <div className="text-xs sm:text-xl font-black text-yellow-300 font-mono">{jackpots.grand.toLocaleString()}</div>
           </div>
 
-          <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-2 text-center shadow-md">
-            <div className="text-[9px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MINOR</div>
-            <div className="text-xs sm:text-base font-black text-white font-mono">{jackpots.minor.toLocaleString()}</div>
+          <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-1.5 sm:p-2 text-center shadow-md">
+            <div className="text-[8px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MINOR</div>
+            <div className="text-[11px] sm:text-base font-black text-white font-mono">{jackpots.minor.toLocaleString()}</div>
           </div>
         </div>
 
-        {/* DANH SÁCH AURA THƯỞNG NHANH DRAGON BALL */}
-        <div className="bg-slate-950/80 border border-amber-500/30 p-2 rounded-xl flex items-center justify-between gap-1 overflow-x-auto text-[10px] sm:text-xs">
+        {/* DANH SÁCH AURA THƯỞNG NHANH */}
+        <div className="bg-slate-950/80 border border-amber-500/30 p-1.5 rounded-xl flex items-center justify-between gap-1 overflow-x-auto text-[9px] sm:text-xs">
           {AURA_QUICK_REWARDS.map((aura) => (
-            <div key={aura.id} className="bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg shrink-0 flex items-center gap-1 font-bold">
+            <div key={aura.id} className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg shrink-0 flex items-center gap-1 font-bold">
               <span>{aura.icon}</span>
               <span className="text-amber-300">{aura.name.split(" ")[1]}</span>
               <span className="text-orange-400 font-mono">x{aura.mult}</span>
@@ -492,28 +499,28 @@ export default function JackpotPage() {
         </div>
 
         {/* DÒNG THÔNG BÁO REALTIME & NÚT DỪNG AUTO */}
-        <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-2 rounded-xl text-xs font-bold gap-2">
+        <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold gap-2">
           <div className={`truncate ${messageBox.type === "break" ? "text-rose-500 font-black animate-bounce" : messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
             💬 {messageBox.text}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {autoCount > 0 && (
               <button
                 onClick={stopAuto}
                 className="bg-rose-600 hover:bg-rose-500 text-white font-black px-2 py-0.5 rounded text-[10px] animate-pulse cursor-pointer shadow"
               >
-                ⏹ Dừng Auto
+                ⏹ Dừng
               </button>
             )}
-            <div className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/40 font-mono">
-              🔥 Chuỗi: {currentMultiplierDisplay === 0 ? "Chưa có" : `x${currentMultiplierDisplay}`}
+            <div className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/40 font-mono text-[10px] sm:text-xs">
+              🔥 Chuỗi: {currentMultiplierDisplay === 0 ? "Không" : `x${currentMultiplierDisplay}`}
             </div>
           </div>
         </div>
 
-        {/* LƯỚI 4 HÀNG X 6 CỘT */}
-        <div className="bg-slate-950 p-2 sm:p-3 rounded-xl border border-amber-500/30 shadow-inner">
-          <div className="grid grid-cols-6 grid-rows-4 gap-1.5 sm:gap-2">
+        {/* LƯỚI 4 HÀNG X 6 CỘT - TỐI ƯU MOBILE */}
+        <div className="bg-slate-950 p-2 rounded-xl border border-amber-500/30 shadow-inner">
+          <div className="grid grid-cols-6 grid-rows-4 gap-1.5">
             {grid.map((sym, idx) => {
               const isWinning = winningCoords.includes(idx);
               const hasResult = winningCoords.length > 0;
@@ -521,18 +528,18 @@ export default function JackpotPage() {
               return (
                 <div
                   key={idx}
-                  className={`flex flex-col items-center justify-center rounded-lg aspect-square p-1 transition-all duration-300 ${
+                  className={`flex flex-col items-center justify-center rounded-lg aspect-square p-0.5 transition-all duration-300 ${
                     spinning
                       ? "animate-pulse scale-95 bg-slate-800"
                       : isWinning
-                      ? "bg-gradient-to-b from-amber-500 to-orange-600 border-2 border-yellow-300 scale-110 shadow-[0_0_25px_rgba(245,158,11,0.9)] z-10 animate-bounce"
+                      ? "bg-gradient-to-b from-amber-500 to-orange-600 border-2 border-yellow-300 scale-105 sm:scale-110 shadow-[0_0_20px_rgba(245,158,11,0.9)] z-10 animate-bounce"
                       : hasResult
                       ? "bg-slate-950/90 border border-slate-900 opacity-30 scale-95 grayscale"
                       : "bg-gradient-to-b from-slate-800 to-slate-900 border border-amber-500/20 hover:border-amber-400"
                   }`}
                 >
-                  <span className="text-xl sm:text-3xl">{sym.icon}</span>
-                  <span className={`text-[8px] sm:text-[10px] font-bold truncate w-full text-center mt-0.5 ${isWinning ? "text-slate-950 font-black" : "text-amber-300/80"}`}>
+                  <span className="text-2xl sm:text-3xl">{sym.icon}</span>
+                  <span className={`text-[7px] sm:text-[9px] font-bold truncate w-full text-center mt-0.5 ${isWinning ? "text-slate-950 font-black" : "text-amber-300/80"}`}>
                     {sym.name}
                   </span>
                 </div>
@@ -542,15 +549,15 @@ export default function JackpotPage() {
         </div>
 
         {/* THANH ĐIỀU KHIỂN CƯỢC & AUTO & QUAY */}
-        <div className="flex flex-col gap-2 pt-1">
+        <div className="flex flex-col gap-1.5 pt-0.5">
           <div className="flex items-center gap-1 flex-wrap justify-center sm:justify-start">
-            <span className="text-xs font-bold text-amber-300 mr-1">CƯỢC:</span>
+            <span className="text-[11px] font-bold text-amber-300 mr-1">CƯỢC:</span>
             {BET_OPTIONS.map((amt) => (
               <button
                 key={amt}
                 onClick={() => setCurrentBet(amt)}
                 disabled={spinning}
-                className={`px-2 py-1 rounded-lg text-[11px] sm:text-xs font-black border transition cursor-pointer ${
+                className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-black border transition cursor-pointer ${
                   currentBet === amt
                     ? "bg-amber-400 text-slate-950 border-amber-300 shadow"
                     : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
@@ -561,15 +568,15 @@ export default function JackpotPage() {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 items-center">
-            <div className="flex items-center gap-1 flex-wrap justify-center">
-              <span className="text-xs font-bold text-orange-400 mr-1">AUTO:</span>
+          <div className="flex flex-col sm:flex-row gap-1.5 items-center">
+            <div className="flex items-center gap-1 flex-wrap justify-center w-full sm:w-auto">
+              <span className="text-[11px] font-bold text-orange-400 mr-1">AUTO:</span>
               {AUTO_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => handleSpinClick(opt.value)}
                   disabled={spinning && autoCount === 0}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-black border transition cursor-pointer ${
+                  className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-black border transition cursor-pointer ${
                     autoCount === opt.value
                       ? "bg-orange-500 text-slate-950 border-orange-300 shadow"
                       : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
@@ -595,13 +602,13 @@ export default function JackpotPage() {
         </div>
 
         {/* LỊCH SỬ QUAY GẦN NHẤT */}
-        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 max-h-28 overflow-y-auto text-[11px]">
-          <div className="font-bold text-slate-400 mb-1">📜 Lịch sử chiến đấu gần đây:</div>
+        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-2 max-h-24 overflow-y-auto text-[10px] sm:text-[11px]">
+          <div className="font-bold text-slate-400 mb-0.5">📜 Lịch sử chiến đấu gần đây:</div>
           {history.length === 0 ? (
             <div className="text-slate-600 italic">Chưa có lượt quay nào trong phiên này.</div>
           ) : (
             history.map((item) => (
-              <div key={item.id} className="flex justify-between py-0.5 border-b border-slate-900">
+              <div key={item.id} className="flex justify-between py-0.5 border-b border-slate-900/60">
                 <span className={item.isWin ? "text-amber-400 font-bold" : "text-rose-400"}>
                   {item.text}
                 </span>
