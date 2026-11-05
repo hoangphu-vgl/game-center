@@ -16,23 +16,23 @@ const AUTO_OPTIONS = [
 ];
 
 const DRAGON_SYMBOLS = [
-  { id: "shenron", icon: "🐲", name: "Rồng Thần", tier: "epic", multiplier: 50 },
-  { id: "goku", icon: "🐉", name: "Goku SSJ", tier: "rare", multiplier: 25 },
-  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", tier: "rare", multiplier: 20 },
-  { id: "gohan", icon: "⚡", name: "Gohan Beast", tier: "rare", multiplier: 18 },
-  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", tier: "mid", multiplier: 12 },
-  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", tier: "mid", multiplier: 10 },
-  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", tier: "mid", multiplier: 8 },
-  { id: "ball5", icon: "🔮", name: "Ngọc 5 Sao", tier: "mid", multiplier: 8 },
-  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", tier: "bad", multiplier: 3 },
-  { id: "ball2", icon: "🔮", name: "Ngọc 2 Sao", tier: "bad", multiplier: 3 },
-  { id: "ball6", icon: "🔮", name: "Ngọc 6 Sao", tier: "bad", multiplier: 3 },
-  { id: "senzu", icon: "🫘", name: "Đậu Senzu", tier: "bad", multiplier: 2 },
-  { id: "scouter", icon: "🥽", name: "Kính Dò Ki", tier: "bad", multiplier: 2 },
+  { id: "shenron", icon: "🐲", name: "Rồng Thần", tier: "epic", multiplier: 30 },
+  { id: "goku", icon: "🐉", name: "Goku SSJ", tier: "rare", multiplier: 15 },
+  { id: "vegeta", icon: "💥", name: "Vegeta SSJ", tier: "rare", multiplier: 12 },
+  { id: "gohan", icon: "⚡", name: "Gohan Beast", tier: "rare", multiplier: 10 },
+  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", tier: "mid", multiplier: 8 },
+  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", tier: "mid", multiplier: 6 },
+  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", tier: "mid", multiplier: 5 },
+  { id: "ball5", icon: "🔮", name: "Ngọc 5 Sao", tier: "mid", multiplier: 5 },
+  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", tier: "bad", multiplier: 2 },
+  { id: "ball2", icon: "🔮", name: "Ngọc 2 Sao", tier: "bad", multiplier: 2 },
+  { id: "ball6", icon: "🔮", name: "Ngọc 6 Sao", tier: "bad", multiplier: 2 },
+  { id: "senzu", icon: "🫘", name: "Đậu Senzu", tier: "bad", multiplier: 1 },
+  { id: "scouter", icon: "🥽", name: "Kính Dò Ki", tier: "bad", multiplier: 1 },
   { id: "capsule", icon: "💊", name: "Capsule", tier: "bad", multiplier: 1 },
 ];
 
-const STREAK_MULTIPLIERS = [2, 4, 16, 32, 64, 128, 256, 512, 1024];
+const STREAK_MULTIPLIERS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 const LOSE_TAUNTS = [
   "Vegeta cười khẩy: 'Ngươi chỉ có thế thôi sao cùi bắp?'",
@@ -61,7 +61,9 @@ export default function JackpotPage() {
   const [spinning, setSpinning] = useState<boolean>(false);
   const [explosiveEffect, setExplosiveEffect] = useState<boolean>(false);
 
-  // Auto spin states
+  // Lưu danh sách ID các ô trúng thưởng để làm hiệu ứng nổi/chìm
+  const [winningIndices, setWinningIndices] = useState<number[]>([]);
+
   const [autoCount, setAutoCount] = useState<number>(0);
   const autoSpinRef = useRef<number>(0);
 
@@ -69,8 +71,9 @@ export default function JackpotPage() {
     Array(24).fill(DRAGON_SYMBOLS[0])
   );
 
+  // Hạ hũ chuẩn 10k - 20k giai đoạn đầu
   const [jackpots, setJackpots] = useState({
-    grand: 25000,
+    grand: 20000,
     major: 15000,
     minor: 10000,
   });
@@ -105,19 +108,20 @@ export default function JackpotPage() {
     return () => unsubscribe();
   }, []);
 
+  // Lắng nghe Hũ Realtime, nếu hũ trên db lớn hơn 50000 thì giữ chuẩn 10k-20k theo ý ní
   useEffect(() => {
     const jackpotRef = doc(db, "system", "jackpot");
     const unsubscribe = onSnapshot(jackpotRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setJackpots({
-          grand: data.grand || 25000,
-          major: data.major || 15000,
-          minor: data.minor || 10000,
+          grand: data.grand > 50000 ? 20000 : (data.grand || 20000),
+          major: data.major > 40000 ? 15000 : (data.major || 15000),
+          minor: data.minor > 30000 ? 10000 : (data.minor || 10000),
         });
       } else {
         setDoc(jackpotRef, {
-          grand: 25000,
+          grand: 20000,
           major: 15000,
           minor: 10000,
         });
@@ -133,7 +137,7 @@ export default function JackpotPage() {
   const getRandomSymbol = () => {
     const rand = Math.random() * 100;
     let pool = DRAGON_SYMBOLS;
-    if (rand < 60) {
+    if (rand < 55) {
       pool = DRAGON_SYMBOLS.filter((s) => s.tier === "bad");
     } else if (rand < 85) {
       pool = DRAGON_SYMBOLS.filter((s) => s.tier === "mid");
@@ -170,6 +174,7 @@ export default function JackpotPage() {
 
   const handleSpinClick = (targetAuto: number) => {
     if (spinning) return;
+    setWinningIndices([]); // Reset hiệu ứng nổi cũ
     setAutoCount(targetAuto);
     executeSpin(targetAuto);
   };
@@ -182,6 +187,7 @@ export default function JackpotPage() {
     }
 
     setSpinning(true);
+    setWinningIndices([]);
     const newPointsAfterBet = points - currentBet;
     await updatePointsInDB(newPointsAfterBet);
 
@@ -209,54 +215,95 @@ export default function JackpotPage() {
     }, 80);
   };
 
+  // Cấu trúc tính điểm chuẩn khớp 100% với lịch sử và số điểm cộng vào DB
   const evaluateSpinResult = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    let winChanceThreshold = 0.40;
-    if (currentBet <= 100) winChanceThreshold = 0.52;
+    let winChanceThreshold = 0.42;
+    if (currentBet <= 100) winChanceThreshold = 0.55; // Buff 10-12% cho cược nhỏ
     else if (currentBet <= 1000) winChanceThreshold = 0.38;
     else winChanceThreshold = 0.30;
 
     const isLuckyHit = Math.random() < winChanceThreshold;
+    const shenronCount = finalGrid.filter((s) => s.id === "shenron").length;
 
     let totalWin = 0;
     let resultText = "";
-    const shenronCount = finalGrid.filter((s) => s.id === "shenron").length;
+    let matchedIndices: number[] = [];
 
     if (shenronCount >= 3 || (isLuckyHit && Math.random() < 0.05)) {
+      // Trúng Hũ Minor/Grand
       totalWin = jackpots.minor + Math.floor(currentBet * 10);
       resultText = `🎉 NỔ HŨ RỒNG THẦN! +${totalWin.toLocaleString()} PTS`;
+      matchedIndices = finalGrid
+        .map((s, idx) => (s.id === "shenron" ? idx : -1))
+        .filter((idx) => idx !== -1);
       triggerExplosion();
     } else if (isLuckyHit) {
-      const baseReward = currentBet * (Math.floor(Math.random() * 5) + 3);
-      
-      let nextStreak = streakIndex;
-      let activeMultiplier = 1;
-      
-      if (streakIndex === 0) {
-        nextStreak = 0;
-        activeMultiplier = STREAK_MULTIPLIERS[0];
-      } else if (streakIndex < STREAK_MULTIPLIERS.length) {
-        activeMultiplier = STREAK_MULTIPLIERS[streakIndex];
-        nextStreak = streakIndex + 1;
-      } else {
-        activeMultiplier = STREAK_MULTIPLIERS[STREAK_MULTIPLIERS.length - 1];
-      }
+      // Tìm xem biểu tượng nào xuất hiện nhiều nhất (từ 3 hình trở lên) để tính thưởng chuẩn
+      const counts: Record<string, number[]> = {};
+      finalGrid.forEach((s, idx) => {
+        if (!counts[s.id]) counts[s.id] = [];
+        counts[s.id].push(idx);
+      });
 
-      setStreakIndex(nextStreak);
-      totalWin = baseReward * activeMultiplier;
-      const randomPraise = WIN_PRAISES[Math.floor(Math.random() * WIN_PRAISES.length)];
-      resultText = `⚡ ${randomPraise} (x${activeMultiplier}) +${totalWin.toLocaleString()} PTS`;
-      triggerExplosion();
+      let bestSymbolId = "";
+      let maxLen = 0;
+      Object.keys(counts).forEach((id) => {
+        if (counts[id].length > maxLen) {
+          maxLen = counts[id].length;
+          bestSymbolId = id;
+        }
+      });
+
+      if (maxLen >= 3) {
+        matchedIndices = counts[bestSymbolId];
+        const sym = DRAGON_SYMBOLS.find((s) => s.id === bestSymbolId);
+        const baseMultiplier = sym ? sym.multiplier : 5;
+        const baseReward = currentBet * baseMultiplier;
+
+        // Tính chuỗi cấp số nhân
+        let nextStreak = streakIndex;
+        let activeMultiplier = 1;
+
+        if (streakIndex === 0) {
+          nextStreak = 1;
+          activeMultiplier = STREAK_MULTIPLIERS[0];
+        } else if (streakIndex < STREAK_MULTIPLIERS.length) {
+          activeMultiplier = STREAK_MULTIPLIERS[streakIndex];
+          nextStreak = streakIndex + 1;
+        } else {
+          activeMultiplier = STREAK_MULTIPLIERS[STREAK_MULTIPLIERS.length - 1];
+        }
+
+        setStreakIndex(nextStreak);
+        totalWin = baseReward * activeMultiplier;
+        const randomPraise = WIN_PRAISES[Math.floor(Math.random() * WIN_PRAISES.length)];
+        resultText = `⚡ ${randomPraise} [Trúng ${maxLen} ${sym?.name}] (x${activeMultiplier}) +${totalWin.toLocaleString()} PTS`;
+        triggerExplosion();
+      } else {
+        // Trúng ngẫu nhiên cơ bản
+        matchedIndices = [0, 1, 2, 3]; // Highlight vài ô ngẫu nhiên
+        const baseReward = currentBet * 3;
+        let activeMultiplier = streakIndex === 0 ? STREAK_MULTIPLIERS[0] : STREAK_MULTIPLIERS[streakIndex];
+        if (streakIndex < STREAK_MULTIPLIERS.length) setStreakIndex(streakIndex + 1);
+
+        totalWin = baseReward * activeMultiplier;
+        resultText = `✨ Thắng may mắn! (x${activeMultiplier}) +${totalWin.toLocaleString()} PTS`;
+        triggerExplosion();
+      }
     } else {
+      // Thua cược
       setStreakIndex(0);
+      setWinningIndices([]);
       const randomTaunt = LOSE_TAUNTS[Math.floor(Math.random() * LOSE_TAUNTS.length)];
       resultText = `💥 Thua (-${currentBet} PTS) | ${randomTaunt}`;
       setMessageBox({ text: resultText, type: "lose" });
       addHistory(resultText, false);
-      
+
       continueAutoIfNeeded(remainingAuto);
       return;
     }
 
+    setWinningIndices(matchedIndices);
     const finalPts = currentPts + totalWin;
     await updatePointsInDB(finalPts);
     setMessageBox({ text: resultText, type: "win" });
@@ -267,19 +314,14 @@ export default function JackpotPage() {
 
   const triggerExplosion = () => {
     setExplosiveEffect(true);
-    setTimeout(() => setExplosiveEffect(false), 600);
+    setTimeout(() => setExplosiveEffect(false), 700);
   };
 
   const continueAutoIfNeeded = (remainingAuto: number) => {
     if (remainingAuto > 1) {
-      setTimeout(() => {
-        executeSpin(remainingAuto - 1);
-      }, 300);
+      setTimeout(() => executeSpin(remainingAuto - 1), 400);
     } else if (remainingAuto === 99999) {
-      // Vô cực tiếp tục nếu đủ điểm
-      setTimeout(() => {
-        executeSpin(99999);
-      }, 300);
+      setTimeout(() => executeSpin(99999), 400);
     } else {
       setAutoCount(0);
     }
@@ -296,7 +338,7 @@ export default function JackpotPage() {
   };
 
   return (
-    <div className={`min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-2 sm:p-4 overflow-x-hidden transition-all duration-300 ${explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/20" : ""}`}>
+    <div className={`min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-2 sm:p-4 overflow-x-hidden transition-all duration-300 ${explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""}`}>
       {/* Top Bar */}
       <div className="w-full max-w-4xl flex justify-between items-center mb-3 px-2">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
@@ -321,7 +363,7 @@ export default function JackpotPage() {
       {/* Main Game Container */}
       <div className="w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-3 sm:p-5 shadow-2xl flex flex-col gap-3">
         
-        {/* 3 HŨ JACKPOT */}
+        {/* 3 HŨ JACKPOT GIAI ĐOẠN ĐẦU */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-2 text-center shadow-md">
             <div className="text-[9px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MAJOR</div>
@@ -339,38 +381,48 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* DÒNG THÔNG BÁO KẾT QUẢ & CHUỖI REALTIME */}
+        {/* DÒNG THÔNG BÁO REALTIME */}
         <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-2 rounded-xl text-xs font-bold">
           <div className={`truncate ${messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
             💬 {messageBox.text}
           </div>
           <div className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/40 font-mono shrink-0">
-            🔥 Chuỗi: x{streakIndex === 0 ? 1 : STREAK_MULTIPLIERS[streakIndex - 1]}
+            🔥 Chuỗi: x{streakIndex === 0 ? 1 : STREAK_MULTIPLIERS[Math.min(streakIndex - 1, STREAK_MULTIPLIERS.length - 1)]}
           </div>
         </div>
 
-        {/* LƯỚI 4 HÀNG X 6 CỘT CHUẨN KHÍT (24 Ô) */}
+        {/* LƯỚI 4 HÀNG X 6 CỘT - HIỆU ỨNG TRÙNG HÌNH NỔI LÊN / KHÔNG TRÙNG CHÌM XUỐNG */}
         <div className="bg-slate-950 p-2 sm:p-3 rounded-xl border border-amber-500/30 shadow-inner">
           <div className="grid grid-cols-6 grid-rows-4 gap-1.5 sm:gap-2">
-            {grid.map((sym, idx) => (
-              <div
-                key={idx}
-                className={`flex flex-col items-center justify-center bg-gradient-to-b from-slate-800 to-slate-900 border border-amber-500/20 rounded-lg aspect-square p-1 transition-transform ${
-                  spinning ? "animate-pulse scale-95" : "hover:border-amber-400"
-                } ${explosiveEffect ? "scale-105 border-amber-400" : ""}`}
-              >
-                <span className="text-xl sm:text-3xl">{sym.icon}</span>
-                <span className="text-[8px] sm:text-[10px] font-bold text-amber-300/80 truncate w-full text-center mt-0.5">
-                  {sym.name}
-                </span>
-              </div>
-            ))}
+            {grid.map((sym, idx) => {
+              const isWinning = winningIndices.includes(idx);
+              const hasResult = winningIndices.length > 0;
+
+              return (
+                <div
+                  key={idx}
+                  className={`flex flex-col items-center justify-center rounded-lg aspect-square p-1 transition-all duration-300 ${
+                    spinning
+                      ? "animate-pulse scale-95 bg-slate-800"
+                      : isWinning
+                      ? "bg-gradient-to-b from-amber-500 to-orange-600 border-2 border-yellow-300 scale-110 shadow-[0_0_20px_rgba(245,158,11,0.8)] z-10 animate-bounce"
+                      : hasResult
+                      ? "bg-slate-950/80 border border-slate-900 opacity-40 scale-95 grayscale"
+                      : "bg-gradient-to-b from-slate-800 to-slate-900 border border-amber-500/20 hover:border-amber-400"
+                  }`}
+                >
+                  <span className="text-xl sm:text-3xl">{sym.icon}</span>
+                  <span className={`text-[8px] sm:text-[10px] font-bold truncate w-full text-center mt-0.5 ${isWinning ? "text-slate-950 font-black" : "text-amber-300/80"}`}>
+                    {sym.name}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* THANH ĐIỀU KHIỂN CƯỢC & NÚT QUAY / AUTO */}
+        {/* THANH ĐIỀU KHIỂN CƯỢC & AUTO & QUAY */}
         <div className="flex flex-col gap-2 pt-1">
-          {/* Mức cược */}
           <div className="flex items-center gap-1 flex-wrap justify-center sm:justify-start">
             <span className="text-xs font-bold text-amber-300 mr-1">CƯỢC:</span>
             {BET_OPTIONS.map((amt) => (
@@ -389,7 +441,6 @@ export default function JackpotPage() {
             ))}
           </div>
 
-          {/* Chọn chế độ Tự động & Nút Quay Ngay */}
           <div className="flex flex-col sm:flex-row gap-2 items-center">
             <div className="flex items-center gap-1 flex-wrap justify-center">
               <span className="text-xs font-bold text-orange-400 mr-1">AUTO:</span>
