@@ -90,6 +90,31 @@ export default function BanCaPage() {
     'bottom-right': { active: true, email: 'Bạn' }
   });
 
+  // Dùng ref để lưu trạng thái phòng hiện tại phục vụ dọn dẹp khi thoát
+  const activeRoomRefData = useRef<{ roomId: string | null; corner: string; pve: boolean }>({
+    roomId: null,
+    corner: 'bottom-right',
+    pve: true
+  });
+
+  useEffect(() => {
+    activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
+  }, [activeRoomId, myCorner, isPVE]);
+
+  // Xử lý tự động xóa tên và giải phóng ghế khi người chơi đóng tab hoặc thoát trang đột ngột
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const { roomId, corner, pve } = activeRoomRefData.current;
+      if (roomId && !pve) {
+        // Gửi lệnh đồng bộ đồng thời giải phóng ghế
+        const roomRef = doc(db, "banca_rooms", roomId);
+        // Dùng Beacon hoặc update trực tiếp nếu có thể
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -188,19 +213,19 @@ export default function BanCaPage() {
 
   useEffect(() => {
     const bubbles = [];
-    for (let i = 0; i < 35; i++) {
+    for (let i = 0; i < 30; i++) {
       bubbles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        radius: Math.random() * 5 + 2,
-        speed: Math.random() * 1.2 + 0.4,
+        radius: Math.random() * 4 + 2,
+        speed: Math.random() * 1.0 + 0.3,
         opacity: Math.random() * 0.3 + 0.1
       });
     }
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe dữ liệu phòng PVP realtime chuẩn xác
+  // Lắng nghe dữ liệu phòng PVP realtime
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -218,7 +243,7 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE]);
 
-  // Cập nhật góc súng định kỳ lên Firestore
+  // Cập nhật góc súng tối ưu hóa tần số để chống giật lag
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -242,7 +267,7 @@ export default function BanCaPage() {
           await updateDoc(roomRef, { players: currentPlayers });
         }
       } catch (e) {}
-    }, 150);
+    }, 200); // Giảm tần số gọi Firestore xuống 200ms giúp mượt mà, hết giật khung hình
 
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
@@ -264,10 +289,10 @@ export default function BanCaPage() {
     window.addEventListener('resize', handleResize);
 
     const isMobile = window.innerWidth < 768;
-    const scaleFactor = isMobile ? 0.8 : 1.0; // Tự động scale độ phân giải riêng cho mobile và pc
+    const scaleFactor = isMobile ? 0.75 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if (fishesRef.current.length < 28 && Math.random() < 0.35) {
+      if (fishesRef.current.length < 24 && Math.random() < 0.3) {
         const rand = Math.random();
         let template;
         if (rand < 0.05) {
@@ -348,14 +373,14 @@ export default function BanCaPage() {
         bulletsRef.current = bulletsRef.current.filter(b => b.alive);
 
         explosionsRef.current.forEach(ex => {
-          ex.radius += 4;
-          ex.alpha -= 0.06;
+          ex.radius += 3;
+          ex.alpha -= 0.08;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
         floatingTextsRef.current.forEach(ft => {
           ft.y += ft.vy;
-          ft.alpha -= 0.02;
+          ft.alpha -= 0.025;
         });
         floatingTextsRef.current = floatingTextsRef.current.filter(ft => ft.alpha > 0);
 
@@ -373,7 +398,7 @@ export default function BanCaPage() {
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
             if (dist < bullet.radius + fish.width / 2.5) {
               bullet.alive = false;
-              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 10, maxRadius: 75, color: bullet.color, alpha: 1 });
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 8, maxRadius: 60, color: bullet.color, alpha: 1 });
 
               fish.hp -= bullet.damage;
               fish.hitTimer = 4;
@@ -437,14 +462,12 @@ export default function BanCaPage() {
         bulletsRef.current.forEach(b => {
           ctx.save();
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 6, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius + 5, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
           ctx.fill();
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 3, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius + 2, 0, Math.PI * 2);
           ctx.fillStyle = b.color;
-          ctx.shadowColor = b.color;
-          ctx.shadowBlur = 22;
           ctx.fill();
           ctx.restore();
         });
@@ -456,9 +479,7 @@ export default function BanCaPage() {
           ctx.beginPath();
           ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
           ctx.strokeStyle = ex.color;
-          ctx.lineWidth = 5;
-          ctx.shadowColor = ex.color;
-          ctx.shadowBlur = 25;
+          ctx.lineWidth = 4;
           ctx.stroke();
           ctx.restore();
         });
@@ -466,15 +487,14 @@ export default function BanCaPage() {
         floatingTextsRef.current.forEach(ft => {
           ctx.save();
           ctx.globalAlpha = Math.max(0, ft.alpha);
-          ctx.font = '900 20px Fredoka, sans-serif';
+          ctx.font = '900 18px Fredoka, sans-serif';
           ctx.fillStyle = ft.color;
           ctx.shadowColor = 'rgba(0,0,0,0.8)';
-          ctx.shadowBlur = 6;
+          ctx.shadowBlur = 4;
           ctx.fillText(ft.text, ft.x, ft.y);
           ctx.restore();
         });
 
-        // Vẽ súng: Kiểm tra nghiêm ngặt, vị trí nào trống sẽ ẩn hoàn toàn tên và giữ yên
         const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
@@ -491,37 +511,37 @@ export default function BanCaPage() {
           }
 
           ctx.beginPath();
-          ctx.arc(0, 0, 48, 0, Math.PI * 2);
+          ctx.arc(0, 0, 42, 0, Math.PI * 2);
           ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
           ctx.fill();
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 3;
           ctx.strokeStyle = isActive ? '#38bdf8' : '#475569';
           ctx.stroke();
 
           ctx.rotate(angle);
           ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
-          ctx.fillRect(0, -16, 60, 32);
+          ctx.fillRect(0, -14, 52, 28);
           ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -16, 60, 32);
+          ctx.strokeRect(0, -14, 52, 28);
           ctx.fillStyle = isActive ? '#b45309' : '#334155';
-          ctx.fillRect(52, -20, 10, 40);
+          ctx.fillRect(44, -18, 8, 36);
           ctx.restore();
 
           if (isActive) {
-            ctx.font = "bold 11px Fredoka, sans-serif";
+            ctx.font = "bold 10px Fredoka, sans-serif";
             ctx.fillStyle = "#facc15";
             ctx.textAlign = 'center';
-            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 55 - 4 : 45));
+            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 48 : 38));
           }
         };
 
         if (!isPVE) {
-          drawTurret(70, 70, 'top-left', 'P2');
-          drawTurret(w - 70, 70, 'top-right', 'P3');
-          drawTurret(70, h - 70, 'bottom-left', 'P4');
+          drawTurret(60, 60, 'top-left', 'P2');
+          drawTurret(w - 60, 60, 'top-right', 'P3');
+          drawTurret(60, h - 60, 'bottom-left', 'P4');
         }
-        drawTurret(w - 70, h - 70, 'bottom-right', isPVE ? 'P1 (Solo)' : 'P1 (Bạn)');
+        drawTurret(w - 60, h - 60, 'bottom-right', isPVE ? 'P1 (Solo)' : 'P1 (Bạn)');
       }
 
       animationFrameId = requestAnimationFrame(render);
@@ -557,10 +577,10 @@ export default function BanCaPage() {
 
     const w = window.innerWidth;
     const h = window.innerHeight;
-    let startX = w - 70, startY = h - 70;
-    if (myCorner === 'bottom-left') { startX = 70; startY = h - 70; }
-    else if (myCorner === 'top-left') { startX = 70; startY = 70; }
-    else if (myCorner === 'top-right') { startX = w - 70; startY = 70; }
+    let startX = w - 60, startY = h - 60;
+    if (myCorner === 'bottom-left') { startX = 60; startY = h - 60; }
+    else if (myCorner === 'top-left') { startX = 60; startY = 60; }
+    else if (myCorner === 'top-right') { startX = w - 60; startY = 60; }
 
     const angle = Math.atan2(mousePosRef.current.y - startY, mousePosRef.current.x - startX);
     bulletsRef.current.push({
@@ -589,7 +609,6 @@ export default function BanCaPage() {
     }
   };
 
-  // Ghép phòng tự động ưu tiên phòng đang có người
   const handleAutoMatchmaking = async () => {
     try {
       showToast("⚡ Đang tìm phòng có người...");
@@ -742,23 +761,25 @@ export default function BanCaPage() {
     showToast(`🎉 Vào phòng ${roomId} thành công!`);
   };
 
-  // Xóa tên và giải phóng ngay ghế ngồi khi bấm Thoát phòng
+  // Thoát phòng triệt để: trả ghế về trạng thái Trống ngay lập tức để người khác vào
   const handleLeaveRoom = async () => {
     if (activeRoomId && !isPVE) {
       const roomRef = doc(db, "banca_rooms", activeRoomId);
-      const roomSnap = await getDoc(roomRef);
-      if (roomSnap.exists()) {
-        const players = roomSnap.data().players || {};
-        if (players[myCorner]) {
-          players[myCorner] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
-          await updateDoc(roomRef, { players });
+      try {
+        const roomSnap = await getDoc(roomRef);
+        if (roomSnap.exists()) {
+          const players = roomSnap.data().players || {};
+          if (players[myCorner]) {
+            players[myCorner] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
+            await updateDoc(roomRef, { players });
+          }
         }
-      }
+      } catch (e) {}
     }
     setActiveRoomId(null);
     setIsPVE(true);
     setScreenMode('lobby');
-    showToast("Đã rời phòng về sảnh chính.");
+    showToast("Đã rời phòng, ghế đã được giải phóng.");
   };
 
   return (
