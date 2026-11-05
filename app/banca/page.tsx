@@ -46,15 +46,16 @@ const GUN_TYPES: GunConfig[] = [
   { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' }
 ];
 
+// Đã giảm máu cá xuống vừa phải để bắn mượt và dễ húp thưởng hơn
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 5, hpMax: 12, reward: 15, category: 'small' },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 6, hpMax: 15, reward: 20, category: 'small' },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 5, hpMax: 12, reward: 12, category: 'small' },
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 80, hpMax: 180, reward: 80, category: 'medium' },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 120, hpMax: 250, reward: 120, category: 'medium' },
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 800, hpMax: 2000, reward: 600, category: 'large' },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 600, hpMax: 1600, reward: 500, category: 'large' },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 1200, hpMax: 3000, reward: 1000, category: 'large' }
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 2, hpMax: 6, reward: 15, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 3, hpMax: 8, reward: 20, category: 'small' },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 2, hpMax: 6, reward: 12, category: 'small' },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 30, hpMax: 70, reward: 80, category: 'medium' },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 45, hpMax: 100, reward: 120, category: 'medium' },
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 300, hpMax: 800, reward: 600, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 250, hpMax: 650, reward: 500, category: 'large' },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 450, hpMax: 1200, reward: 1000, category: 'large' }
 ];
 
 export default function BanCaPage() {
@@ -84,9 +85,9 @@ export default function BanCaPage() {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string } }>({
-    'top-left': { active: false, email: '' },
-    'top-right': { active: false, email: '' },
-    'bottom-left': { active: false, email: '' },
+    'top-left': { active: false, email: 'Trống' },
+    'top-right': { active: false, email: 'Trống' },
+    'bottom-left': { active: false, email: 'Trống' },
     'bottom-right': { active: true, email: 'Bạn' }
   });
 
@@ -200,7 +201,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe dữ liệu phòng PVP realtime chuẩn xác
+  // Lắng nghe dữ liệu phòng PVP realtime chuẩn xác từng góc ghế
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -367,7 +368,6 @@ export default function BanCaPage() {
         });
         fishesRef.current = fishesRef.current.filter(f => !f.dead);
 
-        // Bất kể Solo hay PVP, mọi người chơi đều phụ trách sinh cá để màn hình luôn đông đúc
         spawnFish(w, h);
 
         ctx.clearRect(0, 0, w, h);
@@ -433,12 +433,12 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // HÀM VẼ SÚNG CHUẨN XÁC: Ghế nào có người thật mới hiển thị tên và xoay súng
+        // Vẽ súng: Kiểm tra cực kỳ chặt chẽ trạng thái active và email hợp lệ
         const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
           const pData = roomPlayersRef.current[cornerKey];
-          const isActive = pData && pData.active && pData.email && pData.email !== 'Trống';
+          const isActive = pData && pData.active && pData.email && pData.email !== 'Trống' && pData.email !== '';
 
           let angle = -Math.PI / 2;
           if (isActive && cornerKey === myCorner) {
@@ -534,7 +534,7 @@ export default function BanCaPage() {
     }
   };
 
-  // Ghép phòng tự động chuẩn xác không bị đè tên
+  // Ghép phòng tự động phân bổ đúng ghế trống
   const handleAutoMatchmaking = async () => {
     try {
       showToast("⚡ Đang tìm phòng trống...");
@@ -689,7 +689,7 @@ export default function BanCaPage() {
               <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-indigo-400 uppercase tracking-wide">
                 BẮN CÁ KI-BLAST
               </h1>
-              <p className="text-xs text-slate-400 mt-1">Săn cá trâu, nổ hũ Jackpot & chiến PVP realtime!</p>
+              <p className="text-xs text-slate-400 mt-1">Săn cá đại dương, nổ hũ Jackpot & chiến PVP realtime!</p>
             </div>
 
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-2.5 text-amber-300 text-xs font-bold animate-pulse">
@@ -752,7 +752,7 @@ export default function BanCaPage() {
         <div className="relative w-full h-full overflow-hidden flex flex-col">
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+            className="absolute inset-0 w-full h-full cursor-crosshair touch-none object-contain"
             onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
             onTouchMove={(e) => {
               if (e.touches.length > 0) {
