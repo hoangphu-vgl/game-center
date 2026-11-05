@@ -1,17 +1,18 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { auth, googleProvider, db } from "@/lib/firebase";
+import { signInWithPopup, onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
 
-// Mức cược hỗ trợ
 const BET_OPTIONS = [50, 100, 500, 1000, 5000];
 
-// Icon quân cờ Unicode
 const PIECES: Record<string, string> = {
   wP: '♙', wN: '♘', wB: '♗', wR: '♖', wQ: '♕', wK: '♔',
   bP: '♟', bN: '♞', bB: '♝', bR: '♜', bQ: '♛', bK: '♚',
 };
 
-// Khởi tạo bàn cờ mặc định
 const INITIAL_BOARD = [
   ['bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR'],
   ['bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP'],
@@ -24,80 +25,141 @@ const INITIAL_BOARD = [
 ];
 
 export default function ChessPage() {
-  const [score, setScore] = useState<number>(1000);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  
+  const [points, setPoints] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(50);
   const [screen, setScreen] = useState<'menu' | 'online' | 'game'>('menu');
   const [gameMode, setGameMode] = useState<'ai' | 'online'>('ai');
+  
+  // Thông tin phòng Online & Realtime
   const [roomCode, setRoomCode] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');
+  const [playerRole, setPlayerRole] = useState<'w' | 'b'>('w'); // 'w' = Host (Trắng), 'b' = Khách (Đen)
 
-  // Trạng thái bàn cờ
   const [board, setBoard] = useState<string[][]>(INITIAL_BOARD);
   const [turn, setTurn] = useState<'w' | 'b'>('w');
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
   
-  // Modal kết quả
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
     msg: '',
   });
 
-  // Xử lý chọn mức cược
+  // 1. Kiểm tra đăng nhập Firebase & lấy điểm số thực tế từ DB
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setPoints(userSnap.data().points || 0);
+        }
+      } else {
+        setPoints(0);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Hàm cập nhật điểm lên Firebase Firestore
+  const updatePointsInDB = async (newPoints: number) => {
+    if (!user) return;
+    setPoints(newPoints);
+    const userRef = doc(db, "users", user.uid);
+    await updateDoc(userRef, { points: newPoints });
+  };
+
   const handleSelectBet = (amount: number) => {
-    if (score < amount) {
+    if (points < amount) {
       alert('Bạn không đủ điểm để cược mức này!');
       return;
     }
     setCurrentBet(amount);
   };
 
-  // Bắt đầu game đấu AI
   const startVsAI = () => {
-    if (score < currentBet) {
+    if (points < currentBet) {
       alert('Bạn không đủ điểm cược!');
       return;
     }
     setGameMode('ai');
-    resetBoard();
+    setBoard(INITIAL_BOARD.map(r => [...r]));
+    setTurn('w');
+    setSelectedSquare(null);
+    setValidMoves([]);
     setScreen('game');
   };
 
-  // Tạo phòng Online
-  const handleCreateRoom = () => {
+  // 2. Tạo phòng Online Realtime
+  const handleCreateRoom = async () => {
+    if (points < currentBet) {
+      alert('Bạn không đủ điểm cược!');
+      return;
+    }
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setRoomCode(code);
     setGameMode('online');
-    resetBoard();
+    setPlayerRole('w'); // Chủ phòng cầm quân Trắng
+
+    const roomRef = doc(db, "chessRooms", code);
+    await setDoc(roomRef, {
+      board: INITIAL_BOARD,
+      turn: 'w',
+      status: 'waiting',
+      host: user?.displayName || 'Chủ phòng',
+      bet: currentBet
+    });
+
     setScreen('game');
   };
 
-  // Vào phòng Online bằng mã
-  const handleJoinRoom = () => {
+  // 3. Vào phòng Online bằng mã (Realtime sync)
+  const handleJoinRoom = async () => {
     if (inputCode.length < 6) {
       alert('Vui lòng nhập đầy đủ mã phòng 6 chữ số!');
       return;
     }
-    if (score < currentBet) {
+    if (points < currentBet) {
       alert('Bạn không đủ điểm cược!');
       return;
     }
+
+    const roomRef = doc(db, "chessRooms", inputCode);
+    const roomSnap = await getDoc(roomRef);
+
+    if (!roomSnap.exists()) {
+      alert('Phòng không tồn tại hoặc đã kết thúc!');
+      return;
+    }
+
     setRoomCode(inputCode);
     setGameMode('online');
-    resetBoard();
+    setPlayerRole('b'); // Người vào sau cầm quân Đen
     setScreen('game');
   };
 
-  // Reset lại bàn cờ
-  const resetBoard = () => {
-    setBoard(INITIAL_BOARD.map((row) => [...row]));
-    setTurn('w');
-    setSelectedSquare(null);
-    setValidMoves([]);
-  };
+  // Lắng nghe dữ liệu phòng realtime nếu đang ở chế độ online
+  useEffect(() => {
+    if (gameMode !== 'online' || !roomCode) return;
 
-  // Tính nước đi cơ bản
+    const roomRef = doc(db, "chessRooms", roomCode);
+    const unsubscribe = onSnapshot(roomRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setBoard(data.board);
+        setTurn(data.turn);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [gameMode, roomCode]);
+
   const getBasicMoves = (r: number, c: number, currentBoard: string[][]) => {
     const moves: { r: number; c: number }[] = [];
     const p = currentBoard[r][c];
@@ -157,16 +219,19 @@ export default function ChessPage() {
     return moves;
   };
 
-  // Click vào ô bàn cờ
-  const handleSquareClick = (r: number, c: number) => {
-    if (gameMode === 'ai' && turn === 'b') return; // Lượt AI
+  const handleSquareClick = async (r: number, c: number) => {
+    if (gameMode === 'ai' && turn === 'b') return;
+    if (gameMode === 'online' && turn !== playerRole) {
+      alert("Chưa tới lượt của ní!");
+      return;
+    }
 
     const piece = board[r][c];
 
     if (selectedSquare) {
       const isValid = validMoves.some((m) => m.r === r && m.c === c);
       if (isValid) {
-        executeMove(selectedSquare.r, selectedSquare.c, r, c);
+        await executeMove(selectedSquare.r, selectedSquare.c, r, c);
         setSelectedSquare(null);
         setValidMoves([]);
         return;
@@ -182,31 +247,44 @@ export default function ChessPage() {
     }
   };
 
-  // Thực thi di chuyển quân
-  const executeMove = (fromR: number, fromC: number, toR: number, toC: number) => {
+  const executeMove = async (fromR: number, fromC: number, toR: number, toC: number) => {
     const newBoard = board.map((row) => [...row]);
     const captured = newBoard[toR][toC];
 
     newBoard[toR][toC] = newBoard[fromR][fromC];
     newBoard[fromR][fromC] = '';
-    setBoard(newBoard);
-
-    if (captured === 'bK') {
-      endGame(true, 'Bạn đã ăn Hậu/Vua Đen và giành chiến thắng!');
-      return;
-    } else if (captured === 'wK') {
-      endGame(false, 'Vua Trắng của bạn đã bị tiêu diệt!');
-      return;
-    }
 
     const nextTurn = turn === 'w' ? 'b' : 'w';
-    setTurn(nextTurn);
+
+    if (gameMode === 'ai') {
+      setBoard(newBoard);
+      setTurn(nextTurn);
+      if (captured === 'bK') {
+        endGame(true, 'Bạn đã hạ gục Vua Đen và chiến thắng!');
+        return;
+      } else if (captured === 'wK') {
+        endGame(false, 'Vua Trắng đã bị tiêu diệt!');
+        return;
+      }
+    } else if (gameMode === 'online') {
+      // Đồng bộ state trực tiếp lên Firestore cho đối thủ thấy realtime
+      const roomRef = doc(db, "chessRooms", roomCode);
+      await updateDoc(roomRef, {
+        board: newBoard,
+        turn: nextTurn
+      });
+
+      if (captured === 'bK' || captured === 'wK') {
+        const isWin = (captured === 'bK' && playerRole === 'w') || (captured === 'wK' && playerRole === 'b');
+        endGame(isWin, isWin ? "Bạn đã chiếu tướng thành công!" : "Bạn đã thua cuộc!");
+      }
+    }
   };
 
-  // Xử lý AI đánh trả khi tới lượt Đen
+  // AI tự động đánh trả khi đến lượt Đen
   useEffect(() => {
     if (gameMode === 'ai' && turn === 'b' && !modal.open) {
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         const allAiMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
         
         for (let r = 0; r < 8; r++) {
@@ -221,7 +299,18 @@ export default function ChessPage() {
         if (allAiMoves.length > 0) {
           const attackMove = allAiMoves.find((m) => board[m.toR][m.toC] !== '');
           const chosen = attackMove || allAiMoves[Math.floor(Math.random() * allAiMoves.length)];
-          executeMove(chosen.fromR, chosen.fromC, chosen.toR, chosen.toC);
+          
+          const newBoard = board.map((row) => [...row]);
+          const captured = newBoard[chosen.toR][chosen.toC];
+          newBoard[chosen.toR][chosen.toC] = newBoard[chosen.fromR][chosen.fromC];
+          newBoard[chosen.fromR][chosen.fromC] = '';
+          
+          setBoard(newBoard);
+          setTurn('w');
+
+          if (captured === 'wK') {
+            endGame(false, 'Vua Trắng của bạn đã bị tiêu diệt!');
+          }
         }
       }, 600);
 
@@ -229,30 +318,62 @@ export default function ChessPage() {
     }
   }, [turn, gameMode, board, modal.open]);
 
-  // Kết thúc ván đấu
-  const endGame = (isWin: boolean, msg: string) => {
+  const endGame = async (isWin: boolean, msg: string) => {
+    let newPts = points;
     if (isWin) {
-      setScore((prev) => prev + currentBet);
+      newPts += currentBet;
     } else {
-      setScore((prev) => prev - currentBet);
+      newPts = Math.max(0, newPts - currentBet);
     }
+    await updatePointsInDB(newPts);
     setModal({ open: true, win: isWin, msg });
   };
 
+  // MÀN HÌNH CHẶN NẾU CHƯA ĐĂNG NHẬP
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-amber-400 font-bold">
+        ĐANG XÁC THỰC TÀI KHOẢN...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center select-none">
+        <div className="bg-slate-900 border border-amber-500/30 p-8 rounded-2xl max-w-sm w-full flex flex-col gap-6 shadow-xl">
+          <div className="text-5xl">🔒</div>
+          <h1 className="text-2xl font-black text-amber-400">YÊU CẦU ĐĂNG NHẬP</h1>
+          <p className="text-sm text-slate-400">Ní cần phải đăng nhập tài khoản Google để tham gia bàn cờ và cược điểm!</p>
+          <button
+            onClick={() => signInWithPopup(auth, googleProvider)}
+            className="w-full py-3 bg-amber-400 text-slate-950 font-bold rounded-xl hover:bg-amber-300 transition cursor-pointer"
+          >
+            Đăng Nhập Bằng Google 🚀
+          </button>
+          <Link href="/" className="text-xs text-slate-500 hover:text-slate-300">
+            ← Quay lại trang chủ
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-900 text-white flex flex-col items-center p-4 select-none">
-      {/* Header & Thông số */}
       <header className="text-center mb-4">
+        <div className="flex justify-between items-center w-full max-w-md mb-2">
+          <Link href="/" className="text-xs text-amber-400 hover:underline">← Về Trang Chủ</Link>
+          <div className="text-xs bg-neutral-800 px-3 py-1 rounded-lg border border-amber-500/30">
+            🪙 <span className="font-bold text-amber-400">{points.toLocaleString()}</span> PTS
+          </div>
+        </div>
         <h1 className="text-2xl font-black text-amber-500 tracking-wider uppercase">
           ♚ Cờ Vua Quyết Liệt ♛
         </h1>
-        <div className="flex gap-4 text-sm mt-1 text-gray-400 justify-center">
-          <div>Điểm: <span className="text-amber-400 font-bold">{score}</span></div>
-          <div>Cược: <span className="text-amber-400 font-bold">{currentBet}</span> điểm</div>
-        </div>
       </header>
 
-      {/* MÀN HÌNH MENU CHÍNH */}
+      {/* MENU CHÍNH */}
       {screen === 'menu' && (
         <div className="w-full max-w-sm flex flex-col gap-4">
           <div className="bg-neutral-800 p-4 rounded-xl border border-neutral-700 text-center">
@@ -262,7 +383,7 @@ export default function ChessPage() {
                 <button
                   key={amt}
                   onClick={() => handleSelectBet(amt)}
-                  className={`py-2 text-xs font-bold rounded-lg border transition ${
+                  className={`py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                     currentBet === amt
                       ? 'border-amber-500 bg-amber-500/20 text-amber-400'
                       : 'border-neutral-700 bg-neutral-900 text-gray-300 hover:bg-neutral-700'
@@ -277,15 +398,15 @@ export default function ChessPage() {
           <div className="bg-neutral-800 p-4 rounded-xl border border-neutral-700 flex flex-col gap-3">
             <button
               onClick={startVsAI}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 font-bold rounded-lg shadow hover:opacity-90 active:scale-95 transition"
+              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 font-bold rounded-lg shadow hover:opacity-90 active:scale-95 transition cursor-pointer"
             >
               🤖 Đấu Với AI (Thông Minh)
             </button>
             <button
               onClick={() => setScreen('online')}
-              className="w-full py-3 bg-neutral-700 border border-neutral-600 font-bold rounded-lg hover:bg-neutral-600 active:scale-95 transition"
+              className="w-full py-3 bg-neutral-700 border border-neutral-600 font-bold rounded-lg hover:bg-neutral-600 active:scale-95 transition cursor-pointer"
             >
-              🌐 Chế Độ Online (Tạo/Vào Phòng)
+              🌐 Phòng Online Realtime
             </button>
           </div>
         </div>
@@ -294,12 +415,12 @@ export default function ChessPage() {
       {/* MÀN HÌNH ONLINE */}
       {screen === 'online' && (
         <div className="w-full max-w-sm bg-neutral-800 p-5 rounded-xl border border-neutral-700 flex flex-col gap-4">
-          <h3 className="text-center font-bold text-lg">Phòng Trực Tuyến</h3>
+          <h3 className="text-center font-bold text-lg text-amber-400">Phòng Realtime</h3>
           <button
             onClick={handleCreateRoom}
-            className="w-full py-3 bg-amber-500 font-bold rounded-lg hover:bg-amber-600 transition"
+            className="w-full py-3 bg-amber-500 text-neutral-950 font-bold rounded-lg hover:bg-amber-400 transition cursor-pointer"
           >
-            Tạo Phòng Mới
+            Tạo Phòng Mới (Cược {currentBet})
           </button>
           <div className="flex gap-2">
             <input
@@ -312,7 +433,7 @@ export default function ChessPage() {
             />
             <button
               onClick={handleJoinRoom}
-              className="px-5 bg-neutral-700 font-bold rounded-lg hover:bg-neutral-600 transition"
+              className="px-5 bg-neutral-700 font-bold rounded-lg hover:bg-neutral-600 transition cursor-pointer"
             >
               Vào
             </button>
@@ -331,14 +452,13 @@ export default function ChessPage() {
         <div className="flex flex-col items-center w-full max-w-md">
           <div className="w-full flex justify-between items-center bg-neutral-800 px-4 py-2 rounded-t-lg text-sm border-b border-neutral-700">
             <span className="font-semibold text-amber-400">
-              Lượt: {turn === 'w' ? 'Trắng (Bạn)' : 'Đen (AI)'}
+              Lượt: {turn === 'w' ? 'Trắng' : 'Đen'} {gameMode === 'online' && turn === playerRole ? '(Đến lượt bạn!)' : ''}
             </span>
             <span className="text-xs text-gray-400">
-              {gameMode === 'ai' ? `Đấu AI (Cược: ${currentBet})` : `Phòng #${roomCode}`}
+              {gameMode === 'ai' ? `Đấu AI` : `Phòng #${roomCode} (${playerRole === 'w' ? 'Quân Trắng' : 'Quân Đen'})`}
             </span>
           </div>
 
-          {/* Grid bàn cờ */}
           <div className="grid grid-cols-8 grid-rows-8 w-full aspect-square border-4 border-neutral-800 shadow-2xl">
             {board.map((row, r) =>
               row.map((piece, c) => {
@@ -367,13 +487,12 @@ export default function ChessPage() {
           <button
             onClick={() => {
               if (confirm('Bạn có chắc muốn đầu hàng và mất điểm cược?')) {
-                setScore((prev) => prev - currentBet);
-                setScreen('menu');
+                endGame(false, "Bạn đã đầu hàng!");
               }
             }}
-            className="w-full mt-4 py-3 bg-red-600/80 hover:bg-red-600 font-bold rounded-lg transition"
+            className="w-full mt-4 py-3 bg-red-600/80 hover:bg-red-600 font-bold rounded-lg transition cursor-pointer"
           >
-            Thoát / Đầu Hàng
+            Thoát / Đầu Hàng (-{currentBet} PTS)
           </button>
         </div>
       )}
@@ -391,7 +510,7 @@ export default function ChessPage() {
                 setModal({ open: false, win: false, msg: '' });
                 setScreen('menu');
               }}
-              className="w-full py-2 bg-amber-500 font-bold text-black rounded-lg hover:bg-amber-400 transition"
+              className="w-full py-2 bg-amber-500 font-bold text-neutral-950 rounded-lg hover:bg-amber-400 transition cursor-pointer"
             >
               Về Menu Chính
             </button>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import AuthGuard from "@/components/AuthGuard";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -78,111 +79,119 @@ export default function Home() {
   const isCheckedInToday = lastCheckIn === getTodayString();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans select-none">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-amber-500/30 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🐉</span>
-            <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
-              DRAGON ARCADE
-            </span>
-          </div>
+    <AuthGuard>
+      <div className="min-h-screen bg-slate-950 text-white font-sans select-none">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-amber-500/30 px-4 py-3">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🐉</span>
+              <span className="font-black text-2xl text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+                DRAGON ARCADE
+              </span>
+            </div>
 
-          <div className="flex items-center gap-3">
-            {user ? (
-              <>
-                <div className="flex items-center gap-2 bg-slate-800 border border-amber-500/40 px-3 py-1.5 rounded-xl">
-                  <span>🪙</span>
-                  <span className="font-extrabold text-amber-400">{points.toLocaleString()}</span>
-                  <span className="text-xs text-amber-300/70">PTS</span>
-                </div>
+            <div className="flex items-center gap-3">
+              {user ? (
+                <>
+                  <div className="flex items-center gap-2 bg-slate-800 border border-amber-500/40 px-3 py-1.5 rounded-xl">
+                    <span>🪙</span>
+                    <span className="font-extrabold text-amber-400">{points.toLocaleString()}</span>
+                    <span className="text-xs text-amber-300/70">PTS</span>
+                  </div>
 
+                  <button
+                    onClick={handleCheckIn}
+                    disabled={isCheckedInToday}
+                    className={`text-xs sm:text-sm font-bold py-1.5 px-3 sm:px-4 rounded-xl transition ${
+                      isCheckedInToday
+                        ? "bg-slate-800 text-slate-500"
+                        : "bg-amber-400 hover:bg-amber-300 text-slate-950 cursor-pointer"
+                    }`}
+                  >
+                    {isCheckedInToday ? "✅ Đã nhận 500p" : "📅 Điểm Danh (+500)"}
+                  </button>
+
+                  <button onClick={() => signOut(auth)} className="text-xs text-slate-400 hover:text-red-400 cursor-pointer">
+                    Thoát
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={handleCheckIn}
-                  disabled={isCheckedInToday}
-                  className={`text-xs sm:text-sm font-bold py-1.5 px-3 sm:px-4 rounded-xl transition ${
-                    isCheckedInToday
-                      ? "bg-slate-800 text-slate-500"
-                      : "bg-amber-400 hover:bg-amber-300 text-slate-950 cursor-pointer"
-                  }`}
+                  onClick={() => signInWithPopup(auth, googleProvider)}
+                  className="bg-amber-400 text-slate-950 font-bold text-sm py-2 px-4 rounded-xl cursor-pointer hover:bg-amber-300 transition"
                 >
-                  {isCheckedInToday ? "✅ Đã nhận 500p" : "📅 Điểm Danh (+500)"}
+                  Đăng nhập
                 </button>
+              )}
+            </div>
+          </div>
+        </header>
 
-                <button onClick={() => signOut(auth)} className="text-xs text-slate-400 hover:text-red-400">
-                  Thoát
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => signInWithPopup(auth, googleProvider)}
-                className="bg-amber-400 text-slate-950 font-bold text-sm py-2 px-4 rounded-xl cursor-pointer hover:bg-amber-300 transition"
+        {/* Banner */}
+        <section
+          className="relative flex items-center justify-center min-h-[300px] bg-cover bg-center text-center p-6"
+          style={{ backgroundImage: "url('https://images.alphacoders.com/605/605592.png')" }}
+        >
+          <div className="absolute inset-0 bg-slate-950/80"></div>
+          <div className="relative z-10 max-w-3xl">
+            <h1 className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-500 mb-2">
+              DRAGON GAMING
+            </h1>
+            <p className="text-slate-300">Tham gia đấu game đối kháng, cờ vua đỉnh cao & thử vận may ngay!</p>
+          </div>
+        </section>
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 py-8 space-y-10">
+          {/* Vòng Quay & Lọ Vương */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-black text-amber-400">🔥 ĐẶC QUYỀN MỖI NGÀY</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-6">
+                <h3 className="text-xl font-bold">🎡 Vòng Quay May Mắn</h3>
+                <p className="text-slate-400 text-sm mt-1">Quay thưởng nhận điểm miễn phí.</p>
+              </div>
+              <div className="bg-slate-900 border border-orange-500/30 rounded-2xl p-6">
+                <h3 className="text-xl font-bold">🏺 Lọ Vương (Hũ Cầu Nguyện)</h3>
+                <p className="text-slate-400 text-sm mt-1">Nổ hũ rinh trọn quà to.</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Game Đối Kháng & Trí Tuệ */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-black text-rose-500">⚔️ TRÒ CHƠI & ĐỐI KHÁNG</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Đấu Trường PvP */}
+              <Link
+                href="/dautruong"
+                className="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group"
               >
-                Đăng nhập
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+                <div className="text-4xl mb-2">🥊</div>
+                <h3 className="font-bold text-xl text-white group-hover:text-amber-400">Đấu Trường PvP (Cyber Saiyan)</h3>
+                <p className="text-slate-400 text-sm mt-1">Chiến đấu 1v1 tung chưởng Kamehameha cực đã!</p>
+                <div className="mt-4 bg-amber-400 text-slate-950 font-bold py-2 px-4 rounded-xl text-center text-sm">
+                  Vào Chiến Ngay 🚀
+                </div>
+              </Link>
 
-      {/* Banner */}
-      <section className="relative flex items-center justify-center min-h-[300px] bg-cover bg-center text-center p-6"
-        style={{ backgroundImage: "url('https://images.alphacoders.com/605/605592.png')" }}>
-        <div className="absolute inset-0 bg-slate-950/80"></div>
-        <div className="relative z-10 max-w-3xl">
-          <h1 className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-500 mb-2">
-            DRAGON GAMING
-          </h1>
-          <p className="text-slate-300">Tham gia đấu game đối kháng, cờ vua đỉnh cao & thử vận may ngay!</p>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-10">
-        {/* Vòng Quay & Lọ Vương */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-black text-amber-400">🔥 ĐẶC QUYỀN MỖI NGÀY</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-6">
-              <h3 className="text-xl font-bold">🎡 Vòng Quay May Mắn</h3>
-              <p className="text-slate-400 text-sm mt-1">Quay thưởng nhận điểm miễn phí.</p>
+              {/* Cờ Vua Quyết Liệt */}
+              <Link
+                href="/chess"
+                className="bg-slate-900 border border-amber-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group"
+              >
+                <div className="text-4xl mb-2">♚</div>
+                <h3 className="font-bold text-xl text-white group-hover:text-amber-400">Cờ Vua Quyết Liệt</h3>
+                <p className="text-slate-400 text-sm mt-1">Đấu AI thông minh, tạo phòng Online cược 50-5000 PTS!</p>
+                <div className="mt-4 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold py-2 px-4 rounded-xl text-center text-sm">
+                  Vào Bàn Cờ ♟️
+                </div>
+              </Link>
             </div>
-            <div className="bg-slate-900 border border-orange-500/30 rounded-2xl p-6">
-              <h3 className="text-xl font-bold">🏺 Lọ Vương (Hũ Cầu Nguyện)</h3>
-              <p className="text-slate-400 text-sm mt-1">Nổ hũ rinh trọn quà to.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Game Đối Kháng & Trí Tuệ */}
-        <section className="space-y-4">
-          <h2 className="text-xl font-black text-rose-500">⚔️ TRÒ CHƠI & ĐỐI KHÁNG</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* Đấu Trường PvP */}
-            <Link href="/dautruong" className="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group">
-              <div className="text-4xl mb-2">🥊</div>
-              <h3 className="font-bold text-xl text-white group-hover:text-amber-400">Đấu Trường PvP (Cyber Saiyan)</h3>
-              <p className="text-slate-400 text-sm mt-1">Chiến đấu 1v1 tung chưởng Kamehameha cực đã!</p>
-              <div className="mt-4 bg-amber-400 text-slate-950 font-bold py-2 px-4 rounded-xl text-center text-sm">
-                Vào Chiến Ngay 🚀
-              </div>
-            </Link>
-
-            {/* Cờ Vua Quyết Liệt (Mới thêm) */}
-            <Link href="/chess" className="bg-slate-900 border border-amber-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group">
-              <div className="text-4xl mb-2">♚</div>
-              <h3 className="font-bold text-xl text-white group-hover:text-amber-400">Cờ Vua Quyết Liệt</h3>
-              <p className="text-slate-400 text-sm mt-1">Đấu AI thông minh, tạo phòng Online cược 50-5000 PTS!</p>
-              <div className="mt-4 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold py-2 px-4 rounded-xl text-center text-sm">
-                Vào Bàn Cờ ♟️
-              </div>
-            </Link>
-
-          </div>
-        </section>
-      </main>
-    </div>
+          </section>
+        </main>
+      </div>
+    </AuthGuard>
   );
 }
