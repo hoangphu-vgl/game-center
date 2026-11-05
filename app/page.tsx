@@ -78,7 +78,7 @@ export default function Home() {
   const isCheckedInToday = lastCheckIn === getTodayString();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
+    <div className="min-h-screen bg-slate-950 text-white font-sans select-none">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-amber-500/30 px-4 py-3">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -117,7 +117,7 @@ export default function Home() {
             ) : (
               <button
                 onClick={() => signInWithPopup(auth, googleProvider)}
-                className="bg-amber-400 text-slate-950 font-bold text-sm py-2 px-4 rounded-xl"
+                className="bg-amber-400 text-slate-950 font-bold text-sm py-2 px-4 rounded-xl cursor-pointer hover:bg-amber-300 transition"
               >
                 Đăng nhập
               </button>
@@ -134,7 +134,7 @@ export default function Home() {
           <h1 className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-500 mb-2">
             DRAGON GAMING
           </h1>
-          <p className="text-slate-300">Tham gia đấm game đối kháng & thử vận may ngay!</p>
+          <p className="text-slate-300">Tham gia đấu game đối kháng, cờ vua đỉnh cao & thử vận may ngay!</p>
         </div>
       </section>
 
@@ -155,10 +155,12 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Game Đối Kháng */}
+        {/* Game Đối Kháng & Trí Tuệ */}
         <section className="space-y-4">
-          <h2 className="text-xl font-black text-rose-500">⚔️ GAME ĐỐI KHÁNG</h2>
+          <h2 className="text-xl font-black text-rose-500">⚔️ TRÒ CHƠI & ĐỐI KHÁNG</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Đấu Trường PvP */}
             <Link href="/dautruong" className="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group">
               <div className="text-4xl mb-2">🥊</div>
               <h3 className="font-bold text-xl text-white group-hover:text-amber-400">Đấu Trường PvP (Cyber Saiyan)</h3>
@@ -167,6 +169,17 @@ export default function Home() {
                 Vào Chiến Ngay 🚀
               </div>
             </Link>
+
+            {/* Cờ Vua Quyết Liệt (Mới thêm) */}
+            <Link href="/chess" className="bg-slate-900 border border-amber-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group">
+              <div className="text-4xl mb-2">♚</div>
+              <h3 className="font-bold text-xl text-white group-hover:text-amber-400">Cờ Vua Quyết Liệt</h3>
+              <p className="text-slate-400 text-sm mt-1">Đấu AI thông minh, tạo phòng Online cược 50-5000 PTS!</p>
+              <div className="mt-4 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold py-2 px-4 rounded-xl text-center text-sm">
+                Vào Bàn Cờ ♟️
+              </div>
+            </Link>
+
           </div>
         </section>
       </main>
