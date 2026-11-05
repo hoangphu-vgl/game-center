@@ -48,17 +48,18 @@ const GUN_TYPES: GunConfig[] = [
   { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 15, size: 17, color: '#ef4444' }
 ];
 
+// Giảm tốc độ bơi của cá trung bình, cá lớn và nàng tiên cá theo yêu cầu
 const FISH_TYPES_BASE = [
   { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speed: 3.4, hpMin: 8, hpMax: 18, rewardMin: 10, rewardMax: 30, category: 'small', weight: 40 },
   { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speed: 3.2, hpMin: 10, hpMax: 22, rewardMin: 10, rewardMax: 30, category: 'small', weight: 40 },
   { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speed: 3.6, hpMin: 6, hpMax: 15, rewardMin: 10, rewardMax: 30, category: 'small', weight: 30 },
   
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 2.2, hpMin: 90, hpMax: 200, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 2.0, hpMin: 120, hpMax: 280, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 1.3, hpMin: 90, hpMax: 200, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 1.2, hpMin: 120, hpMax: 280, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
   
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 1.2, hpMin: 1200, hpMax: 3000, rewardMin: 100, rewardMax: 500, category: 'large', weight: 12 },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 1.3, hpMin: 2000, hpMax: 4500, rewardList: [5000, 10000, 15000, 20000, 50000, 75000, 100000], category: 'mermaid', weight: 3 }, // Thưởng khủng random
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 1.0, hpMin: 2500, hpMax: 5500, rewardMin: 100, rewardMax: 500, category: 'large', weight: 6 }
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 0.7, hpMin: 1200, hpMax: 3000, rewardMin: 100, rewardMax: 500, category: 'large', weight: 12 },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 0.75, hpMin: 2000, hpMax: 4500, rewardList: [5000, 10000, 15000, 20000, 50000, 75000, 100000], category: 'mermaid', weight: 3 },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 0.6, hpMin: 2500, hpMax: 5500, rewardMin: 100, rewardMax: 500, category: 'large', weight: 6 }
 ];
 
 export default function BanCaPage() {
@@ -81,6 +82,7 @@ export default function BanCaPage() {
 
   const [comboCount, setComboCount] = useState<number>(0);
   const [comboMultiplier, setComboMultiplier] = useState<number>(1);
+  const [dbAuraText, setDbAuraText] = useState<string | null>(null);
   const comboTimerRef = useRef<any>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -160,6 +162,11 @@ export default function BanCaPage() {
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const showDbAura = (text: string) => {
+    setDbAuraText(text);
+    setTimeout(() => setDbAuraText(null), 2500);
   };
 
   const updatePointsInFirestore = async (newPts: number) => {
@@ -466,11 +473,14 @@ export default function BanCaPage() {
                 setComboCount(prev => {
                   const nextCount = prev + 1;
                   let mult = 1;
-                  if (nextCount >= 25) mult = 10;
-                  else if (nextCount >= 18) mult = 8;
-                  else if (nextCount >= 12) mult = 5;
-                  else if (nextCount >= 7) mult = 3;
-                  else if (nextCount >= 3) mult = 2;
+                  let auraStr = "";
+                  if (nextCount >= 25) { mult = 10; auraStr = "⚡ ULTRA INSTINCT (BẢN NĂNG VÔ CỰC)! ⚡"; }
+                  else if (nextCount >= 18) { mult = 8; auraStr = "🔥 SUPER SAIYAN BLUE! 🔥"; }
+                  else if (nextCount >= 12) { mult = 5; auraStr = "💥 SUPER SAIYAN 3! 💥"; }
+                  else if (nextCount >= 7) { mult = 3; auraStr = "🌟 SUPER SAIYAN 2! 🌟"; }
+                  else if (nextCount >= 3) { mult = 2; auraStr = "⚡ SIÊU SAYAN LEVEL 1! ⚡"; }
+                  
+                  if (auraStr) showDbAura(auraStr);
                   setComboMultiplier(mult);
                   return nextCount;
                 });
@@ -484,8 +494,7 @@ export default function BanCaPage() {
                 let finalReward = baseReward * comboMultiplier;
                 let isJackpot = false;
 
-                // LUẬT JACKPOT MỚI: Đạn nào cũng có thể trúng Jackpot, nhưng đạn càng nhỏ thì tỉ lệ càng siêu hiếm (Đạn 1đ cực kỳ hiếm, đạn 2000đ dễ trúng hơn)
-                const jackpotChance = 0.0002 + (bullet.cost * 0.000003); // Tỉ lệ tăng dần theo giá trị đạn
+                const jackpotChance = 0.0002 + (bullet.cost * 0.000003);
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
@@ -502,7 +511,11 @@ export default function BanCaPage() {
 
                 if (isJackpot) {
                   showToast(`👑 NỔ HŨ JACKPOT RỒNG THẦN CỰC KHỦNG +${finalReward.toLocaleString()}đ!`);
+                  showDbAura("🐉 RỒNG THẦN XUẤT HIỆN! ƯỚC ĐI NÍ!");
                   floatingTextsRef.current.push({ text: `JACKPOT +${finalReward}`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#f59e0b' });
+                } else if (fish.category === 'mermaid' || fish.category === 'large') {
+                  showDbAura("🔥 HAKAI! SĂN THÀNH CÔNG THỦ LĨNH KHỦNG!");
+                  floatingTextsRef.current.push({ text: `+${finalReward}đ (SĂN BOSS)`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#ec4899' });
                 } else if (comboMultiplier > 1) {
                   floatingTextsRef.current.push({ text: `+${finalReward}đ (x${comboMultiplier})`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#38bdf8' });
                 } else {
@@ -997,20 +1010,20 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Hũ Jackpot & Combo Hệ số */}
+          {/* Hũ Jackpot & Hiệu ứng Aura Dragon Ball */}
           <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center gap-1">
             <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-4 py-1 rounded-xl text-center shadow-xl animate-pulse">
               <div className="text-[8px] text-amber-300 font-extrabold uppercase tracking-widest">
-                👑 JACKPOT RỒNG THẦN (Mọi loại đạn) 👑
+                👑 JACKPOT RỒNG THẦN 👑
               </div>
               <div className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
                 {jackpotPool.toLocaleString()} đ
               </div>
             </div>
 
-            {comboMultiplier > 1 && (
-              <div className="bg-sky-500/90 border border-sky-300 text-white font-black px-3 py-0.5 rounded-full text-xs shadow-lg animate-bounce">
-                🔥 COMBO x{comboMultiplier} ĐIỂM THƯỞNG! 🔥
+            {dbAuraText && (
+              <div className="bg-gradient-to-r from-amber-500 via-red-500 to-purple-600 text-white font-black px-4 py-1 rounded-2xl text-xs shadow-2xl animate-bounce tracking-wider border border-yellow-300">
+                {dbAuraText}
               </div>
             )}
           </div>
