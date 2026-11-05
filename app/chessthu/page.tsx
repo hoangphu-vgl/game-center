@@ -48,10 +48,10 @@ const INITIAL_COTHU_BOARD: string[][] = [
 ];
 
 const TAUNT_MESSAGES = [
-  "Lần này ta đã bị khóa không cho về hang nhà nữa rồi, chuẩn bị chiến đấu thật sự nhé! 🦁🔥",
-  "Đội hình ta đang lao thẳng xuống hang (8,3) của cậu đấy! ⚡",
-  "Đừng hòng cản đường ta săn thú và cướp hang! 🏴‍☠️",
-  "Tổng tấn công toàn lực, không lùi bước! 💀"
+  "Ta đã đổi hướng tấn công lên hang phía trên rồi nhé! Chuẩn bị tinh thần đi! 🦁🔥",
+  "Đội hình Xanh đang lao thẳng lên hang (0,3) của cậu đấy! ⚡",
+  "Đừng hòng cản đường ta tiến về phía trước! 🏴‍☠️",
+  "Tổng tấn công dồn dập, không lùi bước! 💀"
 ];
 
 export default function ChessthuPage() {
@@ -59,7 +59,6 @@ export default function ChessthuPage() {
   const [points, setPoints] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(50);
   const [gameMode, setGameMode] = useState<'pvp' | 'ai'>('pvp');
-  const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [screen, setScreen] = useState<'menu' | 'game'>('menu');
 
   const [roomCode, setRoomCode] = useState<string>('');
@@ -71,7 +70,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("AI đã sửa lỗi triệt để! Sẵn sàng tấn công!");
+  const [aiTaunt, setAiTaunt] = useState<string>("AI đã chỉnh lại hướng tiến công chuẩn xác!");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -152,7 +151,7 @@ export default function ChessthuPage() {
 
   const handleJoinRoom = async () => {
     if (inputCode.length < 6) {
-      alert('Vui lòng nhập mã phòng 6 chữ số!');
+      alert('Vui nhập mã phòng 6 chữ số!');
       return;
     }
     if (points < currentBet) {
@@ -189,12 +188,12 @@ export default function ChessthuPage() {
     }
     setGameMode('ai');
     setRoomCode('');
-    setPlayerRole('r');
+    setPlayerRole('r'); // Bạn ở dưới (quân Đỏ)
     setBoard(INITIAL_COTHU_BOARD.map(r => [...r]));
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Trận chiến AI tấn công chính xác bắt đầu! Sẵn sàng chưa? 🦁");
+    setAiTaunt("Trận chiến AI tấn công lên hang trên bắt đầu! 🦁");
     setScreen('game');
   };
 
@@ -241,9 +240,12 @@ export default function ChessthuPage() {
     }
   };
 
+  // ĐIỀU CHỈNH LẠI HANG THỰC TẾ TRÊN MÀN HÌNH:
+  // - Hang Xanh (b) nằm ở TRÊN CÙNG: (0, 3) -> AI (quân xanh ở dưới) phải phi LÊN ĐÂY để thắng.
+  // - Hang Đỏ (r) nằm ở DƯỚI CÙNG: (8, 3) -> Bạn (quân đỏ ở dưới) phải bảo vệ hang này, và AI phi xuống đây thì AI thắng.
   const isDen = (r: number, c: number, color: 'r' | 'b') => {
-    if (color === 'r') return r === 8 && c === 3; // Hang Đỏ (của bạn)
-    return r === 0 && c === 3; // Hang Xanh (của AI)
+    if (color === 'r') return r === 8 && c === 3; // Hang Đỏ ở dưới
+    return r === 0 && c === 3; // Hang Xanh ở trên
   };
 
   const getPieceMoves = (r: number, c: number, currentBoard: string[][]) => {
@@ -262,7 +264,7 @@ export default function ChessthuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
-        // TUYỆT ĐỐI CẤM MỌI QUÂN CỜ BƯỚC VÀO HANG CỦA CHÍNH MÌNH
+        // Cấm quân cờ bước vào hang của chính mình
         if (isDen(nr, nc, color)) return;
 
         const target = currentBoard[nr][nc];
@@ -413,13 +415,13 @@ export default function ChessthuPage() {
       }
     }
 
-    // ĐIỀU KIỆN THẮNG THUA CHUẨN XÁC 100%:
-    // - Quân Đỏ (r) bước vào Hang Xanh của AI tại (0, 3) -> Bạn Thắng!
-    // - Quân Xanh (b) bước vào Hang Đỏ của Bạn tại (8, 3) -> AI Thắng / Bạn Thua!
-    if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
-      endGame(true, "Bạn đã xông vào chiếm hang địch và thắng cược!");
-    } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
-      endGame(false, "AI đã xông vào chiếm mất hang của bạn! Thất bại!");
+    // LUẬT THẮNG THUA CHUẨN XÁC THEO GIAO DIỆN (BẠN Ở DƯỚI - AI Ở DƯỚI NHƯNG QUÂN XANH):
+    // - AI (quân Xanh 'b') xuất phát từ dưới, mục tiêu là phi LÊN TRÊN chiếm Hang Xanh ở (0, 3) -> AI Thắng!
+    // - Bạn (quân Đỏ 'r') xuất phát từ trên, mục tiêu là phi XUỐNG DƯỚI chiếm Hang Đỏ ở (8, 3) -> Bạn Thắng!
+    if (movingPiece.startsWith('b') && toR === 0 && toC === 3) {
+      endGame(false, "AI đã xông vào chiếm mất hang ở trên! Thất bại!");
+    } else if (movingPiece.startsWith('r') && toR === 8 && toC === 3) {
+      endGame(true, "Bạn đã xông vào chiếm hang ở dưới và thắng cược!");
     }
   };
 
@@ -432,27 +434,27 @@ export default function ChessthuPage() {
         if (p && ANIMAL_DATA[p].color === 'b') {
           const moves = getPieceMoves(r, c, board);
           moves.forEach((m) => {
-            // LOẠI BỎ NGAY LẬP TỨC NẾU MẤT TRÍ LAO VÀO HANG NHÀ MÌNH (0, 3)
+            // Cấm AI tuyệt đối không được tự ý chui vào Hang Xanh của nó ở (0, 3)
             if (m.r === 0 && m.c === 3) return;
 
             let score = 0;
             const targetPiece = board[m.r][m.c];
 
-            // 1. ƯU TIÊN TUYỆT ĐỐI: Xông vào Hang Đỏ của Bạn tại (8, 3) để THẮNG NGAY
+            // 1. ƯU TIÊN SỐ 1: AI Xanh (b) xông vào Hang Đỏ của bạn ở đáy (8, 3) để thắng
             if (m.r === 8 && m.c === 3) {
-              score += 1000000;
+              score += 2000000;
             }
 
             // 2. Ưu tiên ăn quân địch (cấp càng cao điểm càng lớn)
             if (targetPiece) {
               const targetRank = ANIMAL_DATA[targetPiece].rank;
-              score += targetRank * 500;
+              score += targetRank * 600;
             }
 
-            // 3. Khuyến khích tiến xuống sân của bạn (hàng số tăng dần từ 0 đến 8)
-            score += m.r * 50;
+            // 3. AI (quân xanh) hiện đang ở nửa dưới, muốn thắng nó phải tiến XUỐNG DƯỚI (hàng số tăng dần từ 0 đến 8)
+            score += m.r * 80;
 
-            score += Math.random() * 30;
+            score += Math.random() * 40;
 
             allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
           });
