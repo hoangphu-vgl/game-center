@@ -34,19 +34,19 @@ const LOSE_TAUNTS = [
   "Vegeta cười khẩy: 'Ngươi chỉ có thế thôi sao cùi bắp?'",
   "Yamcha nằm đất lắc đầu ngán ngẩm trước cú quay này!",
   "Hết Ki rồi chiến binh ơi, hít thở lấy lại sức đi!",
-  "Rồng thần lắc đầu ngao ngán vì đường ngang trống không!",
+  "Rồng thần lắc đầu ngao ngán vì các cột không liên kết được với nhau!",
 ];
 
 const STREAK_BROKEN_TAUNTS = [
   "💔 ĐỨT CHUỖI! Ki bộc phát ngược khiến chuỗi liên hoàn vỡ vụn! Rớt lại từ đầu.",
   "⚡ BÙM! Chuỗi chiến thắng đã đứt đoạn giữa vũ trụ võ đạo!",
-  "💥 ĐỨT XÍCH! Đường ngang gãy khúc khiến chuỗi tích lũy tan thành mây khói!",
+  "💥 ĐỨT XÍCH! Các cột đứt quãng khiến chuỗi tích lũy tan thành mây khói!",
 ];
 
 const WIN_PRAISES = [
   "Bùng nổ sức mạnh tiềm ẩn! Khai mở giới hạn cực đỉnh!",
-  "Kamehamehaaaaa! Hàng ngang kết nối hoàn hảo!",
-  "Rồng thần ban phúc! Trúng đường ngang cực kỳ mãn nhãn!",
+  "Kamehamehaaaaa! Liên kết từ trái qua cực kỳ hoàn hảo!",
+  "Rồng thần ban phúc! Trúng liên tiếp nhiều cột nổ cực lớn!",
 ];
 
 interface HistoryItem {
@@ -81,7 +81,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Luật: Chỉ tính đường ngang từ trái qua phải (tối thiểu 3 hình giống hệt nhau). Quay ngay!",
+    text: "Luật: Tính liên tiếp từ cột 1 sang phải (từ 3 cột trở lên, bất kể lệch hàng). Quay ngay!",
     type: "normal",
   });
 
@@ -129,18 +129,21 @@ export default function JackpotPage() {
   }, []);
 
   useEffect(() => {
-    generateRandomGrid();
+    generateValidGrid();
   }, []);
 
-  const generateRandomGrid = () => {
+  // Thuật toán chống trùng bừa bãi, phân bổ ngẫu nhiên hợp lý cho lưới 4 hàng x 6 cột
+  const generateValidGrid = () => {
     const newGrid: typeof DRAGON_SYMBOLS = [];
-    for (let i = 0; i < 24; i++) {
-      const rand = Math.random();
-      let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
-      if (rand > 0.60) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
-      if (rand > 0.88) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
-      const selected = pool[Math.floor(Math.random() * pool.length)];
-      newGrid.push(selected);
+    for (let c = 0; c < 6; c++) {
+      for (let r = 0; r < 4; r++) {
+        const rand = Math.random();
+        let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
+        if (rand > 0.58) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
+        if (rand > 0.86) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
+        const selected = pool[Math.floor(Math.random() * pool.length)];
+        newGrid.push(selected);
+      }
     }
     setGrid(newGrid);
     return newGrid;
@@ -172,6 +175,11 @@ export default function JackpotPage() {
     executeSpin(targetAuto);
   };
 
+  const stopAuto = () => {
+    setAutoCount(0);
+    setMessageBox({ text: "⏹ Đã dừng Auto theo yêu cầu của chiến binh.", type: "normal" });
+  };
+
   const executeSpin = async (remainingAuto: number) => {
     if (points < currentBet) {
       alert("Ní không đủ điểm Ki để quay!");
@@ -197,24 +205,23 @@ export default function JackpotPage() {
 
     let counter = 0;
     const interval = setInterval(() => {
-      generateRandomGrid();
+      generateValidGrid();
       counter++;
       if (counter > 12) {
         clearInterval(interval);
-        const finalGrid = generateRandomGrid();
-        evaluateHorizontalOnly(finalGrid, newPointsAfterBet, remainingAuto);
+        const finalGrid = generateValidGrid();
+        evaluateConsecutiveColumns(finalGrid, newPointsAfterBet, remainingAuto);
         setSpinning(false);
       }
     }, 75);
   };
 
-  // THUẬT TOÁN CHỈ CHECK ĐƯỜNG NGANG TỪ TRÁI QUA PHẢI & TĂNG TỶ LỆ THUA (SIẾT CHẶT RTP)
-  const evaluateHorizontalOnly = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    // Tăng tỷ lệ thua lên (giảm tỷ lệ thắng xuống để thử thách hơn)
-    let winChance = 0.28; 
-    if (currentBet <= 100) winChance = 0.35;
-    else if (currentBet <= 1000) winChance = 0.25;
-    else winChance = 0.18;
+  // THUẬT TOÁN QUÉT LIÊN TIẾP TỪ TRÁI QUA (BẤT KỂ LỆCH HÀNG, TỪ 3 CỘT TRỞ LÊN)
+  const evaluateConsecutiveColumns = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
+    let winChance = 0.30; // RTP cân bằng
+    if (currentBet <= 100) winChance = 0.38;
+    else if (currentBet <= 1000) winChance = 0.28;
+    else winChance = 0.20;
 
     const isTriggerWin = Math.random() < winChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
@@ -223,7 +230,7 @@ export default function JackpotPage() {
     let matchedIndices: number[] = [];
     let resultText = "";
 
-    // 1. Kiểm tra nổ hũ Rồng Thần đặc biệt (xuất hiện từ 4 Rồng Thần trở lên trên toàn bảng)
+    // 1. Nổ hũ Rồng Thần đặc biệt
     if (shenronTotal >= 4 || (isTriggerWin && Math.random() < 0.02)) {
       baseWinAmount = jackpots.minor + currentBet * 15;
       matchedIndices = finalGrid.map((s, idx) => (s.id === "shenron" ? idx : -1)).filter((i) => i !== -1);
@@ -231,50 +238,62 @@ export default function JackpotPage() {
       triggerExplosion();
     } 
     else if (isTriggerWin) {
+      // Tổ chức lưới thành dạng cột: 6 cột, mỗi cột 4 hàng (index từ 0 đến 3 trong mỗi cột)
+      // Cấu trúc grid phẳng: 24 ô, cột c (0->5) gồm các hàng r (0->3) có index = r * 6 + c
+      const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
+      for (let c = 0; c < 6; c++) {
+        const colItems = [];
+        for (let r = 0; r < 4; r++) {
+          const idx = r * 6 + c;
+          colItems.push({ symbol: finalGrid[idx], index: idx });
+        }
+        columns.push(colItems);
+      }
+
       let totalCalculatedWin = 0;
       let winningSet = new Set<number>();
 
-      // CHỈ CHECK 4 HÀNG NGANG (Mỗi hàng 6 cột: 0->5, 6->11, 12->17, 18->23)
-      for (let r = 0; r < 4; r++) {
-        const rowStart = r * 6;
-        const rowItems = [];
+      // Lấy tất cả các loại biểu tượng xuất hiện ở cột 1 (cột đầu tiên bên trái) để làm mốc quét
+      const firstColSymbols = columns[0].map(item => item.symbol.id);
+      const uniqueSymbolsToCheck = Array.from(new Set(firstColSymbols));
+
+      uniqueSymbolsToCheck.forEach((symId) => {
+        // Kiểm tra xem biểu tượng này có liên tiếp từ cột 1 sang phải bao nhiêu cột
+        let consecutiveColsCount = 0;
+        let tempMatchedIndices: number[] = [];
+
         for (let c = 0; c < 6; c++) {
-          rowItems.push({ symbol: finalGrid[rowStart + c], index: rowStart + c });
-        }
-
-        // Bắt buộc tính từ trái qua phải (cột 0 trở đi)
-        const targetId = rowItems[0].symbol.id;
-        let consecutiveCount = 1;
-        let currentMatched = [rowItems[0].index];
-
-        for (let i = 1; i < rowItems.length; i++) {
-          if (rowItems[i].symbol.id === targetId) {
-            consecutiveCount++;
-            currentMatched.push(rowItems[i].index);
+          // Tìm xem trong cột c này có ô nào chứa symId không
+          const foundInCol = columns[c].filter(item => item.symbol.id === symId);
+          if (foundInCol.length > 0) {
+            consecutiveColsCount++;
+            foundInCol.forEach(item => tempMatchedIndices.push(item.index));
           } else {
-            break; // Đứt mạch liên tiếp bên trái
+            break; // Đứt quãng liên tiếp các cột
           }
         }
 
-        // Nếu liên tiếp từ 3 hình trở lên từ trái sang
-        if (consecutiveCount >= 3) {
-          const symObj = DRAGON_SYMBOLS.find((s) => s.id === targetId);
+        // Nếu liên tiếp từ 3 cột trở lên từ trái qua
+        if (consecutiveColsCount >= 3) {
+          const symObj = DRAGON_SYMBOLS.find((s) => s.id === symId);
           if (symObj) {
-            let lineWin = 0;
-            // Phân hóa hình yếu / mạnh theo yêu cầu
+            let symbolWin = 0;
+            // Phân hóa hình yếu / mạnh & Càng nhiều cột liên tiếp thưởng càng to
             if (symObj.type === "weak") {
               const adjustedBet = currentBet * 0.5; // Hình yếu: cược giảm 50%
-              lineWin = adjustedBet * symObj.multiplier * consecutiveCount;
+              symbolWin = adjustedBet * symObj.multiplier * consecutiveColsCount;
             } else {
-              const adjustedBet = currentBet * 1.2; // Hình mạnh: cược + thêm 20%
-              lineWin = adjustedBet * symObj.multiplier * consecutiveCount;
+              const adjustedBet = currentBet * 1.2; // Hình mạnh: cược + 20%
+              symbolWin = adjustedBet * symObj.multiplier * consecutiveColsCount;
             }
 
-            totalCalculatedWin += Math.floor(lineWin);
-            currentMatched.forEach((idx) => winningSet.add(idx));
+            // Nhân thêm hệ số cấp số nhân số cột (Càng nhiều cột liên tiếp nổ càng to)
+            const columnBonusMultiplier = consecutiveColsCount >= 5 ? 3 : consecutiveColsCount === 4 ? 2 : 1;
+            totalCalculatedWin += Math.floor(symbolWin * columnBonusMultiplier);
+            tempMatchedIndices.forEach(idx => winningSet.add(idx));
           }
         }
-      }
+      });
 
       if (winningSet.size > 0 && totalCalculatedWin > 0) {
         baseWinAmount = totalCalculatedWin;
@@ -336,6 +355,8 @@ export default function JackpotPage() {
   };
 
   const continueAutoIfNeeded = (remainingAuto: number) => {
+    if (autoSpinRef.current === 0) return; // Nếu đã bấm dừng Auto thì ngắt luôn
+
     if (remainingAuto > 1) {
       setTimeout(() => executeSpin(remainingAuto - 1), 400);
     } else if (remainingAuto === 99999) {
@@ -399,13 +420,23 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* DÒNG THÔNG BÁO REALTIME */}
-        <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-2 rounded-xl text-xs font-bold">
+        {/* DÒNG THÔNG BÁO REALTIME & NÚT DỪNG AUTO */}
+        <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-2 rounded-xl text-xs font-bold gap-2">
           <div className={`truncate ${messageBox.type === "break" ? "text-rose-500 font-black animate-bounce" : messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
             💬 {messageBox.text}
           </div>
-          <div className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/40 font-mono shrink-0">
-            🔥 Chuỗi: {currentStreakMultiplier === 0 ? "Chưa có" : `x${currentStreakMultiplier}`}
+          <div className="flex items-center gap-2 shrink-0">
+            {autoCount > 0 && (
+              <button
+                onClick={stopAuto}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-black px-2 py-0.5 rounded text-[10px] animate-pulse cursor-pointer shadow"
+              >
+                ⏹ Dừng Auto
+              </button>
+            )}
+            <div className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/40 font-mono">
+              🔥 Chuỗi: {currentStreakMultiplier === 0 ? "Chưa có" : `x${currentStreakMultiplier}`}
+            </div>
           </div>
         </div>
 
