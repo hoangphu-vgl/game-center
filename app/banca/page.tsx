@@ -46,7 +46,6 @@ const GUN_TYPES: GunConfig[] = [
   { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' }
 ];
 
-// Tăng lượng máu (HP) cực trâu để thử thách độ khó
 const FISH_TYPES_BASE = [
   { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 5, hpMax: 12, reward: 15, category: 'small' },
   { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 6, hpMax: 15, reward: 20, category: 'small' },
@@ -61,7 +60,7 @@ const FISH_TYPES_BASE = [
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(20000); // Khởi điểm 20.000đ
+  const [jackpotPool, setJackpotPool] = useState<number>(20000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -102,9 +101,7 @@ export default function BanCaPage() {
           if (userSnap.exists()) {
             setPoints(userSnap.data().points || 1000);
           }
-        } catch (e) {
-          console.error("Lỗi lấy điểm user:", e);
-        }
+        } catch (e) {}
       }
     });
 
@@ -347,7 +344,7 @@ export default function BanCaPage() {
                 if (fish.category === 'large' && Math.random() < 0.12) {
                   reward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(20000); // Reset về 20.000đ
+                  updateJackpotInFirestore(20000);
                 }
 
                 setPoints(prev => {
@@ -437,36 +434,46 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
+        // HÀM VẼ SÚNG RIÊNG BIỆT CHO TỪNG GÓC:
+        // - Nếu có người chơi: súng xoay theo chuột / cảm ứng.
+        // - Nếu chưa có người chơi (trống): súng đứng yên một chỗ, không quay lung tung.
         const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
           const pData = roomPlayersRef.current[cornerKey];
-          let angle = -Math.PI / 2;
-          if (pData && pData.active) {
+          const isActive = pData && pData.active;
+
+          let angle = -Math.PI / 2; // Hướng mặc định đứng yên
+          if (isActive && cornerKey === myCorner) {
+            // Chỉ súng của chính mình mới xoay theo chuột
             angle = Math.atan2(mousePosRef.current.y - y, mousePosRef.current.x - x);
+          } else if (isActive) {
+            // Súng của người khác trong phòng giữ góc cố định hướng lên giữa màn hình
+            angle = -Math.PI / 2;
           }
+
           ctx.beginPath();
           ctx.arc(0, 0, 48, 0, Math.PI * 2);
-          ctx.fillStyle = pData && pData.active ? '#0f172a' : '#1e293b';
+          ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
           ctx.fill();
           ctx.lineWidth = 4;
-          ctx.strokeStyle = pData && pData.active ? '#38bdf8' : '#475569';
+          ctx.strokeStyle = isActive ? '#38bdf8' : '#475569';
           ctx.stroke();
 
           ctx.rotate(angle);
-          ctx.fillStyle = pData && pData.active ? '#f59e0b' : '#64748b';
+          ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
           ctx.fillRect(0, -16, 60, 32);
           ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
           ctx.strokeRect(0, -16, 60, 32);
-          ctx.fillStyle = '#b45309';
+          ctx.fillStyle = isActive ? '#b45309' : '#334155';
           ctx.fillRect(52, -20, 10, 40);
           ctx.restore();
 
           ctx.font = "bold 11px Fredoka, sans-serif";
-          ctx.fillStyle = pData && pData.active ? "#facc15" : "#94a3b8";
+          ctx.fillStyle = isActive ? "#facc15" : "#64748b";
           ctx.textAlign = 'center';
-          ctx.fillText(pData && pData.active ? `${label}: ${pData.email.split('@')[0]}` : "Đang trống", x, y + (y > h / 2 ? 55 - 4 : 45));
+          ctx.fillText(isActive ? `${label}: ${pData.email.split('@')[0]}` : "Đang trống", x, y + (y > h / 2 ? 55 - 4 : 45));
         };
 
         if (!isPVE) {
@@ -486,7 +493,7 @@ export default function BanCaPage() {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [screenMode, isPaused, isPVE, isHost, activeRoomId, jackpotPool, isMuted]);
+  }, [screenMode, isPaused, isPVE, isHost, activeRoomId, jackpotPool, isMuted, myCorner]);
 
   const handleShoot = () => {
     initAudio();
@@ -534,7 +541,7 @@ export default function BanCaPage() {
     }
   };
 
-  // Tính năng Ghép Phòng Tự Động (Auto Matchmaking)
+  // Ghép phòng tự động (Matchmaking) y chang Xì Dách
   const handleAutoMatchmaking = async () => {
     try {
       showToast("⚡ Đang tìm phòng trống...");
@@ -551,7 +558,6 @@ export default function BanCaPage() {
         const data = docSnap.data();
         const players = data.players || {};
         
-        // Tìm góc trống trong phòng
         const corners = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
         for (const c of corners) {
           if (!players[c] || !players[c].active) {
@@ -564,7 +570,6 @@ export default function BanCaPage() {
       });
 
       if (foundRoomId && availableCorner) {
-        // Vào phòng có sẵn
         setActiveRoomId(foundRoomId);
         setIsHost(false);
         setIsPVE(false);
@@ -577,7 +582,6 @@ export default function BanCaPage() {
         setScreenMode('game');
         showToast(`🎉 Đã ghép vào phòng #${foundRoomId} thành công!`);
       } else {
-        // Nếu không có phòng nào trống, tự động tạo phòng mới làm Host
         const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
         setActiveRoomId(newRoomId);
         setIsHost(true);
@@ -599,7 +603,7 @@ export default function BanCaPage() {
         });
 
         setScreenMode('game');
-        showToast(`✨ Không tìm thấy phòng trống. Đã tạo phòng mới #${newRoomId}!`);
+        showToast(`✨ Đã tạo phòng mới #${newRoomId}!`);
       }
     } catch (e) {
       showToast("Lỗi ghép phòng tự động!");
@@ -704,7 +708,6 @@ export default function BanCaPage() {
             </div>
 
             <div className="space-y-2.5">
-              {/* Nút Ghép Phòng Tự Động */}
               <button
                 onClick={handleAutoMatchmaking}
                 className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-110 text-slate-950 font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
@@ -827,7 +830,7 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Hũ Jackpot dời xuống dưới một chút để không đè lên header */}
+          {/* Hũ Jackpot */}
           <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
             <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-4 py-1 rounded-xl text-center shadow-xl animate-pulse">
               <div className="text-[8px] text-amber-300 font-extrabold uppercase tracking-widest">
@@ -839,7 +842,7 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Thanh công cụ súng dưới góc */}
+          {/* Thanh súng dưới góc */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-auto">
             <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-3 py-1.5 rounded-2xl flex items-center gap-2.5 shadow-xl">
               <button
