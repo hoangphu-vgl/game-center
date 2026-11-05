@@ -28,7 +28,6 @@ const DRAGON_SYMBOLS = [
   { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 1 },
 ];
 
-// Đã tinh chỉnh hệ số Aura nhẹ nhàng hơn, không còn nổ dồn dập mất cân bằng
 const AURA_QUICK_REWARDS = [
   { id: "ki_white", name: "⚪ Ki Trắng", mult: 1.5, icon: "✨" },
   { id: "kaioken", name: "🔴 Kaioken", mult: 2, icon: "🔥" },
@@ -76,7 +75,11 @@ export default function JackpotPage() {
 
   const [winningCoords, setWinningCoords] = useState<number[]>([]);
   const [autoCount, setAutoCount] = useState<number>(0);
+  
+  // Dùng Ref để lưu trữ state điểm và auto mới nhất, tránh closure stale state
+  const pointsRef = useRef<number>(0);
   const autoSpinRef = useRef<number>(0);
+  const currentBetRef = useRef<number>(100);
 
   const streakRef = useRef<number>(-1);
   const [streakIndex, setStreakIndex] = useState<number>(-1);
@@ -94,13 +97,17 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Đã cân đối lại tỷ lệ nổ và fix lỗi trừ cược Auto chuẩn xác!",
+    text: "Võ đạo Dragon Ball: Đã fix lỗi Auto trừ cược và khôi phục nút Dừng hoàn chỉnh!",
     type: "normal",
   });
 
   useEffect(() => {
     autoSpinRef.current = autoCount;
   }, [autoCount]);
+
+  useEffect(() => {
+    currentBetRef.current = currentBet;
+  }, [currentBet]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -110,7 +117,9 @@ export default function JackpotPage() {
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
           if (userSnap.exists()) {
-            setPoints(userSnap.data().points || 0);
+            const pts = userSnap.data().points || 0;
+            setPoints(pts);
+            pointsRef.current = pts;
           }
         } catch (e) {
           console.error(e);
@@ -169,8 +178,9 @@ export default function JackpotPage() {
   };
 
   const updatePointsInDB = async (newPts: number) => {
-    if (!user) return;
     setPoints(newPts);
+    pointsRef.current = newPts;
+    if (!user) return;
     try {
       const userRef = doc(db, "users", user.uid);
       updateDoc(userRef, { points: newPts }).catch((err) => console.log(err));
@@ -188,38 +198,43 @@ export default function JackpotPage() {
   };
 
   const handleSpinClick = (targetAuto: number) => {
-    if (spinning) return;
-    setWinningCoords([]);
+    if (spinning && autoSpinRef.current > 0) return; // Nếu đang auto thì không bấm đè
     setAutoCount(targetAuto);
-    executeSpin(targetAuto);
+    autoSpinRef.current = targetAuto;
+    if (!spinning) {
+      executeSpin(targetAuto);
+    }
   };
 
   const stopAuto = () => {
     setAutoCount(0);
+    autoSpinRef.current = 0;
     setMessageBox({ text: "⏹ Đã dừng Auto theo yêu cầu của chiến binh.", type: "normal" });
   };
 
   const executeSpin = async (remainingAuto: number) => {
-    // Kiểm tra điểm trước khi trừ cược chuẩn xác cho cả chế độ Auto
-    if (points < currentBet) {
+    const bet = currentBetRef.current;
+    const currentPts = pointsRef.current;
+
+    if (currentPts < bet) {
       alert("Ní không đủ điểm Ki để quay tiếp!");
-      setAutoCount(0);
+      stopAuto();
       setSpinning(false);
       return;
     }
 
     setSpinning(true);
     setWinningCoords([]);
-    const newPointsAfterBet = points - currentBet;
+    
+    const newPointsAfterBet = currentPts - bet;
     await updatePointsInDB(newPointsAfterBet);
 
-    // Tích lũy hũ jackpot mỗi khi quay
     try {
       const jackpotRef = doc(db, "system", "jackpot");
       updateDoc(jackpotRef, {
-        grand: jackpots.grand + Math.floor(currentBet * 0.2),
-        major: jackpots.major + Math.floor(currentBet * 0.1),
-        minor: jackpots.minor + Math.floor(currentBet * 0.05),
+        grand: jackpots.grand + Math.floor(bet * 0.2),
+        major: jackpots.major + Math.floor(bet * 0.1),
+        minor: jackpots.minor + Math.floor(bet * 0.05),
       }).catch((e) => console.log(e));
     } catch (e) {
       console.error(e);
@@ -229,28 +244,28 @@ export default function JackpotPage() {
     const interval = setInterval(() => {
       generateValidGrid();
       counter++;
-      if (counter > 12) {
+      if (counter > 10) {
         clearInterval(interval);
         const finalGrid = generateValidGrid();
         evaluateGameLogic(finalGrid, newPointsAfterBet, remainingAuto);
         setSpinning(false);
       }
-    }, 75);
+    }, 60);
   };
 
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    // Tinh chỉnh lại tỷ lệ thắng vừa phải, không bị nổ quá dồn dập
+    const bet = currentBetRef.current;
     let winChance = 0.28;
-    if (currentBet < 100) {
+    if (bet < 100) {
       winChance += 0.06;
-    } else if (currentBet >= 200 && currentBet <= 500) {
+    } else if (bet >= 200 && bet <= 500) {
       winChance -= 0.04;
-    } else if (currentBet >= 5000) {
+    } else if (bet >= 5000) {
       winChance -= 0.08;
     }
 
     const isTriggerWin = Math.random() < winChance;
-    const jackpotChance = currentBet >= 1000 ? 0.008 : 0.002; // Giảm tỷ lệ nổ hũ xuống mức hợp lý
+    const jackpotChance = bet >= 1000 ? 0.008 : 0.002;
     const isJackpotHit = Math.random() < jackpotChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
 
@@ -316,9 +331,9 @@ export default function JackpotPage() {
           if (symObj) {
             let symbolWin = 0;
             if (symObj.type === "weak") {
-              symbolWin = (currentBet * 0.3) * symObj.multiplier * consecutiveColsCount;
+              symbolWin = (bet * 0.3) * symObj.multiplier * consecutiveColsCount;
             } else {
-              symbolWin = (currentBet * 0.8) * symObj.multiplier * consecutiveColsCount;
+              symbolWin = (bet * 0.8) * symObj.multiplier * consecutiveColsCount;
             }
             const columnBonus = consecutiveColsCount >= 5 ? 2.5 : consecutiveColsCount === 4 ? 1.8 : 1;
             totalStreakWin += Math.floor(symbolWin * columnBonus);
@@ -339,7 +354,7 @@ export default function JackpotPage() {
           baseWinAmount = 0;
         } else {
           const chosenAura = AURA_QUICK_REWARDS[Math.floor(Math.random() * AURA_QUICK_REWARDS.length)];
-          baseWinAmount = Math.floor(currentBet * chosenAura.mult);
+          baseWinAmount = Math.floor(bet * chosenAura.mult);
           
           matchedIndices = [
             Math.floor(Math.random() * 6),
@@ -384,11 +399,11 @@ export default function JackpotPage() {
         streakRef.current = -1;
         setStreakIndex(-1);
         const breakTaunt = STREAK_BROKEN_TAUNTS[Math.floor(Math.random() * STREAK_BROKEN_TAUNTS.length)];
-        resultText = `${breakTaunt} (-${currentBet} PTS)`;
+        resultText = `${breakTaunt} (-${bet} PTS)`;
         setMessageBox({ text: resultText, type: "break" });
       } else {
         const randomTaunt = LOSE_TAUNTS[Math.floor(Math.random() * LOSE_TAUNTS.length)];
-        resultText = `💥 Thua (-${currentBet} PTS) | ${randomTaunt}`;
+        resultText = `💥 Thua (-${bet} PTS) | ${randomTaunt}`;
         setMessageBox({ text: resultText, type: "lose" });
       }
 
@@ -414,16 +429,20 @@ export default function JackpotPage() {
     }, 1500);
   };
 
-  // FIX LỖI AUTO KHÔNG TRỪ CƯỢC: Kiểm tra ref và gọi tiếp vòng quay
+  // QUẢN LÝ TIẾN TRÌNH AUTO CHUẨN XÁC, CÓ NÚT DỪNG RIÊNG BIỆT
   const continueAutoIfNeeded = (remainingAuto: number) => {
-    if (autoSpinRef.current === 0) return;
+    const currentAutoSetting = autoSpinRef.current;
+    if (currentAutoSetting === 0) return;
 
-    if (remainingAuto > 1) {
-      setTimeout(() => executeSpin(remainingAuto - 1), 400);
-    } else if (remainingAuto === 99999) {
-      setTimeout(() => executeSpin(99999), 400);
+    if (remainingAuto === 99999) {
+      setTimeout(() => executeSpin(99999), 300);
+    } else if (remainingAuto > 1) {
+      setAutoCount(remainingAuto - 1);
+      setTimeout(() => executeSpin(remainingAuto - 1), 300);
     } else {
       setAutoCount(0);
+      autoSpinRef.current = 0;
+      setMessageBox({ text: "✨ Đã hoàn thành toàn bộ lượt Auto theo yêu cầu!", type: "normal" });
     }
   };
 
@@ -508,9 +527,9 @@ export default function JackpotPage() {
             {autoCount > 0 && (
               <button
                 onClick={stopAuto}
-                className="bg-rose-600 hover:bg-rose-500 text-white font-black px-2 py-0.5 rounded text-[10px] animate-pulse cursor-pointer shadow"
+                className="bg-rose-600 hover:bg-rose-500 text-white font-black px-2.5 py-1 rounded-lg text-xs animate-pulse cursor-pointer shadow flex items-center gap-1"
               >
-                ⏹ Dừng
+                <span>⏹</span> Dừng Auto ({autoCount === 99999 ? "Vô Cực" : autoCount})
               </button>
             )}
             <div className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/40 font-mono text-[10px] sm:text-xs">
