@@ -37,35 +37,34 @@ interface FishData {
 }
 
 const GUN_TYPES: GunConfig[] = [
-  { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 10, size: 5, color: '#a855f7' },
-  { level: 2, cost: 10, name: "Đạn 10đ", damage: 6, speed: 11, size: 6, color: '#38bdf8' },
-  { level: 3, cost: 20, name: "Đạn 20đ", damage: 12, speed: 11, size: 7, color: '#22d3ee' },
-  { level: 4, cost: 50, name: "Đạn 50đ", damage: 28, speed: 12, size: 8, color: '#4ade80' },
-  { level: 5, cost: 100, name: "Đạn 100đ", damage: 55, speed: 12, size: 9, color: '#facc15' },
-  { level: 6, cost: 200, name: "Đạn 200đ", damage: 110, speed: 13, size: 10, color: '#f97316' },
-  { level: 7, cost: 500, name: "Đạn 500đ", damage: 260, speed: 13, size: 12, color: '#ec4899' },
-  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 550, speed: 14, size: 14, color: '#8b5cf6' },
-  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 15, size: 17, color: '#ef4444' }
+  { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 12, size: 5, color: '#a855f7' },
+  { level: 2, cost: 10, name: "Đạn 10đ", damage: 6, speed: 13, size: 6, color: '#38bdf8' },
+  { level: 3, cost: 20, name: "Đạn 20đ", damage: 12, speed: 13, size: 7, color: '#22d3ee' },
+  { level: 4, cost: 50, name: "Đạn 50đ", damage: 28, speed: 14, size: 8, color: '#4ade80' },
+  { level: 5, cost: 100, name: "Đạn 100đ", damage: 55, speed: 14, size: 9, color: '#facc15' },
+  { level: 6, cost: 200, name: "Đạn 200đ", damage: 110, speed: 15, size: 10, color: '#f97316' },
+  { level: 7, cost: 500, name: "Đạn 500đ", damage: 260, speed: 15, size: 12, color: '#ec4899' },
+  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 550, speed: 16, size: 14, color: '#8b5cf6' },
+  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 16, size: 17, color: '#ef4444' }
 ];
 
-// Thu nhỏ kích thước cá lại vừa vặn, dễ săn bắn
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 60, height: 38, speedMin: 2.5, speedMax: 5.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small' },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 65, height: 40, speedMin: 2.8, speedMax: 6.0, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small' },
-  { id: 's3', name: 'Tôm Sống', emoji: '🦐', width: 50, height: 32, speedMin: 3.2, speedMax: 6.5, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 60, height: 38, speedMin: 2.0, speedMax: 4.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 65, height: 40, speedMin: 2.2, speedMax: 4.8, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's3', name: 'Tôm Sống', emoji: '🦐', width: 50, height: 32, speedMin: 2.5, speedMax: 5.0, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small' },
   
-  { id: 'm1', name: 'Cá Nóc', emoji: '🐡', width: 95, height: 65, speedMin: 1.0, speedMax: 2.8, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium' },
-  { id: 'm2', name: 'Cá Heo', emoji: '🐬', width: 110, height: 70, speedMin: 1.2, speedMax: 3.0, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium' },
+  { id: 'm1', name: 'Cá Nóc', emoji: '🐡', width: 90, height: 60, speedMin: 1.0, speedMax: 2.5, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium' },
+  { id: 'm2', name: 'Cá Heo', emoji: '🐬', width: 105, height: 68, speedMin: 1.2, speedMax: 2.8, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium' },
   
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 180, height: 110, speedMin: 0.5, speedMax: 1.8, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large' },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 150, height: 100, speedMin: 0.6, speedMax: 2.0, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid' },
-  { id: 'l3', name: 'Rồng Biển', emoji: '🐉', width: 200, height: 130, speedMin: 0.4, speedMax: 1.5, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large' }
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 170, height: 105, speedMin: 0.5, speedMax: 1.5, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 140, height: 95, speedMin: 0.6, speedMax: 1.8, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid' },
+  { id: 'l3', name: 'Rồng Biển', emoji: '🐉', width: 190, height: 120, speedMin: 0.4, speedMax: 1.3, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large' }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(450000);
+  const [jackpotPool, setJackpotPool] = useState<number>(500000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -86,7 +85,7 @@ export default function BanCaPage() {
   const comboTimerRef = useRef<any>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const touchPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pointerPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const isHoldingRef = useRef<boolean>(false);
   const lastShootTimeRef = useRef<number>(0);
 
@@ -147,9 +146,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 450000);
+        setJackpotPool(docSnap.data().amount || 500000);
       } else {
-        setDoc(jpRef, { amount: 450000 });
+        setDoc(jpRef, { amount: 500000 });
       }
     });
 
@@ -235,13 +234,13 @@ export default function BanCaPage() {
 
   useEffect(() => {
     const bubbles = [];
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 15; i++) {
       bubbles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        radius: Math.random() * 4 + 2,
-        speed: Math.random() * 0.9 + 0.3,
-        opacity: Math.random() * 0.3 + 0.1
+        radius: Math.random() * 3 + 2,
+        speed: Math.random() * 0.7 + 0.2,
+        opacity: Math.random() * 0.25 + 0.1
       });
     }
     bubblesRef.current = bubbles;
@@ -289,7 +288,7 @@ export default function BanCaPage() {
       else if (myCorner === 'top-left') { startX = 60; startY = 60; }
       else if (myCorner === 'top-right') { startX = w - 60; startY = 60; }
 
-      const angle = Math.atan2(touchPosRef.current.y - startY, touchPosRef.current.x - startX);
+      const angle = Math.atan2(pointerPosRef.current.y - startY, pointerPosRef.current.x - startX);
       const roomRef = doc(db, "banca_rooms", activeRoomId);
       
       try {
@@ -299,30 +298,32 @@ export default function BanCaPage() {
           await setDoc(roomRef, { players: currentPlayers }, { merge: true });
         }
       } catch (e) {}
-    }, 200);
+    }, 250);
 
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
 
+  // Vòng lặp bắn liên tục khi giữ chuột / chạm
   useEffect(() => {
     if (screenMode !== 'game') return;
     const interval = setInterval(() => {
       if (isHoldingRef.current && !isPaused) {
         const now = Date.now();
-        if (now - lastShootTimeRef.current > 180) {
+        if (now - lastShootTimeRef.current > 160) {
           lastShootTimeRef.current = now;
-          handleShoot(touchPosRef.current.x, touchPosRef.current.y);
+          handleShoot(pointerPosRef.current.x, pointerPosRef.current.y);
         }
       }
-    }, 50);
+    }, 40);
     return () => clearInterval(interval);
   }, [screenMode, isPaused, currentGunIndex, points]);
 
+  // Game Loop Render Canvas tối ưu hóa độ mượt 60 FPS
   useEffect(() => {
     if (screenMode !== 'game') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
     let animationFrameId: number;
@@ -330,18 +331,18 @@ export default function BanCaPage() {
     const handleResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      if (touchPosRef.current.x === 0) {
-        touchPosRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      if (pointerPosRef.current.x === 0) {
+        pointerPosRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       }
     };
     handleResize();
     window.addEventListener('resize', handleResize);
 
     const isMobile = window.innerWidth < 768;
-    const scaleFactor = isMobile ? 0.75 : 1.0;
+    const scaleFactor = isMobile ? 0.8 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if ((isPVE || isHost) && fishesRef.current.length < 20 && Math.random() < 0.22) {
+      if ((isPVE || isHost) && fishesRef.current.length < 16 && Math.random() < 0.20) {
         const randWeight = Math.random() * 100;
         let template;
 
@@ -415,32 +416,27 @@ export default function BanCaPage() {
         const w = canvas.width;
         const h = canvas.height;
 
-        // Vẽ Background hồ cá 3D chuyên nghiệp
+        // 1. Vẽ Background đại dương
         const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, '#021d38');
-        grad.addColorStop(0.5, '#04386b');
-        grad.addColorStop(1, '#010d1a');
+        grad.addColorStop(0, '#011627');
+        grad.addColorStop(0.5, '#032e57');
+        grad.addColorStop(1, '#000814');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
-        // Hiệu ứng ánh sáng rọi từ trên xuống
+        // Hiệu ứng ánh sáng
         ctx.save();
-        ctx.globalAlpha = 0.12;
+        ctx.globalAlpha = 0.10;
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
         ctx.moveTo(w * 0.2, 0); ctx.lineTo(w * 0.4, 0); ctx.lineTo(w * 0.6, h); ctx.lineTo(w * 0.3, h);
         ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(w * 0.6, 0); ctx.lineTo(w * 0.8, 0); ctx.lineTo(w * 0.9, h); ctx.lineTo(w * 0.5, h);
-        ctx.fill();
         ctx.restore();
 
+        // 2. Cập nhật vị trí Bong bóng
         bubblesRef.current.forEach(b => {
           b.y -= b.speed;
           if (b.y < -10) { b.y = h + 10; b.x = Math.random() * w; }
-        });
-
-        bubblesRef.current.forEach(b => {
           ctx.save();
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
@@ -449,6 +445,7 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
+        // 3. Cập nhật Đạn & Nổ
         bulletsRef.current.forEach(b => {
           b.x += b.vx;
           b.y += b.vy;
@@ -459,33 +456,34 @@ export default function BanCaPage() {
         bulletsRef.current = bulletsRef.current.filter(b => b.alive);
 
         explosionsRef.current.forEach(ex => {
-          ex.radius += 5;
-          ex.alpha -= 0.08;
+          ex.radius += 4;
+          ex.alpha -= 0.1;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
         floatingTextsRef.current.forEach(ft => {
           ft.y += ft.vy;
-          ft.alpha -= 0.03;
+          ft.alpha -= 0.035;
         });
         floatingTextsRef.current = floatingTextsRef.current.filter(ft => ft.alpha > 0);
 
+        // 4. Cập nhật Cá
         fishesRef.current.forEach(f => {
           f.x += f.vx;
           f.y += f.vy;
           if (f.hitTimer > 0) f.hitTimer--;
         });
-        fishesRef.current = fishesRef.current.filter(f => f.x > -300 && f.x < w + 300 && f.y > -300 && f.y < h + 300);
+        fishesRef.current = fishesRef.current.filter(f => f.x > -350 && f.x < w + 350 && f.y > -350 && f.y < h + 350);
 
+        // Va chạm đạn và cá
         bulletsRef.current.forEach(bullet => {
           if (!bullet.alive) return;
           fishesRef.current.forEach(fish => {
             if (!bullet.alive || fish.dead) return;
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
-            if (dist < bullet.radius + fish.width / 2.5) {
+            if (dist < bullet.radius + fish.width / 2.3) {
               bullet.alive = false;
-
-              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 14, maxRadius: 75, color: bullet.color, alpha: 1 });
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 12, color: bullet.color, alpha: 1 });
 
               let finalDamage = bullet.damage;
               const isCrit = Math.random() < 0.12;
@@ -495,7 +493,7 @@ export default function BanCaPage() {
               }
 
               fish.hp -= finalDamage;
-              fish.hitTimer = 6;
+              fish.hitTimer = 5;
 
               if (fish.hp <= 0 && !fish.dead) {
                 fish.dead = true;
@@ -529,7 +527,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(450000);
+                  updateJackpotInFirestore(500000);
                 }
 
                 setPoints(prev => {
@@ -547,8 +545,6 @@ export default function BanCaPage() {
                 } else if (fish.category === 'mermaid' || fish.category === 'large') {
                   showDbAura("🔥 HAKAI! SĂN THÀNH CÔNG THỦ LĨNH KHỦNG!");
                   floatingTextsRef.current.push({ text: `+${finalReward}đ (SĂN BOSS)`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#ec4899' });
-                } else if (comboMultiplier > 1) {
-                  floatingTextsRef.current.push({ text: `+${finalReward}đ (x${comboMultiplier})`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#38bdf8' });
                 } else {
                   floatingTextsRef.current.push({ text: `+${finalReward}đ`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#facc15' });
                 }
@@ -560,14 +556,14 @@ export default function BanCaPage() {
 
         spawnFish(w, h);
 
-        // Vẽ Emoji cá sống động, sắc nét và vừa vặn
+        // 5. VẼ CÁ NỔI TRÊN LỚP ĐẦU TIÊN (Không bao giờ bị chìm)
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
           if (f.vx < 0) ctx.scale(-1, 1);
 
           if (f.hitTimer > 0) {
-            ctx.filter = 'brightness(2.5) drop-shadow(0 0 15px #ffffff)';
+            ctx.filter = 'brightness(2.5) drop-shadow(0 0 12px #ffffff)';
           }
 
           ctx.font = `${f.height}px Arial`;
@@ -578,22 +574,19 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
+        // 6. Vẽ Đạn
         bulletsRef.current.forEach(b => {
           ctx.save();
-          ctx.shadowColor = b.color;
-          ctx.shadowBlur = 15;
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-          ctx.fill();
-
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
           ctx.fillStyle = b.color;
+          ctx.shadowColor = b.color;
+          ctx.shadowBlur = 10;
           ctx.fill();
           ctx.restore();
         });
 
+        // 7. Vẽ Hiệu ứng nổ & Chữ thưởng
         explosionsRef.current.forEach(ex => {
           if (ex.alpha <= 0) return;
           ctx.save();
@@ -601,7 +594,7 @@ export default function BanCaPage() {
           ctx.beginPath();
           ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
           ctx.strokeStyle = ex.color;
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 3;
           ctx.stroke();
           ctx.restore();
         });
@@ -609,7 +602,7 @@ export default function BanCaPage() {
         floatingTextsRef.current.forEach(ft => {
           ctx.save();
           ctx.globalAlpha = Math.max(0, ft.alpha);
-          ctx.font = '900 16px Fredoka, sans-serif';
+          ctx.font = '900 15px Fredoka, sans-serif';
           ctx.fillStyle = ft.color;
           ctx.shadowColor = 'rgba(0,0,0,0.9)';
           ctx.shadowBlur = 4;
@@ -617,15 +610,16 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
+        // 8. Vẽ Súng / Pháo thủ
         if (isPVE) {
           const x = w / 2;
           const y = h - 50;
-          const angle = Math.atan2(touchPosRef.current.y - y, touchPosRef.current.x - x);
+          const angle = Math.atan2(pointerPosRef.current.y - y, pointerPosRef.current.x - x);
 
           ctx.save();
           ctx.translate(x, y);
           ctx.beginPath();
-          ctx.arc(0, 0, 42, 0, Math.PI * 2);
+          ctx.arc(0, 0, 40, 0, Math.PI * 2);
           ctx.fillStyle = '#0f172a';
           ctx.fill();
           ctx.lineWidth = 3;
@@ -634,19 +628,16 @@ export default function BanCaPage() {
 
           ctx.rotate(angle);
           ctx.fillStyle = '#f59e0b';
-          ctx.fillRect(0, -14, 52, 28);
+          ctx.fillRect(0, -12, 48, 24);
           ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -14, 52, 28);
-          ctx.fillStyle = '#b45309';
-          ctx.fillRect(44, -18, 10, 36);
+          ctx.strokeRect(0, -12, 48, 24);
           ctx.restore();
 
           ctx.font = "bold 12px Fredoka, sans-serif";
           ctx.fillStyle = "#facc15";
           ctx.textAlign = 'center';
-          ctx.fillText("P1 (Solo)", x, y + 44);
-
+          ctx.fillText("P1 (Solo)", x, y + 42);
         } else {
           const drawTurretAtCorner = (cornerKey: string, label: string) => {
             let x = w - 60, y = h - 60;
@@ -662,14 +653,14 @@ export default function BanCaPage() {
             let angle = -Math.PI / 2;
             if (isActive) {
               if (cornerKey === myCorner) {
-                angle = Math.atan2(touchPosRef.current.y - y, touchPosRef.current.x - x);
+                angle = Math.atan2(pointerPosRef.current.y - y, pointerPosRef.current.x - x);
               } else if (pData.angle !== undefined) {
                 angle = pData.angle;
               }
             }
 
             ctx.beginPath();
-            ctx.arc(0, 0, 38, 0, Math.PI * 2);
+            ctx.arc(0, 0, 36, 0, Math.PI * 2);
             ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
             ctx.fill();
             ctx.lineWidth = 3;
@@ -678,19 +669,17 @@ export default function BanCaPage() {
 
             ctx.rotate(angle);
             ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
-            ctx.fillRect(0, -12, 46, 24);
+            ctx.fillRect(0, -10, 42, 20);
             ctx.lineWidth = 2;
             ctx.strokeStyle = '#ffffff';
-            ctx.strokeRect(0, -12, 46, 24);
-            ctx.fillStyle = isActive ? '#b45309' : '#334155';
-            ctx.fillRect(38, -15, 8, 30);
+            ctx.strokeRect(0, -10, 42, 20);
             ctx.restore();
 
             if (isActive) {
               ctx.font = "bold 11px Fredoka, sans-serif";
               ctx.fillStyle = "#facc15";
               ctx.textAlign = 'center';
-              ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 44 : 34));
+              ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 42 : 32));
             }
           };
 
@@ -961,19 +950,35 @@ export default function BanCaPage() {
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full cursor-crosshair touch-none object-contain"
+            // Hỗ trợ chuột trên PC
+            onMouseDown={(e) => {
+              isHoldingRef.current = true;
+              pointerPosRef.current = { x: e.clientX, y: e.clientY };
+              handleShoot(e.clientX, e.clientY);
+            }}
+            onMouseMove={(e) => {
+              pointerPosRef.current = { x: e.clientX, y: e.clientY };
+            }}
+            onMouseUp={() => {
+              isHoldingRef.current = false;
+            }}
+            onMouseLeave={() => {
+              isHoldingRef.current = false;
+            }}
+            // Hỗ trợ cảm ứng trên Điện thoại
             onTouchStart={(e) => {
               e.preventDefault();
               isHoldingRef.current = true;
               if (e.touches.length > 0) {
                 const touch = e.touches[0];
-                touchPosRef.current = { x: touch.clientX, y: touch.clientY };
+                pointerPosRef.current = { x: touch.clientX, y: touch.clientY };
                 handleShoot(touch.clientX, touch.clientY);
               }
             }}
             onTouchMove={(e) => {
               if (e.touches.length > 0) {
                 const touch = e.touches[0];
-                touchPosRef.current = { x: touch.clientX, y: touch.clientY };
+                pointerPosRef.current = { x: touch.clientX, y: touch.clientY };
               }
             }}
             onTouchEnd={() => {
