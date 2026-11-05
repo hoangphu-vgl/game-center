@@ -82,7 +82,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("Đã sẵn sàng tuân thủ luật Cờ Thú quốc tế! Mời bạn đi trước.");
+  const [aiTaunt, setAiTaunt] = useState<string>("Đã sẵn sàng tuân thủ luật Cờ Thú chuẩn! Mời bạn đi trước.");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -246,11 +246,8 @@ export default function ChessthuPage() {
 
   const isTrap = (r: number, c: number, color: 'r' | 'b') => {
     if (color === 'r') {
-      // Bẫy của phe Đỏ nằm sát hang Đỏ (8,3) -> các ô (7,2), (7,4), (8,3)? Theo chuẩn: (7,2), (7,4), (8,2)/(8,4) tùy bàn, chuẩn quốc tế: Bẫy Đỏ ở (7,2), (7,4), (8,3 sát hang) hoặc (8,2),(8,4),(7,3)
-      // Cụ thể bẫy phe Đỏ (bảo vệ hang r ở 8,3): (7,2), (7,4), (8,2) [hoặc (8,4)]
       return (r === 7 && (c === 2 || c === 4)) || (r === 8 && (c === 2 || c === 4));
     } else {
-      // Bẫy phe Xanh (bảo vệ hang b ở 0,3): (1,2), (1,4), (0,2) [hoặc (0,4)]
       return (r === 1 && (c === 2 || c === 4)) || (r === 0 && (c === 2 || c === 4));
     }
   };
@@ -260,7 +257,6 @@ export default function ChessthuPage() {
     return r === 0 && c === 3;
   };
 
-  // Hàm kiểm tra tính hợp lệ của nước đi theo ĐÚNG LUẬT CỜ THÚ CHUẨN
   const getPieceMoves = (r: number, c: number, currentBoard: string[][]) => {
     const moves: { r: number; c: number }[] = [];
     const p = currentBoard[r][c];
@@ -277,16 +273,13 @@ export default function ChessthuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
-        // Không được bước vào hang của chính mình
         if (isDen(nr, nc, color)) return;
 
         const target = currentBoard[nr][nc];
         const targetAnimal = target ? ANIMAL_DATA[target] : null;
 
-        // LUẬT DÒNG SÔNG: Chỉ Chuột (rank 1) mới được bước xuống nước
         if (isWater(nr, nc)) {
           if (rank !== 1) {
-            // Sư Tử (7) và Hổ (6) có quyền NHẢY QUA SÔNG theo chiều dọc hoặc ngang
             if (rank === 6 || rank === 7) {
               if (dr !== 0) {
                 let jumpR = r + dr;
@@ -295,7 +288,7 @@ export default function ChessthuPage() {
                 while (jumpR >= 3 && jumpR <= 5) {
                   const midPiece = currentBoard[jumpR][nc];
                   if (midPiece) {
-                    if (ANIMAL_DATA[midPiece].rank === 1) mouseInRiver = true; // Bị chuột cản đường nhảy
+                    if (ANIMAL_DATA[midPiece].rank === 1) mouseInRiver = true;
                     blocked = true;
                     break;
                   }
@@ -306,7 +299,6 @@ export default function ChessthuPage() {
                   const landAnimal = landTarget ? ANIMAL_DATA[landTarget] : null;
                   if (!landTarget || landAnimal?.color !== color) {
                     const targetRank = landAnimal ? landAnimal.rank : 0;
-                    // Kiểm tra xem ô đáp có bị dính bẫy địch không
                     const enemyColor = color === 'r' ? 'b' : 'r';
                     const inEnemyTrap = isTrap(jumpR, nc, enemyColor);
                     if (inEnemyTrap || !landTarget || rank >= targetRank) {
@@ -341,27 +333,11 @@ export default function ChessthuPage() {
                 }
               }
             }
-            return; // Các con khác không được xuống nước
-          } else {
-            // Chuột đang ở dưới nước hoặc từ bờ xuống nước, hoặc từ nước lên bờ
-            if (target) {
-              // Chuột dưới nước KHÔNG THỂ ăn quân trên cạn, và ngược lại. Chuột dưới nước chỉ ăn Chuột dưới nước.
-              if (targetAnimal && targetAnimal.color !== color) {
-                if (isWater(nr, nc)) {
-                  // Cả 2 cùng ở dưới nước -> được ăn
-                  moves.push({ r: nr, c: nc });
-                }
-              }
-            } else {
-              moves.push({ r: nr, c: nc });
-            }
             return;
           }
         }
 
-        // Nếu đi trên cạn bình thường
         if (isWater(r, c) && !isWater(nr, nc) && rank === 1) {
-          // Chuột từ dưới nước nhảy lên cạn: nếu ô cạn có Voi địch thì theo luật không được ăn Voi từ dưới nước lên cạn
           if (target && targetAnimal && targetAnimal.rank === 8 && targetAnimal.color !== color) {
             // Không được ăn Voi từ nước lên cạn
           } else if (!target || targetAnimal?.color !== color) {
@@ -370,7 +346,6 @@ export default function ChessthuPage() {
           return;
         }
 
-        // Kiểm tra ô đích có nằm trong bẫy của địch không? Nếu nằm trong bẫy địch thì lực chiến về 0 (bất kỳ con nào cũng ăn được)
         const enemyColor = color === 'r' ? 'b' : 'r';
         const targetInTrap = isTrap(nr, nc, enemyColor);
 
@@ -379,14 +354,15 @@ export default function ChessthuPage() {
         } else {
           if (targetAnimal?.color !== color) {
             let canEat = false;
-            const tRank = targetAnimal.rank;
+            // Ép kiểu an toàn chống lỗi TS18047
+            const tRank = targetAnimal?.rank ?? 0;
             const curRankNum: number = rank;
 
             if (targetInTrap) {
-              canEat = true; // Đang dính bẫy thì mất toàn bộ sức mạnh, ai cũng ăn được
+              canEat = true;
             } else {
-              if (curRankNum === 1 && tRank === 8) canEat = true; // Chuột ăn Voi
-              else if (curRankNum === 8 && tRank === 1) canEat = false; // Voi không ăn được Chuột
+              if (curRankNum === 1 && tRank === 8) canEat = true;
+              else if (curRankNum === 8 && tRank === 1) canEat = false;
               else if (curRankNum >= tRank) canEat = true;
             }
 
@@ -448,7 +424,6 @@ export default function ChessthuPage() {
       }
     }
 
-    // Kiểm tra chiến thắng vào Hang
     if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
       endGame(true, "Bạn đã chiếm hang địch và thắng cược!");
     } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
@@ -476,7 +451,6 @@ export default function ChessthuPage() {
       return;
     }
 
-    // Ưu tiên vào hang Đỏ (8,3) nếu đi được
     const winMove = allMoves.find(m => m.toR === 8 && m.toC === 3);
     const chosenMove = winMove || allMoves[Math.floor(Math.random() * allMoves.length)];
 
@@ -616,7 +590,6 @@ export default function ChessthuPage() {
             </div>
           )}
 
-          {/* Bàn cờ chuẩn 7x9 */}
           <div className="grid grid-cols-7 grid-rows-9 w-full aspect-[7/9] border-4 border-amber-900/80 rounded-b-2xl shadow-2xl bg-[#52796f] p-1 gap-0.5 relative overflow-hidden">
             {board.map((row, r) =>
               row.map((piece, c) => {
