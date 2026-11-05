@@ -114,7 +114,7 @@ export default function ChessPage() {
         board: INITIAL_BOARD,
         turn: 'w',
         bet: currentBet,
-        createdAt: new Date().toISOString()
+        hostUid: user?.uid || ""
       });
 
       setBoard(INITIAL_BOARD.map(r => [...r]));
@@ -124,7 +124,7 @@ export default function ChessPage() {
       setScreen('game');
     } catch (err) {
       console.error("Lỗi tạo phòng:", err);
-      alert("Không thể tạo phòng, vui lòng kiểm tra lại kết nối Firebase!");
+      alert("Không thể tạo phòng, vui lòng kiểm tra lại Rules Firestore!");
     }
   };
 
