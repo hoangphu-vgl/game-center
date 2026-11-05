@@ -46,7 +46,6 @@ const GUN_TYPES: GunConfig[] = [
   { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' }
 ];
 
-// Đã giảm máu cá xuống vừa phải để bắn mượt và dễ húp thưởng hơn
 const FISH_TYPES_BASE = [
   { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 2, hpMax: 6, reward: 15, category: 'small' },
   { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 3, hpMax: 8, reward: 20, category: 'small' },
@@ -85,9 +84,9 @@ export default function BanCaPage() {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string } }>({
-    'top-left': { active: false, email: 'Trống' },
-    'top-right': { active: false, email: 'Trống' },
-    'bottom-left': { active: false, email: 'Trống' },
+    'top-left': { active: false, email: '' },
+    'top-right': { active: false, email: '' },
+    'bottom-left': { active: false, email: '' },
     'bottom-right': { active: true, email: 'Bạn' }
   });
 
@@ -201,7 +200,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe dữ liệu phòng PVP realtime chuẩn xác từng góc ghế
+  // Lắng nghe dữ liệu phòng PVP realtime chuẩn xác
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -433,7 +432,7 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ súng: Kiểm tra cực kỳ chặt chẽ trạng thái active và email hợp lệ
+        // Vẽ súng: Nếu ụ súng chưa có người thật thì ẩn hoàn toàn tên, giữ nguyên bất động không cho hoạt động
         const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
@@ -463,10 +462,12 @@ export default function BanCaPage() {
           ctx.fillRect(52, -20, 10, 40);
           ctx.restore();
 
-          ctx.font = "bold 11px Fredoka, sans-serif";
-          ctx.fillStyle = isActive ? "#facc15" : "#64748b";
-          ctx.textAlign = 'center';
-          ctx.fillText(isActive ? `${label}: ${pData.email.split('@')[0]}` : "Đang trống", x, y + (y > h / 2 ? 55 - 4 : 45));
+          if (isActive) {
+            ctx.font = "bold 11px Fredoka, sans-serif";
+            ctx.fillStyle = "#facc15";
+            ctx.textAlign = 'center';
+            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 55 - 4 : 45));
+          }
         };
 
         if (!isPVE) {
@@ -489,6 +490,15 @@ export default function BanCaPage() {
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner]);
 
   const handleShoot = () => {
+    // Nếu đang ở phòng PVP và góc súng của mình không hợp lệ hoặc chưa active thì chặn bắn
+    if (!isPVE) {
+      const pData = roomPlayersRef.current[myCorner];
+      if (!pData || !pData.active || !pData.email || pData.email === 'Trống') {
+        showToast("Ụ súng chưa sẵn sàng!");
+        return;
+      }
+    }
+
     initAudio();
     const gun = GUN_TYPES[currentGunIndex];
     if (points < gun.cost) {
@@ -534,33 +544,60 @@ export default function BanCaPage() {
     }
   };
 
-  // Ghép phòng tự động phân bổ đúng ghế trống
+  // Ghép phòng tự động: ƯU TIÊN VÀO PHÒNG ĐANG CÓ NGƯỜI TRƯỚC
   const handleAutoMatchmaking = async () => {
     try {
-      showToast("⚡ Đang tìm phòng trống...");
+      showToast("⚡ Đang tìm phòng có người...");
       const roomsRef = collection(db, "banca_rooms");
-      const q = query(roomsRef, where("status", "==", "playing"), limit(5));
+      const q = query(roomsRef, where("status", "==", "playing"), limit(10));
       const querySnapshot = await getDocs(q);
 
       let foundRoomId: string | null = null;
       let availableCorner: string | null = null;
       let roomPlayersData: any = null;
 
+      // Sắp xếp ưu tiên các phòng có người chơi (có ít nhất 1 slot active khác 'Trống')
+      const roomsList: any[] = [];
       querySnapshot.forEach((docSnap) => {
-        if (foundRoomId) return;
-        const data = docSnap.data();
-        const players = data.players || {};
-        
-        const corners = ['bottom-right', 'bottom-left', 'top-left', 'top-right'];
-        for (const c of corners) {
-          if (!players[c] || !players[c].active || players[c].email === 'Trống') {
-            foundRoomId = docSnap.id;
-            availableCorner = c;
-            roomPlayersData = players;
-            break;
-          }
-        }
+        roomsList.push({ id: docSnap.id, data: docSnap.data() });
       });
+
+      // Ưu tiên 1: Tìm phòng đang có người chơi bên trong nhưng vẫn còn ghế trống
+      for (const room of roomsList) {
+        const players = room.data.players || {};
+        const corners = ['bottom-right', 'bottom-left', 'top-left', 'top-right'];
+        const hasPeople = corners.some(c => players[c] && players[c].active && players[c].email && players[c].email !== 'Trống');
+        const hasEmpty = corners.some(c => !players[c] || !players[c].active || players[c].email === 'Trống');
+
+        if (hasPeople && hasEmpty) {
+          foundRoomId = room.id;
+          roomPlayersData = players;
+          for (const c of corners) {
+            if (!players[c] || !players[c].active || players[c].email === 'Trống') {
+              availableCorner = c;
+              break;
+            }
+          }
+          break;
+        }
+      }
+
+      // Ưu tiên 2: Nếu không có phòng nào có người, tìm phòng trống bất kỳ
+      if (!foundRoomId) {
+        for (const room of roomsList) {
+          const players = room.data.players || {};
+          const corners = ['bottom-right', 'bottom-left', 'top-left', 'top-right'];
+          for (const c of corners) {
+            if (!players[c] || !players[c].active || players[c].email === 'Trống') {
+              foundRoomId = room.id;
+              availableCorner = c;
+              roomPlayersData = players;
+              break;
+            }
+          }
+          if (foundRoomId) break;
+        }
+      }
 
       if (foundRoomId && availableCorner) {
         setActiveRoomId(foundRoomId);
@@ -572,8 +609,9 @@ export default function BanCaPage() {
 
         await updateDoc(doc(db, "banca_rooms", foundRoomId), { players: roomPlayersData });
         setScreenMode('game');
-        showToast(`🎉 Đã ghép vào phòng #${foundRoomId} thành công!`);
+        showToast(`🎉 Đã ghép vào phòng đang có người #${foundRoomId}!`);
       } else {
+        // Nếu tất cả các phòng đều đầy hoặc không có, tạo phòng mới
         const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
         setActiveRoomId(newRoomId);
         setIsPVE(false);
@@ -594,7 +632,7 @@ export default function BanCaPage() {
         });
 
         setScreenMode('game');
-        showToast(`✨ Đã tạo phòng mới #${newRoomId}!`);
+        showToast(`✨ Tất cả phòng đã kín. Đã tạo phòng mới #${newRoomId}!`);
       }
     } catch (e) {
       showToast("Lỗi ghép phòng tự động!");
@@ -701,7 +739,7 @@ export default function BanCaPage() {
                 onClick={handleAutoMatchmaking}
                 className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-110 text-slate-950 font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
               >
-                ⚡ CHƠI NGAY (GHÉP PHÒNG TỰ ĐỘNG)
+                ⚡ CHƠI NGAY (ƯU TIÊN GHÉP PHÒNG CÓ NGƯỜI)
               </button>
 
               <button
