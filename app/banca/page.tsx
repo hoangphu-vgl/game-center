@@ -101,7 +101,7 @@ export default function BanCaPage() {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
 
-  // Dọn sạch ghế ngay lập tức khi thoát trang hoặc đóng tab
+  // Giải phóng ghế ngay lập tức khi đóng tab hoặc thoát trang
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -228,7 +228,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe realtime phòng PVP
+  // Lắng nghe realtime phòng PVP và tự động bầu Host động
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -238,13 +238,24 @@ export default function BanCaPage() {
         if (data.players) {
           roomPlayersRef.current = data.players;
         }
+        
+        // Tự động bầu Host động: Nếu chưa có ai làm Host hoặc Host cũ đã thoát, người đầu tiên trong phòng active sẽ làm Host sinh cá
+        const players = data.players || {};
+        const activeCorners = Object.keys(players).filter(c => players[c] && players[c].active && players[c].email && players[c].email !== 'Trống');
+        if (activeCorners.length > 0) {
+          const firstPlayerEmail = players[activeCorners[0]].email;
+          if (user && user.email === firstPlayerEmail) {
+            setIsHost(true);
+          }
+        }
+
         if (!isHost && data.fishes && Array.isArray(data.fishes)) {
           fishesRef.current = data.fishes;
         }
       }
     });
     return () => unsubscribe();
-  }, [activeRoomId, isPVE, isHost]);
+  }, [activeRoomId, isPVE, isHost, user]);
 
   // Cập nhật góc súng định kỳ
   useEffect(() => {
@@ -661,19 +672,18 @@ export default function BanCaPage() {
     const data = roomSnap.data();
     setActiveRoomId(roomId);
     setIsPVE(false);
-    setIsHost(false);
 
     const players = data.players || {};
     const userEmail = user?.email || 'Thành viên';
 
-    // KIỂM TRA QUAN TRỌNG: Nếu tài khoản này đã có mặt ở ghế nào đó trước đó, quét và dọn sạch phân thân cũ
+    // Xóa sạch phân thân cũ của tài khoản này trong phòng trước khi gán ghế mới
     Object.keys(players).forEach((k) => {
       if (players[k] && players[k].email === userEmail) {
         players[k] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
       }
     });
 
-    // Tìm ghế trống thực sự theo thứ tự chuẩn xác
+    // Tìm ghế trống chính xác
     let corner = '';
     const priorityCorners = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
     for (const c of priorityCorners) {
@@ -704,17 +714,20 @@ export default function BanCaPage() {
     if (activeRoomId && !isPVE) {
       const roomRef = doc(db, "banca_rooms", activeRoomId);
       try {
-        const currentPlayers = { ...roomPlayersRef.current };
-        const userEmail = user?.email || 'Thành viên';
-        
-        // Dọn sạch tất cả các ghế thuộc tài khoản này trong phòng để không bị dính phân thân
-        Object.keys(currentPlayers).forEach((k) => {
-          if (currentPlayers[k] && (k === myCorner || currentPlayers[k].email === userEmail)) {
-            currentPlayers[k] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
-          }
-        });
+        const roomSnap = await getDoc(roomRef);
+        if (roomSnap.exists()) {
+          const currentData = roomSnap.data();
+          const currentPlayers = currentData.players || {};
+          const userEmail = user?.email || 'Thành viên';
+          
+          Object.keys(currentPlayers).forEach((k) => {
+            if (currentPlayers[k] && (k === myCorner || currentPlayers[k].email === userEmail)) {
+              currentPlayers[k] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
+            }
+          });
 
-        await setDoc(roomRef, { players: currentPlayers }, { merge: true });
+          await setDoc(roomRef, { players: currentPlayers }, { merge: true });
+        }
       } catch (e) {}
     }
     setActiveRoomId(null);
@@ -832,7 +845,7 @@ export default function BanCaPage() {
             <div className="flex items-center gap-1.5 pointer-events-auto">
               {!isPVE && activeRoomId && (
                 <div className="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 text-amber-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md">
-                  Mã Phòng: #{activeRoomId} ({myCorner})
+                  Mã Phòng: #{activeRoomId} ({myCorner}) {isHost ? '👑' : ''}
                 </div>
               )}
 
