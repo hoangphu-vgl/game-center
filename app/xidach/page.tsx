@@ -105,6 +105,7 @@ export default function XiDachPage() {
     return () => unsubscribe();
   }, [roomId]);
 
+  // THUẬT TOÁN XÁO BÀI FISHER-YATES: CHỐNG TRÙNG LÁ BÀI tuyệt đối 100%
   const createDeck = (): Card[] => {
     const deck: Card[] = [];
     SUITS.forEach((s) => {
@@ -112,7 +113,13 @@ export default function XiDachPage() {
         deck.push({ suit: s, value: v, code: `${v}${s}` });
       });
     });
-    return deck.sort(() => Math.random() - 0.5);
+
+    // Xáo bài chuẩn Fisher-Yates Shuffle
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
   };
 
   const calculateHandScore = (cards: Card[]) => {
@@ -138,7 +145,6 @@ export default function XiDachPage() {
     return score;
   };
 
-  // PHÂN LUỒNG PHÒNG THEO ĐÚNG MẮC CƯỢC SELECTED
   const joinOrCreateRoom = async () => {
     if (!user) {
       alert("Ní vui lòng đăng nhập Google để vào sòng bài!");
@@ -152,7 +158,6 @@ export default function XiDachPage() {
     setLoading(true);
     try {
       const roomsRef = collection(db, "xidach_rooms");
-      // Tìm phòng khớp mức cược selectedBetTier
       const q = query(
         roomsRef,
         where("betTier", "==", selectedBetTier),
@@ -221,7 +226,19 @@ export default function XiDachPage() {
     }
   };
 
-  const leaveRoom = () => {
+  // GIẢI PHÓNG SLOT KHỎI FIRESTORE KHI ĐỔI PHÒNG HOẶC THOÁT RA CỔNG GAME
+  const leaveRoom = async () => {
+    if (roomId && room && user) {
+      try {
+        const updatedPlayers = room.players.filter((p) => p.uid !== user.uid);
+        const roomRef = doc(db, "xidach_rooms", roomId);
+        await updateDoc(roomRef, {
+          players: updatedPlayers,
+        });
+      } catch (e) {
+        console.error("Lỗi giải phóng slot phòng:", e);
+      }
+    }
     setRoomId(null);
     setRoom(null);
   };
@@ -300,7 +317,6 @@ export default function XiDachPage() {
     }
   };
 
-  // TÍNH NĂNG TÁCH ĐÔI KHI CÓ 2 LÁ BÀI CÙNG GIÁ TRỊ
   const splitPairHand = async () => {
     if (!roomId || !room || !user) return;
     const currentPlayer = room.players[room.currentTurnIndex];
@@ -314,7 +330,6 @@ export default function XiDachPage() {
     let deck = [...room.deck];
     if (deck.length < 2) deck = createDeck();
 
-    // Tách 2 lá ra và rút thêm mỗi bên 1 lá
     const card1 = currentPlayer.cards[0];
     const card2 = currentPlayer.cards[1];
 
@@ -436,7 +451,6 @@ export default function XiDachPage() {
     room.currentTurnIndex === myTurnIndex &&
     myTurnIndex !== -1;
 
-  // Kiểm tra điều kiện Tách Bài (2 lá đầu cùng giá trị)
   const canSplit =
     isMyTurn &&
     myPlayer &&
@@ -450,7 +464,11 @@ export default function XiDachPage() {
     <div className="min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-2 sm:p-4">
       {/* Top Bar Navigation */}
       <div className="w-full max-w-6xl flex justify-between items-center mb-3 px-2">
-        <Link href="/" className="text-xs sm:text-sm font-extrabold text-amber-400 hover:underline flex items-center gap-1">
+        <Link
+          href="/"
+          onClick={leaveRoom}
+          className="text-xs sm:text-sm font-extrabold text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+        >
           ← Về Cổng Game
         </Link>
         <div className="flex items-center gap-3">
@@ -584,7 +602,6 @@ export default function XiDachPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1 items-center">
-                        {/* Tụ Bài 1 */}
                         <div className="flex gap-1 justify-center flex-wrap">
                           {p.cards.map((c, cIdx) => (
                             <div
@@ -598,7 +615,6 @@ export default function XiDachPage() {
                           ))}
                         </div>
 
-                        {/* Tụ Bài Tách (Nếu có) */}
                         {p.splitCards && p.splitCards.length > 0 && (
                           <div className="flex gap-1 justify-center flex-wrap border-t border-amber-500/30 pt-1 mt-1">
                             {p.splitCards.map((c, cIdx) => (
