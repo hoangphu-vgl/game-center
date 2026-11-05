@@ -49,9 +49,9 @@ const INITIAL_COTHU_BOARD: string[][] = [
 
 const TAUNT_MESSAGES = [
   "Cẩn thận đấy, đội hình của ta chuẩn bị tràn sang càn quét đây! 🦁🔥",
-  "Đứng thủ hoài sao thắng được ta? Xung phong nào! ⚡",
-  "Hang của cậu sơ hở quá, ta chuẩn bị phi vào ăn mừng đây! 🏴‍☠️",
-  "Sợ quá hả? Mau đem Voi ra đấu tay đôi với ta nào! 🐘"
+  "Đừng tưởng sơ hở là ta không thấy đường vào hang nhé! ⚡",
+  "Hang của cậu đang vẫy gọi ta kìa, chuẩn bị tinh thần đi! 🏴‍☠️",
+  "Thuật toán mới đã kích hoạt, chuẩn bị mất điểm đi ní ơi! 💀"
 ];
 
 export default function ChessthuPage() {
@@ -71,7 +71,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("AI Đã bật chế độ Tấn Công Tổng Lực! Sẵn sàng chiến đấu chưa?");
+  const [aiTaunt, setAiTaunt] = useState<string>("AI Thông Minh đã sẵn sàng nghênh chiến!");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -194,7 +194,7 @@ export default function ChessthuPage() {
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Trận chiến Cờ Thú tấn công bắt đầu! Đừng hòng ngăn cản ta! 🦁");
+    setAiTaunt("Trận chiến AI thông minh bắt đầu! Đừng hòng qua mặt ta! 🦁");
     setScreen('game');
   };
 
@@ -412,7 +412,7 @@ export default function ChessthuPage() {
       }
     }
 
-    // KIỂM TRA ĐIỀU KIỆN THẮNG KHI VÀO HANG NGAY LẬP TỨC
+    // KIỂM TRA ĐIỀU KIỆN THẮNG CHUẨN KHI VÀO HANG
     if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
       endGame(true, "Bạn đã chiếm hang địch và thắng cược!");
     } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
@@ -420,7 +420,7 @@ export default function ChessthuPage() {
     }
   };
 
-  // NÂNG CẤP AI: TẤN CÔNG MẠNH MẼ, SĂN QUÂN VÀ LAO VÀO HANG
+  // NÂNG CẤP AI THÔNG MINH, LINH HOẠT VÀ TẤN CÔNG TRIỆT ĐỂ
   const makeAiMove = () => {
     const allMoves: { fromR: number; fromC: number; toR: number; toC: number; score: number }[] = [];
 
@@ -433,21 +433,28 @@ export default function ChessthuPage() {
             let score = 0;
             const targetPiece = board[m.r][m.c];
 
-            // 1. Nếu đi vào ô Hang Đỏ (0, 3) -> THẮNG NGAY LẬP TỨC (Ưu tiên điểm số cao nhất)
-            if (m.r === 0 && m.c === 3) {
-              score += 10000;
+            // 1. Ưu tiên TUYỆT ĐỐI vào hang Đỏ (8, 3) để chiến thắng ngay lập tức
+            if (m.r === 8 && m.c === 3) {
+              score += 50000;
             }
 
-            // 2. Nếu ăn được quân địch -> Điểm cộng cực cao dựa theo cấp bậc quân địch
+            // 2. Ưu tiên ăn quân địch (cấp càng cao điểm càng lớn)
             if (targetPiece) {
-              score += ANIMAL_DATA[targetPiece].rank * 100;
+              const targetRank = ANIMAL_DATA[targetPiece].rank;
+              score += targetRank * 200;
             }
 
-            // 3. Khuyến khích tấn công tiến về phía trước (tiến về hang địch hàng 0)
-            score += (9 - m.r) * 15;
+            // 3. Khuyến khích tiến về phần sân của người chơi (hàng số lớn dần) để tấn công
+            score += m.r * 20;
 
-            // Thêm chút ngẫu nhiên để AI linh hoạt
-            score += Math.random() * 20;
+            // 4. Tránh đi vào bẫy của người chơi trừ khi bắt buộc hoặc ăn được quân
+            const isMyColorTrap = isTrap(m.r, m.c, 'b');
+            if (isMyColorTrap) {
+              score -= 10;
+            }
+
+            // Thêm chút ngẫu nhiên nhỏ để các nước đi linh hoạt, không bị rập khuôn
+            score += Math.random() * 15;
 
             allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
           });
@@ -460,7 +467,7 @@ export default function ChessthuPage() {
       return;
     }
 
-    // Sắp xếp các nước đi từ điểm cao xuống thấp để AI luôn chọn nước Tấn công / Vào hang tốt nhất
+    // Sắp xếp các nước đi từ điểm cao xuống thấp, chọn nước tối ưu nhất
     allMoves.sort((a, b) => b.score - a.score);
     const chosenMove = allMoves[0];
 
@@ -493,7 +500,7 @@ export default function ChessthuPage() {
           ← Trang chủ
         </Link>
         <h1 className="text-lg font-black tracking-wider text-emerald-400 uppercase flex items-center gap-1">
-          🦁 CỜ THÚ TẤN CÔNG
+          🦁 CỜ THÚ THÔNG MINH
         </h1>
         <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-xl border border-amber-500/30 font-bold text-amber-400">
           🪙 {points.toLocaleString()} PTS
@@ -548,12 +555,12 @@ export default function ChessthuPage() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
-            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Tấn Công Tổng Lực</label>
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu AI Thông Minh Cải Tiến</label>
             <button
               onClick={startAiGame}
               className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm"
             >
-              🎮 Chiến AI Tấn Công Ngay
+              🎮 Chiến AI Ngay
             </button>
           </div>
         </div>
@@ -567,7 +574,7 @@ export default function ChessthuPage() {
             </span>
             <div className="flex items-center gap-3">
               <span className="text-slate-400">
-                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (Tấn Công)`}
+                {gameMode === 'pvp' ? `Phòng #${roomCode}` : `AI (Thông Minh)`}
               </span>
               <button
                 onClick={() => setScreen('menu')}
