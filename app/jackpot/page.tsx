@@ -15,7 +15,6 @@ const AUTO_OPTIONS = [
   { label: "Vô Cực", value: 99999 },
 ];
 
-// Phân định rõ Hình Mạnh (Rare/Epic) và Hình Yếu (Bad/Mid)
 const DRAGON_SYMBOLS = [
   { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "strong", multiplier: 30 },
   { id: "goku", icon: "🐉", name: "Goku SSJ", type: "strong", multiplier: 18 },
@@ -35,19 +34,19 @@ const LOSE_TAUNTS = [
   "Vegeta cười khẩy: 'Ngươi chỉ có thế thôi sao cùi bắp?'",
   "Yamcha nằm đất lắc đầu ngán ngẩm trước cú quay này!",
   "Hết Ki rồi chiến binh ơi, hít thở lấy lại sức đi!",
-  "Rồng thần khóc thét vì đường đi nước bước quá tệ!",
+  "Rồng thần lắc đầu ngao ngán vì đường ngang trống không!",
 ];
 
 const STREAK_BROKEN_TAUNTS = [
   "💔 ĐỨT CHUỖI! Ki bộc phát ngược khiến chuỗi liên hoàn vỡ vụn! Rớt lại từ đầu.",
   "⚡ BÙM! Chuỗi chiến thắng đã đứt đoạn giữa vũ trụ võ đạo!",
-  "💥 ĐỨT XÍCH! Sai lầm trong đường đi nước bước đã khiến chuỗi tan thành mây khói!",
+  "💥 ĐỨT XÍCH! Đường ngang gãy khúc khiến chuỗi tích lũy tan thành mây khói!",
 ];
 
 const WIN_PRAISES = [
   "Bùng nổ sức mạnh tiềm ẩn! Khai mở giới hạn cực đỉnh!",
-  "Kamehamehaaaaa! Đường đi chuẩn xác, chấn động vũ trụ!",
-  "Rồng thần ban phúc! Đọc đường cờ quá xuất sắc!",
+  "Kamehamehaaaaa! Hàng ngang kết nối hoàn hảo!",
+  "Rồng thần ban phúc! Trúng đường ngang cực kỳ mãn nhãn!",
 ];
 
 interface HistoryItem {
@@ -82,7 +81,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Hệ thống kiểm tra đường đi (Ngang, Dọc, Xéo) đã kích hoạt. Chọn mức cược và quay ngay!",
+    text: "Luật: Chỉ tính đường ngang từ trái qua phải (tối thiểu 3 hình giống hệt nhau). Quay ngay!",
     type: "normal",
   });
 
@@ -138,8 +137,8 @@ export default function JackpotPage() {
     for (let i = 0; i < 24; i++) {
       const rand = Math.random();
       let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
-      if (rand > 0.55) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
-      if (rand > 0.85) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
+      if (rand > 0.60) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
+      if (rand > 0.88) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
       const selected = pool[Math.floor(Math.random() * pool.length)];
       newGrid.push(selected);
     }
@@ -203,18 +202,19 @@ export default function JackpotPage() {
       if (counter > 12) {
         clearInterval(interval);
         const finalGrid = generateRandomGrid();
-        evaluateMatrixLines(finalGrid, newPointsAfterBet, remainingAuto);
+        evaluateHorizontalOnly(finalGrid, newPointsAfterBet, remainingAuto);
         setSpinning(false);
       }
     }, 75);
   };
 
-  // THUẬT TOÁN CHECK ĐƯỜNG (NGANG, DỌC, XÉO) VÀ TÍNH THƯỞNG PHÂN HÓA HÌNH YẾU / HÌNH MẠNH
-  const evaluateMatrixLines = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    let winChance = 0.35; // Tỷ lệ cân bằng, không ảo
-    if (currentBet <= 100) winChance = 0.42;
-    else if (currentBet <= 1000) winChance = 0.32;
-    else winChance = 0.25;
+  // THUẬT TOÁN CHỈ CHECK ĐƯỜNG NGANG TỪ TRÁI QUA PHẢI & TĂNG TỶ LỆ THUA (SIẾT CHẶT RTP)
+  const evaluateHorizontalOnly = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
+    // Tăng tỷ lệ thua lên (giảm tỷ lệ thắng xuống để thử thách hơn)
+    let winChance = 0.28; 
+    if (currentBet <= 100) winChance = 0.35;
+    else if (currentBet <= 1000) winChance = 0.25;
+    else winChance = 0.18;
 
     const isTriggerWin = Math.random() < winChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
@@ -223,8 +223,8 @@ export default function JackpotPage() {
     let matchedIndices: number[] = [];
     let resultText = "";
 
-    // 1. Kiểm tra nổ hũ đặc biệt Rồng Thần
-    if (shenronTotal >= 4 || (isTriggerWin && Math.random() < 0.025)) {
+    // 1. Kiểm tra nổ hũ Rồng Thần đặc biệt (xuất hiện từ 4 Rồng Thần trở lên trên toàn bảng)
+    if (shenronTotal >= 4 || (isTriggerWin && Math.random() < 0.02)) {
       baseWinAmount = jackpots.minor + currentBet * 15;
       matchedIndices = finalGrid.map((s, idx) => (s.id === "shenron" ? idx : -1)).filter((i) => i !== -1);
       resultText = `👑 NỔ HŨ RỒNG THẦN ĐẠI CỰC! +${baseWinAmount.toLocaleString()} PTS`;
@@ -234,66 +234,47 @@ export default function JackpotPage() {
       let totalCalculatedWin = 0;
       let winningSet = new Set<number>();
 
-      // ĐỊNH NGHĨA CÁC ĐƯỜNG KIỂM TRA (4 Hàng ngang, 6 Cột dọc, Vài đường xéo chính)
-      const lines: number[][] = [];
-      
-      // 4 Hàng ngang (mỗi hàng 6 ô)
+      // CHỈ CHECK 4 HÀNG NGANG (Mỗi hàng 6 cột: 0->5, 6->11, 12->17, 18->23)
       for (let r = 0; r < 4; r++) {
-        const row = [];
-        for (let c = 0; c < 6; c++) row.push(r * 6 + c);
-        lines.push(row);
-      }
-      // 6 Cột dọc (mỗi cột 4 ô)
-      for (let c = 0; c < 6; c++) {
-        const col = [];
-        for (let r = 0; r < 4; r++) col.push(r * 6 + c);
-        lines.push(col);
-      }
-      // Đường xéo chính
-      lines.push([0, 7, 14, 21]); // Xéo từ trái sang phải
-      lines.push([5, 10, 15, 20]); // Xéo từ phải sang trái
+        const rowStart = r * 6;
+        const rowItems = [];
+        for (let c = 0; c < 6; c++) {
+          rowItems.push({ symbol: finalGrid[rowStart + c], index: rowStart + c });
+        }
 
-      // Duyệt qua từng đường để check xem có từ 3 hình giống nhau liên tiếp trở lên không
-      lines.forEach((line) => {
-        const symbolsOnLine = line.map((idx) => finalGrid[idx]);
-        
-        // Check liên tiếp
-        let targetId = symbolsOnLine[0].id;
-        let count = 1;
-        let lineIndices = [line[0]];
+        // Bắt buộc tính từ trái qua phải (cột 0 trở đi)
+        const targetId = rowItems[0].symbol.id;
+        let consecutiveCount = 1;
+        let currentMatched = [rowItems[0].index];
 
-        for (let i = 1; i < symbolsOnLine.length; i++) {
-          if (symbolsOnLine[i].id === targetId) {
-            count++;
-            lineIndices.push(line[i]);
+        for (let i = 1; i < rowItems.length; i++) {
+          if (rowItems[i].symbol.id === targetId) {
+            consecutiveCount++;
+            currentMatched.push(rowItems[i].index);
           } else {
-            if (count >= 3) break; // Đã đủ chuỗi liên tiếp
-            targetId = symbolsOnLine[i].id;
-            count = 1;
-            lineIndices = [line[i]];
+            break; // Đứt mạch liên tiếp bên trái
           }
         }
 
-        if (count >= 3) {
+        // Nếu liên tiếp từ 3 hình trở lên từ trái sang
+        if (consecutiveCount >= 3) {
           const symObj = DRAGON_SYMBOLS.find((s) => s.id === targetId);
           if (symObj) {
             let lineWin = 0;
-            // LUẬT TÍNH THƯỞNG PHÂN HÓA THEO YÊU CẦU:
-            // - Hình yếu (weak): Lấy tiền cược giảm 50% xong nhân lên
-            // - Hình mạnh (strong/mid): Lấy tiền cược + thêm 20% từ giá cược rồi nhân hệ số
+            // Phân hóa hình yếu / mạnh theo yêu cầu
             if (symObj.type === "weak") {
-              const adjustedBet = currentBet * 0.5; // Giảm 50% tiền cược
-              lineWin = adjustedBet * symObj.multiplier * count;
+              const adjustedBet = currentBet * 0.5; // Hình yếu: cược giảm 50%
+              lineWin = adjustedBet * symObj.multiplier * consecutiveCount;
             } else {
-              const adjustedBet = currentBet * 1.2; // Cộng thêm 20% giá cược
-              lineWin = adjustedBet * symObj.multiplier * count;
+              const adjustedBet = currentBet * 1.2; // Hình mạnh: cược + thêm 20%
+              lineWin = adjustedBet * symObj.multiplier * consecutiveCount;
             }
 
             totalCalculatedWin += Math.floor(lineWin);
-            lineIndices.forEach((idx) => winningSet.add(idx));
+            currentMatched.forEach((idx) => winningSet.add(idx));
           }
         }
-      });
+      }
 
       if (winningSet.size > 0 && totalCalculatedWin > 0) {
         baseWinAmount = totalCalculatedWin;
@@ -304,13 +285,11 @@ export default function JackpotPage() {
       }
     }
 
-    // 3. Xử lý Thắng / Thua / Đứt chuỗi / Nhân dồn điểm chuẩn
+    // 2. Xử lý Thắng / Thua / Đứt chuỗi / Nhân dồn điểm
     let finalTotalWin = 0;
 
     if (baseWinAmount > 0) {
       let activeMultiplier = 1;
-      let nextStreak = currentStreakMultiplier;
-
       if (currentStreakMultiplier === 0) {
         const startingMult = STREAK_STEPS[0]; // x2
         setCurrentStreakMultiplier(startingMult);
@@ -322,7 +301,6 @@ export default function JackpotPage() {
         setCurrentStreakMultiplier(activeMultiplier);
       }
 
-      // Lấy tổng điểm đã thắng nhân dồn tiếp với cấp số nhân
       finalTotalWin = baseWinAmount * activeMultiplier;
       resultText = `🔥 KÍCH HOẠT CHUỖI x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
 
