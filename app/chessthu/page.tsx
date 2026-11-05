@@ -49,19 +49,20 @@ const INITIAL_COTHU_BOARD: string[][] = [
 
 const TAUNT_MESSAGES = {
   easy: [
-  "Trời ơi bộ cờ này trơn lắm hả sao đi hụt hoài vậy ní? 🐢",
-  "Nước đi này thâm thúy quá... thâm vào đất liền luôn! 😂",
-  "Mới tập chơi hả? Không sao, máy nhường vài nước nha! 🍼"
+    "Hơi lóng ngóng nha ní ơi, đi lại đi nào! 🐢",
+    "Nước vừa rồi làm tớ suýt ngáp ngủ đấy! 😴",
+    "Cứ thong thả, máy chấp 3 bước suy nghĩ luôn! 🍼"
   ],
   medium: [
-  "Cẩn thận nha, hệ thống phòng thủ của trẫm đang kê bẫy chờ đấy! 🦊",
-  "Đừng tưởng qua sông là dễ đâu ní ơi, ở đây cá sấu đói lắm! 🌊",
-  "Cờ bí gởi cờ ngâm, nước này ní định đi đâu về đâu? 🤔"
+    "Sông rộng thế kia, Chuột hoặc Sư Tử của cậu tính nhảy thế nào? 🌊",
+    "Cẩn thận bẫy đấy nhé, sập là mất tích luôn con Voi đấy! 🦊",
+    "Trận địa đang dần khép lại rồi đấy, né đi đâu cho thoát! ♟️"
   ],
   hard: [
-  "Hừm, con thú đó chỉ đáng làm mồi cho sư tử của ta thôi! 🦁🔥",
-  "Hang của ngươi sơ hở quá, ta chuẩn bị vào dạo chơi đây! 🏴‍☠️",
-  "Vô vọng rồi ní ơi, AI siêu cấp chấp luôn 3 nước suy nghĩ! ⚡"
+    "Khôn hồn thì dâng Voi ra đây, Đại đế AI đang bao vây toàn bản đồ! 🦁👑",
+    "Hang của cậu sơ hở quá, Chuột và Sư Tử của ta đang phi nước đại vào rồi! ⚡",
+    "Tính toán làm gì cho mệt, thuật toán Alpha-Beta của ta đã nhìn thấu 3 nước tới rồi! 💀",
+    "Bỏ cuộc đi ní ơi, chống cự chỉ làm nước mắt rơi thêm thôi! 🔥"
   ]
 };
 
@@ -82,7 +83,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("Chào mừng đến với Đấu Trường Cờ Thú! Hãy chọn nước đi khôn ngoan.");
+  const [aiTaunt, setAiTaunt] = useState<string>("Chuẩn bị tinh thần đấu trí cùng AI Siêu Cấp chưa nào!");
 
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
@@ -206,7 +207,7 @@ export default function ChessthuPage() {
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Trận chiến bắt đầu! Đừng có khóc nhè khi mất Voi đấy nhé! 🐘");
+    setAiTaunt("Đã bật chế độ AI Siêu Trí Tuệ. Cẩn thận mất hết quân nhé! 🔥");
     setScreen('game');
   };
 
@@ -232,12 +233,12 @@ export default function ChessthuPage() {
     return () => unsubscribe();
   }, [screen, gameMode, roomCode, playerRole]);
 
-  // AI đánh thông minh hơn (Có Công & Có Thủ, đánh giá nguy hiểm bẫy và hang)
+  // AI đánh tự động khi tới lượt Xanh ('b')
   useEffect(() => {
     if (screen === 'game' && gameMode === 'ai' && turn === 'b' && !modal.open) {
       const timer = setTimeout(() => {
         makeAiMove();
-      }, 700);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [screen, gameMode, turn, board, modal.open]);
@@ -401,9 +402,80 @@ export default function ChessthuPage() {
     }
   };
 
-  // Nâng cấp AI thông minh, linh hoạt, Công - Thủ cân bằng & thêm khịa
+  // --- THUẬT TOÁN AI SIÊU CẤP (MINIMAX + ALPHA-BETA CHO CẤP KHÓ) ---
+  const evaluateBoard = (currentBoard: string[][]) => {
+    let score = 0;
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 7; c++) {
+        const p = currentBoard[r][c];
+        if (p) {
+          const animal = ANIMAL_DATA[p];
+          const val = animal.rank * 15 + (animal.color === 'b' ? (8 - r) * 2 : r * 2);
+          if (animal.color === 'b') score += val;
+          else score -= val;
+        }
+      }
+    }
+    return score;
+  };
+
+  const minimax = (currentBoard: string[][], depth: number, alpha: number, beta: number, isMaximizing: boolean) => {
+    if (depth === 0) return evaluateBoard(currentBoard);
+
+    const color = isMaximizing ? 'b' : 'r';
+    let allPossibleMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
+
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 7; c++) {
+        const p = currentBoard[r][c];
+        if (p && ANIMAL_DATA[p].color === color) {
+          const moves = getPieceMoves(r, c, currentBoard);
+          moves.forEach(m => {
+            allPossibleMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c });
+          });
+        }
+      }
+    }
+
+    if (allPossibleMoves.length === 0) return isMaximizing ? -10000 : 10000;
+
+    if (isMaximizing) {
+      let maxEval = -Infinity;
+      for (let move of allPossibleMoves) {
+        const clonedBoard = currentBoard.map(row => [...row]);
+        clonedBoard[move.toR][move.toC] = clonedBoard[move.fromR][move.fromC];
+        clonedBoard[move.fromR][move.fromC] = '';
+
+        // Thưởng điểm nếu AI áp sát hoặc chiếm hang đỏ (0,3)
+        if (move.toR === 0 && move.toC === 3) return 5000;
+
+        const evaluation = minimax(clonedBoard, depth - 1, alpha, beta, false);
+        maxEval = Math.max(maxEval, evaluation);
+        alpha = Math.max(alpha, evaluation);
+        if (beta <= alpha) break;
+      }
+      return maxEval;
+    } else {
+      let minEval = Infinity;
+      for (let move of allPossibleMoves) {
+        const clonedBoard = currentBoard.map(row => [...row]);
+        clonedBoard[move.toR][move.toC] = clonedBoard[move.fromR][move.fromC];
+        clonedBoard[move.fromR][move.fromC] = '';
+
+        if (move.toR === 8 && move.toC === 3) return -5000;
+
+        const evaluation = minimax(clonedBoard, depth - 1, alpha, beta, true);
+        minEval = Math.min(minEval, evaluation);
+        beta = Math.min(beta, evaluation);
+        if (beta <= alpha) break;
+      }
+      return minEval;
+    }
+  };
+
   const makeAiMove = () => {
-    const allMoves: { fromR: number; fromC: number; toR: number; toC: number; score: number }[] = [];
+    let bestScore = -Infinity;
+    let bestMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
 
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 7; c++) {
@@ -411,60 +483,42 @@ export default function ChessthuPage() {
         if (p && ANIMAL_DATA[p].color === 'b') {
           const moves = getPieceMoves(r, c, board);
           moves.forEach((m) => {
+            const clonedBoard = board.map(row => [...row]);
+            clonedBoard[m.r][m.c] = clonedBoard[r][c];
+            clonedBoard[r][c] = '';
+
             let score = 0;
-            const targetPiece = board[m.r][m.c];
-            const movingRank = ANIMAL_DATA[p].rank;
-
-            // 1. TẤN CÔNG: Ưu tiên ăn quân giá trị cao
-            if (targetPiece) {
-              score += ANIMAL_DATA[targetPiece].rank * 15;
+            const depth = aiDifficulty === 'hard' ? 2 : aiDifficulty === 'medium' ? 1 : 0;
+            
+            if (depth > 0) {
+              score = minimax(clonedBoard, depth, -Infinity, Infinity, false);
+            } else {
+              // Cấp độ Dễ: Ưu tiên ăn quân đơn giản
+              const target = board[m.r][m.c];
+              score = target ? ANIMAL_DATA[target].rank * 10 : Math.random() * 5;
             }
 
-            // 2. CHIẾN THUẬT THẮNG: Ưu tiên tiến vào ô Hang Đỏ (0, 3) nếu có thể
-            if (m.r === 0 && m.c === 3) {
-              score += 2000;
+            if (m.r === 0 && m.c === 3) score += 3000; // Ưu tiên tuyệt đối vào hang
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestMoves = [{ fromR: r, fromC: c, toR: m.r, toC: m.c }];
+            } else if (score === bestScore) {
+              bestMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c });
             }
-
-            // 3. PHÒNG THỦ & TIẾN CÔNG LINH HOẠT: Ưu tiên tiến về phía trước (hàng số nhỏ dần đối với quân xanh)
-            score += (8 - m.r) * 3;
-
-            // 4. Ưu tiên bảo vệ bẫy/hang hoặc né bẫy hiểm
-            if (isTrap(m.r, m.c)) {
-              score -= 5; // Hơi dè chừng bẫy nếu không có sự hỗ trợ
-            }
-
-            allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
           });
         }
       }
     }
 
-    if (allMoves.length === 0) {
-      endGame(true, "AI bị kẹt quân! Bạn đã giành chiến thắng!");
+    if (bestMoves.length === 0) {
+      endGame(true, "AI đã bị dồn vào đường cùng! Bạn thắng!");
       return;
     }
 
-    // Sắp xếp nước đi theo điểm số thông minh
-    allMoves.sort((a, b) => b.score - a.score);
+    const chosenMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
 
-    let chosenMove = allMoves[0];
-
-    // Phân hóa cấp độ AI:
-    if (aiDifficulty === 'easy') {
-      // Dễ: Thỉnh thoảng đi ngẫu nhiên bậy bạ
-      if (Math.random() > 0.3) {
-        chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
-      }
-    } else if (aiDifficulty === 'medium') {
-      // Trung bình: Lấy top 3 nước đi tốt nhất random
-      const topMoves = allMoves.slice(0, Math.min(3, allMoves.length));
-      chosenMove = topMoves[Math.floor(Math.random() * topMoves.length)];
-    } else {
-      // Khó: Đỉnh cao chiến thuật, luôn chọn nước tối ưu nhất + săn đuổi tấn công
-      chosenMove = allMoves[0];
-    }
-
-    // Lấy câu khịa ngẫu nhiên theo độ khó
+    // Lấy câu khịa
     const tauntList = TAUNT_MESSAGES[aiDifficulty];
     const randomTaunt = tauntList[Math.floor(Math.random() * tauntList.length)];
     setAiTaunt(randomTaunt);
@@ -490,7 +544,6 @@ export default function ChessthuPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-2 sm:p-4 font-sans select-none">
-      {/* Header Bar */}
       <header className="w-full max-w-xl flex justify-between items-center mb-3 bg-slate-900/90 border border-slate-800 p-3 rounded-2xl shadow-lg">
         <Link href="/" className="text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1">
           ← Trang chủ
@@ -503,7 +556,6 @@ export default function ChessthuPage() {
         </div>
       </header>
 
-      {/* Screen Menu */}
       {screen === 'menu' && (
         <div className="w-full max-w-md flex flex-col gap-4">
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl text-center shadow-xl">
@@ -525,7 +577,6 @@ export default function ChessthuPage() {
             </div>
           </div>
 
-          {/* Đấu PvP Online */}
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
             <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider">⚔️ Đấu Online 2 Người</label>
             <button
@@ -552,9 +603,8 @@ export default function ChessthuPage() {
             </div>
           </div>
 
-          {/* Đấu với AI Máy (Đã nâng cấp 3 mức độ thông minh & khịa) */}
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
-            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu Luyện AI Thông Minh</label>
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu Luyện AI Siêu Trí Tuệ</label>
             <div className="flex justify-center gap-2">
               {(['easy', 'medium', 'hard'] as const).map((diff) => (
                 <button
@@ -566,7 +616,7 @@ export default function ChessthuPage() {
                       : 'border-slate-800 bg-slate-950 text-slate-500'
                   }`}
                 >
-                  {diff === 'easy' ? 'Dễ' : diff === 'medium' ? 'Trung Bình' : 'Khó'}
+                  {diff === 'easy' ? 'Dễ' : diff === 'medium' ? 'Trung Bình' : 'Khó (Minimax)'}
                 </button>
               ))}
             </div>
@@ -580,10 +630,8 @@ export default function ChessthuPage() {
         </div>
       )}
 
-      {/* Screen Game Bàn Cờ */}
       {screen === 'game' && (
         <div className="flex flex-col items-center w-full max-w-lg">
-          {/* Top Info Bar */}
           <div className="w-full flex justify-between items-center bg-slate-900 px-4 py-2.5 rounded-t-2xl border border-slate-800 text-xs font-bold">
             <span className="text-emerald-400 flex items-center gap-1">
               ⚡ Lượt: {turn === 'r' ? 'Đỏ' : 'Xanh'} {turn === playerRole ? '(Đến lượt bạn!)' : ''}
@@ -601,7 +649,6 @@ export default function ChessthuPage() {
             </div>
           </div>
 
-          {/* Bong bóng hội thoại AI Khịa */}
           {gameMode === 'ai' && (
             <div className="w-full bg-slate-900/90 border-t border-b border-amber-500/30 px-4 py-2 flex items-center gap-2 text-xs text-amber-300 font-medium">
               <span className="text-lg">🤖</span>
@@ -611,7 +658,6 @@ export default function ChessthuPage() {
             </div>
           )}
 
-          {/* Bàn Cờ Thú 3D Sống Động & To Rõ */}
           <div className="grid grid-cols-7 grid-rows-9 w-full aspect-[7/9] border-4 border-amber-900/80 rounded-b-2xl shadow-2xl bg-[#52796f] p-1 gap-0.5 relative overflow-hidden">
             {board.map((row, r) =>
               row.map((piece, c) => {
@@ -664,7 +710,6 @@ export default function ChessthuPage() {
             )}
           </div>
 
-          {/* Nút Đầu Hàng Riêng Biệt */}
           <div className="w-full flex gap-3 mt-4">
             <button
               onClick={handleSurrender}
@@ -676,7 +721,6 @@ export default function ChessthuPage() {
         </div>
       )}
 
-      {/* Modal Thắng Thua */}
       {modal.open && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl text-center max-w-xs w-full flex flex-col gap-4 shadow-2xl">
