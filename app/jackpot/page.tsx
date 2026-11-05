@@ -77,11 +77,12 @@ export default function JackpotPage() {
     minor: 40000,
   });
 
-  const [currentStreakMultiplier, setCurrentStreakMultiplier] = useState<number>(0);
+  // Lưu chỉ mục (index) của chuỗi: 0 = x2, 1 = x4, 2 = x8, 3 = x16...
+  const [streakIndex, setStreakIndex] = useState<number>(-1);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Luật: Hàng đầu tiên (cột 1) BẮT BUỘC phải có mặt thì mới được tính nổ liên tiếp sang phải!",
+    text: "Luật: Hàng đầu tiên (cột 1) BẮT BUỘC phải có mặt. Trúng liên tiếp sẽ nhân dồn chuỗi (x2 -> x4 -> x8...).",
     type: "normal",
   });
 
@@ -132,15 +133,26 @@ export default function JackpotPage() {
     generateValidGrid();
   }, []);
 
+  // Thuật toán chống trùng lặp gắt gao, phân phối đều biểu tượng trên lưới 4x6
   const generateValidGrid = () => {
     const newGrid: typeof DRAGON_SYMBOLS = [];
     for (let r = 0; r < 4; r++) {
+      let prevSymbolId = "";
       for (let c = 0; c < 6; c++) {
         const rand = Math.random();
         let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
-        if (rand > 0.58) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
-        if (rand > 0.86) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
-        const selected = pool[Math.floor(Math.random() * pool.length)];
+        if (rand > 0.55) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
+        if (rand > 0.82) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
+
+        // Chống lặp hình liên tiếp quá nhiều trên cùng 1 hàng
+        let selected = pool[Math.floor(Math.random() * pool.length)];
+        if (selected.id === prevSymbolId && Math.random() < 0.7) {
+          const alternativePool = pool.filter(s => s.id !== prevSymbolId);
+          if (alternativePool.length > 0) {
+            selected = alternativePool[Math.floor(Math.random() * alternativePool.length)];
+          }
+        }
+        prevSymbolId = selected.id;
         newGrid.push(selected);
       }
     }
@@ -209,14 +221,14 @@ export default function JackpotPage() {
       if (counter > 12) {
         clearInterval(interval);
         const finalGrid = generateValidGrid();
-        evaluateFirstColumnMandatory(finalGrid, newPointsAfterBet, remainingAuto);
+        evaluateStrictColumnLogic(finalGrid, newPointsAfterBet, remainingAuto);
         setSpinning(false);
       }
     }, 75);
   };
 
-  // THUẬT TOÁN GẮT: BẮT BUỘC HÀNG ĐẦU TIÊN (CỘT 1) PHẢI CÓ MẶT THÌ MỚI ĐƯỢC TÍNH NỔ LIÊN TIẾP SANG PHẢI
-  const evaluateFirstColumnMandatory = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
+  // THUẬT TOÁN CHUẨN XÁC: CỘT 1 BẮT BUỘC CÓ MẶT + CHUỖI NHÂN DỒN ĐÚNG CẤP SỐ (x2 -> x4 -> x8 -> x16...)
+  const evaluateStrictColumnLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
     let winChance = 0.30;
     if (currentBet <= 100) winChance = 0.38;
     else if (currentBet <= 1000) winChance = 0.28;
@@ -237,8 +249,6 @@ export default function JackpotPage() {
       triggerExplosion();
     } 
     else if (isTriggerWin) {
-      // Đóng gói thành 6 cột, mỗi cột 4 hàng (r từ 0 đến 3, c từ 0 đến 5)
-      // Index trong mảng phẳng grid = r * 6 + c
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
         const colItems = [];
@@ -252,7 +262,6 @@ export default function JackpotPage() {
       let totalCalculatedWin = 0;
       let winningSet = new Set<number>();
 
-      // LẤY CÁC BIỂU TƯỢNG XUẤT HIỆN Ở CỘT 1 (c = 0) LÀM ĐIỀU KIỆN TIÊN QUYẾT
       const firstColSymbols = columns[0].map(item => item.symbol.id);
       const uniqueSymbolsToCheck = Array.from(new Set(firstColSymbols));
 
@@ -260,18 +269,16 @@ export default function JackpotPage() {
         let consecutiveColsCount = 0;
         let tempMatchedIndices: number[] = [];
 
-        // Quét liên tiếp từ cột 0 sang phải
         for (let c = 0; c < 6; c++) {
           const foundInCol = columns[c].filter(item => item.symbol.id === symId);
           if (foundInCol.length > 0) {
             consecutiveColsCount++;
             foundInCol.forEach(item => tempMatchedIndices.push(item.index));
           } else {
-            break; // Đứt mạch ngay lập tức nếu cột nào thiếu biểu tượng này
+            break;
           }
         }
 
-        // ĐIỀU KIỆN GẮT: Cột 1 (index 0) BẮT BUỘC phải có symbol này VÀ liên tiếp từ 3 cột trở lên
         const mustExistInCol1 = columns[0].some(item => item.symbol.id === symId);
 
         if (mustExistInCol1 && consecutiveColsCount >= 3) {
@@ -279,10 +286,10 @@ export default function JackpotPage() {
           if (symObj) {
             let symbolWin = 0;
             if (symObj.type === "weak") {
-              const adjustedBet = currentBet * 0.5; // Hình yếu: cược giảm 50%
+              const adjustedBet = currentBet * 0.5;
               symbolWin = adjustedBet * symObj.multiplier * consecutiveColsCount;
             } else {
-              const adjustedBet = currentBet * 1.2; // Hình mạnh: cược + 20%
+              const adjustedBet = currentBet * 1.2;
               symbolWin = adjustedBet * symObj.multiplier * consecutiveColsCount;
             }
 
@@ -302,21 +309,14 @@ export default function JackpotPage() {
       }
     }
 
-    // 2. Xử lý Thắng / Thua / Đứt chuỗi
+    // 2. Xử lý Thắng / Thua / Nhảy mốc chuỗi chính xác
     let finalTotalWin = 0;
 
     if (baseWinAmount > 0) {
-      let activeMultiplier = 1;
-      if (currentStreakMultiplier === 0) {
-        const startingMult = STREAK_STEPS[0]; // x2
-        setCurrentStreakMultiplier(startingMult);
-        activeMultiplier = startingMult;
-      } else {
-        const currentIndex = STREAK_STEPS.indexOf(currentStreakMultiplier);
-        const nextIndex = Math.min(currentIndex + (Math.random() > 0.4 ? 1 : 0), STREAK_STEPS.length - 1);
-        activeMultiplier = STREAK_STEPS[nextIndex];
-        setCurrentStreakMultiplier(activeMultiplier);
-      }
+      // Tự động tăng mốc chuỗi lên 1 bậc (x2 -> x4 -> x8 -> x16...)
+      const nextIndex = streakIndex < 0 ? 0 : Math.min(streakIndex + 1, STREAK_STEPS.length - 1);
+      setStreakIndex(nextIndex);
+      const activeMultiplier = STREAK_STEPS[nextIndex];
 
       finalTotalWin = baseWinAmount * activeMultiplier;
       resultText = `🔥 KÍCH HOẠT CHUỖI x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
@@ -328,8 +328,9 @@ export default function JackpotPage() {
       addHistory(resultText, true);
     } else {
       setWinningCoords([]);
-      if (currentStreakMultiplier > 0) {
-        setCurrentStreakMultiplier(0); // Đứt chuỗi
+      if (streakIndex >= 0) {
+        // Đang trong chuỗi mà thua -> Đứt chuỗi, reset về -1
+        setStreakIndex(-1);
         const breakTaunt = STREAK_BROKEN_TAUNTS[Math.floor(Math.random() * STREAK_BROKEN_TAUNTS.length)];
         resultText = `${breakTaunt} (-${currentBet} PTS)`;
         setMessageBox({ text: resultText, type: "break" });
@@ -373,6 +374,8 @@ export default function JackpotPage() {
     };
     setHistory((prev) => [newEntry, ...prev.slice(0, 9)]);
   };
+
+  const currentMultiplierDisplay = streakIndex >= 0 ? STREAK_STEPS[streakIndex] : 0;
 
   return (
     <div className={`min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-2 sm:p-4 overflow-x-hidden transition-all duration-300 ${explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""}`}>
@@ -433,7 +436,7 @@ export default function JackpotPage() {
               </button>
             )}
             <div className="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/40 font-mono">
-              🔥 Chuỗi: {currentStreakMultiplier === 0 ? "Chưa có" : `x${currentStreakMultiplier}`}
+              🔥 Chuỗi: {currentMultiplierDisplay === 0 ? "Chưa có" : `x${currentMultiplierDisplay}`}
             </div>
           </div>
         </div>
