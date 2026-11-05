@@ -48,10 +48,10 @@ const INITIAL_COTHU_BOARD: string[][] = [
 ];
 
 const TAUNT_MESSAGES = [
-  "Ta đã chỉnh lại hướng tiến công, hang (8,3) của cậu hãy đợi đấy! 🦁🔥",
-  "Đừng hòng cản đường ta tiến xuống sân nhà cậu! ⚡",
-  "Chuẩn bị tinh thần mất điểm cược đi, AI đang lao thẳng về phía hang của cậu đấy! 🏴‍☠️",
-  "Không có chuyện đi lộn chuồng nữa đâu, chiến thuật tổng lực bắt đầu! 💀"
+  "Lần này ta đã bị khóa không cho về hang nhà nữa rồi, chuẩn bị chiến đấu thật sự nhé! 🦁🔥",
+  "Đội hình ta đang lao thẳng xuống hang (8,3) của cậu đấy! ⚡",
+  "Đừng hòng cản đường ta săn thú và cướp hang! 🏴‍☠️",
+  "Tổng tấn công toàn lực, không lùi bước! 💀"
 ];
 
 export default function ChessthuPage() {
@@ -71,7 +71,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("AI đã định vị chính xác hang đối phương! Xung phong!");
+  const [aiTaunt, setAiTaunt] = useState<string>("AI đã sửa lỗi triệt để! Sẵn sàng tấn công!");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -173,6 +173,7 @@ export default function ChessthuPage() {
       if (data.board) setBoard(JSON.parse(data.board));
       if (data.turn) setTurn(data.turn);
 
+      setGameMode('pvp');
       setRoomCode(inputCode);
       setPlayerRole('b');
       setScreen('game');
@@ -193,7 +194,7 @@ export default function ChessthuPage() {
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Trận chiến AI tấn công hang chuẩn xác bắt đầu! Sẵn sàng chưa? 🦁");
+    setAiTaunt("Trận chiến AI tấn công chính xác bắt đầu! Sẵn sàng chưa? 🦁");
     setScreen('game');
   };
 
@@ -240,12 +241,9 @@ export default function ChessthuPage() {
     }
   };
 
-  // ĐÃ SỬA CHUẨN XÁC TỌA ĐỘ HANG:
-  // - Hang Đỏ (của bạn) nằm ở (8, 3)
-  // - Hang Xanh (của AI) nằm ở (0, 3)
   const isDen = (r: number, c: number, color: 'r' | 'b') => {
-    if (color === 'r') return r === 8 && c === 3; 
-    return r === 0 && c === 3; 
+    if (color === 'r') return r === 8 && c === 3; // Hang Đỏ (của bạn)
+    return r === 0 && c === 3; // Hang Xanh (của AI)
   };
 
   const getPieceMoves = (r: number, c: number, currentBoard: string[][]) => {
@@ -264,7 +262,7 @@ export default function ChessthuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
-        // Cấm quân cờ tự bước vào hang của chính mình
+        // TUYỆT ĐỐI CẤM MỌI QUÂN CỜ BƯỚC VÀO HANG CỦA CHÍNH MÌNH
         if (isDen(nr, nc, color)) return;
 
         const target = currentBoard[nr][nc];
@@ -415,7 +413,7 @@ export default function ChessthuPage() {
       }
     }
 
-    // ĐIỀU KIỆN THẮNG THUA CHUẨN XÁC TUYỆT ĐỐI:
+    // ĐIỀU KIỆN THẮNG THUA CHUẨN XÁC 100%:
     // - Quân Đỏ (r) bước vào Hang Xanh của AI tại (0, 3) -> Bạn Thắng!
     // - Quân Xanh (b) bước vào Hang Đỏ của Bạn tại (8, 3) -> AI Thắng / Bạn Thua!
     if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
@@ -434,24 +432,27 @@ export default function ChessthuPage() {
         if (p && ANIMAL_DATA[p].color === 'b') {
           const moves = getPieceMoves(r, c, board);
           moves.forEach((m) => {
+            // LOẠI BỎ NGAY LẬP TỨC NẾU MẤT TRÍ LAO VÀO HANG NHÀ MÌNH (0, 3)
+            if (m.r === 0 && m.c === 3) return;
+
             let score = 0;
             const targetPiece = board[m.r][m.c];
 
-            // 1. ƯU TIÊN SỐ 1: AI Xanh (b) xông vào Hang Đỏ của Bạn tại (8, 3) để THẮNG
+            // 1. ƯU TIÊN TUYỆT ĐỐI: Xông vào Hang Đỏ của Bạn tại (8, 3) để THẮNG NGAY
             if (m.r === 8 && m.c === 3) {
-              score += 500000;
+              score += 1000000;
             }
 
             // 2. Ưu tiên ăn quân địch (cấp càng cao điểm càng lớn)
             if (targetPiece) {
               const targetRank = ANIMAL_DATA[targetPiece].rank;
-              score += targetRank * 400;
+              score += targetRank * 500;
             }
 
             // 3. Khuyến khích tiến xuống sân của bạn (hàng số tăng dần từ 0 đến 8)
-            score += m.r * 40;
+            score += m.r * 50;
 
-            score += Math.random() * 25;
+            score += Math.random() * 30;
 
             allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
           });
