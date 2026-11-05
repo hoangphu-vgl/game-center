@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { auth, googleProvider, db } from "@/lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, setDoc, alert } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
