@@ -101,7 +101,7 @@ export default function BanCaPage() {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
 
-  // Giải phóng ghế tức thì khi người chơi đóng tab hoặc thoát trang
+  // Giải phóng ghế khi đóng tab hoặc thoát trang
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -238,7 +238,6 @@ export default function BanCaPage() {
         if (data.players) {
           roomPlayersRef.current = data.players;
         }
-        // Nếu không phải Host, nhận danh sách cá từ Host để mượt tuyệt đối không giật
         if (!isHost && data.fishes && Array.isArray(data.fishes)) {
           fishesRef.current = data.fishes;
         }
@@ -247,7 +246,7 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE, isHost]);
 
-  // Cập nhật góc súng tối ưu tần số 300ms chống lag mạng tuyệt đối
+  // Cập nhật góc súng định kỳ
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -271,7 +270,7 @@ export default function BanCaPage() {
           await setDoc(roomRef, { players: currentPlayers }, { merge: true });
         }
       } catch (e) {}
-    }, 300);
+    }, 250);
 
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
@@ -296,7 +295,6 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.75 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      // Chỉ Host mới sinh cá và đồng bộ để loại bỏ hoàn toàn giật khung hình
       if (isHost && fishesRef.current.length < 18 && Math.random() < 0.2) {
         const rand = Math.random();
         let template;
@@ -562,7 +560,12 @@ export default function BanCaPage() {
     };
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
-  const handleShoot = () => {
+  // Chặn đứng hoàn toàn việc refresh trang trên mobile khi nhấn bắn
+  const handleShoot = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+
     if (!isPVE) {
       const pData = roomPlayersRef.current[myCorner];
       if (!pData || !pData.active || !pData.email || pData.email === 'Trống') {
@@ -771,12 +774,12 @@ export default function BanCaPage() {
                 mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
               }
             }}
-            onClick={handleShoot}
+            onClick={(e) => handleShoot(e)}
             onTouchStart={(e) => {
               if (e.touches.length > 0) {
                 mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
               }
-              handleShoot();
+              handleShoot(e);
             }}
           />
 
