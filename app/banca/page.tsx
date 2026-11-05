@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, updateDoc, setDoc, onSnapshot, collection, getDocs, query, where, limit, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, onSnapshot, collection, getDocs, query, where, limit } from "firebase/firestore";
 
 interface GunConfig {
   level: number;
@@ -47,14 +47,14 @@ const GUN_TYPES: GunConfig[] = [
 ];
 
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 2, hpMax: 6, reward: 15, category: 'small' },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 3, hpMax: 8, reward: 20, category: 'small' },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 2, hpMax: 6, reward: 12, category: 'small' },
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 30, hpMax: 70, reward: 80, category: 'medium' },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 45, hpMax: 100, reward: 120, category: 'medium' },
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 300, hpMax: 800, reward: 600, category: 'large' },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 250, hpMax: 650, reward: 500, category: 'large' },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 450, hpMax: 1200, reward: 1000, category: 'large' }
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speed: 3.2, hpMin: 2, hpMax: 6, reward: 15, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speed: 3.0, hpMin: 3, hpMax: 8, reward: 20, category: 'small' },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speed: 3.5, hpMin: 2, hpMax: 6, reward: 12, category: 'small' },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 2.0, hpMin: 30, hpMax: 70, reward: 80, category: 'medium' },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 1.8, hpMin: 45, hpMax: 100, reward: 120, category: 'medium' },
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 1.1, hpMin: 300, hpMax: 800, reward: 600, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 1.2, hpMin: 250, hpMax: 650, reward: 500, category: 'large' },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 0.9, hpMin: 450, hpMax: 1200, reward: 1000, category: 'large' }
 ];
 
 export default function BanCaPage() {
@@ -84,9 +84,9 @@ export default function BanCaPage() {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string; angle?: number } }>({
-    'top-left': { active: false, email: '' },
-    'top-right': { active: false, email: '' },
-    'bottom-left': { active: false, email: '' },
+    'top-left': { active: false, email: 'Trống' },
+    'top-right': { active: false, email: 'Trống' },
+    'bottom-left': { active: false, email: 'Trống' },
     'bottom-right': { active: true, email: 'Bạn' }
   });
 
@@ -200,7 +200,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe dữ liệu phòng PVP realtime (đồng bộ người chơi, góc súng, và danh sách cá)
+  // Lắng nghe dữ liệu phòng PVP realtime chuẩn xác
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -211,7 +211,6 @@ export default function BanCaPage() {
           roomPlayersRef.current = data.players;
         }
         if (data.fishes && Array.isArray(data.fishes)) {
-          // Đồng bộ cá từ server phòng PVP xuống
           fishesRef.current = data.fishes;
         }
       }
@@ -219,7 +218,7 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE]);
 
-  // Gửi cập nhật góc súng lên Firestore liên tục khi di chuyển chuột trong PVP
+  // Cập nhật góc súng định kỳ lên Firestore
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -264,6 +263,9 @@ export default function BanCaPage() {
     handleResize();
     window.addEventListener('resize', handleResize);
 
+    const isMobile = window.innerWidth < 768;
+    const scaleFactor = isMobile ? 0.8 : 1.0; // Tự động scale độ phân giải riêng cho mobile và pc
+
     const spawnFish = async (w: number, h: number) => {
       if (fishesRef.current.length < 28 && Math.random() < 0.35) {
         const rand = Math.random();
@@ -282,19 +284,19 @@ export default function BanCaPage() {
         if (template) {
           const dir = Math.floor(Math.random() * 4);
           let x = 0, y = 0, vx = 0, vy = 0;
-          const speed = template.speed;
+          const speed = template.speed * scaleFactor;
 
           if (dir === 0) {
-            x = -template.width; y = Math.random() * h;
+            x = -template.width * scaleFactor; y = Math.random() * h;
             vx = (Math.random() * 0.5 + 0.8) * speed; vy = (Math.random() - 0.5) * speed;
           } else if (dir === 1) {
-            x = w + template.width; y = Math.random() * h;
+            x = w + template.width * scaleFactor; y = Math.random() * h;
             vx = -(Math.random() * 0.5 + 0.8) * speed; vy = (Math.random() - 0.5) * speed;
           } else if (dir === 2) {
-            x = Math.random() * w; y = -template.height;
+            x = Math.random() * w; y = -template.height * scaleFactor;
             vx = (Math.random() - 0.5) * speed; vy = (Math.random() * 0.5 + 0.8) * speed;
           } else {
-            x = Math.random() * w; y = h + template.height;
+            x = Math.random() * w; y = h + template.height * scaleFactor;
             vx = (Math.random() - 0.5) * speed; vy = -(Math.random() * 0.5 + 0.8) * speed;
           }
 
@@ -304,8 +306,8 @@ export default function BanCaPage() {
             typeId: template.id,
             name: template.name,
             emoji: template.emoji,
-            width: template.width,
-            height: template.height,
+            width: template.width * scaleFactor,
+            height: template.height * scaleFactor,
             speed: template.speed,
             hp,
             maxHp: hp,
@@ -317,7 +319,6 @@ export default function BanCaPage() {
 
           fishesRef.current.push(fishObj);
 
-          // Nếu đang chơi phòng PVP, đồng bộ danh sách cá lên server chung
           if (!isPVE && activeRoomId) {
             try {
               await updateDoc(doc(db, "banca_rooms", activeRoomId), { fishes: fishesRef.current });
@@ -473,7 +474,7 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ súng: Đồng bộ góc xoay thực tế của từng người chơi từ server
+        // Vẽ súng: Kiểm tra nghiêm ngặt, vị trí nào trống sẽ ẩn hoàn toàn tên và giữ yên
         const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
@@ -588,7 +589,7 @@ export default function BanCaPage() {
     }
   };
 
-  // Ghép phòng tự động ưu tiên phòng có người
+  // Ghép phòng tự động ưu tiên phòng đang có người
   const handleAutoMatchmaking = async () => {
     try {
       showToast("⚡ Đang tìm phòng có người...");
@@ -741,6 +742,7 @@ export default function BanCaPage() {
     showToast(`🎉 Vào phòng ${roomId} thành công!`);
   };
 
+  // Xóa tên và giải phóng ngay ghế ngồi khi bấm Thoát phòng
   const handleLeaveRoom = async () => {
     if (activeRoomId && !isPVE) {
       const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -748,7 +750,7 @@ export default function BanCaPage() {
       if (roomSnap.exists()) {
         const players = roomSnap.data().players || {};
         if (players[myCorner]) {
-          players[myCorner] = { active: false, email: 'Trống' };
+          players[myCorner] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
           await updateDoc(roomRef, { players });
         }
       }
@@ -832,7 +834,7 @@ export default function BanCaPage() {
         <div className="relative w-full h-full overflow-hidden flex flex-col bg-slate-950">
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 w-full h-full cursor-crosshair touch-none object-cover"
+            className="absolute inset-0 w-full h-full cursor-crosshair touch-none object-contain"
             onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
             onTouchMove={(e) => {
               if (e.touches.length > 0) {
@@ -891,7 +893,7 @@ export default function BanCaPage() {
                 {isPaused ? '▶' : '⏸'}
               </button>
               <button
-                onClick={() => setScreenMode('lobby')}
+                onClick={handleLeaveRoom}
                 className="bg-red-950/80 backdrop-blur-md border border-red-500/50 hover:bg-red-900 text-red-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md transition"
               >
                 Thoát ✕
