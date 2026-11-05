@@ -37,15 +37,15 @@ interface FishData {
 }
 
 const GUN_TYPES: GunConfig[] = [
-  { level: 1, cost: 1, name: "Đạn 1đ (Dame: 1)", damage: 1, speed: 12, size: 4, color: '#a855f7' },
-  { level: 2, cost: 10, name: "Đạn 10đ (Dame: 10)", damage: 10, speed: 13, size: 5, color: '#38bdf8' },
-  { level: 3, cost: 20, name: "Đạn 20đ (Dame: 20)", damage: 20, speed: 14, size: 6, color: '#22d3ee' },
-  { level: 4, cost: 50, name: "Đạn 50đ (Dame: 50)", damage: 50, speed: 15, size: 7, color: '#facc15' },
-  { level: 5, cost: 100, name: "Đạn 100đ (Dame: 100)", damage: 100, speed: 16, size: 8, color: '#f97316' },
-  { level: 6, cost: 200, name: "Đạn 200đ (Dame: 200)", damage: 200, speed: 17, size: 9, color: '#ec4899' },
-  { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' },
-  { level: 8, cost: 1000, name: "Đạn 1.000đ (Dame: 1000)", damage: 1000, speed: 21, size: 11, color: '#8b5cf6' },
-  { level: 9, cost: 2000, name: "Đạn 2.000đ (Dame: 2000)", damage: 2000, speed: 23, size: 12, color: '#10b981' }
+  { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 10, size: 5, color: '#a855f7' },       // Tím nhẹ
+  { level: 2, cost: 10, name: "Đạn 10đ", damage: 10, speed: 11, size: 6, color: '#38bdf8' },     // Xanh dương
+  { level: 3, cost: 20, name: "Đạn 20đ", damage: 20, speed: 11, size: 7, color: '#22d3ee' },     // Xanh ngọc
+  { level: 4, cost: 50, name: "Đạn 50đ", damage: 50, speed: 12, size: 8, color: '#4ade80' },     // Xanh lá
+  { level: 5, cost: 100, name: "Đạn 100đ", damage: 100, speed: 12, size: 9, color: '#facc15' },   // Vàng
+  { level: 6, cost: 200, name: "Đạn 200đ", damage: 200, speed: 13, size: 10, color: '#f97316' },  // Cam
+  { level: 7, cost: 500, name: "Đạn 500đ", damage: 500, speed: 13, size: 12, color: '#ec4899' },  // Hồng đậm
+  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 1000, speed: 14, size: 14, color: '#8b5cf6' },// Tím rực
+  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 2000, speed: 15, size: 17, color: '#ef4444' }// Đỏ rực đại bác
 ];
 
 const FISH_TYPES_BASE = [
@@ -229,7 +229,6 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe realtime phòng PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -257,7 +256,6 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE, isHost, user]);
 
-  // Đồng bộ góc súng thời gian thực cho PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -383,15 +381,15 @@ export default function BanCaPage() {
         bulletsRef.current.forEach(b => {
           b.x += b.vx;
           b.y += b.vy;
-          if (b.x < -20 || b.x > w + 20 || b.y < -20 || b.y > h + 20) {
+          if (b.x < -30 || b.x > w + 30 || b.y < -30 || b.y > h + 30) {
             b.alive = false;
           }
         });
         bulletsRef.current = bulletsRef.current.filter(b => b.alive);
 
         explosionsRef.current.forEach(ex => {
-          ex.radius += 3;
-          ex.alpha -= 0.12;
+          ex.radius += 4;
+          ex.alpha -= 0.1;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
@@ -415,7 +413,8 @@ export default function BanCaPage() {
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
             if (dist < bullet.radius + fish.width / 2.5) {
               bullet.alive = false;
-              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 8, maxRadius: 45, color: bullet.color, alpha: 1 });
+              // Hiệu ứng nổ lớn rực rỡ khi đạn trúng cá
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 10, maxRadius: 55, color: bullet.color, alpha: 1 });
 
               fish.hp -= bullet.damage;
               fish.hitTimer = 4;
@@ -476,14 +475,18 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
+        // Vẽ đạn với hiệu ứng tỏa sáng rực rỡ và kích thước phân cấp
         bulletsRef.current.forEach(b => {
           ctx.save();
+          ctx.shadowColor = b.color;
+          ctx.shadowBlur = 12;
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 3, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.arc(b.x, b.y, b.radius + 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
           ctx.fill();
+
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 1, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
           ctx.fillStyle = b.color;
           ctx.fill();
           ctx.restore();
@@ -496,7 +499,7 @@ export default function BanCaPage() {
           ctx.beginPath();
           ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
           ctx.strokeStyle = ex.color;
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 3;
           ctx.stroke();
           ctx.restore();
         });
@@ -513,7 +516,6 @@ export default function BanCaPage() {
         });
 
         if (isPVE) {
-          // PVE: Ụ súng nằm chính giữa đáy màn hình
           const x = w / 2;
           const y = h - 50;
           const angle = Math.atan2(touchPosRef.current.y - y, touchPosRef.current.x - x);
@@ -521,7 +523,7 @@ export default function BanCaPage() {
           ctx.save();
           ctx.translate(x, y);
           ctx.beginPath();
-          ctx.arc(0, 0, 40, 0, Math.PI * 2);
+          ctx.arc(0, 0, 42, 0, Math.PI * 2);
           ctx.fillStyle = '#0f172a';
           ctx.fill();
           ctx.lineWidth = 3;
@@ -530,23 +532,22 @@ export default function BanCaPage() {
 
           ctx.rotate(angle);
           ctx.fillStyle = '#f59e0b';
-          ctx.fillRect(0, -12, 48, 24);
+          ctx.fillRect(0, -14, 52, 28);
           ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -12, 48, 24);
+          ctx.strokeRect(0, -14, 52, 28);
           ctx.fillStyle = '#b45309';
-          ctx.fillRect(40, -15, 8, 30);
+          ctx.fillRect(44, -18, 10, 36);
           ctx.restore();
 
-          ctx.font = "bold 11px Fredoka, sans-serif";
+          ctx.font = "bold 12px Fredoka, sans-serif";
           ctx.fillStyle = "#facc15";
           ctx.textAlign = 'center';
-          ctx.fillText("P1 (Solo)", x, y + 42);
+          ctx.fillText("P1 (Solo)", x, y + 44);
 
         } else {
-          // PVP: Vẽ 4 ụ súng tại 4 góc
           const drawTurretAtCorner = (cornerKey: string, label: string) => {
-            let x = w - 60, y = h - 60; // bottom-right
+            let x = w - 60, y = h - 60;
             if (cornerKey === 'bottom-left') { x = 60; y = h - 60; }
             else if (cornerKey === 'top-left') { x = 60; y = 60; }
             else if (cornerKey === 'top-right') { x = w - 60; y = 60; }
@@ -566,7 +567,7 @@ export default function BanCaPage() {
             }
 
             ctx.beginPath();
-            ctx.arc(0, 0, 36, 0, Math.PI * 2);
+            ctx.arc(0, 0, 38, 0, Math.PI * 2);
             ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
             ctx.fill();
             ctx.lineWidth = 3;
@@ -575,19 +576,19 @@ export default function BanCaPage() {
 
             ctx.rotate(angle);
             ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
-            ctx.fillRect(0, -11, 42, 22);
+            ctx.fillRect(0, -12, 46, 24);
             ctx.lineWidth = 2;
             ctx.strokeStyle = '#ffffff';
-            ctx.strokeRect(0, -11, 42, 22);
+            ctx.strokeRect(0, -12, 46, 24);
             ctx.fillStyle = isActive ? '#b45309' : '#334155';
-            ctx.fillRect(35, -14, 7, 28);
+            ctx.fillRect(38, -15, 8, 30);
             ctx.restore();
 
             if (isActive) {
-              ctx.font = "bold 10px Fredoka, sans-serif";
+              ctx.font = "bold 11px Fredoka, sans-serif";
               ctx.fillStyle = "#facc15";
               ctx.textAlign = 'center';
-              ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 42 : 32));
+              ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 44 : 34));
             }
           };
 
@@ -609,7 +610,6 @@ export default function BanCaPage() {
     };
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
-  // Hành động bắn cá
   const handleShoot = async (clientX: number, clientY: number) => {
     if (!isPVE) {
       const pData = roomPlayersRef.current[myCorner];
@@ -632,7 +632,7 @@ export default function BanCaPage() {
 
     const w = window.innerWidth;
     const h = window.innerHeight;
-    let startX = w / 2, startY = h - 50; // PVE mặc định ở giữa đáy
+    let startX = w / 2, startY = h - 50;
 
     if (!isPVE) {
       startX = w - 60; startY = h - 60;
@@ -933,15 +933,15 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Thanh chọn đạn bên trái & Tên súng ở giữa dưới */}
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-2 py-1.5 rounded-2xl shadow-xl">
+          {/* Thanh chọn đạn bên góc trái dưới */}
+          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-2.5 py-1.5 rounded-2xl shadow-xl">
             <button
               onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
               className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
             >
               -
             </button>
-            <div className="text-center min-w-[100px]">
+            <div className="text-center min-w-[90px]">
               <div className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
               <div className="text-[8px] text-yellow-300 font-semibold">
                 {isPVE ? "Solo PVE" : `Phòng #${activeRoomId}`}
