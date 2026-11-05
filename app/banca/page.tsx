@@ -36,16 +36,17 @@ interface FishData {
   dead?: boolean;
 }
 
+// Đạn ít tiền bay cực nhanh, đạn nhiều tiền đầm chắc, bay chậm hơn một chút
 const GUN_TYPES: GunConfig[] = [
-  { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 12, size: 5, color: '#a855f7' },
-  { level: 2, cost: 10, name: "Đạn 10đ", damage: 6, speed: 13, size: 6, color: '#38bdf8' },
-  { level: 3, cost: 20, name: "Đạn 20đ", damage: 12, speed: 13, size: 7, color: '#22d3ee' },
+  { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 18, size: 5, color: '#a855f7' },
+  { level: 2, cost: 10, name: "Đạn 10đ", damage: 6, speed: 16, size: 6, color: '#38bdf8' },
+  { level: 3, cost: 20, name: "Đạn 20đ", damage: 12, speed: 15, size: 7, color: '#22d3ee' },
   { level: 4, cost: 50, name: "Đạn 50đ", damage: 28, speed: 14, size: 8, color: '#4ade80' },
-  { level: 5, cost: 100, name: "Đạn 100đ", damage: 55, speed: 14, size: 9, color: '#facc15' },
-  { level: 6, cost: 200, name: "Đạn 200đ", damage: 110, speed: 15, size: 10, color: '#f97316' },
-  { level: 7, cost: 500, name: "Đạn 500đ", damage: 260, speed: 15, size: 12, color: '#ec4899' },
-  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 550, speed: 16, size: 14, color: '#8b5cf6' },
-  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 16, size: 17, color: '#ef4444' }
+  { level: 5, cost: 100, name: "Đạn 100đ", damage: 55, speed: 13, size: 9, color: '#facc15' },
+  { level: 6, cost: 200, name: "Đạn 200đ", damage: 110, speed: 12, size: 10, color: '#f97316' },
+  { level: 7, cost: 500, name: "Đạn 500đ", damage: 260, speed: 11, size: 12, color: '#ec4899' },
+  { level: 8, cost: 1000, name: "Đạn 1.000đ", damage: 550, speed: 10, size: 14, color: '#8b5cf6' },
+  { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 9, size: 17, color: '#ef4444' }
 ];
 
 const FISH_TYPES_BASE = [
@@ -64,7 +65,7 @@ const FISH_TYPES_BASE = [
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(500000);
+  const [jackpotPool, setJackpotPool] = useState<number>(550000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -146,9 +147,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 500000);
+        setJackpotPool(docSnap.data().amount || 550000);
       } else {
-        setDoc(jpRef, { amount: 500000 });
+        setDoc(jpRef, { amount: 550000 });
       }
     });
 
@@ -234,13 +235,13 @@ export default function BanCaPage() {
 
   useEffect(() => {
     const bubbles = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 12; i++) {
       bubbles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
         radius: Math.random() * 3 + 2,
-        speed: Math.random() * 0.7 + 0.2,
-        opacity: Math.random() * 0.25 + 0.1
+        speed: Math.random() * 0.6 + 0.2,
+        opacity: Math.random() * 0.3 + 0.15
       });
     }
     bubblesRef.current = bubbles;
@@ -298,7 +299,7 @@ export default function BanCaPage() {
           await setDoc(roomRef, { players: currentPlayers }, { merge: true });
         }
       } catch (e) {}
-    }, 250);
+    }, 300);
 
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
@@ -309,16 +310,16 @@ export default function BanCaPage() {
     const interval = setInterval(() => {
       if (isHoldingRef.current && !isPaused) {
         const now = Date.now();
-        if (now - lastShootTimeRef.current > 160) {
+        if (now - lastShootTimeRef.current > 180) {
           lastShootTimeRef.current = now;
           handleShoot(pointerPosRef.current.x, pointerPosRef.current.y);
         }
       }
-    }, 40);
+    }, 50);
     return () => clearInterval(interval);
   }, [screenMode, isPaused, currentGunIndex, points]);
 
-  // Game Loop Render Canvas tối ưu hóa độ mượt 60 FPS
+  // Game Loop Render Canvas tối ưu hóa siêu mượt
   useEffect(() => {
     if (screenMode !== 'game') return;
     const canvas = canvasRef.current;
@@ -342,7 +343,7 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.8 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if ((isPVE || isHost) && fishesRef.current.length < 16 && Math.random() < 0.20) {
+      if ((isPVE || isHost) && fishesRef.current.length < 14 && Math.random() < 0.18) {
         const randWeight = Math.random() * 100;
         let template;
 
@@ -416,24 +417,24 @@ export default function BanCaPage() {
         const w = canvas.width;
         const h = canvas.height;
 
-        // 1. Vẽ Background đại dương
+        // 1. Background Đại Dương Sáng Rõ
         const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, '#011627');
-        grad.addColorStop(0.5, '#032e57');
-        grad.addColorStop(1, '#000814');
+        grad.addColorStop(0, '#042b57');
+        grad.addColorStop(0.5, '#07529a');
+        grad.addColorStop(1, '#021833');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
-        // Hiệu ứng ánh sáng
+        // Ánh sáng rọi
         ctx.save();
-        ctx.globalAlpha = 0.10;
-        ctx.fillStyle = '#38bdf8';
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = '#7dd3fc';
         ctx.beginPath();
         ctx.moveTo(w * 0.2, 0); ctx.lineTo(w * 0.4, 0); ctx.lineTo(w * 0.6, h); ctx.lineTo(w * 0.3, h);
         ctx.fill();
         ctx.restore();
 
-        // 2. Cập nhật vị trí Bong bóng
+        // 2. Bong bóng nước
         bubblesRef.current.forEach(b => {
           b.y -= b.speed;
           if (b.y < -10) { b.y = h + 10; b.x = Math.random() * w; }
@@ -445,7 +446,7 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // 3. Cập nhật Đạn & Nổ
+        // 3. Đạn & Hiệu ứng nổ
         bulletsRef.current.forEach(b => {
           b.x += b.vx;
           b.y += b.vy;
@@ -467,7 +468,7 @@ export default function BanCaPage() {
         });
         floatingTextsRef.current = floatingTextsRef.current.filter(ft => ft.alpha > 0);
 
-        // 4. Cập nhật Cá
+        // 4. Cá bơi
         fishesRef.current.forEach(f => {
           f.x += f.vx;
           f.y += f.vy;
@@ -475,7 +476,7 @@ export default function BanCaPage() {
         });
         fishesRef.current = fishesRef.current.filter(f => f.x > -350 && f.x < w + 350 && f.y > -350 && f.y < h + 350);
 
-        // Va chạm đạn và cá
+        // Va chạm
         bulletsRef.current.forEach(bullet => {
           if (!bullet.alive) return;
           fishesRef.current.forEach(fish => {
@@ -527,7 +528,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(500000);
+                  updateJackpotInFirestore(550000);
                 }
 
                 setPoints(prev => {
@@ -556,14 +557,17 @@ export default function BanCaPage() {
 
         spawnFish(w, h);
 
-        // 5. VẼ CÁ NỔI TRÊN LỚP ĐẦU TIÊN (Không bao giờ bị chìm)
+        // 5. VẼ CÁ NỔI RỰC RỠ TRÊN LỚP ĐẦU TIÊN (Có viền sáng chống chìm)
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
           if (f.vx < 0) ctx.scale(-1, 1);
 
           if (f.hitTimer > 0) {
-            ctx.filter = 'brightness(2.5) drop-shadow(0 0 12px #ffffff)';
+            ctx.filter = 'brightness(2.5) drop-shadow(0 0 15px #ffffff)';
+          } else {
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 8;
           }
 
           ctx.font = `${f.height}px Arial`;
@@ -581,7 +585,7 @@ export default function BanCaPage() {
           ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
           ctx.fillStyle = b.color;
           ctx.shadowColor = b.color;
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 12;
           ctx.fill();
           ctx.restore();
         });
@@ -602,7 +606,7 @@ export default function BanCaPage() {
         floatingTextsRef.current.forEach(ft => {
           ctx.save();
           ctx.globalAlpha = Math.max(0, ft.alpha);
-          ctx.font = '900 15px Fredoka, sans-serif';
+          ctx.font = '900 16px Fredoka, sans-serif';
           ctx.fillStyle = ft.color;
           ctx.shadowColor = 'rgba(0,0,0,0.9)';
           ctx.shadowBlur = 4;
@@ -950,7 +954,6 @@ export default function BanCaPage() {
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full cursor-crosshair touch-none object-contain"
-            // Hỗ trợ chuột trên PC
             onMouseDown={(e) => {
               isHoldingRef.current = true;
               pointerPosRef.current = { x: e.clientX, y: e.clientY };
@@ -965,7 +968,6 @@ export default function BanCaPage() {
             onMouseLeave={() => {
               isHoldingRef.current = false;
             }}
-            // Hỗ trợ cảm ứng trên Điện thoại
             onTouchStart={(e) => {
               e.preventDefault();
               isHoldingRef.current = true;
