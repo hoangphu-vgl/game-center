@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, updateDoc, setDoc, onSnapshot, collection, getDocs, query, where, limit } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 interface GunConfig {
   level: number;
@@ -91,23 +91,17 @@ export default function BanCaPage() {
     'bottom-right': { active: true, email: 'Bạn' }
   });
 
-  const activeRoomRefData = useRef<{ roomId: string | null; corner: string; pve: boolean; userEmail: string }>({
+  const activeRoomRefData = useRef<{ roomId: string | null; corner: string; pve: boolean }>({
     roomId: null,
     corner: 'bottom-right',
-    pve: true,
-    userEmail: ''
+    pve: true
   });
 
   useEffect(() => {
-    activeRoomRefData.current = { 
-      roomId: activeRoomId, 
-      corner: myCorner, 
-      pve: isPVE, 
-      userEmail: user?.email || 'Thành viên' 
-    };
-  }, [activeRoomId, myCorner, isPVE, user]);
+    activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
+  }, [activeRoomId, myCorner, isPVE]);
 
-  // Giải phóng ghế tức thì khi thoát trang hoặc đóng tab
+  // Giải phóng ghế tức thì khi người chơi đóng tab hoặc thoát trang
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -163,7 +157,7 @@ export default function BanCaPage() {
     if (!user) return;
     try {
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, { points: newPts });
+      await setDoc(userRef, { points: newPts }, { merge: true });
     } catch (e) {}
   };
 
@@ -222,13 +216,13 @@ export default function BanCaPage() {
 
   useEffect(() => {
     const bubbles = [];
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 20; i++) {
       bubbles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
         radius: Math.random() * 3 + 2,
         speed: Math.random() * 0.8 + 0.2,
-        opacity: Math.random() * 0.25 + 0.1
+        opacity: Math.random() * 0.2 + 0.1
       });
     }
     bubblesRef.current = bubbles;
@@ -244,7 +238,7 @@ export default function BanCaPage() {
         if (data.players) {
           roomPlayersRef.current = data.players;
         }
-        // Nếu không phải Host, nhận danh sách cá từ Host để mượt mà tuyệt đối không giật lag
+        // Nếu không phải Host, nhận danh sách cá từ Host để mượt tuyệt đối không giật
         if (!isHost && data.fishes && Array.isArray(data.fishes)) {
           fishesRef.current = data.fishes;
         }
@@ -253,7 +247,7 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE, isHost]);
 
-  // Cập nhật góc súng mượt mà, tần số chuẩn 250ms chống nghẽn mạng
+  // Cập nhật góc súng tối ưu tần số 300ms chống lag mạng tuyệt đối
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -277,7 +271,7 @@ export default function BanCaPage() {
           await setDoc(roomRef, { players: currentPlayers }, { merge: true });
         }
       } catch (e) {}
-    }, 250);
+    }, 300);
 
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
@@ -302,8 +296,8 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.75 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      // Chỉ Host mới sinh cá và đẩy lên server để tránh xung đột khung hình
-      if (isHost && fishesRef.current.length < 20 && Math.random() < 0.25) {
+      // Chỉ Host mới sinh cá và đồng bộ để loại bỏ hoàn toàn giật khung hình
+      if (isHost && fishesRef.current.length < 18 && Math.random() < 0.2) {
         const rand = Math.random();
         let template;
         if (rand < 0.05) {
@@ -385,7 +379,7 @@ export default function BanCaPage() {
 
         explosionsRef.current.forEach(ex => {
           ex.radius += 3;
-          ex.alpha -= 0.1;
+          ex.alpha -= 0.12;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
@@ -409,7 +403,7 @@ export default function BanCaPage() {
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
             if (dist < bullet.radius + fish.width / 2.5) {
               bullet.alive = false;
-              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 8, maxRadius: 50, color: bullet.color, alpha: 1 });
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 8, maxRadius: 45, color: bullet.color, alpha: 1 });
 
               fish.hp -= bullet.damage;
               fish.hitTimer = 4;
@@ -475,11 +469,11 @@ export default function BanCaPage() {
         bulletsRef.current.forEach(b => {
           ctx.save();
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 4, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius + 3, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
           ctx.fill();
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 2, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius + 1, 0, Math.PI * 2);
           ctx.fillStyle = b.color;
           ctx.fill();
           ctx.restore();
@@ -492,7 +486,7 @@ export default function BanCaPage() {
           ctx.beginPath();
           ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
           ctx.strokeStyle = ex.color;
-          ctx.lineWidth = 3;
+          ctx.lineWidth = 2;
           ctx.stroke();
           ctx.restore();
         });
@@ -503,7 +497,7 @@ export default function BanCaPage() {
           ctx.font = '900 16px Fredoka, sans-serif';
           ctx.fillStyle = ft.color;
           ctx.shadowColor = 'rgba(0,0,0,0.8)';
-          ctx.shadowBlur = 4;
+          ctx.shadowBlur = 3;
           ctx.fillText(ft.text, ft.x, ft.y);
           ctx.restore();
         });
@@ -524,7 +518,7 @@ export default function BanCaPage() {
           }
 
           ctx.beginPath();
-          ctx.arc(0, 0, 38, 0, Math.PI * 2);
+          ctx.arc(0, 0, 36, 0, Math.PI * 2);
           ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
           ctx.fill();
           ctx.lineWidth = 3;
@@ -533,19 +527,19 @@ export default function BanCaPage() {
 
           ctx.rotate(angle);
           ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
-          ctx.fillRect(0, -12, 46, 24);
+          ctx.fillRect(0, -11, 42, 22);
           ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -12, 46, 24);
+          ctx.strokeRect(0, -11, 42, 22);
           ctx.fillStyle = isActive ? '#b45309' : '#334155';
-          ctx.fillRect(38, -15, 8, 30);
+          ctx.fillRect(35, -14, 7, 28);
           ctx.restore();
 
           if (isActive) {
             ctx.font = "bold 10px Fredoka, sans-serif";
             ctx.fillStyle = "#facc15";
             ctx.textAlign = 'center';
-            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 44 : 34));
+            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 42 : 32));
           }
         };
 
@@ -622,99 +616,6 @@ export default function BanCaPage() {
     }
   };
 
-  const handleAutoMatchmaking = async () => {
-    try {
-      showToast("⚡ Đang tìm phòng có người...");
-      const roomsRef = collection(db, "banca_rooms");
-      const q = query(roomsRef, where("status", "==", "playing"), limit(10));
-      const querySnapshot = await getDocs(q);
-
-      let foundRoomId: string | null = null;
-      let availableCorner: string | null = null;
-      let roomPlayersData: any = null;
-
-      const roomsList: any[] = [];
-      querySnapshot.forEach((docSnap) => {
-        roomsList.push({ id: docSnap.id, data: docSnap.data() });
-      });
-
-      for (const room of roomsList) {
-        const players = room.data.players || {};
-        const corners = ['bottom-right', 'bottom-left', 'top-left', 'top-right'];
-        const hasPeople = corners.some(c => players[c] && players[c].active && players[c].email && players[c].email !== 'Trống');
-        const hasEmpty = corners.some(c => !players[c] || !players[c].active || players[c].email === 'Trống');
-
-        if (hasPeople && hasEmpty) {
-          foundRoomId = room.id;
-          roomPlayersData = players;
-          for (const c of corners) {
-            if (!players[c] || !players[c].active || players[c].email === 'Trống') {
-              availableCorner = c;
-              break;
-            }
-          }
-          break;
-        }
-      }
-
-      if (!foundRoomId) {
-        for (const room of roomsList) {
-          const players = room.data.players || {};
-          const corners = ['bottom-right', 'bottom-left', 'top-left', 'top-right'];
-          for (const c of corners) {
-            if (!players[c] || !players[c].active || players[c].email === 'Trống') {
-              foundRoomId = room.id;
-              availableCorner = c;
-              roomPlayersData = players;
-              break;
-            }
-          }
-          if (foundRoomId) break;
-        }
-      }
-
-      if (foundRoomId && availableCorner) {
-        setActiveRoomId(foundRoomId);
-        setIsPVE(false);
-        setIsHost(false); // Vào phòng có sẵn thì không làm Host sinh cá
-        setMyCorner(availableCorner);
-
-        roomPlayersData[availableCorner] = { active: true, email: user?.email || 'Thành viên', angle: -Math.PI / 2 };
-        roomPlayersRef.current = roomPlayersData;
-
-        await setDoc(doc(db, "banca_rooms", foundRoomId), { players: roomPlayersData }, { merge: true });
-        setScreenMode('game');
-        showToast(`🎉 Đã ghép vào phòng đang có người #${foundRoomId}!`);
-      } else {
-        const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        setActiveRoomId(newRoomId);
-        setIsPVE(false);
-        setIsHost(true); // Mình tạo phòng mới nên mình là Host sinh cá
-        setMyCorner('bottom-right');
-
-        const newPlayers = {
-          'top-left': { active: false, email: 'Trống' },
-          'top-right': { active: false, email: 'Trống' },
-          'bottom-left': { active: false, email: 'Trống' },
-          'bottom-right': { active: true, email: user?.email || 'Chủ phòng', angle: -Math.PI / 2 }
-        };
-        roomPlayersRef.current = newPlayers;
-
-        await setDoc(doc(db, "banca_rooms", newRoomId), {
-          creator: user?.email || 'Host',
-          status: 'playing',
-          players: newPlayers,
-          fishes: []
-        });
-
-        setScreenMode('game');
-        showToast(`✨ Đã tạo phòng mới #${newRoomId}!`);
-      }
-    } catch (e) {
-      showToast("Lỗi ghép phòng tự động!");
-    }
-  };
-
   const handleCreateRoom = async () => {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     setActiveRoomId(roomId);
@@ -778,7 +679,6 @@ export default function BanCaPage() {
     showToast(`🎉 Vào phòng ${roomId} thành công!`);
   };
 
-  // Thoát phòng dứt điểm: ghi đè trạng thái Trống lên ghế bằng setDoc merge để không bị kẹt
   const handleLeaveRoom = async () => {
     if (activeRoomId && !isPVE) {
       const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -807,54 +707,48 @@ export default function BanCaPage() {
               <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-indigo-400 uppercase tracking-wide">
                 BẮN CÁ KI-BLAST
               </h1>
-              <p className="text-xs text-slate-400 mt-1">Săn cá đại dương, nổ hũ Jackpot & chiến PVP realtime!</p>
+              <p className="text-xs text-slate-400 mt-1">Săn cá đại dương, nổ hũ Jackpot & tạo phòng chiến PVP!</p>
             </div>
 
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-2.5 text-amber-300 text-xs font-bold animate-pulse">
               👑 HŨ JACKPOT: {jackpotPool.toLocaleString()} đ 🪙
             </div>
 
-            <div className="space-y-2.5">
-              <button
-                onClick={handleAutoMatchmaking}
-                className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-110 text-slate-950 font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
-              >
-                ⚡ CHƠI NGAY (ƯU TIÊN GHÉP PHÒNG CÓ NGƯỜI)
-              </button>
-
+            <div className="space-y-3">
               <button
                 onClick={() => { setIsPVE(true); setIsHost(true); setScreenMode('game'); }}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-bold rounded-2xl transition uppercase text-xs cursor-pointer"
+                className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-110 text-slate-950 font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
               >
                 🛡️ CHƠI ĐƠN (SOLO PVE)
               </button>
 
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-800"></div>
-                <span className="flex-shrink mx-4 text-slate-500 text-[10px] font-bold uppercase">Hoặc Tạo / Nhập Mã</span>
+                <span className="flex-shrink mx-4 text-slate-500 text-[10px] font-bold uppercase">Chế Độ PVP Bạn Bè</span>
                 <div className="flex-grow border-t border-slate-800"></div>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCreateRoom}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl shadow transition text-xs cursor-pointer"
-                >
-                  ✨ Tạo Phòng
-                </button>
+              <button
+                onClick={handleCreateRoom}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
+              >
+                ✨ TẠO PHÒNG MỚI
+              </button>
+
+              <div className="flex gap-2 pt-1">
                 <input
                   type="text"
-                  placeholder="MÃ PHÒNG"
+                  placeholder="NHẬP MÃ PHÒNG (VD: ABCXYZ)"
                   maxLength={6}
                   value={roomCodeInput}
                   onChange={(e) => setRoomCodeInput(e.target.value)}
-                  className="w-28 px-2 py-2 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-center font-bold uppercase text-amber-300 outline-none focus:border-cyan-500"
+                  className="flex-1 px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-center font-bold uppercase text-amber-300 outline-none focus:border-cyan-500"
                 />
                 <button
                   onClick={handleJoinRoom}
-                  className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl shadow transition cursor-pointer"
+                  className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl shadow transition cursor-pointer uppercase tracking-wider"
                 >
-                  Vào
+                  Vào Phòng
                 </button>
               </div>
             </div>
@@ -902,12 +796,9 @@ export default function BanCaPage() {
 
             <div className="flex items-center gap-1.5 pointer-events-auto">
               {!isPVE && activeRoomId && (
-                <button
-                  onClick={handleLeaveRoom}
-                  className="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 hover:bg-amber-900 text-amber-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md transition"
-                >
-                  Phòng: #{activeRoomId} (Rời)
-                </button>
+                <div className="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 text-amber-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md">
+                  Mã Phòng: #{activeRoomId}
+                </div>
               )}
 
               <button
