@@ -66,7 +66,7 @@ export default function VongQuayPage() {
       }
     }
 
-    // Chọn phần thưởng theo tỉ lệ xác suất
+    // Random xác suất trúng thưởng
     const rand = Math.random();
     let cumulative = 0;
     let selectedIndex = 0;
@@ -152,12 +152,12 @@ export default function VongQuayPage() {
               🎡 VÒNG QUAY NGỌC RỒNG MAY MẮN
             </h1>
             <p className="text-slate-400 text-sm max-w-md mx-auto">
-              Quay ngay để rinh quà xịn (Nước suối, Tiền mặt, Lọc Thận), né các ô Yamcha và Majin Buu nhé!
+              Quay ngay để rinh quà xịn (Nước suối, Tiền mặt, 1 Chai Lọc Thận), né các ô Yamcha và Majin Buu nhé!
             </p>
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-            {/* Vòng quay Conic Gradient mượt mà, bấm là quay */}
+            {/* Vòng quay Conic Gradient thuần CSS, mượt mà 100% */}
             <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] flex items-center justify-center">
               <div className="absolute -top-3 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
               <div
