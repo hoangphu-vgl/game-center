@@ -7,15 +7,15 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-const REWARDS = [
-  { label: "🥤 Nước Suối", type: "water", weight: 6, color: "#06b6d4" },
-  { label: "💀 Yamcha", type: "empty", weight: 15, color: "#ef4444" },
-  { label: "💵 1.000đ", type: "money", value: 1000, weight: 10, color: "#eab308" },
-  { label: "🍩 Majin Buu", type: "empty", weight: 18, color: "#f97316" },
-  { label: "🎟️ +1 Lượt", type: "spin", value: 1, weight: 10, color: "#a855f7" },
-  { label: "🌌 Zeno", type: "empty", weight: 17, color: "#64748b" },
-  { label: "🫘 Lọc Thận", type: "special", weight: 4, color: "#22c55e" },
-  { label: "🚀 Tàu Pảy Pảy", type: "empty", weight: 20, color: "#ec4899" },
+const WHEEL_SLICES = [
+  { id: 1, label: "🥤 Nước Suối", type: "water", prob: 0.06, color: "#06b6d4" },
+  { id: 2, label: "💀 Yamcha", type: "empty", prob: 0.15, color: "#ef4444" },
+  { id: 3, label: "💵 1.000đ", type: "money", value: 1000, prob: 0.10, color: "#eab308" },
+  { id: 4, label: "🍩 Majin Buu", type: "empty", prob: 0.18, color: "#f97316" },
+  { id: 5, label: "🎟️ +1 Lượt", type: "spin", value: 1, prob: 0.10, color: "#a855f7" },
+  { id: 6, label: "🌌 Zeno", type: "empty", prob: 0.17, color: "#64748b" },
+  { id: 7, label: "🫘 Lọc Thận", type: "special", prob: 0.04, color: "#22c55e" },
+  { id: 8, label: "🚀 Tàu Pảy Pảy", type: "empty", prob: 0.20, color: "#ec4899" },
 ];
 
 export default function VongQuayPage() {
@@ -27,23 +27,6 @@ export default function VongQuayPage() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [wheelAngle, setWheelAngle] = useState(0);
   const [spinResultModal, setSpinResultModal] = useState<string | null>(null);
-  const [lastIndex, setLastIndex] = useState<number | null>(null);
-
-  const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
-
-  // Tính toán góc cho 8 ô
-  let currentAngle = 0;
-  const sectors = REWARDS.map((r) => {
-    const angleSize = (r.weight / totalWeight) * 360;
-    const sector = {
-      ...r,
-      start: currentAngle,
-      end: currentAngle + angleSize,
-      middle: currentAngle + angleSize / 2,
-    };
-    currentAngle += angleSize;
-    return sector;
-  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -64,7 +47,7 @@ export default function VongQuayPage() {
 
   const spinWheel = async () => {
     if (isSpinning) return;
-    
+
     if (luckySpins <= 0) {
       alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt!");
       return;
@@ -83,37 +66,27 @@ export default function VongQuayPage() {
       }
     }
 
-    let targetIndex = 0;
-    let attempts = 0;
-    do {
-      const randWeight = Math.random() * totalWeight;
-      let accumulated = 0;
-      for (let i = 0; i < sectors.length; i++) {
-        accumulated += REWARDS[i].weight;
-        if (randWeight <= accumulated) {
-          targetIndex = i;
-          break;
-        }
+    // Chọn phần thưởng theo tỉ lệ xác suất
+    const rand = Math.random();
+    let cumulative = 0;
+    let selectedIndex = 0;
+    for (let i = 0; i < WHEEL_SLICES.length; i++) {
+      cumulative += WHEEL_SLICES[i].prob;
+      if (rand <= cumulative) {
+        selectedIndex = i;
+        break;
       }
-      attempts++;
-      if (targetIndex !== lastIndex || attempts > 3) break;
-    } while (true);
+    }
 
-    setLastIndex(targetIndex);
+    const sliceAngle = 360 / WHEEL_SLICES.length;
+    const randomFullRounds = 360 * (6 + Math.floor(Math.random() * 3));
+    const targetAngle = wheelAngle + randomFullRounds + (360 - (wheelAngle % 360)) + (360 - (selectedIndex * sliceAngle + sliceAngle / 2));
 
-    const winningSector = sectors[targetIndex];
-    const targetMiddleAngle = (winningSector.start + winningSector.end) / 2;
-    const desiredDegree = 270 - targetMiddleAngle;
-
-    const currentNormalized = wheelAngle % 360;
-    const extraOffset = (desiredDegree - currentNormalized + 360) % 360;
-    const newTotalAngle = wheelAngle + 360 * 8 + extraOffset;
-
-    setWheelAngle(newTotalAngle);
+    setWheelAngle(targetAngle);
 
     setTimeout(async () => {
       setIsSpinning(false);
-      const prize = REWARDS[targetIndex];
+      const prize = WHEEL_SLICES[selectedIndex];
       let msg = `🎉 Chúc mừng ní trúng: ${prize.label}`;
 
       if (prize.type === "spin") {
@@ -140,7 +113,7 @@ export default function VongQuayPage() {
       }
 
       setSpinResultModal(msg);
-    }, 4100);
+    }, 4000);
   };
 
   if (loading) {
@@ -179,12 +152,12 @@ export default function VongQuayPage() {
               🎡 VÒNG QUAY NGỌC RỒNG MAY MẮN
             </h1>
             <p className="text-slate-400 text-sm max-w-md mx-auto">
-              Quay ngay để rinh quà xịn (Nước suối, Tiền mặt, 1 Chai Lọc Thận), né các ô Yamcha và Majin Buu nhé!
+              Quay ngay để rinh quà xịn (Nước suối, Tiền mặt, Lọc Thận), né các ô Yamcha và Majin Buu nhé!
             </p>
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-            {/* Vòng quay CSS Conic Gradient chuẩn xác, hiển thị 100% mượt mà */}
+            {/* Vòng quay Conic Gradient mượt mà, bấm là quay */}
             <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] flex items-center justify-center">
               <div className="absolute -top-3 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
               <div
@@ -195,7 +168,6 @@ export default function VongQuayPage() {
                   background: "conic-gradient(#06b6d4 0deg 45deg, #ef4444 45deg 90deg, #eab308 90deg 135deg, #f97316 135deg 180deg, #a855f7 180deg 225deg, #64748b 225deg 270deg, #22c55e 270deg 315deg, #ec4899 315deg 360deg)"
                 }}
               >
-                {/* Các nhãn chữ xuôi theo nan quạt vòng quay */}
                 <div className="absolute inset-0 flex items-center justify-center text-[12px] sm:text-[14px] font-black text-slate-950">
                   <div className="absolute top-8 transform -translate-y-1/2 rotate-0 drop-shadow-sm">🥤 Nước Suối</div>
                   <div className="absolute right-10 top-20 transform rotate-45 drop-shadow-sm">💀 Yamcha</div>
