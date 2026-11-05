@@ -13,6 +13,10 @@ const PIECES: Record<string, string> = {
   bP: '♟', bN: '♞', bB: '♝', bR: '♜', bQ: '♛', bK: '♚',
 };
 
+const PIECE_VALUES: Record<string, number> = {
+  P: 1, N: 3, B: 3, R: 5, Q: 9, K: 100
+};
+
 const INITIAL_BOARD = [
   ['bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR'],
   ['bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP'],
@@ -30,6 +34,7 @@ export default function ChessPage() {
   const [currentBet, setCurrentBet] = useState<number>(50);
   const [screen, setScreen] = useState<'menu' | 'online' | 'game'>('menu');
   const [gameMode, setGameMode] = useState<'ai' | 'online'>('ai');
+  const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   
   const [roomCode, setRoomCode] = useState<string>('');
   const [inputCode, setInputCode] = useState<string>('');
@@ -46,7 +51,6 @@ export default function ChessPage() {
     msg: '',
   });
 
-  // Lấy thông tin user & điểm số từ Firebase
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -97,7 +101,6 @@ export default function ChessPage() {
     setScreen('game');
   };
 
-  // Tạo phòng Online Realtime trên Firestore (dùng JSON.stringify để tránh lỗi nested arrays)
   const handleCreateRoom = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
@@ -129,12 +132,11 @@ export default function ChessPage() {
       setValidMoves([]);
       setScreen('game');
     } catch (err: any) {
-      console.error("CHI TIẾT LỖI TẠO PHÒNG:", err);
+      console.error("Lỗi tạo phòng:", err);
       alert("Lỗi tạo phòng: " + (err.message || "Không xác định"));
     }
   };
 
-  // Vào phòng Online bằng mã
   const handleJoinRoom = async () => {
     if (inputCode.length < 6) {
       alert('Vui lòng nhập mã phòng 6 chữ số!');
@@ -155,12 +157,8 @@ export default function ChessPage() {
       }
 
       const data = roomSnap.data();
-      if (data.board) {
-        setBoard(JSON.parse(data.board));
-      }
-      if (data.turn) {
-        setTurn(data.turn);
-      }
+      if (data.board) setBoard(JSON.parse(data.board));
+      if (data.turn) setTurn(data.turn);
 
       setRoomCode(inputCode);
       setGameMode('online');
@@ -172,7 +170,6 @@ export default function ChessPage() {
     }
   };
 
-  // Lắng nghe realtime từ Firestore cho phòng Online
   useEffect(() => {
     if (gameMode !== 'online' || !roomCode) return;
 
@@ -180,34 +177,51 @@ export default function ChessPage() {
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.board) {
-          setBoard(JSON.parse(data.board));
-        }
-        if (data.turn) {
-          setTurn(data.turn);
-        }
+        if (data.board) setBoard(JSON.parse(data.board));
+        if (data.turn) setTurn(data.turn);
       }
     }, (error) => {
-      console.error("Lỗi sync realtime phòng cờ:", error);
+      console.error("Lỗi sync realtime:", error);
     });
 
     return () => unsubscribe();
   }, [gameMode, roomCode]);
 
-  const getBasicMoves = (r: number, c: number, currentBoard: string[][]) => {
+  // --- HỆ THỐNG LUẬT CỜ VUA CHUẨN XÁC ---
+  const getPieceMoves = (r: number, c: number, currentBoard: string[][]) => {
     const moves: { r: number; c: number }[] = [];
     const p = currentBoard[r][c];
     if (!p) return moves;
     
     const color = p[0];
     const type = p[1];
-    const dir = color === 'w' ? -1 : 1;
+
+    const addSliderMoves = (directions: number[][]) => {
+      directions.forEach(([dr, dc]) => {
+        let nr = r + dr;
+        let nc = c + dc;
+        while (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+          const target = currentBoard[nr][nc];
+          if (!target) {
+            moves.push({ r: nr, c: nc });
+          } else {
+            if (target[0] !== color) {
+              moves.push({ r: nr, c: nc });
+            }
+            break;
+          }
+          nr += dr;
+          nc += dc;
+        }
+      });
+    };
 
     if (type === 'P') {
-      const nextR = r + dir;
-      if (nextR >= 0 && nextR < 8 && !currentBoard[nextR][c]) {
-        moves.push({ r: nextR, c });
-        const startRow = color === 'w' ? 6 : 1;
+      const dir = color === 'w' ? -1 : 1;
+      const startRow = color === 'w' ? 6 : 1;
+      const nr = r + dir;
+      if (nr >= 0 && nr < 8 && !currentBoard[nr][c]) {
+        moves.push({ r: nr, c });
         const doubleR = r + dir * 2;
         if (r === startRow && !currentBoard[doubleR][c]) {
           moves.push({ r: doubleR, c });
@@ -215,11 +229,11 @@ export default function ChessPage() {
       }
       [-1, 1].forEach((dc) => {
         const nc = c + dc;
-        const nr = r + dir;
-        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
-          const target = currentBoard[nr][nc];
+        const capR = r + dir;
+        if (capR >= 0 && capR < 8 && nc >= 0 && nc < 8) {
+          const target = currentBoard[capR][nc];
           if (target && target[0] !== color) {
-            moves.push({ r: nr, c: nc });
+            moves.push({ r: capR, c: nc });
           }
         }
       });
@@ -236,7 +250,13 @@ export default function ChessPage() {
           if (!target || target[0] !== color) moves.push({ r: nr, c: nc });
         }
       });
-    } else {
+    } else if (type === 'B') {
+      addSliderMoves([[1, 1], [1, -1], [-1, 1], [-1, -1]]);
+    } else if (type === 'R') {
+      addSliderMoves([[1, 0], [-1, 0], [0, 1], [0, -1]]);
+    } else if (type === 'Q') {
+      addSliderMoves([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]);
+    } else if (type === 'K') {
       const steps = [
         [1, 0], [-1, 0], [0, 1], [0, -1],
         [1, 1], [1, -1], [-1, 1], [-1, -1],
@@ -274,7 +294,7 @@ export default function ChessPage() {
 
     if (piece && piece.startsWith(turn)) {
       setSelectedSquare({ r, c });
-      setValidMoves(getBasicMoves(r, c, board));
+      setValidMoves(getPieceMoves(r, c, board));
     } else {
       setSelectedSquare(null);
       setValidMoves([]);
@@ -311,29 +331,54 @@ export default function ChessPage() {
           endGame(isWin, isWin ? "Bạn đã chiến thắng ván cược!" : "Bạn đã thua cuộc!");
         }
       } catch (err) {
-        console.error("Lỗi cập nhật nước đi online:", err);
+        console.error("Lỗi cập nhật online:", err);
       }
     }
   };
 
-  // AI đánh trả
+  // --- AI THÔNG MINH THEO CÁC BẬC KHÓ ---
   useEffect(() => {
     if (gameMode === 'ai' && turn === 'b' && !modal.open) {
       const timer = setTimeout(() => {
-        const allAiMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
+        const allAiMoves: { fromR: number; fromC: number; toR: number; toC: number; score: number }[] = [];
         
         for (let r = 0; r < 8; r++) {
           for (let c = 0; c < 8; c++) {
             if (board[r][c].startsWith('b')) {
-              const mvs = getBasicMoves(r, c, board);
-              mvs.forEach((m) => allAiMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c }));
+              const mvs = getPieceMoves(r, c, board);
+              mvs.forEach((m) => {
+                const target = board[m.r][m.c];
+                let score = 0;
+                // Đánh giá điểm ưu tiên ăn quân cho bậc Trung Bình & Khó
+                if (target) {
+                  const targetType = target[1];
+                  score = PIECE_VALUES[targetType] || 1;
+                }
+                allAiMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c, score });
+              });
             }
           }
         }
 
         if (allAiMoves.length > 0) {
-          const attackMove = allAiMoves.find((m) => board[m.toR][m.toC] !== '');
-          const chosen = attackMove || allAiMoves[Math.floor(Math.random() * allAiMoves.length)];
+          let chosen = allAiMoves[0];
+
+          if (aiDifficulty === 'easy') {
+            // Ngẫu nhiên hoàn toàn
+            chosen = allAiMoves[Math.floor(Math.random() * allAiMoves.length)];
+          } else if (aiDifficulty === 'medium') {
+            // Ưu tiên ăn quân nếu có thể, không thì ngẫu nhiên
+            const captures = allAiMoves.filter(m => m.score > 0);
+            if (captures.length > 0) {
+              chosen = captures[Math.floor(Math.random() * captures.length)];
+            } else {
+              chosen = allAiMoves[Math.floor(Math.random() * allAiMoves.length)];
+            }
+          } else if (aiDifficulty === 'hard') {
+            // Chọn nước đi có giá trị ăn quân cao nhất
+            allAiMoves.sort((a, b) => b.score - a.score);
+            chosen = allAiMoves[0];
+          }
           
           const newBoard = board.map((row) => [...row]);
           const captured = newBoard[chosen.toR][chosen.toC];
@@ -347,11 +392,11 @@ export default function ChessPage() {
             endGame(false, 'Vua Trắng của bạn đã bị tiêu diệt!');
           }
         }
-      }, 500);
+      }, 600);
 
       return () => clearTimeout(timer);
     }
-  }, [turn, gameMode, board, modal.open]);
+  }, [turn, gameMode, board, modal.open, aiDifficulty]);
 
   const endGame = async (isWin: boolean, msg: string) => {
     let newPts = points;
@@ -401,11 +446,28 @@ export default function ChessPage() {
           </div>
 
           <div className="bg-neutral-800 p-4 rounded-xl border border-neutral-700 flex flex-col gap-3">
+            <label className="text-xs font-semibold text-gray-300 text-left">Chọn cấp độ AI:</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['easy', 'medium', 'hard'] as const).map((lvl) => (
+                <button
+                  key={lvl}
+                  onClick={() => setAiDifficulty(lvl)}
+                  className={`py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer uppercase ${
+                    aiDifficulty === lvl
+                      ? 'border-amber-500 bg-amber-500/20 text-amber-400'
+                      : 'border-neutral-700 bg-neutral-900 text-gray-400 hover:bg-neutral-700'
+                  }`}
+                >
+                  {lvl === 'easy' ? 'Dễ' : lvl === 'medium' ? 'Vừa' : 'Khó'}
+                </button>
+              ))}
+            </div>
+
             <button
               onClick={startVsAI}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 font-bold rounded-lg shadow hover:opacity-90 active:scale-95 transition cursor-pointer"
+              className="w-full mt-2 py-3 bg-gradient-to-r from-amber-500 to-orange-600 font-bold rounded-lg shadow hover:opacity-90 active:scale-95 transition cursor-pointer"
             >
-              🤖 Đấu Với AI (Thông Minh)
+              🤖 Đấu Với AI ({aiDifficulty.toUpperCase()})
             </button>
             <button
               onClick={() => setScreen('online')}
@@ -460,7 +522,7 @@ export default function ChessPage() {
               Lượt: {turn === 'w' ? 'Trắng' : 'Đen'} {gameMode === 'online' && turn === playerRole ? '(Đến lượt bạn!)' : ''}
             </span>
             <span className="text-xs text-gray-400">
-              {gameMode === 'ai' ? `Đấu AI` : `Phòng #${roomCode} (${playerRole === 'w' ? 'Quân Trắng' : 'Quân Đen'})`}
+              {gameMode === 'ai' ? `AI (${aiDifficulty.toUpperCase()})` : `Phòng #${roomCode} (${playerRole === 'w' ? 'Quân Trắng' : 'Quân Đen'})`}
             </span>
           </div>
 
