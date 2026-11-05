@@ -20,7 +20,7 @@ interface FishData {
   id: string;
   typeId: string;
   name: string;
-  emoji: string;
+  imgUrl: string;
   width: number;
   height: number;
   speed: number;
@@ -48,24 +48,24 @@ const GUN_TYPES: GunConfig[] = [
   { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 15, size: 17, color: '#ef4444' }
 ];
 
-// Giảm nhẹ HP toàn bộ để cá dễ chết hơn, tăng trải nghiệm săn bắn
+// Sử dụng hình ảnh cá thật/sinh động từ nguồn ảnh chất lượng cao chuẩn game bắn cá
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speedMin: 2.5, speedMax: 5.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speedMin: 2.8, speedMax: 6.0, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speedMin: 3.2, speedMax: 6.5, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small', weight: 30 },
+  { id: 's1', name: 'Cá Vàng Nhỏ', imgUrl: 'https://images.unsplash.com/photo-1522069169874-c58ec4b76be5?w=200&auto=format&fit=crop&q=80', width: 75, height: 46, speedMin: 2.5, speedMax: 5.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
+  { id: 's2', name: 'Cá Hề Nemo', imgUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200&auto=format&fit=crop&q=80', width: 80, height: 50, speedMin: 2.8, speedMax: 6.0, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
+  { id: 's3', name: 'Cá Xanh Biển', imgUrl: 'https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=200&auto=format&fit=crop&q=80', width: 70, height: 42, speedMin: 3.2, speedMax: 6.5, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small', weight: 30 },
   
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speedMin: 1.0, speedMax: 2.8, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speedMin: 1.2, speedMax: 3.0, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
+  { id: 'm1', name: 'Cá Nóc Gai', imgUrl: 'https://images.unsplash.com/photo-1520302212323-03f3d977467a?w=300&auto=format&fit=crop&q=80', width: 130, height: 90, speedMin: 1.0, speedMax: 2.8, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
+  { id: 'm2', name: 'Cá Heo Xanh', imgUrl: 'https://images.unsplash.com/photo-1570481662006-a1c8577964b0?w=300&auto=format&fit=crop&q=80', width: 160, height: 100, speedMin: 1.2, speedMax: 3.0, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
   
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speedMin: 0.5, speedMax: 1.8, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 12 },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speedMin: 0.6, speedMax: 2.0, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid', weight: 3 },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speedMin: 0.4, speedMax: 1.5, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 6 }
+  { id: 'l1', name: 'Cá Mập Đại Dương', imgUrl: 'https://images.unsplash.com/photo-1560275619-4662e36fa65c?w=400&auto=format&fit=crop&q=80', width: 280, height: 160, speedMin: 0.5, speedMax: 1.8, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 12 },
+  { id: 'l2', name: 'Nàng Tiên Cá Thần Thoại', imgUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&auto=format&fit=crop&q=80', width: 240, height: 160, speedMin: 0.6, speedMax: 2.0, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid', weight: 3 },
+  { id: 'l3', name: 'Rồng Biển Huyền Thoại', imgUrl: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&auto=format&fit=crop&q=80', width: 320, height: 200, speedMin: 0.4, speedMax: 1.5, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 6 }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(300000);
+  const [jackpotPool, setJackpotPool] = useState<number>(350000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -95,6 +95,7 @@ export default function BanCaPage() {
   const explosionsRef = useRef<any[]>([]);
   const floatingTextsRef = useRef<any[]>([]);
   const bubblesRef = useRef<any[]>([]);
+  const imageCacheRef = useRef<{ [key: string]: HTMLImageElement }>({});
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string; angle?: number } }>({
@@ -113,6 +114,15 @@ export default function BanCaPage() {
   useEffect(() => {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
+
+  // Preload hình ảnh cá vào bộ nhớ canvas để vẽ mượt không giật lag
+  useEffect(() => {
+    FISH_TYPES_BASE.forEach(fish => {
+      const img = new Image();
+      img.src = fish.imgUrl;
+      imageCacheRef.current[fish.id] = img;
+    });
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -147,9 +157,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 300000);
+        setJackpotPool(docSnap.data().amount || 350000);
       } else {
-        setDoc(jpRef, { amount: 300000 });
+        setDoc(jpRef, { amount: 350000 });
       }
     });
 
@@ -233,13 +243,13 @@ export default function BanCaPage() {
 
   useEffect(() => {
     const bubbles = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 25; i++) {
       bubbles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        radius: Math.random() * 3 + 2,
-        speed: Math.random() * 0.8 + 0.2,
-        opacity: Math.random() * 0.2 + 0.1
+        radius: Math.random() * 4 + 2,
+        speed: Math.random() * 0.9 + 0.3,
+        opacity: Math.random() * 0.3 + 0.1
       });
     }
     bubblesRef.current = bubbles;
@@ -385,7 +395,7 @@ export default function BanCaPage() {
             id: 'f_' + Math.random().toString(36).substring(2, 9),
             typeId: template.id,
             name: template.name,
-            emoji: template.emoji,
+            imgUrl: template.imgUrl,
             width: template.width * scaleFactor,
             height: template.height * scaleFactor,
             speed: randomSpeed,
@@ -413,9 +423,38 @@ export default function BanCaPage() {
         const w = canvas.width;
         const h = canvas.height;
 
+        // Vẽ Background hồ cá 3D chuyên nghiệp
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#03264c');
+        grad.addColorStop(0.5, '#064e89');
+        grad.addColorStop(1, '#021024');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Hiệu ứng ánh sáng mặt trời chiếu rọi từ trên xuống
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.moveTo(w * 0.2, 0); ctx.lineTo(w * 0.4, 0); ctx.lineTo(w * 0.6, h); ctx.lineTo(w * 0.3, h);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(w * 0.6, 0); ctx.lineTo(w * 0.8, 0); ctx.lineTo(w * 0.9, h); ctx.lineTo(w * 0.5, h);
+        ctx.fill();
+        ctx.restore();
+
         bubblesRef.current.forEach(b => {
           b.y -= b.speed;
           if (b.y < -10) { b.y = h + 10; b.x = Math.random() * w; }
+        });
+
+        bubblesRef.current.forEach(b => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity})`;
+          ctx.fill();
+          ctx.restore();
         });
 
         bulletsRef.current.forEach(b => {
@@ -498,7 +537,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(300000);
+                  updateJackpotInFirestore(350000);
                 }
 
                 setPoints(prev => {
@@ -529,30 +568,26 @@ export default function BanCaPage() {
 
         spawnFish(w, h);
 
-        ctx.clearRect(0, 0, w, h);
-
-        bubblesRef.current.forEach(b => {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity})`;
-          ctx.fill();
-          ctx.restore();
-        });
-
+        // Vẽ cá bằng hình ảnh thật mượt mà
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
           if (f.vx < 0) ctx.scale(-1, 1);
 
           if (f.hitTimer > 0) {
-            ctx.filter = 'brightness(3.0) drop-shadow(0 0 10px #ffffff)';
+            ctx.filter = 'brightness(2.5) drop-shadow(0 0 12px #ffffff)';
           }
 
-          ctx.font = `${f.height}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(f.emoji, 0, 0);
+          const img = imageCacheRef.current[f.typeId];
+          if (img && img.complete) {
+            ctx.drawImage(img, -f.width / 2, -f.height / 2, f.width, f.height);
+          } else {
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(0, 0, f.width / 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
           ctx.restore();
         });
 
@@ -1028,7 +1063,7 @@ export default function BanCaPage() {
             )}
           </div>
 
-          {/* Thanh chọn đạn to rõ, chống kẹt thao tác ở góc trái dưới */}
+          {/* Thanh chọn đạn to rõ ở góc trái dưới */}
           <div className="absolute bottom-3 left-3 z-30 flex items-center gap-2.5 pointer-events-auto bg-slate-900/95 backdrop-blur-md border-2 border-cyan-400/60 px-3.5 py-2.5 rounded-3xl shadow-2xl">
             <button
               onClick={(e) => {
