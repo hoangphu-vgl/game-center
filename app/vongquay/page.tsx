@@ -25,11 +25,11 @@ export default function VongQuayPage() {
   const [loading, setLoading] = useState(true);
 
   const [isSpinning, setIsSpinning] = useState(false);
+  const [wheelAngle, setWheelAngle] = useState(0);
   const [spinResultModal, setSpinResultModal] = useState<string | null>(null);
   const [lastIndex, setLastIndex] = useState<number | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rotationRef = useRef<number>(0);
 
   const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
 
@@ -98,7 +98,6 @@ export default function VongQuayPage() {
   };
 
   useEffect(() => {
-    // Đảm bảo canvas render ngay khi component mount
     const timer = setTimeout(() => {
       drawWheel();
     }, 50);
@@ -126,7 +125,6 @@ export default function VongQuayPage() {
   const spinWheel = async () => {
     if (isSpinning) return;
     
-    // Kiểm tra gắt gao: Không có lượt thì nhịn!
     if (luckySpins <= 0) {
       alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt!");
       return;
@@ -167,14 +165,12 @@ export default function VongQuayPage() {
     const targetMiddleAngle = (winningSector.start + winningSector.end) / 2;
     const desiredDegree = 270 - targetMiddleAngle;
 
-    const currentNormalized = rotationRef.current % 360;
+    const currentNormalized = wheelAngle % 360;
     const extraOffset = (desiredDegree - currentNormalized + 360) % 360;
-    rotationRef.current += 360 * 8 + extraOffset;
+    const newTotalAngle = wheelAngle + 360 * 8 + extraOffset;
 
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.style.transform = `rotate(${rotationRef.current}deg)`;
-    }
+    // Cập nhật state wheelAngle để React kích hoạt hiệu ứng quay mượt mà
+    setWheelAngle(newTotalAngle);
 
     setTimeout(async () => {
       setIsSpinning(false);
@@ -249,7 +245,6 @@ export default function VongQuayPage() {
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-            {/* Vòng quay Canvas mượt mà, hiển thị chuẩn 100% */}
             <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] flex items-center justify-center">
               <div className="absolute -top-3 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
               <canvas
@@ -258,6 +253,7 @@ export default function VongQuayPage() {
                 height={500}
                 className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_40px_rgba(168,85,247,0.6)]"
                 style={{
+                  transform: `rotate(${wheelAngle}deg)`,
                   transition: isSpinning ? "transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)" : "none",
                 }}
               />
