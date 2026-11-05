@@ -43,7 +43,9 @@ const GUN_TYPES: GunConfig[] = [
   { level: 4, cost: 50, name: "Đạn 50đ (Dame: 50)", damage: 50, speed: 15, size: 7, color: '#facc15' },
   { level: 5, cost: 100, name: "Đạn 100đ (Dame: 100)", damage: 100, speed: 16, size: 8, color: '#f97316' },
   { level: 6, cost: 200, name: "Đạn 200đ (Dame: 200)", damage: 200, speed: 17, size: 9, color: '#ec4899' },
-  { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' }
+  { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' },
+  { level: 8, cost: 1000, name: "Đạn 1.000đ (Dame: 1000)", damage: 1000, speed: 21, size: 11, color: '#8b5cf6' },
+  { level: 9, cost: 2000, name: "Đạn 2.000đ (Dame: 2000)", damage: 2000, speed: 23, size: 12, color: '#10b981' }
 ];
 
 const FISH_TYPES_BASE = [
@@ -101,7 +103,6 @@ export default function BanCaPage() {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
 
-  // Giải phóng ghế ngay lập tức khi thoát trang hoặc đóng tab
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -228,7 +229,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe realtime phòng PVP tối ưu cho điện thoại
+  // Lắng nghe realtime phòng PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -239,7 +240,6 @@ export default function BanCaPage() {
           roomPlayersRef.current = data.players;
         }
 
-        // Bầu Host tự động theo danh sách người chơi đang active
         const players = data.players || {};
         const activeCorners = Object.keys(players).filter(c => players[c] && players[c].active && players[c].email && players[c].email !== 'Trống');
         if (activeCorners.length > 0) {
@@ -257,7 +257,7 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE, isHost, user]);
 
-  // Đồng bộ góc súng thời gian thực
+  // Đồng bộ góc súng thời gian thực cho PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -298,7 +298,6 @@ export default function BanCaPage() {
     const handleResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      // Khởi tạo mặc định vị trí chạm ở giữa màn hình nếu chưa chạm
       if (touchPosRef.current.x === 0) {
         touchPosRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       }
@@ -310,7 +309,7 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.75 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if (isHost && fishesRef.current.length < 18 && Math.random() < 0.2) {
+      if ((isPVE || isHost) && fishesRef.current.length < 18 && Math.random() < 0.2) {
         const rand = Math.random();
         let template;
         if (rand < 0.05) {
@@ -452,9 +451,7 @@ export default function BanCaPage() {
         });
         fishesRef.current = fishesRef.current.filter(f => !f.dead);
 
-        if (isPVE || isHost) {
-          spawnFish(w, h);
-        }
+        spawnFish(w, h);
 
         ctx.clearRect(0, 0, w, h);
 
@@ -515,57 +512,90 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ 4 ụ súng chuẩn xác theo 4 góc màn hình điện thoại
-        const drawTurretAtCorner = (cornerKey: string, label: string) => {
-          let x = w - 60, y = h - 60; // bottom-right
-          if (cornerKey === 'bottom-left') { x = 60; y = h - 60; }
-          else if (cornerKey === 'top-left') { x = 60; y = 60; }
-          else if (cornerKey === 'top-right') { x = w - 60; y = 60; }
+        if (isPVE) {
+          // PVE: Ụ súng nằm chính giữa đáy màn hình
+          const x = w / 2;
+          const y = h - 50;
+          const angle = Math.atan2(touchPosRef.current.y - y, touchPosRef.current.x - x);
 
           ctx.save();
           ctx.translate(x, y);
-          const pData = roomPlayersRef.current[cornerKey];
-          const isActive = pData && pData.active && pData.email && pData.email !== 'Trống' && pData.email !== '';
-
-          let angle = -Math.PI / 2;
-          if (isActive) {
-            if (cornerKey === myCorner) {
-              angle = Math.atan2(touchPosRef.current.y - y, touchPosRef.current.x - x);
-            } else if (pData.angle !== undefined) {
-              angle = pData.angle;
-            }
-          }
-
           ctx.beginPath();
-          ctx.arc(0, 0, 36, 0, Math.PI * 2);
-          ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
+          ctx.arc(0, 0, 40, 0, Math.PI * 2);
+          ctx.fillStyle = '#0f172a';
           ctx.fill();
           ctx.lineWidth = 3;
-          ctx.strokeStyle = isActive ? '#38bdf8' : '#475569';
+          ctx.strokeStyle = '#38bdf8';
           ctx.stroke();
 
           ctx.rotate(angle);
-          ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
-          ctx.fillRect(0, -11, 42, 22);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(0, -12, 48, 24);
           ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -11, 42, 22);
-          ctx.fillStyle = isActive ? '#b45309' : '#334155';
-          ctx.fillRect(35, -14, 7, 28);
+          ctx.strokeRect(0, -12, 48, 24);
+          ctx.fillStyle = '#b45309';
+          ctx.fillRect(40, -15, 8, 30);
           ctx.restore();
 
-          if (isActive) {
-            ctx.font = "bold 10px Fredoka, sans-serif";
-            ctx.fillStyle = "#facc15";
-            ctx.textAlign = 'center';
-            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 42 : 32));
-          }
-        };
+          ctx.font = "bold 11px Fredoka, sans-serif";
+          ctx.fillStyle = "#facc15";
+          ctx.textAlign = 'center';
+          ctx.fillText("P1 (Solo)", x, y + 42);
 
-        drawTurretAtCorner('top-left', 'P2');
-        drawTurretAtCorner('top-right', 'P3');
-        drawTurretAtCorner('bottom-left', 'P4');
-        drawTurretAtCorner('bottom-right', isPVE ? 'P1 (Solo)' : 'P1');
+        } else {
+          // PVP: Vẽ 4 ụ súng tại 4 góc
+          const drawTurretAtCorner = (cornerKey: string, label: string) => {
+            let x = w - 60, y = h - 60; // bottom-right
+            if (cornerKey === 'bottom-left') { x = 60; y = h - 60; }
+            else if (cornerKey === 'top-left') { x = 60; y = 60; }
+            else if (cornerKey === 'top-right') { x = w - 60; y = 60; }
+
+            ctx.save();
+            ctx.translate(x, y);
+            const pData = roomPlayersRef.current[cornerKey];
+            const isActive = pData && pData.active && pData.email && pData.email !== 'Trống' && pData.email !== '';
+
+            let angle = -Math.PI / 2;
+            if (isActive) {
+              if (cornerKey === myCorner) {
+                angle = Math.atan2(touchPosRef.current.y - y, touchPosRef.current.x - x);
+              } else if (pData.angle !== undefined) {
+                angle = pData.angle;
+              }
+            }
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 36, 0, Math.PI * 2);
+            ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = isActive ? '#38bdf8' : '#475569';
+            ctx.stroke();
+
+            ctx.rotate(angle);
+            ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
+            ctx.fillRect(0, -11, 42, 22);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeRect(0, -11, 42, 22);
+            ctx.fillStyle = isActive ? '#b45309' : '#334155';
+            ctx.fillRect(35, -14, 7, 28);
+            ctx.restore();
+
+            if (isActive) {
+              ctx.font = "bold 10px Fredoka, sans-serif";
+              ctx.fillStyle = "#facc15";
+              ctx.textAlign = 'center';
+              ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 42 : 32));
+            }
+          };
+
+          drawTurretAtCorner('top-left', 'P2');
+          drawTurretAtCorner('top-right', 'P3');
+          drawTurretAtCorner('bottom-left', 'P4');
+          drawTurretAtCorner('bottom-right', 'P1');
+        }
       }
 
       animationFrameId = requestAnimationFrame(render);
@@ -579,7 +609,7 @@ export default function BanCaPage() {
     };
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
-  // Hành động bắn cá tối ưu cho màn hình cảm ứng điện thoại
+  // Hành động bắn cá
   const handleShoot = async (clientX: number, clientY: number) => {
     if (!isPVE) {
       const pData = roomPlayersRef.current[myCorner];
@@ -602,10 +632,14 @@ export default function BanCaPage() {
 
     const w = window.innerWidth;
     const h = window.innerHeight;
-    let startX = w - 60, startY = h - 60;
-    if (myCorner === 'bottom-left') { startX = 60; startY = h - 60; }
-    else if (myCorner === 'top-left') { startX = 60; startY = 60; }
-    else if (myCorner === 'top-right') { startX = w - 60; startY = 60; }
+    let startX = w / 2, startY = h - 50; // PVE mặc định ở giữa đáy
+
+    if (!isPVE) {
+      startX = w - 60; startY = h - 60;
+      if (myCorner === 'bottom-left') { startX = 60; startY = h - 60; }
+      else if (myCorner === 'top-left') { startX = 60; startY = 60; }
+      else if (myCorner === 'top-right') { startX = w - 60; startY = 60; }
+    }
 
     const angle = Math.atan2(clientY - startY, clientX - startX);
     
@@ -696,14 +730,12 @@ export default function BanCaPage() {
     const players = data.players || {};
     const userEmail = user?.email || 'Thành viên';
 
-    // Xóa sạch phân thân cũ nếu tài khoản này đã từng kẹt trong phòng
     Object.keys(players).forEach((k) => {
       if (players[k] && players[k].email === userEmail) {
         players[k] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
       }
     });
 
-    // Sắp xếp ghế trống ưu tiên cho người vào sau trên điện thoại
     let corner = '';
     const priorityCorners = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
     for (const c of priorityCorners) {
@@ -901,28 +933,26 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* Thanh súng dưới góc */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-auto">
-            <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-3 py-1.5 rounded-2xl flex items-center gap-2.5 shadow-xl">
-              <button
-                onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
-                className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
-              >
-                -
-              </button>
-              <div className="text-center min-w-[120px]">
-                <div className="text-[11px] text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
-                <div className="text-[9px] text-yellow-300 font-semibold">
-                  {isPVE ? "Solo Đại Dương" : `Phòng #${activeRoomId} (${myCorner})`}
-                </div>
+          {/* Thanh chọn đạn bên trái & Tên súng ở giữa dưới */}
+          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-2 py-1.5 rounded-2xl shadow-xl">
+            <button
+              onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
+              className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
+            >
+              -
+            </button>
+            <div className="text-center min-w-[100px]">
+              <div className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
+              <div className="text-[8px] text-yellow-300 font-semibold">
+                {isPVE ? "Solo PVE" : `Phòng #${activeRoomId}`}
               </div>
-              <button
-                onClick={() => setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length)}
-                className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
-              >
-                +
-              </button>
             </div>
+            <button
+              onClick={() => setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length)}
+              className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
+            >
+              +
+            </button>
           </div>
 
           {toastMsg && (
