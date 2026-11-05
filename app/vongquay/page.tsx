@@ -110,11 +110,28 @@ export default function VongQuayPage() {
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
         const userSnap = await getDoc(userRef);
+        
         if (userSnap.exists()) {
           const data = userSnap.data();
           setPoints(data.points || 0);
-          // Lấy đúng số lượt từ DB, nếu chưa có thì mặc định bằng 0 thật sự để tránh lỗi ảo
-          setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 0);
+          
+          // FIX TRỰC TIẾP: Nếu Firestore chưa có field luckySpins, khởi tạo mặc định 3 lượt vào DB luôn!
+          if (data.luckySpins === undefined) {
+            await setDoc(userRef, { luckySpins: 3 }, { merge: true });
+            setLuckySpins(3);
+          } else {
+            setLuckySpins(data.luckySpins);
+          }
+        } else {
+          // Tạo user mới hoàn toàn nếu chưa có
+          await setDoc(userRef, {
+            uid: currentUser.uid,
+            name: currentUser.displayName || "Chiến Binh",
+            points: 1000,
+            luckySpins: 3,
+          });
+          setPoints(1000);
+          setLuckySpins(3);
         }
       }
       setLoading(false);
@@ -123,12 +140,20 @@ export default function VongQuayPage() {
     return () => unsubscribe();
   }, []);
 
+  // Nút hack nhận lượt test nhanh
+  const addTestSpin = async () => {
+    if (!user) return;
+    const newSpins = luckySpins + 5;
+    setLuckySpins(newSpins);
+    await setDoc(doc(db, "users", user.uid), { luckySpins: newSpins }, { merge: true });
+    alert("🔥 Đã nạp 5 lượt quay vào Firestore thành công!");
+  };
+
   const spinWheel = async () => {
     if (isSpinning) return;
     
-    // Kiểm tra gắt gao thực tế từ DB/State
     if (luckySpins <= 0) {
-      alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt hoặc điểm danh!");
+      alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt!");
       return;
     }
 
@@ -137,11 +162,13 @@ export default function VongQuayPage() {
 
     const newSpins = luckySpins - 1;
     setLuckySpins(newSpins);
+
+    // Cập nhật ngay vào Firestore
     if (user) {
       try {
         await setDoc(doc(db, "users", user.uid), { luckySpins: newSpins }, { merge: true });
       } catch (e) {
-        console.error(e);
+        console.error("Lỗi sync Firestore:", e);
       }
     }
 
@@ -263,9 +290,9 @@ export default function VongQuayPage() {
               </div>
             </div>
 
-            <div className="bg-slate-950/90 border border-purple-500/40 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-5 text-center shadow-2xl">
+            <div className="bg-slate-950/90 border border-purple-500/40 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-4 text-center shadow-2xl">
               <div className="flex justify-between items-center bg-purple-950/60 border border-purple-500/30 px-4 py-3 rounded-2xl">
-                <span className="text-xs font-bold text-purple-300">Lượt Quay Có Sẵn:</span>
+                <span className="text-xs font-bold text-purple-300">Lượt Quay Hiện Có:</span>
                 <span className="text-xl font-black text-amber-400">{luckySpins} 🎟️</span>
               </div>
 
@@ -279,6 +306,13 @@ export default function VongQuayPage() {
                 }`}
               >
                 {isSpinning ? "🌀 ĐANG KÊU GỌI RỒNG THẦN..." : luckySpins <= 0 ? "🔒 HẾT LƯỢT QUAY (NHỊN)" : "🎰 QUAY NGAY (1 LƯỢT)"}
+              </button>
+
+              <button
+                onClick={addTestSpin}
+                className="w-full py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs rounded-xl border border-amber-400/30 transition cursor-pointer"
+              >
+                ⚡ Test Nhanh: +5 Lượt Vào Firestore
               </button>
 
               <Link
