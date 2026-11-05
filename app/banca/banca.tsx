@@ -1,68 +1,97 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { ref, onValue, set, push, remove } from "firebase/database";
 
-interface Fish {
-  id: number;
-  type: 'small' | 'medium' | 'large' | 'boss' | 'rare';
+interface GunConfig {
+  level: number;
+  cost: number;
   name: string;
-  icon: string;
-  x: number;
-  y: number;
+  damage: number;
+  speed: number;
+  size: number;
+  color: string;
+}
+
+interface FishData {
+  id: string;
+  typeId: string;
+  name: string;
+  emoji: string;
+  width: number;
+  height: number;
   speed: number;
   hp: number;
   maxHp: number;
   reward: number;
-  size: number;
-}
-
-interface Bullet {
-  id: number;
+  category: string;
   x: number;
   y: number;
-  targetX: number;
-  targetY: number;
-  speed: number;
-  damage: number;
-  bet: number;
+  vx: number;
+  vy: number;
+  hitTimer: number;
+  dead?: boolean;
 }
 
-const BET_LEVELS = [1, 10, 20, 50, 100, 1000];
+const GUN_TYPES: GunConfig[] = [
+  { level: 1, cost: 1, name: "Đạn 1đ (Dame: 1)", damage: 1, speed: 12, size: 4, color: '#a855f7' },
+  { level: 2, cost: 10, name: "Đạn 10đ (Dame: 10)", damage: 10, speed: 13, size: 5, color: '#38bdf8' },
+  { level: 3, cost: 20, name: "Đạn 20đ (Dame: 20)", damage: 20, speed: 14, size: 6, color: '#22d3ee' },
+  { level: 4, cost: 50, name: "Đạn 50đ (Dame: 50)", damage: 50, speed: 15, size: 7, color: '#facc15' },
+  { level: 5, cost: 100, name: "Đạn 100đ (Dame: 100)", damage: 100, speed: 16, size: 8, color: '#f97316' },
+  { level: 6, cost: 200, name: "Đạn 200đ (Dame: 200)", damage: 200, speed: 17, size: 9, color: '#ec4899' },
+  { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' }
+];
 
-const FISH_TYPES = [
-  { type: 'small', name: 'Cá Vàng', icon: '🐠', hp: 2, reward: 5, size: 40, speed: 2 },
-  { type: 'small', name: 'Cá Hề', icon: '🐟', hp: 3, reward: 8, size: 45, speed: 2.2 },
-  { type: 'medium', name: 'Cá Mập Con', icon: '🐬', hp: 10, reward: 25, size: 65, speed: 1.5 },
-  { type: 'large', name: 'Rùa Biển', icon: '🐢', hp: 25, reward: 60, size: 80, speed: 1 },
-  { type: 'boss', name: 'Cá Mập Bự', icon: '🦈', hp: 60, reward: 150, size: 110, speed: 0.8 },
-  { type: 'rare', name: 'Cá Voi Vàng (Jackpot)', icon: '🐳', hp: 120, reward: 400, size: 140, speed: 0.6 },
+const FISH_TYPES_BASE = [
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 2, hpMax: 5, reward: 15, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 2, hpMax: 5, reward: 20, category: 'small' },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 2, hpMax: 4, reward: 12, category: 'small' },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 20, hpMax: 50, reward: 80, category: 'medium' },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 30, hpMax: 80, reward: 120, category: 'medium' },
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 300, hpMax: 800, reward: 600, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 200, hpMax: 600, reward: 500, category: 'large' },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 500, hpMax: 1000, reward: 1000, category: 'large' }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [screen, setScreen] = useState<'lobby' | 'game'>('lobby');
+  const [jackpotPool, setJackpotPool] = useState<number>(258900);
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
-  const [activeRoom, setActiveRoom] = useState<string>('PHÒNG CHUNG #888');
-  const [seatIndex, setSeatIndex] = useState<number>(0);
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const [isPVE, setIsPVE] = useState<boolean>(true);
+  const [isHost, setIsHost] = useState<boolean>(false);
+  const [myCorner, setMyCorner] = useState<string>('bottom-right');
+  
+  const [currentGunIndex, setCurrentGunIndex] = useState<number>(1);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Game Settings
-  const [currentBet, setCurrentBet] = useState<number>(10);
-  const [isBigGun, setIsBigGun] = useState<boolean>(false);
-  const [jackpot, setJackpot] = useState<number>(258900);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const fishesRef = useRef<FishData[]>([]);
+  const bulletsRef = useRef<any[]>([]);
+  const explosionsRef = useRef<any[]>([]);
+  const floatingTextsRef = useRef<any[]>([]);
+  const bubblesRef = useRef<any[]>([]);
 
-  // Gameplay entities
-  const [fishes, setFishes] = useState<Fish[]>([]);
-  const [bullets, setBullets] = useState<Bullet[]>([]);
-  const [effects, setEffects] = useState<{ id: number; text: string; x: number; y: number; color: string }[]>([]);
-  const [cannonAngle, setCannonAngle] = useState<number>(0);
+  const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string } }>({
+    'top-left': { active: false, email: 'Trống' },
+    'top-right': { active: false, email: 'Trống' },
+    'bottom-left': { active: false, email: 'Trống' },
+    'bottom-right': { active: true, email: 'Bạn' }
+  });
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         try {
@@ -71,343 +100,661 @@ export default function BanCaPage() {
           if (userSnap.exists()) {
             setPoints(userSnap.data().points || 1000);
           }
-        } catch (err) {
-          console.error("Lỗi lấy điểm user:", err);
+        } catch (e) {
+          console.error("Lỗi lấy điểm user:", e);
         }
       }
     });
-    return () => unsubscribe();
+
+    const jpRef = ref(db, 'banca_pvp_jackpot');
+    const unsubJp = onValue(jpRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setJackpotPool(snapshot.val());
+      } else {
+        set(jpRef, 258900);
+      }
+    });
+
+    return () => {
+      unsubAuth();
+      unsubJp();
+    };
   }, []);
 
-  const updatePoints = async (newPts: number) => {
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const updatePointsInFirestore = async (newPts: number) => {
     setPoints(newPts);
     if (!user) return;
     try {
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, { points: newPts });
-    } catch (err) {
-      console.error("Lỗi cập nhật điểm:", err);
+    } catch (e) {
+      console.error("Lỗi lưu điểm:", e);
     }
   };
 
-  const handleQuickJoin = () => {
-    if (points < currentBet) {
-      alert("Bạn không đủ điểm để tham gia bắn cá!");
-      return;
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      audioCtxRef.current = new AudioCtx();
     }
-    setActiveRoom("PHÒNG CHUNG #888");
-    setSeatIndex(Math.floor(Math.random() * 4));
-    setScreen('game');
   };
 
-  const handleJoinCustomRoom = () => {
-    if (!roomCodeInput || roomCodeInput.length < 4) {
-      alert("Vui lòng nhập mã phòng hợp lệ!");
-      return;
-    }
-    setActiveRoom(`PHÒNG RIÊNG #${roomCodeInput.toUpperCase()}`);
-    setSeatIndex(1);
-    setScreen('game');
+  const playShootSound = () => {
+    if (isMuted || !audioCtxRef.current) return;
+    try {
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(450, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) {}
   };
 
+  const playCatchSound = (reward: number) => {
+    if (isMuted || !audioCtxRef.current) return;
+    try {
+      const ctx = audioCtxRef.current;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      const startFreq = reward >= 150 ? 523.25 : 392.00;
+      osc.frequency.setValueAtTime(startFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(startFreq * 1.5, now + 0.15);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(now + 0.2);
+    } catch (e) {}
+  };
+
+  // Khởi tạo bong bóng nước nền
   useEffect(() => {
-    if (screen !== 'game') return;
-
-    const spawnInterval = setInterval(() => {
-      setFishes(prev => {
-        if (prev.length > 14) return prev;
-        const template = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
-        const newFish: Fish = {
-          id: Date.now() + Math.random(),
-          type: template.type as any,
-          name: template.name,
-          icon: template.icon,
-          x: -100,
-          y: Math.random() * 420 + 40,
-          speed: template.speed + Math.random() * 0.5,
-          hp: template.hp,
-          maxHp: template.hp,
-          reward: template.reward,
-          size: template.size
-        };
-        return [...prev, newFish];
+    const bubbles = [];
+    for (let i = 0; i < 35; i++) {
+      bubbles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        radius: Math.random() * 5 + 2,
+        speed: Math.random() * 1.2 + 0.4,
+        opacity: Math.random() * 0.3 + 0.1
       });
-    }, 2200);
+    }
+    bubblesRef.current = bubbles;
+  }, []);
 
-    const gameLoop = setInterval(() => {
-      setFishes(prev => prev.map(f => {
-        let nextX = f.x + f.speed;
-        if (nextX > 880) {
-          return { ...f, x: -100, y: Math.random() * 420 + 40 };
+  // Main Canvas Loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    const spawnFish = (w: number, h: number) => {
+      if (fishesRef.current.length < 22 && Math.random() < 0.28) {
+        const rand = Math.random();
+        let template;
+        if (rand < 0.05) {
+          const lg = FISH_TYPES_BASE.filter(f => f.category === 'large');
+          template = lg[Math.floor(Math.random() * lg.length)];
+        } else if (rand < 0.30) {
+          const med = FISH_TYPES_BASE.filter(f => f.category === 'medium');
+          template = med[Math.floor(Math.random() * med.length)];
+        } else {
+          const sm = FISH_TYPES_BASE.filter(f => f.category === 'small');
+          template = sm[Math.floor(Math.random() * sm.length)];
         }
-        return { ...f, x: nextX };
-      }));
 
-      setBullets(prevBullets => {
-        const nextBullets: Bullet[] = [];
-        prevBullets.forEach(b => {
-          const dx = b.targetX - b.x;
-          const dy = b.targetY - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+        if (template) {
+          const dir = Math.floor(Math.random() * 4);
+          let x = 0, y = 0, vx = 0, vy = 0;
+          const speed = template.speed;
 
-          if (dist < 15) {
-            triggerExplosion(b.targetX, b.targetY, b.damage, b.bet);
+          if (dir === 0) {
+            x = -template.width; y = Math.random() * h;
+            vx = (Math.random() * 0.5 + 0.8) * speed; vy = (Math.random() - 0.5) * speed;
+          } else if (dir === 1) {
+            x = w + template.width; y = Math.random() * h;
+            vx = -(Math.random() * 0.5 + 0.8) * speed; vy = (Math.random() - 0.5) * speed;
+          } else if (dir === 2) {
+            x = Math.random() * w; y = -template.height;
+            vx = (Math.random() - 0.5) * speed; vy = (Math.random() * 0.5 + 0.8) * speed;
           } else {
-            const nx = b.x + (dx / dist) * b.speed;
-            const ny = b.y + (dy / dist) * b.speed;
-            nextBullets.push({ ...b, x: nx, y: ny });
+            x = Math.random() * w; y = h + template.height;
+            vx = (Math.random() - 0.5) * speed; vy = -(Math.random() * 0.5 + 0.8) * speed;
+          }
+
+          const hp = Math.floor(Math.random() * (template.hpMax - template.hpMin + 1)) + template.hpMin;
+          const fishObj: FishData = {
+            id: 'f_' + Math.random().toString(36).substring(2, 9),
+            typeId: template.id,
+            name: template.name,
+            emoji: template.emoji,
+            width: template.width,
+            height: template.height,
+            speed: template.speed,
+            hp,
+            maxHp: hp,
+            reward: isPVE ? Math.round(template.reward * 0.7) : template.reward,
+            category: template.category,
+            x, y, vx, vy,
+            hitTimer: 0
+          };
+
+          if (isPVE) {
+            fishesRef.current.push(fishObj);
+          } else if (isHost && activeRoomId) {
+            const newRef = push(ref(db, `banca_rooms/${activeRoomId}/fishes`));
+            fishObj.id = newRef.key as string;
+            set(newRef, fishObj);
+          }
+        }
+      }
+    };
+
+    const render = () => {
+      if (!isPaused) {
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Cập nhật bong bóng
+        bubblesRef.current.forEach(b => {
+          b.y -= b.speed;
+          if (b.y < -10) { b.y = h + 10; b.x = Math.random() * w; }
+        });
+
+        // Cập nhật đạn
+        bulletsRef.current.forEach(b => {
+          b.x += b.vx;
+          b.y += b.vy;
+          if (b.x < -20 || b.x > w + 20 || b.y < -20 || b.y > h + 20) {
+            b.alive = false;
           }
         });
-        return nextBullets;
-      });
+        bulletsRef.current = bulletsRef.current.filter(b => b.alive);
 
-      setJackpot(prev => prev + 1);
-    }, 50);
+        // Cập nhật hiệu ứng nổ
+        explosionsRef.current.forEach(ex => {
+          ex.radius += 4;
+          ex.alpha -= 0.06;
+        });
+        explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
+
+        // Cập nhật chữ nổi
+        floatingTextsRef.current.forEach(ft => {
+          ft.y += ft.vy;
+          ft.alpha -= 0.02;
+        });
+        floatingTextsRef.current = floatingTextsRef.current.filter(ft => ft.alpha > 0);
+
+        // Cập nhật cá
+        fishesRef.current.forEach(f => {
+          f.x += f.vx;
+          f.y += f.vy;
+          if (f.hitTimer > 0) f.hitTimer--;
+        });
+        fishesRef.current = fishesRef.current.filter(f => f.x > -300 && f.x < w + 300 && f.y > -300 && f.y < h + 300);
+
+        // Va chạm đạn & cá
+        bulletsRef.current.forEach(bullet => {
+          if (!bullet.alive) return;
+          fishesRef.current.forEach(fish => {
+            if (!bullet.alive || fish.dead) return;
+            const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
+            if (dist < bullet.radius + fish.width / 2.5) {
+              bullet.alive = false;
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 10, maxRadius: 75, color: bullet.color, alpha: 1 });
+
+              fish.hp -= bullet.damage;
+              fish.hitTimer = 4;
+
+              if (activeRoomId && !isPVE) {
+                set(ref(db, `banca_rooms/${activeRoomId}/fishes/${fish.id}/hp`), fish.hp);
+              }
+
+              if (fish.hp <= 0 && !fish.dead) {
+                fish.dead = true;
+                let reward = fish.reward;
+                let isJackpot = false;
+
+                if (fish.category === 'large' && Math.random() < 0.15) {
+                  reward += jackpotPool;
+                  isJackpot = true;
+                  set(ref(db, 'banca_pvp_jackpot'), 20000);
+                }
+
+                setPoints(prev => {
+                  const updated = prev + reward;
+                  updatePointsInFirestore(updated);
+                  return updated;
+                });
+
+                playCatchSound(reward);
+
+                if (isJackpot) {
+                  showToast(`🎉 NỔ HŨ JACKPOT LỚN +${reward.toLocaleString()}đ!`);
+                  floatingTextsRef.current.push({ text: `JACKPOT +${reward}`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#f59e0b' });
+                } else {
+                  floatingTextsRef.current.push({ text: `+${reward}đ`, x: fish.x, y: fish.y, alpha: 1, vy: -1.5, color: '#facc15' });
+                }
+
+                if (activeRoomId && !isPVE) {
+                  remove(ref(db, `banca_rooms/${activeRoomId}/fishes/${fish.id}`));
+                }
+              }
+            }
+          });
+        });
+        fishesRef.current = fishesRef.current.filter(f => !f.dead);
+
+        if (isPVE || isHost) {
+          spawnFish(w, h);
+        }
+
+        // --- DRAW SECTION ---
+        ctx.clearRect(0, 0, w, h);
+
+        // Vẽ bong bóng
+        bubblesRef.current.forEach(b => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity})`;
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // Vẽ cá
+        fishesRef.current.forEach(f => {
+          ctx.save();
+          ctx.translate(f.x, f.y);
+          if (f.vx < 0) ctx.scale(-1, 1);
+          if (f.hitTimer > 0) ctx.filter = 'brightness(2.2)';
+          ctx.font = `${f.height}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(f.emoji, 0, 0);
+          ctx.restore();
+        });
+
+        // Vẽ đạn
+        bulletsRef.current.forEach(b => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius + 6, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius + 3, 0, Math.PI * 2);
+          ctx.fillStyle = b.color;
+          ctx.shadowColor = b.color;
+          ctx.shadowBlur = 22;
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // Vẽ nổ
+        explosionsRef.current.forEach(ex => {
+          if (ex.alpha <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, ex.alpha);
+          ctx.beginPath();
+          ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+          ctx.strokeStyle = ex.color;
+          ctx.lineWidth = 5;
+          ctx.shadowColor = ex.color;
+          ctx.shadowBlur = 25;
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // Vẽ chữ điểm nổi
+        floatingTextsRef.current.forEach(ft => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, ft.alpha);
+          ctx.font = '900 20px Fredoka, sans-serif';
+          ctx.fillStyle = ft.color;
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 6;
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.restore();
+        });
+
+        // Vẽ các góc súng người chơi
+        const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
+          ctx.save();
+          ctx.translate(x, y);
+          const pData = roomPlayersRef.current[cornerKey];
+          let angle = -Math.PI / 2;
+          if (pData.active) {
+            angle = Math.atan2(mousePosRef.current.y - y, mousePosRef.current.x - x);
+          }
+          ctx.beginPath();
+          ctx.arc(0, 0, 52, 0, Math.PI * 2);
+          ctx.fillStyle = pData.active ? '#0f172a' : '#1e293b';
+          ctx.fill();
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = pData.active ? '#38bdf8' : '#475569';
+          ctx.stroke();
+
+          ctx.rotate(angle);
+          ctx.fillStyle = pData.active ? '#f59e0b' : '#64748b';
+          ctx.fillRect(0, -18, 68, 36);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#ffffff';
+          ctx.strokeRect(0, -18, 68, 36);
+          ctx.fillStyle = '#b45309';
+          ctx.fillRect(60, -22, 10, 44);
+          ctx.restore();
+
+          ctx.font = "bold 13px Fredoka, sans-serif";
+          ctx.fillStyle = pData.active ? "#facc15" : "#94a3b8";
+          ctx.textAlign = 'center';
+          ctx.fillText(pData.active ? label : "Đang trống", x, y + (y > h / 2 ? 62 : -48));
+        };
+
+        if (!isPVE) {
+          drawTurret(80, 80, 'top-left', 'P2');
+          drawTurret(w - 80, 80, 'top-right', 'P3');
+          drawTurret(80, h - 80, 'bottom-left', 'P4');
+        }
+        drawTurret(w - 90, h - 90, 'bottom-right', isPVE ? 'P1 (Solo PVE)' : 'P1 (Bạn)');
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
 
     return () => {
-      clearInterval(spawnInterval);
-      clearInterval(gameLoop);
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('resize', handleResize);
     };
-  }, [screen]);
+  }, [isPaused, isPVE, isHost, activeRoomId, jackpotPool, isMuted]);
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (points < currentBet) {
-      alert("Bạn đã hết điểm cược!");
+  // Bắn đạn
+  const handleShoot = () => {
+    initAudio();
+    const gun = GUN_TYPES[currentGunIndex];
+    if (points < gun.cost) {
+      showToast("Ví của bạn không đủ điểm để bắn mức đạn này!");
       return;
     }
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const newPts = points - gun.cost;
+    updatePointsInFirestore(newPts);
 
-    updatePoints(points - currentBet);
+    set(ref(db, 'banca_pvp_jackpot'), jackpotPool + Math.round(gun.cost * 0.2));
 
-    const gunX = rect.width / 2;
-    const gunY = rect.height - 40;
-    const angle = Math.atan2(clickY - gunY, clickX - gunX) * (180 / Math.PI);
-    setCannonAngle(angle + 90);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    let startX = w - 90, startY = h - 90;
+    if (myCorner === 'bottom-left') { startX = 80; startY = h - 80; }
+    else if (myCorner === 'top-left') { startX = 80; startY = 80; }
+    else if (myCorner === 'top-right') { startX = w - 80; startY = 80; }
 
-    const newBullet: Bullet = {
-      id: Date.now(),
-      x: gunX,
-      y: gunY,
-      targetX: clickX,
-      targetY: clickY,
-      speed: 25,
-      damage: currentBet * (isBigGun ? 1.5 : 1),
-      bet: currentBet
-    };
+    const angle = Math.atan2(mousePosRef.current.y - startY, mousePosRef.current.x - startX);
+    bulletsRef.current.push({
+      x: startX,
+      y: startY,
+      radius: gun.size,
+      color: gun.color,
+      damage: gun.damage,
+      vx: Math.cos(angle) * gun.speed,
+      vy: Math.sin(angle) * gun.speed,
+      alive: true
+    });
 
-    setBullets(prev => [...prev, newBullet]);
+    playShootShootSound();
+
+    if (activeRoomId && !isPVE) {
+      push(ref(db, `banca_rooms/${activeRoomId}/shots`), {
+        corner: myCorner, x: startX, y: startY, angle, gunLevel: gun.level
+      });
+    }
   };
 
-  const triggerExplosion = (x: number, y: number, damage: number, bet: number) => {
-    setFishes(prevFishes => {
-      const updated = prevFishes.map(f => {
-        const radius = 60 + bet * 0.1;
-        const dist = Math.sqrt((f.x - x) * (f.x - x) + (f.y - y) * (f.y - y));
+  const playShootShootSound = () => {
+    playShootSound();
+  };
 
-        if (dist <= radius) {
-          const isCrit = Math.random() < 0.2;
-          const finalDmg = isCrit ? damage * 2 : damage;
-          const newHp = f.hp - finalDmg;
+  const handleCreateRoom = () => {
+    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setActiveRoomId(roomId);
+    setIsHost(true);
+    setIsPVE(false);
+    setMyCorner('bottom-right');
 
-          if (isCrit) {
-            showFloatingText("💥 CRIT x2!", x, y, "#facc15");
-          }
+    roomPlayersRef.current['bottom-right'].active = true;
+    roomPlayersRef.current['bottom-right'].email = user?.email || 'Chủ phòng';
 
-          if (newHp <= 0) {
-            const earned = f.reward * (bet / 10 > 1 ? bet / 10 : 1);
-            updatePoints(points + earned);
-            showFloatingText(`+${earned} PTS`, f.x, f.y, "#4ade80");
+    set(ref(db, 'banca_rooms/' + roomId), {
+      creator: user?.email || 'Host',
+      status: 'playing',
+      players: {
+        'bottom-right': { email: user?.email || 'Host' }
+      }
+    });
 
-            if (f.type === 'rare') {
-              const bonusJp = jackpot;
-              updatePoints(points + earned + bonusJp);
-              showFloatingText(`🎉 NỔ HŨ JACKPOT: +${bonusJp} PTS!`, 400, 200, "#ec4899");
-              setJackpot(50000);
-            }
+    showToast(`✨ Tạo phòng thành công! Mã phòng: ${roomId}`);
+  };
 
-            return null;
-          }
-          return { ...f, hp: newHp };
+  const handleJoinRoom = () => {
+    const roomId = roomCodeInput.trim().toUpperCase();
+    if (!roomId) {
+      showToast("Vui lòng nhập mã phòng!");
+      return;
+    }
+
+    const roomRef = ref(db, 'banca_rooms/' + roomId);
+    getDoc(doc(db, 'dummy', 'dummy')).then(() => {
+      // Dùng rtdb get
+    });
+
+    // Simple RTDB check
+    import('firebase/database').then(({ get, child }) => {
+      get(child(ref(db), `banca_rooms/${roomId}`)).then((snapshot) => {
+        if (!snapshot.exists()) {
+          showToast("Phòng không tồn tại!");
+          return;
         }
-        return f;
-      }).filter(Boolean) as Fish[];
+        const data = snapshot.val();
+        setActiveRoomId(roomId);
+        setIsHost(false);
+        setIsPVE(false);
 
-      return updated;
+        const players = data.players || {};
+        let corner = 'bottom-right';
+        if (!players['bottom-left']) corner = 'bottom-left';
+        else if (!players['top-left']) corner = 'top-left';
+        else if (!players['top-right']) corner = 'top-right';
+
+        setMyCorner(corner);
+        roomPlayersRef.current[corner].active = true;
+        roomPlayersRef.current[corner].email = user?.email || 'Thành viên';
+
+        set(ref(db, `banca_rooms/${roomId}/players/${corner}`), {
+          email: user?.email || 'Thành viên'
+        });
+
+        showToast(`🎉 Vào phòng ${roomId} thành công!`);
+      });
     });
   };
 
-  const showFloatingText = (text: string, x: number, y: number, color: string) => {
-    const id = Date.now() + Math.random();
-    setEffects(prev => [...prev, { id, text, x, y, color }]);
-    setTimeout(() => {
-      setEffects(prev => prev.filter(e => e.id !== id));
-    }, 1000);
+  const handleLeaveRoom = () => {
+    if (activeRoomId && !isPVE) {
+      remove(ref(db, `banca_rooms/${activeRoomId}/players/${myCorner}`));
+    }
+    setActiveRoomId(null);
+    setIsPVE(true);
+    setIsHost(false);
+    fishesRef.current = [];
+    bulletsRef.current = [];
+    showToast("Đã rời phòng, chuyển về chế độ Solo PVE.");
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-2 sm:p-4 font-sans select-none">
-      <header className="w-full max-w-4xl flex justify-between items-center mb-3 bg-slate-900/90 border border-slate-800 p-3 rounded-2xl shadow-lg">
-        <Link href="/" className="text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1">
-          ← Trang chủ
-        </Link>
-        <h1 className="text-base sm:text-lg font-black tracking-wider text-cyan-400 uppercase flex items-center gap-1">
-          🦈 BẮN CÁ KI-BLAST
-        </h1>
-        <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-xl border border-amber-500/30 font-bold text-amber-400">
-          🪙 {points.toLocaleString()} PTS
-        </div>
-      </header>
+    <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-950 font-sans select-none flex flex-col">
+      {/* Canvas Game */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+        onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
+        onTouchMove={(e) => {
+          if (e.touches.length > 0) {
+            mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          }
+        }}
+        onClick={handleShoot}
+        onTouchStart={(e) => {
+          if (e.touches.length > 0) {
+            mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          }
+          handleShoot();
+        }}
+      />
 
-      {screen === 'lobby' && (
-        <div className="w-full max-w-md flex flex-col gap-4 mt-6">
-          <div className="bg-gradient-to-br from-blue-900/40 to-slate-900 border border-blue-500/30 p-6 rounded-3xl text-center shadow-2xl backdrop-blur-md">
-            <div className="text-4xl mb-2">🌊 🐠 🐋 🦈</div>
-            <h2 className="text-xl font-black text-cyan-300 mb-1">SẢNH BẮN CÁ NHIỀU NGƯỜI</h2>
-            <p className="text-xs text-slate-400 mb-6">Tự động ghép phòng hoặc tạo phòng riêng chiến cùng anh em!</p>
-
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 mb-6 text-amber-300 text-xs font-bold animate-pulse">
-              🎁 HŨ JACKPOT HIỆN TẠI: {jackpot.toLocaleString()} PTS 🪙
+      {/* Top HUD Header */}
+      <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
+        {/* Ví Điểm */}
+        <div className="bg-slate-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl px-3 py-1.5 flex items-center gap-2.5 pointer-events-auto shadow-lg">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center text-yellow-950 font-black shadow-md ring-2 ring-yellow-200">
+            🪙
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-yellow-200/70 font-bold">Ví Điểm VIP</div>
+            <div className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
+              {points.toLocaleString()} đ
             </div>
+          </div>
+        </div>
 
+        {/* Nút điều hướng & phòng */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Link
+            href="/"
+            className="bg-red-950/80 backdrop-blur-md border border-red-500/50 hover:bg-red-900 text-red-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition"
+          >
+            ← Trang chủ
+          </Link>
+
+          {!isPVE && activeRoomId && (
             <button
-              onClick={handleQuickJoin}
-              className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black rounded-2xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm mb-4 uppercase tracking-wider"
+              onClick={handleLeaveRoom}
+              className="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 hover:bg-amber-900 text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold shadow-md transition"
             >
-              ⚡ CHƠI NGAY (Ghép Phòng Tự Động)
+              Phòng: #{activeRoomId} (Rời)
             </button>
+          )}
 
-            <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className="w-9 h-9 bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-300 shadow-md"
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
+          <button
+            onClick={() => setIsPaused(!isPaused)}
+            className="w-9 h-9 bg-slate-900/90 backdrop-blur-md border border-amber-500/30 rounded-xl flex items-center justify-center text-amber-300 shadow-md"
+          >
+            {isPaused ? '▶' : '⏸'}
+          </button>
+        </div>
+      </div>
+
+      {/* Hũ Jackpot ở giữa */}
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+        <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-6 py-1.5 rounded-2xl text-center shadow-xl animate-pulse">
+          <div className="text-[9px] text-amber-300 font-extrabold uppercase tracking-widest">
+            👑 JACKPOT CHUNG 👑
+          </div>
+          <div className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
+            {jackpotPool.toLocaleString()} đ
+          </div>
+        </div>
+      </div>
+
+      {/* Thanh công cụ súng và chế độ phòng ở góc dưới */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex flex-col sm:flex-row items-center gap-2 pointer-events-auto">
+        {/* Chọn Súng */}
+        <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-xl">
+          <button
+            onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
+            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition"
+          >
+            -
+          </button>
+          <div className="text-center min-w-[140px]">
+            <div className="text-xs text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
+            <div className="text-[10px] text-yellow-300 font-semibold">
+              {isPVE ? "Chế độ: Solo PVE" : `Phòng: #${activeRoomId} (${myCorner})`}
+            </div>
+          </div>
+          <button
+            onClick={() => setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length)}
+            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Nút Tạo / Vào Phòng PVP nhanh */}
+        {isPVE && (
+          <div className="bg-slate-900/90 backdrop-blur-md border border-purple-500/40 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-xl">
+            <button
+              onClick={handleCreateRoom}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-2 rounded-xl shadow transition"
+            >
+              ✨ Tạo Phòng PVP
+            </button>
+            <div className="flex items-center gap-1">
               <input
                 type="text"
-                placeholder="NHẬP MÃ PHÒNG (VD: 1234)"
+                placeholder="Mã phòng"
                 maxLength={6}
                 value={roomCodeInput}
                 onChange={(e) => setRoomCodeInput(e.target.value)}
-                className="w-full p-3 bg-slate-950 border border-slate-800 rounded-2xl text-center tracking-widest font-mono text-white focus:outline-none focus:border-cyan-500 text-xs uppercase"
+                className="w-24 px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-center font-bold uppercase text-amber-300 outline-none"
               />
               <button
-                onClick={handleJoinCustomRoom}
-                className="px-6 bg-slate-800 hover:bg-slate-700 font-bold text-xs rounded-2xl transition cursor-pointer border border-slate-700"
+                onClick={handleJoinRoom}
+                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition"
               >
-                Vào Phòng
+                Vào
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {screen === 'game' && (
-        <div className="flex flex-col items-center w-full max-w-4xl">
-          <div className="w-full flex justify-between items-center bg-slate-900 px-4 py-2 rounded-t-2xl border border-slate-800 text-xs font-bold">
-            <span className="text-cyan-400 flex items-center gap-1">
-              🌊 {activeRoom} | Ghế #{seatIndex + 1}
-            </span>
-            <span className="text-pink-400 font-black animate-bounce">
-              🎁 JACKPOT: {jackpot.toLocaleString()} PTS
-            </span>
-            <button
-              onClick={() => setScreen('lobby')}
-              className="bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/40 px-3 py-1 rounded-lg text-xs transition cursor-pointer"
-            >
-              Đổi Phòng ⇄
-            </button>
-          </div>
-
-          <div
-            onClick={handleCanvasClick}
-            className="relative w-full h-[450px] sm:h-[520px] bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 border-4 border-blue-800/80 rounded-b-3xl shadow-2xl overflow-hidden cursor-crosshair"
-          >
-            <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px] animate-pulse" />
-
-            {fishes.map(f => (
-              <div
-                key={f.id}
-                style={{ transform: `translate(${f.x}px, ${f.y}px)`, width: f.size, height: f.size }}
-                className="absolute transition-transform duration-75 flex flex-col items-center justify-center group select-none pointer-events-none"
-              >
-                <div className="text-3xl sm:text-4xl drop-shadow-[0_10px_8px_rgba(0,0,0,0.8)] animate-bounce">
-                  {f.icon}
-                </div>
-                {f.hp < f.maxHp && (
-                  <div className="w-10 bg-slate-800 h-1 rounded-full overflow-hidden border border-slate-700 mt-0.5">
-                    <div
-                      className="bg-emerald-400 h-full transition-all duration-200"
-                      style={{ width: `${(f.hp / f.maxHp) * 100}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {bullets.map(b => (
-              <div
-                key={b.id}
-                style={{ left: b.x, top: b.y }}
-                className="absolute w-3 h-3 bg-yellow-300 rounded-full shadow-[0_0_10px_#facc15] pointer-events-none transform -translate-x-1/2 -translate-y-1/2"
-              />
-            ))}
-
-            {effects.map(eff => (
-              <div
-                key={eff.id}
-                style={{ left: eff.x, top: eff.y, color: eff.color }}
-                className="absolute font-black text-sm sm:text-base drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] pointer-events-none animate-fade-up transform -translate-x-1/2 -translate-y-1/2"
-              >
-                {eff.text}
-              </div>
-            ))}
-
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center pointer-events-none">
-              <div
-                style={{ transform: `rotate(${cannonAngle}deg)` }}
-                className="text-4xl sm:text-5xl transition-transform duration-100 drop-shadow-[0_0_12px_rgba(56,189,248,0.8)]"
-              >
-                {isBigGun ? '🚀' : '🔫'}
-              </div>
-              <div className="bg-slate-900/80 border border-cyan-500/50 px-3 py-0.5 rounded-full text-[10px] text-cyan-300 font-bold mt-1">
-                Cược: {currentBet} PTS
-              </div>
-            </div>
-          </div>
-
-          <div className="w-full bg-slate-900 border border-slate-800 p-3 sm:p-4 rounded-2xl mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center sm:text-left">
-                Chọn Cấp Cược Đạn (Sát thương lan rộng theo cược)
-              </span>
-              <div className="grid grid-cols-6 gap-1.5">
-                {BET_LEVELS.map(lvl => (
-                  <button
-                    key={lvl}
-                    onClick={() => setCurrentBet(lvl)}
-                    className={`py-2 px-2 text-xs font-black rounded-xl border transition cursor-pointer ${
-                      currentBet === lvl
-                        ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-md scale-105'
-                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:bg-slate-800'
-                    }`}
-                  >
-                    {lvl}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <button
-                onClick={() => setIsBigGun(!isBigGun)}
-                className={`py-3 px-5 rounded-xl font-black text-xs transition cursor-pointer border shadow-md flex items-center gap-1.5 ${
-                  isBigGun
-                    ? 'bg-gradient-to-r from-pink-500 to-rose-600 border-pink-400 text-white animate-pulse'
-                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                <span>{isBigGun ? '🚀 SÚNG VIP (Kích hoạt)' : '🔭 Phóng to Súng'}</span>
-              </button>
-            </div>
-          </div>
+      {/* Toast thông báo */}
+      {toastMsg && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-red-950/90 border border-red-500/60 text-red-200 px-4 py-2 rounded-2xl text-xs font-bold shadow-2xl animate-bounce pointer-events-none">
+          ⚠️ {toastMsg}
         </div>
       )}
     </div>
