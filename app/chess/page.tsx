@@ -99,32 +99,38 @@ export default function ChessPage() {
 
   // Tạo phòng Online Realtime trên Firestore
   const handleCreateRoom = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn!");
+      return;
+    }
     if (points < currentBet) {
       alert('Bạn không đủ điểm cược!');
       return;
     }
+
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setRoomCode(code);
-      setGameMode('online');
-      setPlayerRole('w');
-
       const roomRef = doc(db, "chessRooms", code);
+      
       await setDoc(roomRef, {
         board: INITIAL_BOARD,
         turn: 'w',
         bet: currentBet,
-        hostUid: user?.uid || ""
+        hostUid: currentUser.uid
       });
 
+      setRoomCode(code);
+      setGameMode('online');
+      setPlayerRole('w');
       setBoard(INITIAL_BOARD.map(r => [...r]));
       setTurn('w');
       setSelectedSquare(null);
       setValidMoves([]);
       setScreen('game');
-    } catch (err) {
-      console.error("Lỗi tạo phòng:", err);
-      alert("Không thể tạo phòng, vui lòng kiểm tra lại Rules Firestore!");
+    } catch (err: any) {
+      console.error("CHI TIẾT LỖI TẠO PHÒNG:", err);
+      alert("Lỗi Firestore: " + (err.message || "Không thể tạo phòng"));
     }
   };
 
@@ -152,9 +158,9 @@ export default function ChessPage() {
       setGameMode('online');
       setPlayerRole('b');
       setScreen('game');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Lỗi vào phòng:", err);
-      alert("Không thể kết nối vào phòng!");
+      alert("Không thể kết nối vào phòng: " + err.message);
     }
   };
 
