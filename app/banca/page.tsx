@@ -46,24 +46,35 @@ const GUN_TYPES: GunConfig[] = [
   { level: 7, cost: 500, name: "Đạn 500đ (Dame: 500)", damage: 500, speed: 19, size: 10, color: '#ef4444' }
 ];
 
+// Tăng lượng máu (HP) và phần thưởng cho cá trâu hơn để thử thách độ khó
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 2, hpMax: 5, reward: 15, category: 'small' },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 2, hpMax: 5, reward: 20, category: 'small' },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 2, hpMax: 4, reward: 12, category: 'small' },
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 20, hpMax: 50, reward: 80, category: 'medium' },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 30, hpMax: 80, reward: 120, category: 'medium' },
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 300, hpMax: 800, reward: 600, category: 'large' },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 200, hpMax: 600, reward: 500, category: 'large' },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 500, hpMax: 1000, reward: 1000, category: 'large' }
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 90, height: 56, speed: 3.2, hpMin: 3, hpMax: 8, reward: 15, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 100, height: 60, speed: 3.0, hpMin: 4, hpMax: 10, reward: 20, category: 'small' },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 80, height: 48, speed: 3.5, hpMin: 3, hpMax: 8, reward: 12, category: 'small' },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 180, height: 116, speed: 2.0, hpMin: 40, hpMax: 90, reward: 80, category: 'medium' },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 210, height: 126, speed: 1.8, hpMin: 60, hpMax: 150, reward: 120, category: 'medium' },
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 440, height: 280, speed: 1.1, hpMin: 500, hpMax: 1200, reward: 600, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 360, height: 240, speed: 1.2, hpMin: 400, hpMax: 1000, reward: 500, category: 'large' },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 520, height: 320, speed: 0.9, hpMin: 800, hpMax: 1800, reward: 1000, category: 'large' }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(258900);
+  const [jackpotPool, setJackpotPool] = useState<number>(20000); // Khởi điểm 20.000đ tích lũy
+  
+  // Trạng thái phòng & chế độ
+  const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
+  const [roomCodeInput, setRoomCodeInput] = useState<string>('');
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+  const [isPVE, setIsPVE] = useState<boolean>(true);
+  const [isHost, setIsHost] = useState<boolean>(false);
+  const [myCorner, setMyCorner] = useState<string>('bottom-right');
+
   const [currentGunIndex, setCurrentGunIndex] = useState<number>(1);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -74,6 +85,13 @@ export default function BanCaPage() {
   const floatingTextsRef = useRef<any[]>([]);
   const bubblesRef = useRef<any[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string } }>({
+    'top-left': { active: false, email: 'Trống' },
+    'top-right': { active: false, email: 'Trống' },
+    'bottom-left': { active: false, email: 'Trống' },
+    'bottom-right': { active: true, email: 'Bạn' }
+  });
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -91,13 +109,13 @@ export default function BanCaPage() {
       }
     });
 
-    // Lắng nghe hũ Jackpot realtime từ Firestore
+    // Lắng nghe hũ Jackpot realtime
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 258900);
+        setJackpotPool(docSnap.data().amount || 20000);
       } else {
-        setDoc(jpRef, { amount: 258900 });
+        setDoc(jpRef, { amount: 20000 });
       }
     });
 
@@ -176,6 +194,7 @@ export default function BanCaPage() {
     } catch (e) {}
   };
 
+  // Khởi tạo bong bóng nước nền
   useEffect(() => {
     const bubbles = [];
     for (let i = 0; i < 35; i++) {
@@ -190,7 +209,26 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
+  // Lắng nghe phòng Realtime qua Firestore (giống Xì Dách)
   useEffect(() => {
+    if (!activeRoomId || isPVE) return;
+
+    const roomRef = doc(db, "banca_rooms", activeRoomId);
+    const unsubscribe = onSnapshot(roomRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.players) {
+          roomPlayersRef.current = data.players;
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [activeRoomId, isPVE]);
+
+  // Main Canvas Loop
+  useEffect(() => {
+    if (screenMode !== 'game') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -206,7 +244,7 @@ export default function BanCaPage() {
     window.addEventListener('resize', handleResize);
 
     const spawnFish = (w: number, h: number) => {
-      if (fishesRef.current.length < 22 && Math.random() < 0.28) {
+      if (fishesRef.current.length < 24 && Math.random() < 0.3) {
         const rand = Math.random();
         let template;
         if (rand < 0.05) {
@@ -315,10 +353,10 @@ export default function BanCaPage() {
                 let reward = fish.reward;
                 let isJackpot = false;
 
-                if (fish.category === 'large' && Math.random() < 0.15) {
+                if (fish.category === 'large' && Math.random() < 0.12) {
                   reward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(20000);
+                  updateJackpotInFirestore(20000); // Reset về 20.000đ
                 }
 
                 setPoints(prev => {
@@ -341,7 +379,9 @@ export default function BanCaPage() {
         });
         fishesRef.current = fishesRef.current.filter(f => !f.dead);
 
-        spawnFish(w, h);
+        if (isPVE || isHost) {
+          spawnFish(w, h);
+        }
 
         ctx.clearRect(0, 0, w, h);
 
@@ -406,36 +446,45 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // Vẽ pháo súng dưới cùng
-        const drawTurret = (x: number, y: number, label: string) => {
+        // Vẽ các vị trí súng 4 góc phòng PVP / PVE
+        const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
           ctx.save();
           ctx.translate(x, y);
-          const angle = Math.atan2(mousePosRef.current.y - y, mousePosRef.current.x - x);
+          const pData = roomPlayersRef.current[cornerKey];
+          let angle = -Math.PI / 2;
+          if (pData && pData.active) {
+            angle = Math.atan2(mousePosRef.current.y - y, mousePosRef.current.x - x);
+          }
           ctx.beginPath();
-          ctx.arc(0, 0, 52, 0, Math.PI * 2);
-          ctx.fillStyle = '#0f172a';
+          ctx.arc(0, 0, 48, 0, Math.PI * 2);
+          ctx.fillStyle = pData && pData.active ? '#0f172a' : '#1e293b';
           ctx.fill();
-          ctx.lineWidth = 5;
-          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = pData && pData.active ? '#38bdf8' : '#475569';
           ctx.stroke();
 
           ctx.rotate(angle);
-          ctx.fillStyle = '#f59e0b';
-          ctx.fillRect(0, -18, 68, 36);
-          ctx.lineWidth = 3;
+          ctx.fillStyle = pData && pData.active ? '#f59e0b' : '#64748b';
+          ctx.fillRect(0, -16, 60, 32);
+          ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -18, 68, 36);
+          ctx.strokeRect(0, -16, 60, 32);
           ctx.fillStyle = '#b45309';
-          ctx.fillRect(60, -22, 10, 44);
+          ctx.fillRect(52, -20, 10, 40);
           ctx.restore();
 
-          ctx.font = "bold 13px Fredoka, sans-serif";
-          ctx.fillStyle = "#facc15";
+          ctx.font = "bold 11px Fredoka, sans-serif";
+          ctx.fillStyle = pData && pData.active ? "#facc15" : "#94a3b8";
           ctx.textAlign = 'center';
-          ctx.fillText(label, x, y + 62);
+          ctx.fillText(pData && pData.active ? `${label}: ${pData.email.split('@')[0]}` : "Đang trống", x, y + (y > h / 2 ? 55 - 4 : 45));
         };
 
-        drawTurret(w - 90, h - 90, 'P1 (Chiến Binh)');
+        if (!isPVE) {
+          drawTurret(70, 70, 'top-left', 'P2');
+          drawTurret(w - 70, 70, 'top-right', 'P3');
+          drawTurret(70, h - 70, 'bottom-left', 'P4');
+        }
+        drawTurret(w - 70, h - 70, 'bottom-right', isPVE ? 'P1 (Solo)' : 'P1 (Bạn)');
       }
 
       animationFrameId = requestAnimationFrame(render);
@@ -447,7 +496,7 @@ export default function BanCaPage() {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [isPaused, jackpotPool, isMuted]);
+  }, [screenMode, isPaused, isPVE, isHost, activeRoomId, jackpotPool, isMuted]);
 
   const handleShoot = () => {
     initAudio();
@@ -463,8 +512,10 @@ export default function BanCaPage() {
 
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const startX = w - 90;
-    const startY = h - 90;
+    let startX = w - 70, startY = h - 70;
+    if (myCorner === 'bottom-left') { startX = 70; startY = h - 70; }
+    else if (myCorner === 'top-left') { startX = 70; startY = 70; }
+    else if (myCorner === 'top-right') { startX = w - 70; startY = 70; }
 
     const angle = Math.atan2(mousePosRef.current.y - startY, mousePosRef.current.x - startX);
     bulletsRef.current.push({
@@ -481,99 +532,279 @@ export default function BanCaPage() {
     playShootSound();
   };
 
+  // Tính năng phóng to toàn màn hình (Fullscreen) cho mobile màn hình ngang
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {});
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setActiveRoomId(roomId);
+    setIsHost(true);
+    setIsPVE(false);
+    setMyCorner('bottom-right');
+
+    const newPlayers = {
+      'top-left': { active: false, email: 'Trống' },
+      'top-right': { active: false, email: 'Trống' },
+      'bottom-left': { active: false, email: 'Trống' },
+      'bottom-right': { active: true, email: user?.email || 'Chủ phòng' }
+    };
+    roomPlayersRef.current = newPlayers;
+
+    await setDoc(doc(db, "banca_rooms", roomId), {
+      creator: user?.email || 'Host',
+      status: 'playing',
+      players: newPlayers
+    });
+
+    setScreenMode('game');
+    showToast(`✨ Tạo phòng thành công! Mã phòng: ${roomId}`);
+  };
+
+  const handleJoinRoom = async () => {
+    const roomId = roomCodeInput.trim().toUpperCase();
+    if (!roomId) {
+      showToast("Vui lòng nhập mã phòng!");
+      return;
+    }
+
+    const roomRef = doc(db, "banca_rooms", roomId);
+    const roomSnap = await getDoc(roomRef);
+
+    if (!roomSnap.exists()) {
+      showToast("Phòng không tồn tại!");
+      return;
+    }
+
+    const data = roomSnap.data();
+    setActiveRoomId(roomId);
+    setIsHost(false);
+    setIsPVE(false);
+
+    const players = data.players || {};
+    let corner = 'bottom-right';
+    if (!players['bottom-left'] || !players['bottom-left'].active) corner = 'bottom-left';
+    else if (!players['top-left'] || !players['top-left'].active) corner = 'top-left';
+    else if (!players['top-right'] || !players['top-right'].active) corner = 'top-right';
+
+    setMyCorner(corner);
+    players[corner] = { active: true, email: user?.email || 'Thành viên' };
+    roomPlayersRef.current = players;
+
+    await updateDoc(roomRef, { players });
+
+    setScreenMode('game');
+    showToast(`🎉 Vào phòng ${roomId} thành công!`);
+  };
+
+  const handleLeaveRoom = async () => {
+    if (activeRoomId && !isPVE) {
+      const roomRef = doc(db, "banca_rooms", activeRoomId);
+      const roomSnap = await getDoc(roomRef);
+      if (roomSnap.exists()) {
+        const players = roomSnap.data().players || {};
+        if (players[myCorner]) {
+          players[myCorner] = { active: false, email: 'Trống' };
+          await updateDoc(roomRef, { players });
+        }
+      }
+    }
+    setActiveRoomId(null);
+    setIsPVE(true);
+    setIsHost(false);
+    setScreenMode('lobby');
+    showToast("Đã rời phòng về sảnh chính.");
+  };
+
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-950 font-sans select-none flex flex-col">
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
-        onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
-        onTouchMove={(e) => {
-          if (e.touches.length > 0) {
-            mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-          }
-        }}
-        onClick={handleShoot}
-        onTouchStart={(e) => {
-          if (e.touches.length > 0) {
-            mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-          }
-          handleShoot();
-        }}
-      />
+      {screenMode === 'lobby' ? (
+        /* SẢNH CHỜ VÀO PHÒNG / MÃ PHÒNG (REALTIME Y CHANG XÌ DÁCH) */
+        <div className="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-blue-950 via-slate-900 to-slate-950">
+          <div className="bg-slate-900/90 border border-cyan-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl backdrop-blur-xl text-center space-y-6">
+            <div className="text-5xl animate-bounce">🦈 🌊 🪙</div>
+            <div>
+              <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-indigo-400 uppercase tracking-wide">
+                ĐẠI DƯƠNG BẮN CÁ KI-BLAST
+              </h1>
+              <p className="text-xs text-slate-400 mt-1">Chơi đơn Solo hoặc kết nối phòng Realtime cùng bạn bè!</p>
+            </div>
 
-      {/* Top HUD Header */}
-      <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
-        <div className="bg-slate-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl px-3 py-1.5 flex items-center gap-2.5 pointer-events-auto shadow-lg">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center text-yellow-950 font-black shadow-md ring-2 ring-yellow-200">
-            🪙
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-yellow-200/70 font-bold">Ví Điểm VIP</div>
-            <div className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
-              {points.toLocaleString()} đ
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 text-amber-300 text-xs font-bold animate-pulse">
+              👑 HŨ JACKPOT: {jackpotPool.toLocaleString()} đ 🪙
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => { setIsPVE(true); setScreenMode('game'); }}
+                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:brightness-110 text-slate-950 font-black rounded-2xl shadow-lg transition uppercase text-xs tracking-wider cursor-pointer"
+              >
+                ⚡ CHƠI ĐƠN (SOLO PVE)
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-800"></div>
+                <span className="flex-shrink mx-4 text-slate-500 text-[10px] font-bold uppercase">Hoặc Phòng PVP</span>
+                <div className="flex-grow border-t border-slate-800"></div>
+              </div>
+
+              <button
+                onClick={handleCreateRoom}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl shadow-md transition text-xs cursor-pointer"
+              >
+                ✨ Tạo Phòng Mới
+              </button>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="NHẬP MÃ PHÒNG (VD: AB12)"
+                  maxLength={6}
+                  value={roomCodeInput}
+                  onChange={(e) => setRoomCodeInput(e.target.value)}
+                  className="flex-1 px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-center font-bold uppercase text-amber-300 outline-none focus:border-cyan-500"
+                />
+                <button
+                  onClick={handleJoinRoom}
+                  className="px-5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl shadow transition cursor-pointer"
+                >
+                  Vào Phòng
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <Link href="/" className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition">
+                ← Quay lại Trang Chủ
+              </Link>
             </div>
           </div>
         </div>
+      ) : (
+        /* GIAO DIỆN TRONG GAME (MÀN HÌNH NGANG MOBILE TỐI ƯU) */
+        <div className="relative w-full h-full overflow-hidden flex flex-col">
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+            onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
+            onTouchMove={(e) => {
+              if (e.touches.length > 0) {
+                mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+              }
+            }}
+            onClick={handleShoot}
+            onTouchStart={(e) => {
+              if (e.touches.length > 0) {
+                mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+              }
+              handleShoot();
+            }}
+          />
 
-        <div className="flex items-center gap-2 pointer-events-auto">
-          <Link
-            href="/"
-            className="bg-red-950/80 backdrop-blur-md border border-red-500/50 hover:bg-red-900 text-red-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition"
-          >
-            ← Trang chủ
-          </Link>
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className="w-9 h-9 bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-300 shadow-md"
-          >
-            {isMuted ? '🔇' : '🔊'}
-          </button>
-          <button
-            onClick={() => setIsPaused(!isPaused)}
-            className="w-9 h-9 bg-slate-900/90 backdrop-blur-md border border-amber-500/30 rounded-xl flex items-center justify-center text-amber-300 shadow-md"
-          >
-            {isPaused ? '▶' : '⏸'}
-          </button>
-        </div>
-      </div>
+          {/* Top HUD Header */}
+          <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
+            {/* Ví Điểm */}
+            <div className="bg-slate-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl px-3 py-1.5 flex items-center gap-2 pointer-events-auto shadow-lg">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center text-yellow-950 font-black text-xs shadow-md">
+                🪙
+              </div>
+              <div>
+                <div className="text-[9px] uppercase tracking-wider text-yellow-200/70 font-bold">Ví Điểm</div>
+                <div className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
+                  {points.toLocaleString()} đ
+                </div>
+              </div>
+            </div>
 
-      {/* Hũ Jackpot ở giữa */}
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-        <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-6 py-1.5 rounded-2xl text-center shadow-xl animate-pulse">
-          <div className="text-[9px] text-amber-300 font-extrabold uppercase tracking-widest">
-            👑 HŨ JACKPOT RỒNG THẦN 👑
+            {/* Các nút điều khiển & Phóng to */}
+            <div className="flex items-center gap-1.5 pointer-events-auto">
+              {!isPVE && activeRoomId && (
+                <button
+                  onClick={handleLeaveRoom}
+                  className="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 hover:bg-amber-900 text-amber-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md transition"
+                >
+                  Phòng: #{activeRoomId} (Rời)
+                </button>
+              )}
+
+              <button
+                onClick={toggleFullscreen}
+                className="w-8 h-8 bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-300 text-xs shadow-md"
+                title="Phóng to màn hình"
+              >
+                {isFullscreen ? '🗗' : '⛶'}
+              </button>
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className="w-8 h-8 bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 rounded-xl flex items-center justify-center text-cyan-300 text-xs shadow-md"
+              >
+                {isMuted ? '🔇' : '🔊'}
+              </button>
+              <button
+                onClick={() => setIsPaused(!isPaused)}
+                className="w-8 h-8 bg-slate-900/90 backdrop-blur-md border border-amber-500/30 rounded-xl flex items-center justify-center text-amber-300 text-xs shadow-md"
+              >
+                {isPaused ? '▶' : '⏸'}
+              </button>
+              <button
+                onClick={() => setScreenMode('lobby')}
+                className="bg-red-950/80 backdrop-blur-md border border-red-500/50 hover:bg-red-900 text-red-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md transition"
+              >
+                Thoát ✕
+              </button>
+            </div>
           </div>
-          <div className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
-            {jackpotPool.toLocaleString()} đ
-          </div>
-        </div>
-      </div>
 
-      {/* Thanh công cụ súng dưới góc */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-auto">
-        <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-xl">
-          <button
-            onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
-            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition cursor-pointer"
-          >
-            -
-          </button>
-          <div className="text-center min-w-[140px]">
-            <div className="text-xs text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
-            <div className="text-[10px] text-yellow-300 font-semibold">Chế độ: Solo Đại Dương</div>
+          {/* Hũ Jackpot tích lũy ở giữa */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+            <div className="bg-gradient-to-b from-amber-950/90 to-slate-950/90 backdrop-blur-md border border-amber-400/80 px-4 py-1 rounded-xl text-center shadow-xl animate-pulse">
+              <div className="text-[8px] text-amber-300 font-extrabold uppercase tracking-widest">
+                👑 JACKPOT RỒNG THẦN 👑
+              </div>
+              <div className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-orange-400">
+                {jackpotPool.toLocaleString()} đ
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length)}
-            className="w-7 h-7 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold hover:bg-slate-700 transition cursor-pointer"
-          >
-            +
-          </button>
-        </div>
-      </div>
 
-      {toastMsg && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-red-950/90 border border-red-500/60 text-red-200 px-4 py-2 rounded-2xl text-xs font-bold shadow-2xl animate-bounce pointer-events-none">
-          ⚠️ {toastMsg}
+          {/* Thanh công cụ súng dưới góc (tối ưu mobile ngang) */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-auto">
+            <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-400/30 px-3 py-1.5 rounded-2xl flex items-center gap-2.5 shadow-xl">
+              <button
+                onClick={() => setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length)}
+                className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
+              >
+                -
+              </button>
+              <div className="text-center min-w-[120px]">
+                <div className="text-[11px] text-cyan-300 font-bold uppercase tracking-wider">{GUN_TYPES[currentGunIndex].name}</div>
+                <div className="text-[9px] text-yellow-300 font-semibold">
+                  {isPVE ? "Solo Đại Dương" : `Phòng #${activeRoomId} (${myCorner})`}
+                </div>
+              </div>
+              <button
+                onClick={() => setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length)}
+                className="w-6 h-6 rounded-full bg-slate-800 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-bold text-xs hover:bg-slate-700 transition cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {toastMsg && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-red-950/90 border border-red-500/60 text-red-200 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xl animate-bounce pointer-events-none">
+              ⚠️ {toastMsg}
+            </div>
+          )}
         </div>
       )}
     </div>
