@@ -159,7 +159,7 @@ export default function Home() {
         <section className="space-y-4">
           <h2 className="text-xl font-black text-rose-500">⚔️ GAME ĐỐI KHÁNG</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href="/dau-truong" className="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group">
+            <Link href="/dautruong" className="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 hover:border-amber-400 transition block group">
               <div className="text-4xl mb-2">🥊</div>
               <h3 className="font-bold text-xl text-white group-hover:text-amber-400">Đấu Trường PvP (Cyber Saiyan)</h3>
               <p className="text-slate-400 text-sm mt-1">Chiến đấu 1v1 tung chưởng Kamehameha cực đã!</p>
