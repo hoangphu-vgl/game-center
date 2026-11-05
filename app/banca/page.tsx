@@ -101,7 +101,6 @@ export default function BanCaPage() {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
 
-  // Giải phóng ghế ngay lập tức khi đóng tab hoặc thoát trang đột ngột
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -560,13 +559,8 @@ export default function BanCaPage() {
     };
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
-  // Ngăn chặn hoàn toàn việc refresh trang trên Mobile khi bắn
-  const handleShoot = (e?: React.MouseEvent | React.TouchEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
+  // Xử lý tọa độ chạm và bắn tối ưu cho cả PWA (Thêm vào màn hình chính)
+  const handleShoot = (clientX: number, clientY: number) => {
     if (!isPVE) {
       const pData = roomPlayersRef.current[myCorner];
       if (!pData || !pData.active || !pData.email || pData.email === 'Trống') {
@@ -593,7 +587,7 @@ export default function BanCaPage() {
     else if (myCorner === 'top-left') { startX = 60; startY = 60; }
     else if (myCorner === 'top-right') { startX = w - 60; startY = 60; }
 
-    const angle = Math.atan2(mousePosRef.current.y - startY, mousePosRef.current.x - startX);
+    const angle = Math.atan2(clientY - startY, clientX - startX);
     bulletsRef.current.push({
       x: startX,
       y: startY,
@@ -668,7 +662,6 @@ export default function BanCaPage() {
 
     const players = data.players || {};
     let corner = 'bottom-right';
-    // Ưu tiên tìm ghế trống theo thứ tự: bottom-left, top-left, top-right, bottom-right
     if (!players['bottom-left'] || !players['bottom-left'].active || players['bottom-left'].email === 'Trống') corner = 'bottom-left';
     else if (!players['top-left'] || !players['top-left'].active || players['top-left'].email === 'Trống') corner = 'top-left';
     else if (!players['top-right'] || !players['top-right'].active || players['top-right'].email === 'Trống') corner = 'top-right';
@@ -770,18 +763,26 @@ export default function BanCaPage() {
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full cursor-crosshair touch-none object-contain"
-            onMouseMove={(e) => { mousePosRef.current = { x: e.clientX, y: e.clientY }; }}
+            onMouseMove={(e) => {
+              mousePosRef.current = { x: e.clientX, y: e.clientY };
+            }}
             onTouchMove={(e) => {
               if (e.touches.length > 0) {
-                mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                const touch = e.touches[0];
+                mousePosRef.current = { x: touch.clientX, y: touch.clientY };
               }
             }}
-            onClick={(e) => handleShoot(e)}
-            onTouchEnd={(e) => {
-              if (e.changedTouches.length > 0) {
-                mousePosRef.current = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+            onClick={(e) => {
+              e.preventDefault();
+              handleShoot(e.clientX, e.clientY);
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                mousePosRef.current = { x: touch.clientX, y: touch.clientY };
+                handleShoot(touch.clientX, touch.clientY);
               }
-              handleShoot(e);
             }}
           />
 
