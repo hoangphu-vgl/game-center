@@ -101,7 +101,7 @@ export default function BanCaPage() {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
 
-  // Giải phóng ghế khi đóng tab hoặc thoát trang
+  // Giải phóng ghế ngay lập tức khi đóng tab hoặc thoát trang đột ngột
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -560,10 +560,11 @@ export default function BanCaPage() {
     };
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
-  // Chặn đứng hoàn toàn việc refresh trang trên mobile khi nhấn bắn
+  // Ngăn chặn hoàn toàn việc refresh trang trên Mobile khi bắn
   const handleShoot = (e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
       e.preventDefault();
+      e.stopPropagation();
     }
 
     if (!isPVE) {
@@ -666,11 +667,12 @@ export default function BanCaPage() {
     setIsHost(false);
 
     const players = data.players || {};
-    let corner = 'bottom-left';
+    let corner = 'bottom-right';
+    // Ưu tiên tìm ghế trống theo thứ tự: bottom-left, top-left, top-right, bottom-right
     if (!players['bottom-left'] || !players['bottom-left'].active || players['bottom-left'].email === 'Trống') corner = 'bottom-left';
     else if (!players['top-left'] || !players['top-left'].active || players['top-left'].email === 'Trống') corner = 'top-left';
     else if (!players['top-right'] || !players['top-right'].active || players['top-right'].email === 'Trống') corner = 'top-right';
-    else corner = 'bottom-right';
+    else if (!players['bottom-right'] || !players['bottom-right'].active || players['bottom-right'].email === 'Trống') corner = 'bottom-right';
 
     setMyCorner(corner);
     players[corner] = { active: true, email: user?.email || 'Thành viên', angle: -Math.PI / 2 };
@@ -679,7 +681,7 @@ export default function BanCaPage() {
     await setDoc(roomRef, { players }, { merge: true });
 
     setScreenMode('game');
-    showToast(`🎉 Vào phòng ${roomId} thành công!`);
+    showToast(`🎉 Vào phòng ${roomId} thành công ở vị trí ${corner}!`);
   };
 
   const handleLeaveRoom = async () => {
@@ -775,9 +777,9 @@ export default function BanCaPage() {
               }
             }}
             onClick={(e) => handleShoot(e)}
-            onTouchStart={(e) => {
-              if (e.touches.length > 0) {
-                mousePosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            onTouchEnd={(e) => {
+              if (e.changedTouches.length > 0) {
+                mousePosRef.current = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
               }
               handleShoot(e);
             }}
@@ -800,7 +802,7 @@ export default function BanCaPage() {
             <div className="flex items-center gap-1.5 pointer-events-auto">
               {!isPVE && activeRoomId && (
                 <div className="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 text-amber-200 px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md">
-                  Mã Phòng: #{activeRoomId}
+                  Mã Phòng: #{activeRoomId} ({myCorner})
                 </div>
               )}
 
