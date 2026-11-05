@@ -28,14 +28,14 @@ interface ChatMessage {
 }
 
 const WHEEL_SLICES = [
-  { id: 1, label: "1 Chai Nước Suối 🥤", type: "water", prob: 0.05, color: "#38bdf8" },
-  { id: 2, label: "1.000 VNĐ 💵", type: "money", value: 1000, prob: 0.10, color: "#facc15" },
-  { id: 3, label: "Hut 1 (Yamcha nằm đất!) 💀", type: "empty", prob: 0.16, color: "#ef4444" },
-  { id: 4, label: "Thêm 1 Lượt Quay 🎟️", type: "spin", value: 1, prob: 0.10, color: "#a855f7" },
-  { id: 5, label: "Hut 2 (Bị Majin Buu nuốt!) 🍩", type: "empty", prob: 0.17, color: "#f97316" },
-  { id: 6, label: "2.000 VNĐ 💵", type: "money", value: 2000, prob: 0.08, color: "#4ade80" },
-  { id: 7, label: "Hut 3 (Zeno-sama xoá sổ!) 🌌", type: "empty", prob: 0.17, color: "#64748b" },
-  { id: 8, label: "Hut 4 (Tàu Pảy Pảy né đi!) 🚀", type: "empty", prob: 0.17, color: "#ec4899" },
+  { id: 1, label: "🥤 Nước Suối", type: "water", prob: 0.08, color: "#06b6d4" },
+  { id: 2, label: "💵 1.000đ", type: "money", value: 1000, prob: 0.12, color: "#eab308" },
+  { id: 3, label: "💀 Yamcha Nằm Đất", type: "empty", prob: 0.15, color: "#ef4444" },
+  { id: 4, label: "🎟️ +1 Lượt Quay", type: "spin", value: 1, prob: 0.15, color: "#a855f7" },
+  { id: 5, label: "🍩 Majin Buu", type: "empty", prob: 0.15, color: "#f97316" },
+  { id: 6, label: "💵 2.000 VNĐ", type: "money", value: 2000, prob: 0.10, color: "#22c55e" },
+  { id: 7, label: "🌌 Zeno Xoá Sổ", type: "empty", prob: 0.10, color: "#64748b" },
+  { id: 8, label: "🚀 Tàu Pảy Pảy", type: "empty", prob: 0.15, color: "#ec4899" },
 ];
 
 const SHOP_PACKAGES = [
@@ -107,7 +107,7 @@ export default function Home() {
     if (userSnap.exists()) {
       const data = userSnap.data();
       setPoints(data.points || 0);
-      setLuckySpins(data.luckySpins || 3); // Tặng sẵn 3 lượt quay trải nghiệm
+      setLuckySpins(data.luckySpins || 3);
       setLastCheckIn(data.lastCheckIn || "");
     } else {
       const newUser = {
@@ -134,7 +134,7 @@ export default function Home() {
     }
     const userRef = doc(db, "users", user.uid);
     const newPoints = points + 500;
-    const newSpins = luckySpins + 1; // Thưởng thêm 1 lượt quay khi điểm danh
+    const newSpins = luckySpins + 1;
     await setDoc(userRef, { points: newPoints, luckySpins: newSpins, lastCheckIn: today }, { merge: true });
     setPoints(newPoints);
     setLuckySpins(newSpins);
@@ -159,7 +159,6 @@ export default function Home() {
       await setDoc(doc(db, "users", user.uid), { luckySpins: newSpins }, { merge: true });
     }
 
-    // Chọn ngẫu nhiên phần thưởng theo tỉ lệ
     const rand = Math.random();
     let cumulative = 0;
     let selectedIndex = 0;
@@ -172,9 +171,9 @@ export default function Home() {
     }
 
     const sliceAngle = 360 / WHEEL_SLICES.length;
-    // Quay ngẫu nhiên thêm 5-8 vòng (1800 - 2880 độ) để tạo cảm giác hồi hộp
-    const randomFullRounds = 360 * (5 + Math.floor(Math.random() * 3));
-    const targetAngle = randomFullRounds + (360 - (selectedIndex * sliceAngle + sliceAngle / 2));
+    const randomFullRounds = 360 * (6 + Math.floor(Math.random() * 4));
+    // Tính toán góc dừng chính xác ở giữa ô
+    const targetAngle = wheelAngle + randomFullRounds + (360 - (wheelAngle % 360)) + (360 - (selectedIndex * sliceAngle + sliceAngle / 2));
 
     setWheelAngle(targetAngle);
 
@@ -189,17 +188,17 @@ export default function Home() {
         if (user) {
           await setDoc(doc(db, "users", user.uid), { luckySpins: updatedSpins }, { merge: true });
         }
-        msg = `🎁 Quá đỉnh! Ní trúng thêm +1 Lượt Quay Miễn Phí! Tổng lượt: ${updatedSpins}`;
+        msg = `🔥 QUÁ ĐỈNH! Ultra Instinct kích hoạt, trúng ngay +1 Lượt Quay Miễn Phí!`;
       } else if (prize.type === "money") {
-        msg = `💰 Rồng Thần ban phước! Ní nhận ngay phần thưởng ${prize.label}! Liên hệ Admin để nhận thưởng nhé!`;
+        msg = `💰 Rồng Thần ban phước! Ní nhận ngay phần thưởng ${prize.label}! Chụp màn hình báo Admin ngay!`;
       } else if (prize.type === "water") {
         msg = `🥤 Khát nước quá hả ní? Trúng ngay 1 Chai Nước Suối mát lạnh từ Đấu Trường!`;
       } else {
         const trollQuotes = [
-          "💀 Yamcha nằm đất! Hụt quà rồi ní ơi, ráng tu luyện thêm đi!",
-          "🍩 Bị Majin Buu biến thành kẹo sô-cô-la mất phần rồi!",
-          "🌌 Zeno-sama vừa xoá sổ ô quà của ní khỏi vũ trụ!",
-          "🚀 Tàu Pảy Pảy phóng qua lấy mất phần thưởng rồi, quay lại đi ní!"
+          "💀 Yamcha nằm đất! Ki của ní chưa đủ tầm nhận quà rồi, quay lại tu luyện đi!",
+          "🍩 Bị Majin Buu biến thành kẹo sô-cô-la nuốt chửng mất tiêu phần thưởng!",
+          "🌌 Zeno-sama vừa ngứa tay xoá sổ ô quà của ní khỏi đa vũ trụ!",
+          "🚀 Tàu Pảy Pảy phóng qua cướp mất phần thưởng rồi, cay chưa ní!"
         ];
         msg = trollQuotes[Math.floor(Math.random() * trollQuotes.length)];
       }
@@ -208,7 +207,6 @@ export default function Home() {
     }, 4000);
   };
 
-  // Mua gói từ Shop
   const buyPackage = async (pkg: typeof SHOP_PACKAGES[0]) => {
     if (!user) {
       alert("Vui lòng đăng nhập để mua quà từ Shop!");
@@ -242,9 +240,9 @@ export default function Home() {
     );
 
     if (pkg.type === "spin") {
-      alert(`🔥 MUA THÀNH CÔNG! Đã cộng +${pkg.reward} Lượt Quay vào tài khoản vòng quay của ní!`);
+      alert(`🔥 MUA THÀNH CÔNG! Đã cộng +${pkg.reward} Lượt Quay vào tài khoản của ní!`);
     } else {
-      alert(`👑 GIAO DỊCH THẦN THÁNH! Đổi thành công ${pkg.reward.toLocaleString()} VNĐ tiền mặt! Hãy chụp màn hình và báo Admin nhận quà ngay!`);
+      alert(`👑 GIAO DỊCH THẦN THÁNH! Đổi thành công ${pkg.reward.toLocaleString()} VNĐ! Hãy chụp màn hình báo Admin nhận thưởng!`);
     }
   };
 
@@ -337,7 +335,7 @@ export default function Home() {
 
         {/* Banner Dragon Ball Super Saiyan */}
         <section
-          className="relative flex items-center justify-center min-h-[340px] bg-cover bg-center text-center p-6 border-b border-amber-500/30 overflow-hidden"
+          className="relative flex items-center justify-center min-h-[320px] bg-cover bg-center text-center p-6 border-b border-amber-500/30 overflow-hidden"
           style={{
             backgroundImage:
               "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
@@ -360,7 +358,49 @@ export default function Home() {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-8 space-y-12">
           
-          {/* VÒNG QUAY MAY MẮN (8 Ô TỈ LỆ CHUẨN) */}
+          {/* PHỤ LỤC 1: ĐẶC QUYỀN SỨC MẠNH & JACKPOT (Đã khôi phục đầy đủ) */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
+              <h2 className="text-xl font-black text-amber-400 tracking-wider uppercase">
+                🔥 Đặc Quyền & Săn Hũ Jackpot
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Thẻ Vòng Quay Nhanh */}
+              <div className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-6 shadow-lg flex flex-col justify-between relative overflow-hidden group">
+                <div className="absolute -right-6 -bottom-6 text-7xl opacity-10 group-hover:opacity-20 transition">🎡</div>
+                <div>
+                  <h3 className="text-xl font-bold text-purple-300">🎡 Vòng Quay Ngọc Rồng</h3>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Quay nhận nước suối, tiền mặt 1k, 2k và lượt quay miễn phí ngay bên dưới!
+                  </p>
+                </div>
+                <div className="mt-4 bg-purple-600/30 border border-purple-500/40 text-purple-300 font-bold py-2 px-4 rounded-xl text-center text-xs">
+                  Đang hoạt động bên dưới 👇
+                </div>
+              </div>
+
+              {/* JACKPOT RỒNG THẦN (Đã khôi phục) */}
+              <Link
+                href="/jackpot"
+                className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 hover:border-amber-400 transition-all block group shadow-lg hover:-translate-y-1 relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -bottom-6 text-7xl opacity-10 group-hover:opacity-20 transition">🎰</div>
+                <h3 className="text-xl font-bold text-amber-400 group-hover:text-amber-300 transition">
+                  🎰 Jackpot Rồng Thần
+                </h3>
+                <p className="text-slate-400 text-sm mt-1">
+                  Thử vận may quay hũ 4 hàng 6 cột tích tụ Ki nổ hũ Grand cực khủng!
+                </p>
+                <div className="mt-4 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-4 rounded-xl text-center text-sm shadow-md">
+                  Vào Nổ Hũ ngay 🔮
+                </div>
+              </Link>
+            </div>
+          </section>
+
+          {/* VÒNG QUAY MAY MẮN (Giao diện chuẩn, SVG xoay mượt, thu gọn ô quà) */}
           <section id="vongquay" className="space-y-6 bg-gradient-to-br from-slate-900 via-purple-950/40 to-slate-900 border-2 border-purple-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
             <div className="absolute -top-12 -right-12 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
             
@@ -371,58 +411,58 @@ export default function Home() {
               <h2 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-400 to-amber-400">
                 🎡 VÒNG QUAY NGỌC RỒNG MAY MẮN
               </h2>
-              <p className="text-slate-400 text-sm">
-                Sở hữu ngay 1 chai nước suối, tiền mặt 1k, 2k hoặc lượt quay thưởng miễn phí! Tránh né các ô Yamcha và Majin Buu nhé!
+              <p className="text-slate-400 text-sm max-w-lg mx-auto">
+                Tỷ lệ trúng quà xịn đã được tinh chỉnh gọn gàng. Quay ngay để rinh nước suối, tiền mặt và lượt quay!
               </p>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-center justify-center gap-8 py-6">
-              {/* Vòng quay Canvas / CSS Wheel */}
-              <div className="relative w-[300px] h-[300px] sm:w-[360px] sm:h-[360px] flex items-center justify-center">
-                {/* Mũi tên chỉ hướng */}
-                <div className="absolute -top-4 z-30 text-4xl drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)] animate-bounce">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-10 py-4">
+              {/* Vòng quay Canvas / CSS Wheel Xịn Xò */}
+              <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] flex items-center justify-center">
+                {/* Mũi tên chỉ hướng trên đỉnh */}
+                <div className="absolute -top-3 z-30 text-3xl drop-shadow-[0_2px_10px_rgba(255,255,255,0.9)] animate-bounce">
                   🔻
                 </div>
 
-                {/* Bánh xe */}
+                {/* Bánh xe quay */}
                 <div
-                  className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_30px_rgba(168,85,247,0.5)] relative overflow-hidden transition-all ease-out"
+                  className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_35px_rgba(168,85,247,0.6)] relative overflow-hidden"
                   style={{
                     transform: `rotate(${wheelAngle}deg)`,
-                    transitionDuration: isSpinning ? "4s" : "0s",
-                    background: "conic-gradient(#38bdf8 0deg 45deg, #facc15 45deg 90deg, #ef4444 90deg 135deg, #a855f7 135deg 180deg, #f97316 180deg 225deg, #4ade80 225deg 270deg, #64748b 270deg 315deg, #ec4899 315deg 360deg)"
+                    transition: isSpinning ? "transform 4s cubic-bezier(0.15, 0.9, 0.2, 1)" : "none",
+                    background: "conic-gradient(#06b6d4 0deg 45deg, #eab308 45deg 90deg, #ef4444 90deg 135deg, #a855f7 135deg 180deg, #f97316 180deg 225deg, #22c55e 225deg 270deg, #64748b 270deg 315deg, #ec4899 315deg 360deg)"
                   }}
                 >
-                  {/* Nhãn 8 ô */}
-                  <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-slate-950">
-                    <span className="absolute top-4 rotate-0 drop-shadow">🥤 Nước Suối</span>
-                    <span className="absolute right-6 top-16 rotate-45 drop-shadow">💵 1.000đ</span>
-                    <span className="absolute right-4 bottom-16 rotate-90 drop-shadow">💀 Yamcha</span>
-                    <span className="absolute bottom-4 right-16 rotate-[135deg] drop-shadow">🎟️ +1 Lượt</span>
-                    <span className="absolute bottom-4 left-16 rotate-180 drop-shadow">🍩 Majin Buu</span>
-                    <span className="absolute left-4 bottom-16 rotate-[225deg] drop-shadow">💵 2.000đ</span>
-                    <span className="absolute left-4 top-16 rotate-[270deg] drop-shadow">🌌 Zeno</span>
-                    <span className="absolute top-4 left-16 rotate-[315deg] drop-shadow">🚀 Tàu Pảy Pảy</span>
+                  {/* Text 8 ô nằm theo góc */}
+                  <div className="absolute inset-0 flex items-center justify-center text-[12px] font-black text-slate-950">
+                    <div className="absolute top-5 transform -translate-y-1/2 rotate-0 drop-shadow-md">🥤 Nước Suối</div>
+                    <div className="absolute right-10 top-16 transform rotate-45 drop-shadow-md">💵 1.000đ</div>
+                    <div className="absolute right-5 bottom-20 transform rotate-90 drop-shadow-md">💀 Yamcha</div>
+                    <div className="absolute bottom-6 right-16 transform rotate-[135deg] drop-shadow-md">🎟️ +1 Lượt</div>
+                    <div className="absolute bottom-5 left-16 transform rotate-180 drop-shadow-md">🍩 Majin Buu</div>
+                    <div className="absolute left-5 bottom-20 transform rotate-[225deg] drop-shadow-md">💵 2.000đ</div>
+                    <div className="absolute left-8 top-16 transform rotate-[270deg] drop-shadow-md">🌌 Zeno</div>
+                    <div className="absolute top-5 left-16 transform rotate-[315deg] drop-shadow-md">🚀 Tàu Pảy Pảy</div>
                   </div>
                 </div>
 
-                {/* Trục giữa */}
-                <div className="absolute z-20 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-4 border-slate-950 shadow-xl flex items-center justify-center text-xl font-black text-slate-950">
+                {/* Trục tâm Rồng Thần */}
+                <div className="absolute z-20 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-4 border-slate-950 shadow-2xl flex items-center justify-center text-2xl font-black">
                   🐉
                 </div>
               </div>
 
-              {/* Thông tin & Nút quay */}
-              <div className="bg-slate-950/80 border border-purple-500/40 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center">
-                <div className="flex justify-between items-center bg-purple-950/60 border border-purple-500/30 px-4 py-2.5 rounded-xl">
-                  <span className="text-xs font-bold text-purple-300">Lượt Quay Hiện Có:</span>
-                  <span className="text-lg font-black text-amber-400">{luckySpins} 🎟️</span>
+              {/* Bảng điều khiển vòng quay */}
+              <div className="bg-slate-950/90 border border-purple-500/40 rounded-3xl p-6 sm:p-8 max-w-sm w-full space-y-5 text-center shadow-2xl">
+                <div className="flex justify-between items-center bg-purple-950/60 border border-purple-500/30 px-4 py-3 rounded-2xl">
+                  <span className="text-xs font-bold text-purple-300">Lượt Quay Có Sẵn:</span>
+                  <span className="text-xl font-black text-amber-400">{luckySpins} 🎟️</span>
                 </div>
 
                 <button
                   onClick={spinWheel}
                   disabled={isSpinning}
-                  className={`w-full py-4 rounded-2xl font-black text-lg uppercase tracking-wider transition shadow-lg cursor-pointer ${
+                  className={`w-full py-4 rounded-2xl font-black text-base uppercase tracking-wider transition shadow-lg cursor-pointer ${
                     isSpinning
                       ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
                       : "bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 hover:brightness-110 text-slate-950 shadow-amber-500/30 active:scale-95 animate-pulse"
@@ -432,21 +472,21 @@ export default function Home() {
                 </button>
 
                 <p className="text-[11px] text-slate-400 italic">
-                  * Mẹo: Lượt quay có thể nhận miễn phí từ Điểm danh hàng ngày hoặc mua trực tiếp trong Cửa Hàng Đổi Quà bên dưới!
+                  * Mẹo: Lượt quay có thể nhận từ Điểm danh hàng ngày hoặc mua trong Cửa Hàng Đổi Quà bên dưới!
                 </p>
               </div>
             </div>
 
             {/* Modal kết quả quay */}
             {spinResultModal && (
-              <div className="bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-pink-500/20 border-2 border-amber-400/80 rounded-2xl p-4 text-center animate-bounce shadow-2xl">
+              <div className="bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-pink-500/20 border-2 border-amber-400/80 rounded-2xl p-4 text-center animate-bounce shadow-2xl max-w-md mx-auto">
                 <div className="text-base font-black text-amber-300">✨ KẾT QUẢ VÒNG QUAY VŨ TRỤ ✨</div>
-                <div className="text-lg font-bold text-white mt-1">{spinResultModal}</div>
+                <div className="text-sm font-bold text-white mt-1">{spinResultModal}</div>
                 <button
                   onClick={() => setSpinResultModal(null)}
                   className="mt-3 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-1.5 rounded-xl transition cursor-pointer"
                 >
-                  Đã hiểu, tiếp tục chiến!
+                  Đã rõ, chiến tiếp!
                 </button>
               </div>
             )}
