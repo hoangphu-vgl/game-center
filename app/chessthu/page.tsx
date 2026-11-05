@@ -49,20 +49,19 @@ const INITIAL_COTHU_BOARD: string[][] = [
 
 const TAUNT_MESSAGES = {
   easy: [
-    "Hơi lóng ngóng nha ní ơi, đi lại đi nào! 🐢",
-    "Nước vừa rồi làm tớ suýt ngáp ngủ đấy! 😴",
-    "Cứ thong thả, máy chấp 3 bước suy nghĩ luôn! 🍼"
+    "Hơi lóng ngóng nha ní ơi, cẩn thận mất quân đấy! 🐢",
+    "Nước vừa rồi làm tớ suýt ngáp ngủ! 😴",
+    "Cứ thong thả, máy chấp vài nước luôn! 🍼"
   ],
   medium: [
     "Sông rộng thế kia, Chuột hoặc Sư Tử của cậu tính nhảy thế nào? 🌊",
-    "Cẩn thận bẫy đấy nhé, sập là mất tích luôn con Voi đấy! 🦊",
-    "Trận địa đang dần khép lại rồi đấy, né đi đâu cho thoát! ♟️"
+    "Cẩn thận bẫy nhà tớ đấy nhé, sập là mất tích con Voi đấy! 🦊",
+    "Trận địa đang dần khép lại rồi đấy! ♟️"
   ],
   hard: [
     "Khôn hồn thì dâng Voi ra đây, Đại đế AI đang bao vây toàn bản đồ! 🦁👑",
     "Hang của cậu sơ hở quá, Chuột và Sư Tử của ta đang phi nước đại vào rồi! ⚡",
-    "Tính toán làm gì cho mệt, thuật toán Alpha-Beta của ta đã nhìn thấu 3 nước tới rồi! 💀",
-    "Bỏ cuộc đi ní ơi, chống cự chỉ làm nước mắt rơi thêm thôi! 🔥"
+    "Thuật toán chuẩn quốc tế đã nhìn thấu mọi nước cờ của cậu rồi! 💀"
   ]
 };
 
@@ -83,8 +82,7 @@ export default function ChessthuPage() {
   const [selectedSquare, setSelectedSquare] = useState<{ r: number; c: number } | null>(null);
   const [validMoves, setValidMoves] = useState<{ r: number; c: number }[]>([]);
 
-  const [aiTaunt, setAiTaunt] = useState<string>("Chuẩn bị tinh thần đấu trí cùng AI Siêu Cấp chưa nào!");
-
+  const [aiTaunt, setAiTaunt] = useState<string>("Đã sẵn sàng tuân thủ luật Cờ Thú quốc tế! Mời bạn đi trước.");
   const [modal, setModal] = useState<{ open: boolean; win: boolean; msg: string }>({
     open: false,
     win: false,
@@ -207,7 +205,7 @@ export default function ChessthuPage() {
     setTurn('r');
     setSelectedSquare(null);
     setValidMoves([]);
-    setAiTaunt("Đã bật chế độ AI Siêu Trí Tuệ. Cẩn thận mất hết quân nhé! 🔥");
+    setAiTaunt("Trận chiến Cờ Thú chuẩn luật bắt đầu! Chúc bạn may mắn! 🦁");
     setScreen('game');
   };
 
@@ -233,12 +231,11 @@ export default function ChessthuPage() {
     return () => unsubscribe();
   }, [screen, gameMode, roomCode, playerRole]);
 
-  // AI đánh tự động khi tới lượt Xanh ('b')
   useEffect(() => {
     if (screen === 'game' && gameMode === 'ai' && turn === 'b' && !modal.open) {
       const timer = setTimeout(() => {
         makeAiMove();
-      }, 500);
+      }, 600);
       return () => clearTimeout(timer);
     }
   }, [screen, gameMode, turn, board, modal.open]);
@@ -247,11 +244,15 @@ export default function ChessthuPage() {
     return (r >= 3 && r <= 5) && (c === 1 || c === 2 || c === 4 || c === 5);
   };
 
-  const isTrap = (r: number, c: number) => {
-    return (
-      (r === 0 && (c === 2 || c === 4)) || (r === 1 && c === 3) || // Bẫy Đỏ
-      (r === 8 && (c === 2 || c === 4)) || (r === 7 && c === 3)    // Bẫy Xanh
-    );
+  const isTrap = (r: number, c: number, color: 'r' | 'b') => {
+    if (color === 'r') {
+      // Bẫy của phe Đỏ nằm sát hang Đỏ (8,3) -> các ô (7,2), (7,4), (8,3)? Theo chuẩn: (7,2), (7,4), (8,2)/(8,4) tùy bàn, chuẩn quốc tế: Bẫy Đỏ ở (7,2), (7,4), (8,3 sát hang) hoặc (8,2),(8,4),(7,3)
+      // Cụ thể bẫy phe Đỏ (bảo vệ hang r ở 8,3): (7,2), (7,4), (8,2) [hoặc (8,4)]
+      return (r === 7 && (c === 2 || c === 4)) || (r === 8 && (c === 2 || c === 4));
+    } else {
+      // Bẫy phe Xanh (bảo vệ hang b ở 0,3): (1,2), (1,4), (0,2) [hoặc (0,4)]
+      return (r === 1 && (c === 2 || c === 4)) || (r === 0 && (c === 2 || c === 4));
+    }
   };
 
   const isDen = (r: number, c: number, color: 'r' | 'b') => {
@@ -259,6 +260,7 @@ export default function ChessthuPage() {
     return r === 0 && c === 3;
   };
 
+  // Hàm kiểm tra tính hợp lệ của nước đi theo ĐÚNG LUẬT CỜ THÚ CHUẨN
   const getPieceMoves = (r: number, c: number, currentBoard: string[][]) => {
     const moves: { r: number; c: number }[] = [];
     const p = currentBoard[r][c];
@@ -275,28 +277,39 @@ export default function ChessthuPage() {
       let nc = c + dc;
 
       if (nr >= 0 && nr < 9 && nc >= 0 && nc < 7) {
+        // Không được bước vào hang của chính mình
         if (isDen(nr, nc, color)) return;
 
         const target = currentBoard[nr][nc];
         const targetAnimal = target ? ANIMAL_DATA[target] : null;
 
+        // LUẬT DÒNG SÔNG: Chỉ Chuột (rank 1) mới được bước xuống nước
         if (isWater(nr, nc)) {
           if (rank !== 1) {
+            // Sư Tử (7) và Hổ (6) có quyền NHẢY QUA SÔNG theo chiều dọc hoặc ngang
             if (rank === 6 || rank === 7) {
               if (dr !== 0) {
                 let jumpR = r + dr;
                 let blocked = false;
+                let mouseInRiver = false;
                 while (jumpR >= 3 && jumpR <= 5) {
-                  if (currentBoard[jumpR][nc]) { blocked = true; break; }
+                  const midPiece = currentBoard[jumpR][nc];
+                  if (midPiece) {
+                    if (ANIMAL_DATA[midPiece].rank === 1) mouseInRiver = true; // Bị chuột cản đường nhảy
+                    blocked = true;
+                    break;
+                  }
                   jumpR += dr;
                 }
-                if (!blocked && jumpR >= 0 && jumpR < 9) {
+                if (!blocked && !mouseInRiver && jumpR >= 0 && jumpR < 9) {
                   const landTarget = currentBoard[jumpR][nc];
                   const landAnimal = landTarget ? ANIMAL_DATA[landTarget] : null;
                   if (!landTarget || landAnimal?.color !== color) {
                     const targetRank = landAnimal ? landAnimal.rank : 0;
-                    const curRankNum: number = rank;
-                    if (!landTarget || curRankNum >= targetRank || (curRankNum === 8 && targetRank === 1)) {
+                    // Kiểm tra xem ô đáp có bị dính bẫy địch không
+                    const enemyColor = color === 'r' ? 'b' : 'r';
+                    const inEnemyTrap = isTrap(jumpR, nc, enemyColor);
+                    if (inEnemyTrap || !landTarget || rank >= targetRank) {
                       moves.push({ r: jumpR, c: nc });
                     }
                   }
@@ -304,37 +317,78 @@ export default function ChessthuPage() {
               } else if (dc !== 0) {
                 let jumpC = c + dc;
                 let blocked = false;
+                let mouseInRiver = false;
                 while (jumpC >= 1 && jumpC <= 5) {
-                  if (currentBoard[nr][jumpC]) { blocked = true; break; }
+                  const midPiece = currentBoard[nr][jumpC];
+                  if (midPiece) {
+                    if (ANIMAL_DATA[midPiece].rank === 1) mouseInRiver = true;
+                    blocked = true;
+                    break;
+                  }
                   jumpC += dc;
                 }
-                if (!blocked && jumpC >= 0 && jumpC < 7) {
+                if (!blocked && !mouseInRiver && jumpC >= 0 && jumpC < 7) {
                   const landTarget = currentBoard[nr][jumpC];
                   const landAnimal = landTarget ? ANIMAL_DATA[landTarget] : null;
                   if (!landTarget || landAnimal?.color !== color) {
                     const targetRank = landAnimal ? landAnimal.rank : 0;
-                    const curRankNum: number = rank;
-                    if (!landTarget || curRankNum >= targetRank || (curRankNum === 8 && targetRank === 1)) {
+                    const enemyColor = color === 'r' ? 'b' : 'r';
+                    const inEnemyTrap = isTrap(nr, jumpC, enemyColor);
+                    if (inEnemyTrap || !landTarget || rank >= targetRank) {
                       moves.push({ r: nr, c: jumpC });
                     }
                   }
                 }
               }
             }
+            return; // Các con khác không được xuống nước
+          } else {
+            // Chuột đang ở dưới nước hoặc từ bờ xuống nước, hoặc từ nước lên bờ
+            if (target) {
+              // Chuột dưới nước KHÔNG THỂ ăn quân trên cạn, và ngược lại. Chuột dưới nước chỉ ăn Chuột dưới nước.
+              if (targetAnimal && targetAnimal.color !== color) {
+                if (isWater(nr, nc)) {
+                  // Cả 2 cùng ở dưới nước -> được ăn
+                  moves.push({ r: nr, c: nc });
+                }
+              }
+            } else {
+              moves.push({ r: nr, c: nc });
+            }
             return;
           }
         }
+
+        // Nếu đi trên cạn bình thường
+        if (isWater(r, c) && !isWater(nr, nc) && rank === 1) {
+          // Chuột từ dưới nước nhảy lên cạn: nếu ô cạn có Voi địch thì theo luật không được ăn Voi từ dưới nước lên cạn
+          if (target && targetAnimal && targetAnimal.rank === 8 && targetAnimal.color !== color) {
+            // Không được ăn Voi từ nước lên cạn
+          } else if (!target || targetAnimal?.color !== color) {
+            moves.push({ r: nr, c: nc });
+          }
+          return;
+        }
+
+        // Kiểm tra ô đích có nằm trong bẫy của địch không? Nếu nằm trong bẫy địch thì lực chiến về 0 (bất kỳ con nào cũng ăn được)
+        const enemyColor = color === 'r' ? 'b' : 'r';
+        const targetInTrap = isTrap(nr, nc, enemyColor);
 
         if (!target) {
           moves.push({ r: nr, c: nc });
         } else {
           if (targetAnimal?.color !== color) {
             let canEat = false;
-            const tRank = targetAnimal ? targetAnimal.rank : 0;
+            const tRank = targetAnimal.rank;
             const curRankNum: number = rank;
-            if (curRankNum === 1 && tRank === 8) canEat = true;
-            else if (curRankNum === 8 && tRank === 1) canEat = false;
-            else if (curRankNum >= tRank) canEat = true;
+
+            if (targetInTrap) {
+              canEat = true; // Đang dính bẫy thì mất toàn bộ sức mạnh, ai cũng ăn được
+            } else {
+              if (curRankNum === 1 && tRank === 8) canEat = true; // Chuột ăn Voi
+              else if (curRankNum === 8 && tRank === 1) canEat = false; // Voi không ăn được Chuột
+              else if (curRankNum >= tRank) canEat = true;
+            }
 
             if (canEat) {
               moves.push({ r: nr, c: nc });
@@ -394,88 +448,16 @@ export default function ChessthuPage() {
       }
     }
 
-    // Kiểm tra chiến thắng
-    if (movingPiece.startsWith('r') && toR === 8 && toC === 3) {
+    // Kiểm tra chiến thắng vào Hang
+    if (movingPiece.startsWith('r') && toR === 0 && toC === 3) {
       endGame(true, "Bạn đã chiếm hang địch và thắng cược!");
-    } else if (movingPiece.startsWith('b') && toR === 0 && toC === 3) {
+    } else if (movingPiece.startsWith('b') && toR === 8 && toC === 3) {
       endGame(false, "AI đã chiếm mất hang của bạn! Thất bại!");
     }
   };
 
-  // --- THUẬT TOÁN AI SIÊU CẤP (MINIMAX + ALPHA-BETA CHO CẤP KHÓ) ---
-  const evaluateBoard = (currentBoard: string[][]) => {
-    let score = 0;
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 7; c++) {
-        const p = currentBoard[r][c];
-        if (p) {
-          const animal = ANIMAL_DATA[p];
-          const val = animal.rank * 15 + (animal.color === 'b' ? (8 - r) * 2 : r * 2);
-          if (animal.color === 'b') score += val;
-          else score -= val;
-        }
-      }
-    }
-    return score;
-  };
-
-  const minimax = (currentBoard: string[][], depth: number, alpha: number, beta: number, isMaximizing: boolean) => {
-    if (depth === 0) return evaluateBoard(currentBoard);
-
-    const color = isMaximizing ? 'b' : 'r';
-    let allPossibleMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
-
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 7; c++) {
-        const p = currentBoard[r][c];
-        if (p && ANIMAL_DATA[p].color === color) {
-          const moves = getPieceMoves(r, c, currentBoard);
-          moves.forEach(m => {
-            allPossibleMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c });
-          });
-        }
-      }
-    }
-
-    if (allPossibleMoves.length === 0) return isMaximizing ? -10000 : 10000;
-
-    if (isMaximizing) {
-      let maxEval = -Infinity;
-      for (let move of allPossibleMoves) {
-        const clonedBoard = currentBoard.map(row => [...row]);
-        clonedBoard[move.toR][move.toC] = clonedBoard[move.fromR][move.fromC];
-        clonedBoard[move.fromR][move.fromC] = '';
-
-        // Thưởng điểm nếu AI áp sát hoặc chiếm hang đỏ (0,3)
-        if (move.toR === 0 && move.toC === 3) return 5000;
-
-        const evaluation = minimax(clonedBoard, depth - 1, alpha, beta, false);
-        maxEval = Math.max(maxEval, evaluation);
-        alpha = Math.max(alpha, evaluation);
-        if (beta <= alpha) break;
-      }
-      return maxEval;
-    } else {
-      let minEval = Infinity;
-      for (let move of allPossibleMoves) {
-        const clonedBoard = currentBoard.map(row => [...row]);
-        clonedBoard[move.toR][move.toC] = clonedBoard[move.fromR][move.fromC];
-        clonedBoard[move.fromR][move.fromC] = '';
-
-        if (move.toR === 8 && move.toC === 3) return -5000;
-
-        const evaluation = minimax(clonedBoard, depth - 1, alpha, beta, true);
-        minEval = Math.min(minEval, evaluation);
-        beta = Math.min(beta, evaluation);
-        if (beta <= alpha) break;
-      }
-      return minEval;
-    }
-  };
-
   const makeAiMove = () => {
-    let bestScore = -Infinity;
-    let bestMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
+    const allMoves: { fromR: number; fromC: number; toR: number; toC: number }[] = [];
 
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 7; c++) {
@@ -483,45 +465,23 @@ export default function ChessthuPage() {
         if (p && ANIMAL_DATA[p].color === 'b') {
           const moves = getPieceMoves(r, c, board);
           moves.forEach((m) => {
-            const clonedBoard = board.map(row => [...row]);
-            clonedBoard[m.r][m.c] = clonedBoard[r][c];
-            clonedBoard[r][c] = '';
-
-            let score = 0;
-            const depth = aiDifficulty === 'hard' ? 2 : aiDifficulty === 'medium' ? 1 : 0;
-            
-            if (depth > 0) {
-              score = minimax(clonedBoard, depth, -Infinity, Infinity, false);
-            } else {
-              // Cấp độ Dễ: Ưu tiên ăn quân đơn giản
-              const target = board[m.r][m.c];
-              score = target ? ANIMAL_DATA[target].rank * 10 : Math.random() * 5;
-            }
-
-            if (m.r === 0 && m.c === 3) score += 3000; // Ưu tiên tuyệt đối vào hang
-
-            if (score > bestScore) {
-              bestScore = score;
-              bestMoves = [{ fromR: r, fromC: c, toR: m.r, toC: m.c }];
-            } else if (score === bestScore) {
-              bestMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c });
-            }
+            allMoves.push({ fromR: r, fromC: c, toR: m.r, toC: m.c });
           });
         }
       }
     }
 
-    if (bestMoves.length === 0) {
-      endGame(true, "AI đã bị dồn vào đường cùng! Bạn thắng!");
+    if (allMoves.length === 0) {
+      endGame(true, "AI bị kẹt hoàn toàn! Bạn thắng!");
       return;
     }
 
-    const chosenMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+    // Ưu tiên vào hang Đỏ (8,3) nếu đi được
+    const winMove = allMoves.find(m => m.toR === 8 && m.toC === 3);
+    const chosenMove = winMove || allMoves[Math.floor(Math.random() * allMoves.length)];
 
-    // Lấy câu khịa
     const tauntList = TAUNT_MESSAGES[aiDifficulty];
-    const randomTaunt = tauntList[Math.floor(Math.random() * tauntList.length)];
-    setAiTaunt(randomTaunt);
+    setAiTaunt(tauntList[Math.floor(Math.random() * tauntList.length)]);
 
     executeMove(chosenMove.fromR, chosenMove.fromC, chosenMove.toR, chosenMove.toC);
   };
@@ -549,7 +509,7 @@ export default function ChessthuPage() {
           ← Trang chủ
         </Link>
         <h1 className="text-lg font-black tracking-wider text-emerald-400 uppercase flex items-center gap-1">
-          🦁 CỜ THÚ ONLINE
+          🦁 CỜ THÚ CHUẨN LUẬT
         </h1>
         <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-xl border border-amber-500/30 font-bold text-amber-400">
           🪙 {points.toLocaleString()} PTS
@@ -567,7 +527,7 @@ export default function ChessthuPage() {
                   onClick={() => handleSelectBet(amt)}
                   className={`py-2 text-xs font-extrabold rounded-xl border transition cursor-pointer ${
                     currentBet === amt
-                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-md shadow-emerald-500/10'
+                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400 shadow-md'
                       : 'border-slate-800 bg-slate-950 text-slate-400 hover:bg-slate-800'
                   }`}
                 >
@@ -581,7 +541,7 @@ export default function ChessthuPage() {
             <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider">⚔️ Đấu Online 2 Người</label>
             <button
               onClick={handleCreateRoom}
-              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition cursor-pointer text-sm"
+              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black rounded-xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm"
             >
               🚀 Tạo Phòng Online (Cược {currentBet})
             </button>
@@ -604,7 +564,7 @@ export default function ChessthuPage() {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col gap-3 shadow-xl">
-            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu Luyện AI Siêu Trí Tuệ</label>
+            <label className="text-xs font-bold text-blue-400 uppercase tracking-wider">🤖 Đấu Luyện AI Chuẩn Luật</label>
             <div className="flex justify-center gap-2">
               {(['easy', 'medium', 'hard'] as const).map((diff) => (
                 <button
@@ -616,13 +576,13 @@ export default function ChessthuPage() {
                       : 'border-slate-800 bg-slate-950 text-slate-500'
                   }`}
                 >
-                  {diff === 'easy' ? 'Dễ' : diff === 'medium' ? 'Trung Bình' : 'Khó (Minimax)'}
+                  {diff === 'easy' ? 'Dễ' : diff === 'medium' ? 'Trung Bình' : 'Khó'}
                 </button>
               ))}
             </div>
             <button
               onClick={startAiGame}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition cursor-pointer text-sm"
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-xl shadow-lg hover:brightness-110 transition cursor-pointer text-sm"
             >
               🎮 Chiến AI ({aiDifficulty === 'easy' ? 'Dễ' : aiDifficulty === 'medium' ? 'Trung Bình' : 'Khó'})
             </button>
@@ -634,7 +594,7 @@ export default function ChessthuPage() {
         <div className="flex flex-col items-center w-full max-w-lg">
           <div className="w-full flex justify-between items-center bg-slate-900 px-4 py-2.5 rounded-t-2xl border border-slate-800 text-xs font-bold">
             <span className="text-emerald-400 flex items-center gap-1">
-              ⚡ Lượt: {turn === 'r' ? 'Đỏ' : 'Xanh'} {turn === playerRole ? '(Đến lượt bạn!)' : ''}
+              ⚡ Lượt: {turn === 'r' ? 'Đỏ (Bạn)' : 'Xanh'} {turn === playerRole ? '(Đến lượt bạn!)' : ''}
             </span>
             <div className="flex items-center gap-3">
               <span className="text-slate-400">
@@ -652,17 +612,17 @@ export default function ChessthuPage() {
           {gameMode === 'ai' && (
             <div className="w-full bg-slate-900/90 border-t border-b border-amber-500/30 px-4 py-2 flex items-center gap-2 text-xs text-amber-300 font-medium">
               <span className="text-lg">🤖</span>
-              <div className="flex-1 italic">
-                &quot;{aiTaunt}&quot;
-              </div>
+              <div className="flex-1 italic">&quot;{aiTaunt}&quot;</div>
             </div>
           )}
 
+          {/* Bàn cờ chuẩn 7x9 */}
           <div className="grid grid-cols-7 grid-rows-9 w-full aspect-[7/9] border-4 border-amber-900/80 rounded-b-2xl shadow-2xl bg-[#52796f] p-1 gap-0.5 relative overflow-hidden">
             {board.map((row, r) =>
               row.map((piece, c) => {
                 const isW = isWater(r, c);
-                const isT = isTrap(r, c);
+                const isTrapR = isTrap(r, c, 'r');
+                const isTrapB = isTrap(r, c, 'b');
                 const isDenRed = isDen(r, c, 'r');
                 const isDenBlue = isDen(r, c, 'b');
                 const isSelected = selectedSquare?.r === r && selectedSquare?.c === c;
@@ -678,15 +638,15 @@ export default function ChessthuPage() {
                         ? 'bg-gradient-to-b from-blue-600 via-cyan-600 to-blue-700 shadow-inner border border-cyan-400/30'
                         : isDenRed || isDenBlue
                         ? 'bg-amber-800/90 border-2 border-yellow-500/80 shadow-lg'
-                        : isT
-                        ? 'bg-amber-900/40 border border-amber-700/50'
+                        : isTrapR || isTrapB
+                        ? 'bg-amber-900/50 border border-amber-700/60'
                         : 'bg-[#84a98c] border border-black/10 hover:brightness-105'
                     } ${isSelected ? 'ring-4 ring-yellow-400 z-10 scale-95 shadow-xl' : ''}`}
                   >
                     {isW && <span className="absolute text-[10px] opacity-30 select-none">🌊</span>}
-                    {isDenRed && <span className="absolute text-[9px] text-yellow-300 font-black top-0.5">HANG ĐỎ</span>}
-                    {isDenBlue && <span className="absolute text-[9px] text-yellow-300 font-black bottom-0.5">HANG XANH</span>}
-                    {isT && <span className="absolute text-[9px] text-amber-200/50 font-bold">BẪY</span>}
+                    {isDenRed && <span className="absolute text-[8px] text-yellow-300 font-black top-0.5">HANG ĐỎ</span>}
+                    {isDenBlue && <span className="absolute text-[8px] text-yellow-300 font-black bottom-0.5">HANG XANH</span>}
+                    {(isTrapR || isTrapB) && <span className="absolute text-[8px] text-amber-200/60 font-bold">BẪY</span>}
 
                     {animal && (
                       <div className={`flex flex-col items-center justify-center w-11/12 h-11/12 rounded-full shadow-md border-2 ${
