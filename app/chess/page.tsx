@@ -97,11 +97,11 @@ export default function ChessPage() {
     setScreen('game');
   };
 
-  // Tạo phòng Online Realtime trên Firestore
+  // Tạo phòng Online Realtime trên Firestore (dùng JSON.stringify để tránh lỗi nested arrays)
   const handleCreateRoom = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      alert("Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn!");
+      alert("Bạn chưa đăng nhập!");
       return;
     }
     if (points < currentBet) {
@@ -114,7 +114,7 @@ export default function ChessPage() {
       const roomRef = doc(db, "chessRooms", code);
       
       await setDoc(roomRef, {
-        board: INITIAL_BOARD,
+        board: JSON.stringify(INITIAL_BOARD),
         turn: 'w',
         bet: currentBet,
         hostUid: currentUser.uid
@@ -130,7 +130,7 @@ export default function ChessPage() {
       setScreen('game');
     } catch (err: any) {
       console.error("CHI TIẾT LỖI TẠO PHÒNG:", err);
-      alert("Lỗi Firestore: " + (err.message || "Không thể tạo phòng"));
+      alert("Lỗi tạo phòng: " + (err.message || "Không xác định"));
     }
   };
 
@@ -154,6 +154,14 @@ export default function ChessPage() {
         return;
       }
 
+      const data = roomSnap.data();
+      if (data.board) {
+        setBoard(JSON.parse(data.board));
+      }
+      if (data.turn) {
+        setTurn(data.turn);
+      }
+
       setRoomCode(inputCode);
       setGameMode('online');
       setPlayerRole('b');
@@ -172,8 +180,12 @@ export default function ChessPage() {
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.board) setBoard(data.board);
-        if (data.turn) setTurn(data.turn);
+        if (data.board) {
+          setBoard(JSON.parse(data.board));
+        }
+        if (data.turn) {
+          setTurn(data.turn);
+        }
       }
     }, (error) => {
       console.error("Lỗi sync realtime phòng cờ:", error);
@@ -290,7 +302,7 @@ export default function ChessPage() {
       try {
         const roomRef = doc(db, "chessRooms", roomCode);
         await updateDoc(roomRef, {
-          board: newBoard,
+          board: JSON.stringify(newBoard),
           turn: nextTurn
         });
 
