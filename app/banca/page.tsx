@@ -48,24 +48,24 @@ const GUN_TYPES: GunConfig[] = [
   { level: 9, cost: 2000, name: "Đạn 2.000đ", damage: 1100, speed: 15, size: 17, color: '#ef4444' }
 ];
 
-// Giảm tốc độ bơi của cá trung bình, cá lớn và nàng tiên cá theo yêu cầu
+// Định nghĩa mức thưởng và khoảng tốc độ random cho từng loài
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speed: 3.4, hpMin: 8, hpMax: 18, rewardMin: 10, rewardMax: 30, category: 'small', weight: 40 },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speed: 3.2, hpMin: 10, hpMax: 22, rewardMin: 10, rewardMax: 30, category: 'small', weight: 40 },
-  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speed: 3.6, hpMin: 6, hpMax: 15, rewardMin: 10, rewardMax: 30, category: 'small', weight: 30 },
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 75, height: 46, speedMin: 2.5, speedMax: 5.5, hpMin: 8, hpMax: 18, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 85, height: 50, speedMin: 2.8, speedMax: 6.0, hpMin: 10, hpMax: 22, rewardMin: 10, rewardMax: 50, category: 'small', weight: 40 },
+  { id: 's3', name: 'Cá Nhỏ 3', emoji: '🦐', width: 65, height: 40, speedMin: 3.2, speedMax: 6.5, hpMin: 6, hpMax: 15, rewardMin: 10, rewardMax: 50, category: 'small', weight: 30 },
   
-  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speed: 1.3, hpMin: 90, hpMax: 200, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
-  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speed: 1.2, hpMin: 120, hpMax: 280, rewardMin: 50, rewardMax: 100, category: 'medium', weight: 50 },
+  { id: 'm1', name: 'Cá Trung 1', emoji: '🐡', width: 140, height: 90, speedMin: 1.0, speedMax: 2.8, hpMin: 90, hpMax: 200, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
+  { id: 'm2', name: 'Cá Trung 2', emoji: '🐬', width: 165, height: 100, speedMin: 1.2, speedMax: 3.0, hpMin: 120, hpMax: 280, rewardMin: 100, rewardMax: 500, category: 'medium', weight: 50 },
   
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speed: 0.7, hpMin: 1200, hpMax: 3000, rewardMin: 100, rewardMax: 500, category: 'large', weight: 12 },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speed: 0.75, hpMin: 2000, hpMax: 4500, rewardList: [5000, 10000, 15000, 20000, 50000, 75000, 100000], category: 'mermaid', weight: 3 },
-  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speed: 0.6, hpMin: 2500, hpMax: 5500, rewardMin: 100, rewardMax: 500, category: 'large', weight: 6 }
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 320, height: 200, speedMin: 0.5, speedMax: 1.8, hpMin: 1200, hpMax: 3000, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 12 },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 280, height: 180, speedMin: 0.6, speedMax: 2.0, hpMin: 2000, hpMax: 4500, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid', weight: 3 },
+  { id: 'l3', name: 'Rồng Biển Trâu', emoji: '🐉', width: 380, height: 240, speedMin: 0.4, speedMax: 1.5, hpMin: 2500, hpMax: 5500, rewardMin: 1000, rewardMax: 5000, category: 'large', weight: 6 }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(150000);
+  const [jackpotPool, setJackpotPool] = useState<number>(250000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -147,9 +147,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 150000);
+        setJackpotPool(docSnap.data().amount || 250000);
       } else {
-        setDoc(jpRef, { amount: 150000 });
+        setDoc(jpRef, { amount: 250000 });
       }
     });
 
@@ -357,20 +357,22 @@ export default function BanCaPage() {
         if (template) {
           const dir = Math.floor(Math.random() * 4);
           let x = 0, y = 0, vx = 0, vy = 0;
-          const speed = template.speed * scaleFactor;
+          
+          // Random tốc độ riêng cho từng con cá trong khoảng speedMin đến speedMax
+          const randomSpeed = (Math.random() * (template.speedMax - template.speedMin) + template.speedMin) * scaleFactor;
 
           if (dir === 0) {
             x = -template.width * scaleFactor; y = Math.random() * h;
-            vx = (Math.random() * 0.5 + 0.8) * speed; vy = (Math.random() - 0.5) * speed;
+            vx = (Math.random() * 0.5 + 0.8) * randomSpeed; vy = (Math.random() - 0.5) * randomSpeed;
           } else if (dir === 1) {
             x = w + template.width * scaleFactor; y = Math.random() * h;
-            vx = -(Math.random() * 0.5 + 0.8) * speed; vy = (Math.random() - 0.5) * speed;
+            vx = -(Math.random() * 0.5 + 0.8) * randomSpeed; vy = (Math.random() - 0.5) * randomSpeed;
           } else if (dir === 2) {
             x = Math.random() * w; y = -template.height * scaleFactor;
-            vx = (Math.random() - 0.5) * speed; vy = (Math.random() * 0.5 + 0.8) * speed;
+            vx = (Math.random() - 0.5) * randomSpeed; vy = (Math.random() * 0.5 + 0.8) * randomSpeed;
           } else {
             x = Math.random() * w; y = h + template.height * scaleFactor;
-            vx = (Math.random() - 0.5) * speed; vy = -(Math.random() * 0.5 + 0.8) * speed;
+            vx = (Math.random() - 0.5) * randomSpeed; vy = -(Math.random() * 0.5 + 0.8) * randomSpeed;
           }
 
           const hp = Math.floor(Math.random() * (template.hpMax - template.hpMin + 1)) + template.hpMin;
@@ -388,7 +390,7 @@ export default function BanCaPage() {
             emoji: template.emoji,
             width: template.width * scaleFactor,
             height: template.height * scaleFactor,
-            speed: template.speed,
+            speed: randomSpeed,
             hp,
             maxHp: hp,
             reward: calculatedReward,
@@ -498,7 +500,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(150000);
+                  updateJackpotInFirestore(250000);
                 }
 
                 setPoints(prev => {
