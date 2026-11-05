@@ -7,7 +7,6 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-// Tỉ lệ trọng số chuẩn (weight): xen kẽ quà xịn và hụt quà
 const REWARDS = [
   { label: "🥤 Nước Suối", type: "water", weight: 6, color: "#06b6d4" },
   { label: "💀 Yamcha", type: "empty", weight: 15, color: "#ef4444" },
@@ -15,7 +14,7 @@ const REWARDS = [
   { label: "🍩 Majin Buu", type: "empty", weight: 18, color: "#f97316" },
   { label: "🎟️ +1 Lượt", type: "spin", value: 1, weight: 10, color: "#a855f7" },
   { label: "🌌 Zeno", type: "empty", weight: 17, color: "#64748b" },
-  { label: "🫘 Lọc Thận", type: "special", weight: 4, color: "#22c55e" }, // Thay 5k bằng 1 chai lọc thận
+  { label: "🫘 Lọc Thận", type: "special", weight: 4, color: "#22c55e" },
   { label: "🚀 Tàu Pảy Pảy", type: "empty", weight: 20, color: "#ec4899" },
 ];
 
@@ -34,7 +33,6 @@ export default function VongQuayPage() {
 
   const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
 
-  // Tính toán các thông số góc cho từng ô
   let currentAngle = 0;
   const sectors = REWARDS.map((r) => {
     const angleSize = (r.weight / totalWeight) * 360;
@@ -48,7 +46,6 @@ export default function VongQuayPage() {
     return sector;
   });
 
-  // Vẽ vòng quay Canvas
   const drawWheel = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -73,7 +70,6 @@ export default function VongQuayPage() {
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      // Vẽ chữ xuôi theo vòng quay, nằm gọn vào giữa khung
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate((sector.middle * Math.PI) / 180);
@@ -87,7 +83,6 @@ export default function VongQuayPage() {
       ctx.restore();
     });
 
-    // Vẽ tâm vòng quay
     ctx.beginPath();
     ctx.arc(cx, cy, 32, 0, Math.PI * 2);
     ctx.fillStyle = "#ffffff";
@@ -103,7 +98,11 @@ export default function VongQuayPage() {
   };
 
   useEffect(() => {
-    drawWheel();
+    // Đảm bảo canvas render ngay khi component mount
+    const timer = setTimeout(() => {
+      drawWheel();
+    }, 50);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -115,18 +114,21 @@ export default function VongQuayPage() {
         if (userSnap.exists()) {
           const data = userSnap.data();
           setPoints(data.points || 0);
-          setLuckySpins(data.luckySpins || 3);
+          setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 3);
         }
       }
       setLoading(false);
+      setTimeout(drawWheel, 100);
     });
     return () => unsubscribe();
   }, []);
 
   const spinWheel = async () => {
     if (isSpinning) return;
+    
+    // Kiểm tra gắt gao: Không có lượt thì nhịn!
     if (luckySpins <= 0) {
-      alert("⚡ Hết lượt quay rồi ní ơi! Hãy ghé Shop Đổi Quà để mua thêm lượt nhé!");
+      alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt!");
       return;
     }
 
@@ -136,10 +138,13 @@ export default function VongQuayPage() {
     const newSpins = luckySpins - 1;
     setLuckySpins(newSpins);
     if (user) {
-      await setDoc(doc(db, "users", user.uid), { luckySpins: newSpins }, { merge: true });
+      try {
+        await setDoc(doc(db, "users", user.uid), { luckySpins: newSpins }, { merge: true });
+      } catch (e) {
+        console.error(e);
+      }
     }
 
-    // Thuật toán random theo trọng số & tránh lặp lại ô vừa trúng gần nhất
     let targetIndex = 0;
     let attempts = 0;
     do {
@@ -159,13 +164,12 @@ export default function VongQuayPage() {
     setLastIndex(targetIndex);
 
     const winningSector = sectors[targetIndex];
-    // Kim chỉ ở góc phía trên (270 độ), tính toán góc quay chính xác để dừng đúng giữa ô
     const targetMiddleAngle = (winningSector.start + winningSector.end) / 2;
     const desiredDegree = 270 - targetMiddleAngle;
 
     const currentNormalized = rotationRef.current % 360;
     const extraOffset = (desiredDegree - currentNormalized + 360) % 360;
-    rotationRef.current += 360 * 8 + extraOffset; // Quay 8 vòng đà + góc lệch chuẩn
+    rotationRef.current += 360 * 8 + extraOffset;
 
     const canvas = canvasRef.current;
     if (canvas) {
@@ -240,12 +244,12 @@ export default function VongQuayPage() {
               🎡 VÒNG QUAY NGỌC RỒNG MAY MẮN
             </h1>
             <p className="text-slate-400 text-sm max-w-md mx-auto">
-              Quay ngay để rinh quà xịn (Nước suối, Tiền mặt, Lọc Thận), né các ô Yamcha và Majin Buu nhé!
+              Quay ngay để rinh quà xịn (Nước suối, Tiền mặt, 1 Chai Lọc Thận), né các ô Yamcha và Majin Buu nhé!
             </p>
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-            {/* Vòng quay Canvas mượt mà, chuẩn xác */}
+            {/* Vòng quay Canvas mượt mà, hiển thị chuẩn 100% */}
             <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] flex items-center justify-center">
               <div className="absolute -top-3 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
               <canvas
@@ -270,14 +274,14 @@ export default function VongQuayPage() {
 
               <button
                 onClick={spinWheel}
-                disabled={isSpinning}
+                disabled={isSpinning || luckySpins <= 0}
                 className={`w-full py-4 rounded-2xl font-black text-base uppercase tracking-wider transition shadow-lg cursor-pointer ${
-                  isSpinning
-                    ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
+                  isSpinning || luckySpins <= 0
+                    ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60"
                     : "bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 hover:brightness-110 text-slate-950 shadow-amber-500/30 active:scale-95 animate-pulse"
                 }`}
               >
-                {isSpinning ? "🌀 ĐANG KÊU GỌI RỒNG THẦN..." : "🎰 QUAY NGAY (1 LƯỢT)"}
+                {isSpinning ? "🌀 ĐANG KÊU GỌI RỒNG THẦN..." : luckySpins <= 0 ? "🔒 HẾT LƯỢT QUAY (NHỊN)" : "🎰 QUAY NGAY (1 LƯỢT)"}
               </button>
 
               <Link
