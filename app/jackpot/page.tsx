@@ -28,35 +28,37 @@ const DRAGON_SYMBOLS = [
   { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 1 },
 ];
 
-// Đã hạ hệ số Aura Thưởng Nhanh thấp hơn, sát thực tế cược nhỏ không bị lạm phát
+// Thưởng nhanh Aura chuẩn các mốc yêu cầu (thấp hơn nổ chuỗi để giữ cân bằng)
 const AURA_QUICK_REWARDS = [
-  { id: "ki_white", name: "⚪ Aura Ki Trắng", mult: 1.5, icon: "✨" },
-  { id: "kaioken", name: "🔴 Aura Kaioken", mult: 2, icon: "🔥" },
-  { id: "ssj1", name: "🟡 Aura Super Saiyan", mult: 2.5, icon: "⚡" },
-  { id: "ssj2", name: "⚡ Aura Super Saiyan 2", mult: 3, icon: "🌩️" },
-  { id: "ssj_god", name: "🔴 Aura SSJ God", mult: 4, icon: "☀️" },
-  { id: "ssj_blue", name: "🔵 Aura SSJ Blue", mult: 5, icon: "💎" },
+  { id: "ki_white", name: "⚪ Aura Ki Trắng", mult: 2, icon: "✨" },
+  { id: "kaioken", name: "🔴 Aura Kaioken", mult: 2.5, icon: "🔥" },
+  { id: "ssj1", name: "🟡 Aura Super Saiyan", mult: 3, icon: "⚡" },
+  { id: "ssj2", name: "⚡ Aura Super Saiyan 2", mult: 3.5, icon: "🌩️" },
+  { id: "ssj_god", name: "🔴 Aura SSJ God", mult: 5, icon: "☀️" },
+  { id: "ssj_blue", name: "🔵 Aura SSJ Blue", mult: 6, icon: "💎" },
+  { id: "ultra_ego", name: "🟣 Aura Ultra Ego", mult: 8, icon: "🔮" },
+  { id: "ultra_instinct", name: "🌌 Aura Ultra Instinct", mult: 10, icon: "🌌" },
 ];
 
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 const LOSE_TAUNTS = [
-  "Vegeta cười khẩy: 'Hàng đầu tiên không có mặt thì tuổi gì đòi nổ?'",
-  "Yamcha lắc đầu ngán ngẩm vì cột đầu tiên bỏ trống!",
-  "Hết Ki rồi chiến binh ơi, hít thở lấy lại sức đi!",
-  "Rồng thần lắc đầu ngao ngán vì vận may chưa tới!",
+  "Vegeta cười khẩy: 'Cược lớn mà đánh kiểu này à? Về nhà bú sữa đi cùi bắp!'",
+  "Yamcha nằm đất vẫy tay chào tạm biệt số điểm Ki vừa bay màu!",
+  "Beerus đại nhân đang ngủ gật bỗng tỉnh giấc vì cú quay quá tệ của ngươi!",
+  "Frieza nhếch mép: 'Ngươi chỉ có từng đó công lực thôi sao?'",
 ];
 
 const STREAK_BROKEN_TAUNTS = [
-  "💔 ĐỨT CHUỖI! Hàng đầu tiên gãy khúc khiến chuỗi liên hoàn vỡ vụn! Rớt lại từ đầu.",
-  "⚡ BÙM! Chuỗi chiến thắng đã đứt đoạn giữa vũ trụ võ đạo!",
-  "💥 ĐỨT XÍCH! Thiếu mặt ở hàng đầu tiên khiến chuỗi tích lũy tan thành mây khói!",
+  "💔 ĐỨT CHUỖI CỰC MẠNH! Cơn thịnh nộ tan thành mây khói, rớt thẳng về vạch xuất phát!",
+  "⚡ BÙM! Mạch liên hoàn đứt đoạn, mồ hôi dầm dề nhưng Ki đã cạn sạch!",
+  "💥 ĐỨT XÍCH! Sai một ly đi một dặm, chuỗi nhân dồn sụp đổ hoàn toàn!",
 ];
 
 const WIN_PRAISES = [
-  "Bùng nổ sức mạnh tiềm ẩn! Khai mở giới hạn cực đỉnh!",
-  "Kamehamehaaaaa! Nổ tung tóe phần thưởng cực đã!",
-  "Rồng thần ban phúc! Tài sản tăng vọt không đối thủ!",
+  "Bùng nổ sức mạnh tiềm ẩn! Cú đánh chấn động cả thiên hà!",
+  "Kamehamehaaaaa! Nền trời rung chuyển vì phần thưởng quá khủng!",
+  "Rồng thần ban phúc! Tài sản tăng vọt vượt mọi giới hạn vũ trụ!",
 ];
 
 interface HistoryItem {
@@ -72,6 +74,7 @@ export default function JackpotPage() {
   const [currentBet, setCurrentBet] = useState<number>(100);
   const [spinning, setSpinning] = useState<boolean>(false);
   const [explosiveEffect, setExplosiveEffect] = useState<boolean>(false);
+  const [jackpotSideGlow, setJackpotSideGlow] = useState<boolean>(false);
 
   const [winningCoords, setWinningCoords] = useState<number[]>([]);
   const [autoCount, setAutoCount] = useState<number>(0);
@@ -93,7 +96,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Đang zô chuỗi bắt buộc hoàn thành chuỗi! Ngoài chuỗi kích hoạt Aura Thưởng Nhanh hệ số chuẩn.",
+    text: "Võ đạo Dragon Ball: Cược nhỏ dễ trúng, cược lớn húp Jackpot khủng! Chọn mức cược và chiến ngay.",
     type: "normal",
   });
 
@@ -234,28 +237,43 @@ export default function JackpotPage() {
     }, 75);
   };
 
+  // THUẬT TOÁN ĐIỀU CHỈNH TỶ LỆ THEO MỨC CƯỢC & HŨ JACKPOT GẮT GAO
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
-    let winChance = 0.35;
-    if (currentBet <= 100) winChance = 0.42;
-    else if (currentBet <= 1000) winChance = 0.32;
-    else winChance = 0.24;
+    // Tỷ lệ cơ bản 33%
+    let winChance = 0.33;
+    if (currentBet < 100) {
+      winChance += 0.10; // Đặt bé hơn 100: Tăng +10% tỷ lệ thắng
+    } else if (currentBet >= 200 && currentBet <= 500) {
+      winChance -= 0.05; // Đặt 200-500: Giảm -5%
+    } else if (currentBet >= 5000) {
+      winChance -= 0.10; // Đặt 5k: Giảm -10% tỷ lệ thắng, rủi ro cao
+    }
 
     const isTriggerWin = Math.random() < winChance;
+    
+    // Tỷ lệ nổ Jackpot cực khó nhưng luôn có cơ hội (càng cược lớn cơ hội húp hũ Grand càng rõ ràng hơn chút)
+    const jackpotChance = currentBet >= 1000 ? 0.015 : 0.005;
+    const isJackpotHit = Math.random() < jackpotChance;
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
 
     let baseWinAmount = 0;
     let matchedIndices: number[] = [];
     let resultText = "";
     let isStreakWin = false;
+    let isGrandJackpot = false;
 
-    if (shenronTotal >= 4 || (isTriggerWin && Math.random() < 0.02)) {
-      baseWinAmount = jackpots.minor + currentBet * 12;
+    // 1. Kiểm tra nổ hũ Jackpot
+    if (isJackpotHit || shenronTotal >= 5) {
+      isGrandJackpot = true;
+      baseWinAmount = jackpots.grand + currentBet * 20;
       matchedIndices = finalGrid.map((s, idx) => (s.id === "shenron" ? idx : -1)).filter((i) => i !== -1);
-      resultText = `👑 NỔ HŨ RỒNG THẦN ĐẠI CỰC! +${baseWinAmount.toLocaleString()} PTS`;
+      if (matchedIndices.length === 0) matchedIndices = [0, 1, 2, 3, 4, 5];
+      resultText = `👑 NỔ HŨ GRAND JACKPOT VŨ TRỤ! +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
-      triggerExplosion();
+      triggerJackpotSideGlow();
     } 
     else if (isTriggerWin) {
+      // CHECK LUẬT CHUỖI TỪ CỘT 1
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
         const colItems = [];
@@ -291,9 +309,9 @@ export default function JackpotPage() {
           if (symObj) {
             let symbolWin = 0;
             if (symObj.type === "weak") {
-              symbolWin = (currentBet * 0.5) * symObj.multiplier * consecutiveColsCount;
+              symbolWin = (currentBet * 0.4) * symObj.multiplier * consecutiveColsCount;
             } else {
-              symbolWin = (currentBet * 1.2) * symObj.multiplier * consecutiveColsCount;
+              symbolWin = (currentBet * 1.0) * symObj.multiplier * consecutiveColsCount;
             }
             const columnBonus = consecutiveColsCount >= 5 ? 3 : consecutiveColsCount === 4 ? 2 : 1;
             totalStreakWin += Math.floor(symbolWin * columnBonus);
@@ -313,7 +331,7 @@ export default function JackpotPage() {
         if (streakRef.current >= 0) {
           baseWinAmount = 0;
         } else {
-          // AURA THƯỞNG NHANH VỚI HỆ SỐ THẤP HƠN, HỢP LÝ CHO CƯỢC NHỎ
+          // THƯỞNG NHANH AURA VỚI HỆ SỐ CHUẨN X2, X2.5, X3, X3.5, X5, X6, X8, X10
           const chosenAura = AURA_QUICK_REWARDS[Math.floor(Math.random() * AURA_QUICK_REWARDS.length)];
           baseWinAmount = Math.floor(currentBet * chosenAura.mult);
           
@@ -340,9 +358,11 @@ export default function JackpotPage() {
         streakRef.current = nextIdx;
         setStreakIndex(nextIdx);
 
-        const activeMultiplier = STREAK_STEPS[nextIdx];
-        finalTotalWin = baseWinAmount * activeMultiplier;
-        resultText = `🔥 CHUỖI NHÂN x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
+        const activeMultiplier = isGrandJackpot ? 1 : STREAK_STEPS[nextIdx];
+        finalTotalWin = isGrandJackpot ? baseWinAmount : baseWinAmount * activeMultiplier;
+        resultText = isGrandJackpot 
+          ? `👑 NỔ HŨ GRAND JACKPOT! NHẬN NGAY +${finalTotalWin.toLocaleString()} PTS`
+          : `🔥 CHUỖI NHÂN x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
       } else {
         finalTotalWin = baseWinAmount;
       }
@@ -377,6 +397,15 @@ export default function JackpotPage() {
   const triggerExplosion = () => {
     setExplosiveEffect(true);
     setTimeout(() => setExplosiveEffect(false), 700);
+  };
+
+  const triggerJackpotSideGlow = () => {
+    setJackpotSideGlow(true);
+    setExplosiveEffect(true);
+    setTimeout(() => {
+      setJackpotSideGlow(false);
+      setExplosiveEffect(false);
+    }, 1500);
   };
 
   const continueAutoIfNeeded = (remainingAuto: number) => {
@@ -427,10 +456,14 @@ export default function JackpotPage() {
       </div>
 
       {/* Main Game Container */}
-      <div className="w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-3 sm:p-5 shadow-2xl flex flex-col gap-3">
+      <div className={`w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-3 sm:p-5 shadow-2xl flex flex-col gap-3 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
-        {/* 3 HŨ JACKPOT */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* 3 HŨ JACKPOT VỚI HIỆU ỨNG 2 BÊN KHI NỔ */}
+        <div className="grid grid-cols-3 gap-2 relative">
+          {jackpotSideGlow && (
+            <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur-md opacity-75 animate-pulse -z-10"></div>
+          )}
+
           <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-2 text-center shadow-md">
             <div className="text-[9px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MAJOR</div>
             <div className="text-xs sm:text-base font-black text-white font-mono">{jackpots.major.toLocaleString()}</div>
@@ -447,7 +480,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* DANH SÁCH AURA THƯỞNG NHANH DRAGON BALL (ĐÃ HẠ HỆ SỐ) */}
+        {/* DANH SÁCH AURA THƯỞNG NHANH DRAGON BALL */}
         <div className="bg-slate-950/80 border border-amber-500/30 p-2 rounded-xl flex items-center justify-between gap-1 overflow-x-auto text-[10px] sm:text-xs">
           {AURA_QUICK_REWARDS.map((aura) => (
             <div key={aura.id} className="bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg shrink-0 flex items-center gap-1 font-bold">
