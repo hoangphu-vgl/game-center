@@ -417,3 +417,38 @@ export default function Home() {
     </AuthGuard>
   );
 }
+{/* 🎰 GAME GIẢI TRÍ & MAY MẮN */}
+<div className="mb-8">
+  <h2 className="text-lg sm:text-xl font-black text-amber-400 mb-4 flex items-center gap-2">
+    <span>🎰</span> GAME GIẢI TRÍ & MAY MẮN
+  </h2>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    
+    {/* Thẻ Nổ Hũ Jackpot */}
+    <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xl hover:border-amber-400 transition">
+      <div>
+        <div className="text-base sm:text-lg font-black text-amber-300 mb-1">👑 Jackpot Rồng Thần</div>
+        <p className="text-xs sm:text-sm text-slate-300 mb-4">
+          Thử vận may quay hũ 4 hàng 6 cột tích tụ Ki nổ hũ Grand cực khủng!
+        </p>
+      </div>
+      <Link href="/jackpot" className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black py-2.5 rounded-xl text-center text-xs sm:text-sm shadow-md hover:brightness-110 transition">
+        Vào Nổ Hũ Ngay 🎰
+      </Link>
+    </div>
+
+    {/* Thẻ Xì Dách Multiplayer Realtime (Mới thêm) */}
+    <div className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-xl hover:border-emerald-400 transition">
+      <div>
+        <div className="text-base sm:text-lg font-black text-emerald-300 mb-1">🎴 Xì Dách Realtime (6 Người)</div>
+        <p className="text-xs sm:text-sm text-slate-300 mb-4">
+          Đấu trường bài bạc đỉnh cao cùng bạn bè và AI Nhà Cái Rồng Thần. Ghép phòng tự động, cược PTS cực gắt!
+        </p>
+      </div>
+      <Link href="/xidach" className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2.5 rounded-xl text-center text-xs sm:text-sm shadow-md hover:brightness-110 transition">
+        Vào Bàn Xì Dách 🎴
+      </Link>
+    </div>
+
+  </div>
+</div>
