@@ -11,54 +11,67 @@ export default function Home() {
   const [lastCheckIn, setLastCheckIn] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // Lấy ngày hiện tại dạng chuẩn YYYY-MM-DD để so sánh điểm danh
   const getTodayString = () => {
     const today = new Date();
     return today.toISOString().split("T")[0];
   };
 
-  // Lắng nghe trạng thái đăng nhập và tải dữ liệu ví điểm
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        await loadOrInitUser(currentUser);
+        try {
+          await loadOrInitUser(currentUser);
+        } catch (error) {
+          console.error("Lỗi tải dữ liệu Firestore:", error);
+          // Vẫn cho qua loading để người dùng không bị kẹt màn hình
+        }
       } else {
         setPoints(0);
         setLastCheckIn("");
       }
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Timeout phòng hờ 3 giây nếu Firebase chậm/treo thì ép tắt loading luôn
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
-  // Hàm khởi tạo hoặc lấy thông tin user từ Firestore
   const loadOrInitUser = async (currentUser: User) => {
-    const userRef = doc(db, "users", currentUser.uid);
-    const userSnap = await getDoc(userRef);
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
 
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      setPoints(data.points || 0);
-      setLastCheckIn(data.lastCheckIn || "");
-    } else {
-      // Tạo mới user với ví điểm khởi tạo = 0
-      const newUser = {
-        uid: currentUser.uid,
-        name: currentUser.displayName || "Game thủ",
-        email: currentUser.email,
-        photoURL: currentUser.photoURL,
-        points: 0,
-        lastCheckIn: "",
-        createdAt: new Date().toISOString(),
-      };
-      await setDoc(userRef, newUser);
-      setPoints(0);
-      setLastCheckIn("");
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setPoints(data.points || 0);
+        setLastCheckIn(data.lastCheckIn || "");
+      } else {
+        const newUser = {
+          uid: currentUser.uid,
+          name: currentUser.displayName || "Game thủ",
+          email: currentUser.email,
+          photoURL: currentUser.photoURL,
+          points: 0,
+          lastCheckIn: "",
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(userRef, newUser);
+        setPoints(0);
+        setLastCheckIn("");
+      }
+    } catch (err) {
+      console.error("Không kết nối được Firestore:", err);
     }
   };
 
-  // Hàm xử lý Điểm danh nhận 500 điểm
   const handleCheckIn = async () => {
     if (!user) return;
     const today = getTodayString();
@@ -80,7 +93,7 @@ export default function Home() {
       alert("🎉 Điểm danh thành công! Nhận ngay +500 điểm vào ví.");
     } catch (error) {
       console.error("Lỗi điểm danh:", error);
-      alert("Điểm danh thất bại, thử lại sau nhé!");
+      alert("Điểm danh thất bại, kiểm tra lại kết nối mạng!");
     }
   };
 
@@ -141,7 +154,6 @@ export default function Home() {
             </h2>
             <p className="text-xs text-slate-400 mb-4">{user.email}</p>
 
-            {/* Ví điểm hiển thị */}
             <div className="w-full bg-slate-700/60 p-4 rounded-xl mb-5 border border-slate-600 flex justify-between items-center">
               <div className="text-left">
                 <p className="text-xs text-slate-300 font-medium">Ví Điểm Của Bạn</p>
@@ -150,7 +162,6 @@ export default function Home() {
               <span className="text-2xl">💰</span>
             </div>
 
-            {/* Nút Điểm danh 30 ngày / Hằng ngày */}
             <button
               onClick={handleCheckIn}
               disabled={isCheckedInToday}
