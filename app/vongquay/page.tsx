@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import AuthGuard from "@/components/AuthGuard";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-// Sắp xếp xen kẽ giữa Ô Quà Xịn và Ô Hụt Quà để cân đối, không bị trùng lặp liên tiếp
-const WHEEL_SLICES = [
-  { id: 1, label: "🥤 Nước Suối", type: "water", prob: 0.05, color: "#06b6d4" },
-  { id: 2, label: "💀 Yamcha", type: "empty", prob: 0.17, color: "#ef4444" },
-  { id: 3, label: "💵 1.000đ", type: "money", value: 1000, prob: 0.10, color: "#eab308" },
-  { id: 4, label: "🍩 Majin Buu", type: "empty", prob: 0.18, color: "#f97316" },
-  { id: 5, label: "🎟️ +1 Lượt", type: "spin", value: 1, prob: 0.10, color: "#a855f7" },
-  { id: 6, label: "🌌 Zeno", type: "empty", prob: 0.17, color: "#64748b" },
-  { id: 7, label: "💵 2.000đ", type: "money", value: 2000, prob: 0.08, color: "#22c55e" },
-  { id: 8, label: "🚀 Tàu Pảy Pảy", type: "empty", prob: 0.15, color: "#ec4899" },
+// Tỉ lệ trọng số chuẩn (weight): xen kẽ quà xịn và hụt quà
+const REWARDS = [
+  { label: "🥤 Nước Suối", type: "water", weight: 6, color: "#06b6d4" },
+  { label: "💀 Yamcha", type: "empty", weight: 15, color: "#ef4444" },
+  { label: "💵 1.000đ", type: "money", value: 1000, weight: 10, color: "#eab308" },
+  { label: "🍩 Majin Buu", type: "empty", weight: 18, color: "#f97316" },
+  { label: "🎟️ +1 Lượt", type: "spin", value: 1, weight: 10, color: "#a855f7" },
+  { label: "🌌 Zeno", type: "empty", weight: 17, color: "#64748b" },
+  { label: "🫘 Lọc Thận", type: "special", weight: 4, color: "#22c55e" }, // Thay 5k bằng 1 chai lọc thận
+  { label: "🚀 Tàu Pảy Pảy", type: "empty", weight: 20, color: "#ec4899" },
 ];
 
 export default function VongQuayPage() {
@@ -26,9 +26,85 @@ export default function VongQuayPage() {
   const [loading, setLoading] = useState(true);
 
   const [isSpinning, setIsSpinning] = useState(false);
-  const [wheelAngle, setWheelAngle] = useState(0);
   const [spinResultModal, setSpinResultModal] = useState<string | null>(null);
-  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const [lastIndex, setLastIndex] = useState<number | null>(null);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rotationRef = useRef<number>(0);
+
+  const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
+
+  // Tính toán các thông số góc cho từng ô
+  let currentAngle = 0;
+  const sectors = REWARDS.map((r) => {
+    const angleSize = (r.weight / totalWeight) * 360;
+    const sector = {
+      ...r,
+      start: currentAngle,
+      end: currentAngle + angleSize,
+      middle: currentAngle + angleSize / 2,
+    };
+    currentAngle += angleSize;
+    return sector;
+  });
+
+  // Vẽ vòng quay Canvas
+  const drawWheel = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const cx = 250, cy = 250, radius = 245;
+    ctx.clearRect(0, 0, 500, 500);
+
+    sectors.forEach((sector) => {
+      const start = (sector.start * Math.PI) / 180;
+      const end = (sector.end * Math.PI) / 180;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, start, end);
+      ctx.closePath();
+
+      ctx.fillStyle = sector.color;
+      ctx.fill();
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Vẽ chữ xuôi theo vòng quay, nằm gọn vào giữa khung
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((sector.middle * Math.PI) / 180);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 17px Arial";
+      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+      ctx.shadowBlur = 4;
+      ctx.fillText(sector.label, 205, 0);
+      ctx.restore();
+    });
+
+    // Vẽ tâm vòng quay
+    ctx.beginPath();
+    ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+    ctx.fillStyle = "#f59e0b";
+    ctx.fill();
+  };
+
+  useEffect(() => {
+    drawWheel();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -63,37 +139,42 @@ export default function VongQuayPage() {
       await setDoc(doc(db, "users", user.uid), { luckySpins: newSpins }, { merge: true });
     }
 
-    // Thuật toán quay có tỉ lệ và tránh lặp lại ô vừa trúng trước đó nếu có thể
-    let selectedIndex = 0;
+    // Thuật toán random theo trọng số & tránh lặp lại ô vừa trúng gần nhất
+    let targetIndex = 0;
     let attempts = 0;
     do {
-      const rand = Math.random();
-      let cumulative = 0;
-      for (let i = 0; i < WHEEL_SLICES.length; i++) {
-        cumulative += WHEEL_SLICES[i].prob;
-        if (rand <= cumulative) {
-          selectedIndex = i;
+      const randWeight = Math.random() * totalWeight;
+      let accumulated = 0;
+      for (let i = 0; i < sectors.length; i++) {
+        accumulated += REWARDS[i].weight;
+        if (randWeight <= accumulated) {
+          targetIndex = i;
           break;
         }
       }
       attempts++;
-      // Nếu quay ra trùng ô trước đó và có nhiều hơn 1 lựa chọn, thử random lại 1 lần để tránh lặp
-      if (selectedIndex !== lastSelectedIndex || attempts > 3) {
-        break;
-      }
+      if (targetIndex !== lastIndex || attempts > 3) break;
     } while (true);
 
-    setLastSelectedIndex(selectedIndex);
+    setLastIndex(targetIndex);
 
-    const sliceAngle = 360 / WHEEL_SLICES.length;
-    const randomFullRounds = 360 * (6 + Math.floor(Math.random() * 3));
-    const targetAngle = wheelAngle + randomFullRounds + (360 - (wheelAngle % 360)) + (360 - (selectedIndex * sliceAngle + sliceAngle / 2));
+    const winningSector = sectors[targetIndex];
+    // Kim chỉ ở góc phía trên (270 độ), tính toán góc quay chính xác để dừng đúng giữa ô
+    const targetMiddleAngle = (winningSector.start + winningSector.end) / 2;
+    const desiredDegree = 270 - targetMiddleAngle;
 
-    setWheelAngle(targetAngle);
+    const currentNormalized = rotationRef.current % 360;
+    const extraOffset = (desiredDegree - currentNormalized + 360) % 360;
+    rotationRef.current += 360 * 8 + extraOffset; // Quay 8 vòng đà + góc lệch chuẩn
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.style.transform = `rotate(${rotationRef.current}deg)`;
+    }
 
     setTimeout(async () => {
       setIsSpinning(false);
-      const prize = WHEEL_SLICES[selectedIndex];
+      const prize = REWARDS[targetIndex];
       let msg = `🎉 Chúc mừng ní trúng: ${prize.label}`;
 
       if (prize.type === "spin") {
@@ -105,6 +186,8 @@ export default function VongQuayPage() {
         msg = `🔥 QUÁ ĐỈNH! Ultra Instinct kích hoạt, trúng ngay +1 Lượt Quay Miễn Phí!`;
       } else if (prize.type === "money") {
         msg = `💰 Rồng Thần ban phước! Ní nhận ngay phần thưởng ${prize.label}! Chụp màn hình báo Admin ngay!`;
+      } else if (prize.type === "special") {
+        msg = `🫘 Ní trúng 1 Chai Lọc Thận thần dược! Uống xong trẻ lại 10 tuổi, gánh tạ siêu mượt!`;
       } else if (prize.type === "water") {
         msg = `🥤 Khát nước quá hả ní? Trúng ngay 1 Chai Nước Suối mát lạnh từ Đấu Trường!`;
       } else {
@@ -118,7 +201,7 @@ export default function VongQuayPage() {
       }
 
       setSpinResultModal(msg);
-    }, 4000);
+    }, 4100);
   };
 
   if (loading) {
@@ -157,34 +240,23 @@ export default function VongQuayPage() {
               🎡 VÒNG QUAY NGỌC RỒNG MAY MẮN
             </h1>
             <p className="text-slate-400 text-sm max-w-md mx-auto">
-              Quay ngay để rinh quà xịn, né các ô Yamcha và Majin Buu nhé!
+              Quay ngay để rinh quà xịn (Nước suối, Tiền mặt, Lọc Thận), né các ô Yamcha và Majin Buu nhé!
             </p>
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-            {/* Vòng quay SVG chuẩn căn chỉnh chữ vào giữa */}
+            {/* Vòng quay Canvas mượt mà, chuẩn xác */}
             <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] flex items-center justify-center">
-              <div className="absolute -top-4 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
-              <div
-                className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_40px_rgba(168,85,247,0.6)] relative overflow-hidden"
+              <div className="absolute -top-3 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
+              <canvas
+                ref={canvasRef}
+                width={500}
+                height={500}
+                className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_40px_rgba(168,85,247,0.6)]"
                 style={{
-                  transform: `rotate(${wheelAngle}deg)`,
-                  transition: isSpinning ? "transform 4s cubic-bezier(0.15, 0.9, 0.2, 1)" : "none",
-                  background: "conic-gradient(#06b6d4 0deg 45deg, #ef4444 45deg 90deg, #eab308 90deg 135deg, #f97316 135deg 180deg, #a855f7 180deg 225deg, #64748b 225deg 270deg, #22c55e 270deg 315deg, #ec4899 315deg 360deg)"
+                  transition: isSpinning ? "transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)" : "none",
                 }}
-              >
-                {/* Các nhãn chữ được định vị chuẩn tâm ô */}
-                <div className="absolute inset-0 flex items-center justify-center text-[11px] sm:text-[13px] font-black text-slate-950">
-                  <div className="absolute top-7 transform -translate-y-1/2 rotate-0 drop-shadow-sm">🥤 Nước Suối</div>
-                  <div className="absolute right-9 top-20 transform rotate-45 drop-shadow-sm">💀 Yamcha</div>
-                  <div className="absolute right-5 bottom-28 transform rotate-90 drop-shadow-sm">💵 1.000đ</div>
-                  <div className="absolute bottom-7 right-20 transform rotate-[135deg] drop-shadow-sm">🍩 Majin Buu</div>
-                  <div className="absolute bottom-6 left-20 transform rotate-180 drop-shadow-sm">🎟️ +1 Lượt</div>
-                  <div className="absolute left-5 bottom-28 transform rotate-[225deg] drop-shadow-sm">🌌 Zeno</div>
-                  <div className="absolute left-9 top-20 transform rotate-[270deg] drop-shadow-sm">💵 2.000đ</div>
-                  <div className="absolute top-7 left-20 transform rotate-[315deg] drop-shadow-sm">🚀 Tàu Pảy Pảy</div>
-                </div>
-              </div>
+              />
               <div className="absolute z-20 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-4 border-slate-950 shadow-2xl flex items-center justify-center text-2xl font-black">
                 🐉
               </div>
