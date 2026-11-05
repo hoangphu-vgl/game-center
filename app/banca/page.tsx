@@ -101,6 +101,7 @@ export default function BanCaPage() {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
 
+  // Dọn sạch ghế ngay lập tức khi thoát trang hoặc đóng tab
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -559,7 +560,7 @@ export default function BanCaPage() {
     };
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
-  // Xử lý tọa độ chạm và bắn tối ưu cho cả PWA (Thêm vào màn hình chính)
+  // Xử lý tọa độ chạm và bắn tối ưu
   const handleShoot = (clientX: number, clientY: number) => {
     if (!isPVE) {
       const pData = roomPlayersRef.current[myCorner];
@@ -621,16 +622,18 @@ export default function BanCaPage() {
     setIsHost(true);
     setMyCorner('bottom-right');
 
+    const userEmail = user?.email || 'Chủ phòng';
+
     const newPlayers = {
       'top-left': { active: false, email: 'Trống' },
       'top-right': { active: false, email: 'Trống' },
       'bottom-left': { active: false, email: 'Trống' },
-      'bottom-right': { active: true, email: user?.email || 'Chủ phòng', angle: -Math.PI / 2 }
+      'bottom-right': { active: true, email: userEmail, angle: -Math.PI / 2 }
     };
     roomPlayersRef.current = newPlayers;
 
     await setDoc(doc(db, "banca_rooms", roomId), {
-      creator: user?.email || 'Host',
+      creator: userEmail,
       status: 'playing',
       players: newPlayers,
       fishes: []
@@ -661,14 +664,34 @@ export default function BanCaPage() {
     setIsHost(false);
 
     const players = data.players || {};
-    let corner = 'bottom-right';
-    if (!players['bottom-left'] || !players['bottom-left'].active || players['bottom-left'].email === 'Trống') corner = 'bottom-left';
-    else if (!players['top-left'] || !players['top-left'].active || players['top-left'].email === 'Trống') corner = 'top-left';
-    else if (!players['top-right'] || !players['top-right'].active || players['top-right'].email === 'Trống') corner = 'top-right';
-    else if (!players['bottom-right'] || !players['bottom-right'].active || players['bottom-right'].email === 'Trống') corner = 'bottom-right';
+    const userEmail = user?.email || 'Thành viên';
+
+    // KIỂM TRA QUAN TRỌNG: Nếu tài khoản này đã có mặt ở ghế nào đó trước đó, quét và dọn sạch phân thân cũ
+    Object.keys(players).forEach((k) => {
+      if (players[k] && players[k].email === userEmail) {
+        players[k] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
+      }
+    });
+
+    // Tìm ghế trống thực sự theo thứ tự chuẩn xác
+    let corner = '';
+    const priorityCorners = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
+    for (const c of priorityCorners) {
+      if (!players[c] || !players[c].active || players[c].email === 'Trống') {
+        corner = c;
+        break;
+      }
+    }
+
+    if (!corner) {
+      showToast("Phòng đã đầy (4/4 người chơi)!");
+      setIsPVE(true);
+      setActiveRoomId(null);
+      return;
+    }
 
     setMyCorner(corner);
-    players[corner] = { active: true, email: user?.email || 'Thành viên', angle: -Math.PI / 2 };
+    players[corner] = { active: true, email: userEmail, angle: -Math.PI / 2 };
     roomPlayersRef.current = players;
 
     await setDoc(roomRef, { players }, { merge: true });
@@ -682,10 +705,16 @@ export default function BanCaPage() {
       const roomRef = doc(db, "banca_rooms", activeRoomId);
       try {
         const currentPlayers = { ...roomPlayersRef.current };
-        if (currentPlayers[myCorner]) {
-          currentPlayers[myCorner] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
-          await setDoc(roomRef, { players: currentPlayers }, { merge: true });
-        }
+        const userEmail = user?.email || 'Thành viên';
+        
+        // Dọn sạch tất cả các ghế thuộc tài khoản này trong phòng để không bị dính phân thân
+        Object.keys(currentPlayers).forEach((k) => {
+          if (currentPlayers[k] && (k === myCorner || currentPlayers[k].email === userEmail)) {
+            currentPlayers[k] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
+          }
+        });
+
+        await setDoc(roomRef, { players: currentPlayers }, { merge: true });
       } catch (e) {}
     }
     setActiveRoomId(null);
