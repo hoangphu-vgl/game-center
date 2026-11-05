@@ -101,7 +101,7 @@ export default function BanCaPage() {
     activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
   }, [activeRoomId, myCorner, isPVE]);
 
-  // Giải phóng ghế ngay lập tức khi đóng tab hoặc thoát trang
+  // Giải phóng ghế ngay lập tức khi thoát trang
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
@@ -228,7 +228,7 @@ export default function BanCaPage() {
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe realtime phòng PVP và tự động bầu Host động
+  // Lắng nghe realtime phòng PVP cực nhanh
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -238,8 +238,8 @@ export default function BanCaPage() {
         if (data.players) {
           roomPlayersRef.current = data.players;
         }
-        
-        // Tự động bầu Host động: Nếu chưa có ai làm Host hoặc Host cũ đã thoát, người đầu tiên trong phòng active sẽ làm Host sinh cá
+
+        // Bầu Host động để sinh cá
         const players = data.players || {};
         const activeCorners = Object.keys(players).filter(c => players[c] && players[c].active && players[c].email && players[c].email !== 'Trống');
         if (activeCorners.length > 0) {
@@ -257,7 +257,7 @@ export default function BanCaPage() {
     return () => unsubscribe();
   }, [activeRoomId, isPVE, isHost, user]);
 
-  // Cập nhật góc súng định kỳ
+  // Cập nhật góc súng thời gian thực cực mượt
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -281,7 +281,7 @@ export default function BanCaPage() {
           await setDoc(roomRef, { players: currentPlayers }, { merge: true });
         }
       } catch (e) {}
-    }, 250);
+    }, 150);
 
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
@@ -511,7 +511,13 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        const drawTurret = (x: number, y: number, cornerKey: string, label: string) => {
+        // Vẽ 4 ụ súng chuẩn xác theo 4 góc màn hình
+        const drawTurretAtCorner = (cornerKey: string, label: string) => {
+          let x = w - 60, y = h - 60; // bottom-right
+          if (cornerKey === 'bottom-left') { x = 60; y = h - 60; }
+          else if (cornerKey === 'top-left') { x = 60; y = 60; }
+          else if (cornerKey === 'top-right') { x = w - 60; y = 60; }
+
           ctx.save();
           ctx.translate(x, y);
           const pData = roomPlayersRef.current[cornerKey];
@@ -552,12 +558,10 @@ export default function BanCaPage() {
           }
         };
 
-        if (!isPVE) {
-          drawTurret(60, 60, 'top-left', 'P2');
-          drawTurret(w - 60, 60, 'top-right', 'P3');
-          drawTurret(60, h - 60, 'bottom-left', 'P4');
-        }
-        drawTurret(w - 60, h - 60, 'bottom-right', isPVE ? 'P1 (Solo)' : 'P1 (Bạn)');
+        drawTurretAtCorner('top-left', 'P2');
+        drawTurretAtCorner('top-right', 'P3');
+        drawTurretAtCorner('bottom-left', 'P4');
+        drawTurretAtCorner('bottom-right', isPVE ? 'P1 (Solo)' : 'P1');
       }
 
       animationFrameId = requestAnimationFrame(render);
@@ -571,8 +575,8 @@ export default function BanCaPage() {
     };
   }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
-  // Xử lý tọa độ chạm và bắn tối ưu
-  const handleShoot = (clientX: number, clientY: number) => {
+  // Bắn đạn và đồng bộ ngay lập tức sang các thiết bị khác
+  const handleShoot = async (clientX: number, clientY: number) => {
     if (!isPVE) {
       const pData = roomPlayersRef.current[myCorner];
       if (!pData || !pData.active || !pData.email || pData.email === 'Trống') {
@@ -600,6 +604,19 @@ export default function BanCaPage() {
     else if (myCorner === 'top-right') { startX = w - 60; startY = 60; }
 
     const angle = Math.atan2(clientY - startY, clientX - startX);
+    
+    // Đẩy thông tin đạn/góc súng lên ngay lập tức để đồng bộ real-time
+    if (!isPVE && activeRoomId) {
+      try {
+        const roomRef = doc(db, "banca_rooms", activeRoomId);
+        const currentPlayers = { ...roomPlayersRef.current };
+        if (currentPlayers[myCorner]) {
+          currentPlayers[myCorner].angle = angle;
+          await setDoc(roomRef, { players: currentPlayers }, { merge: true });
+        }
+      } catch (e) {}
+    }
+
     bulletsRef.current.push({
       x: startX,
       y: startY,
@@ -636,9 +653,9 @@ export default function BanCaPage() {
     const userEmail = user?.email || 'Chủ phòng';
 
     const newPlayers = {
-      'top-left': { active: false, email: 'Trống' },
-      'top-right': { active: false, email: 'Trống' },
-      'bottom-left': { active: false, email: 'Trống' },
+      'top-left': { active: false, email: 'Trống', angle: -Math.PI / 2 },
+      'top-right': { active: false, email: 'Trống', angle: -Math.PI / 2 },
+      'bottom-left': { active: false, email: 'Trống', angle: -Math.PI / 2 },
       'bottom-right': { active: true, email: userEmail, angle: -Math.PI / 2 }
     };
     roomPlayersRef.current = newPlayers;
@@ -676,14 +693,14 @@ export default function BanCaPage() {
     const players = data.players || {};
     const userEmail = user?.email || 'Thành viên';
 
-    // Xóa sạch phân thân cũ của tài khoản này trong phòng trước khi gán ghế mới
+    // Xóa sạch phân thân cũ của tài khoản này nếu có
     Object.keys(players).forEach((k) => {
       if (players[k] && players[k].email === userEmail) {
         players[k] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
       }
     });
 
-    // Tìm ghế trống chính xác
+    // Ưu tiên tìm ghế trống theo thứ tự: bottom-left, top-left, top-right, bottom-right
     let corner = '';
     const priorityCorners = ['bottom-left', 'top-left', 'top-right', 'bottom-right'];
     for (const c of priorityCorners) {
