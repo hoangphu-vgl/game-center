@@ -36,7 +36,6 @@ interface FishData {
   dead?: boolean;
 }
 
-// Đạn ít tiền bay nhanh, đạn nhiều tiền bay đầm chắc hơn
 const GUN_TYPES: GunConfig[] = [
   { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 18, size: 5, color: '#a855f7' },
   { level: 2, cost: 10, name: "Đạn 10đ", damage: 6, speed: 16, size: 6, color: '#38bdf8' },
@@ -50,22 +49,22 @@ const GUN_TYPES: GunConfig[] = [
 ];
 
 const FISH_TYPES_BASE = [
-  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 60, height: 38, speedMin: 2.0, speedMax: 4.5, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small' },
-  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 65, height: 40, speedMin: 2.2, speedMax: 4.8, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small' },
-  { id: 's3', name: 'Tôm Sống', emoji: '🦐', width: 50, height: 32, speedMin: 2.5, speedMax: 5.0, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's1', name: 'Cá Nhỏ 1', emoji: '🐟', width: 55, height: 35, speedMin: 2.2, speedMax: 4.8, hpMin: 3, hpMax: 10, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's2', name: 'Cá Nhỏ 2', emoji: '🐠', width: 60, height: 38, speedMin: 2.5, speedMax: 5.0, hpMin: 5, hpMax: 12, rewardMin: 10, rewardMax: 50, category: 'small' },
+  { id: 's3', name: 'Tôm Sống', emoji: '🦐', width: 45, height: 30, speedMin: 2.8, speedMax: 5.5, hpMin: 2, hpMax: 8, rewardMin: 10, rewardMax: 50, category: 'small' },
   
-  { id: 'm1', name: 'Cá Nóc', emoji: '🐡', width: 90, height: 60, speedMin: 1.0, speedMax: 2.5, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium' },
-  { id: 'm2', name: 'Cá Heo', emoji: '🐬', width: 105, height: 68, speedMin: 1.2, speedMax: 2.8, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium' },
+  { id: 'm1', name: 'Cá Nóc', emoji: '🐡', width: 85, height: 55, speedMin: 1.2, speedMax: 2.8, hpMin: 35, hpMax: 85, rewardMin: 100, rewardMax: 500, category: 'medium' },
+  { id: 'm2', name: 'Cá Heo', emoji: '🐬', width: 100, height: 65, speedMin: 1.4, speedMax: 3.0, hpMin: 45, hpMax: 110, rewardMin: 100, rewardMax: 500, category: 'medium' },
   
-  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 170, height: 105, speedMin: 0.5, speedMax: 1.5, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large' },
-  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 140, height: 95, speedMin: 0.6, speedMax: 1.8, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid' },
-  { id: 'l3', name: 'Rồng Biển', emoji: '🐉', width: 190, height: 120, speedMin: 0.4, speedMax: 1.3, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large' }
+  { id: 'l1', name: 'Cá Mập Boss', emoji: '🦈', width: 160, height: 100, speedMin: 0.6, speedMax: 1.8, hpMin: 450, hpMax: 1100, rewardMin: 1000, rewardMax: 5000, category: 'large' },
+  { id: 'l2', name: 'Nàng Tiên Cá', emoji: '🧜‍♀️', width: 130, height: 90, speedMin: 0.7, speedMax: 2.0, hpMin: 700, hpMax: 1600, rewardList: [10000, 20000, 50000, 70000, 100000], category: 'mermaid' },
+  { id: 'l3', name: 'Rồng Biển', emoji: '🐉', width: 180, height: 115, speedMin: 0.5, speedMax: 1.5, hpMin: 900, hpMax: 2000, rewardMin: 1000, rewardMax: 5000, category: 'large' }
 ];
 
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(600000);
+  const [jackpotPool, setJackpotPool] = useState<number>(650000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -146,9 +145,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 600000);
+        setJackpotPool(docSnap.data().amount || 650000);
       } else {
-        setDoc(jpRef, { amount: 600000 });
+        setDoc(jpRef, { amount: 650000 });
       }
     });
 
@@ -295,16 +294,16 @@ export default function BanCaPage() {
     const interval = setInterval(() => {
       if (isHoldingRef.current && !isPaused) {
         const now = Date.now();
-        if (now - lastShootTimeRef.current > 180) {
+        if (now - lastShootTimeRef.current > 160) {
           lastShootTimeRef.current = now;
           handleShoot(pointerPosRef.current.x, pointerPosRef.current.y);
         }
       }
-    }, 50);
+    }, 40);
     return () => clearInterval(interval);
   }, [screenMode, isPaused, currentGunIndex, points]);
 
-  // Game Loop Render Canvas cực kỳ nhẹ và mượt
+  // Game Loop Render Canvas cực kỳ nhẹ nhàng và nhiều cá
   useEffect(() => {
     if (screenMode !== 'game') return;
     const canvas = canvasRef.current;
@@ -328,14 +327,15 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.8 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if ((isPVE || isHost) && fishesRef.current.length < 12 && Math.random() < 0.15) {
+      // Tăng số lượng cá tối đa lên 22 con để màn hình sinh động, nhiều cá bơi lội hơn nhưng vẫn giữ 0% giật lag
+      if ((isPVE || isHost) && fishesRef.current.length < 22 && Math.random() < 0.28) {
         const randWeight = Math.random() * 100;
         let template;
 
-        if (randWeight < 3.0) {
+        if (randWeight < 3.5) {
           const rareFish = FISH_TYPES_BASE.filter(f => f.category === 'mermaid' || f.category === 'large');
           template = rareFish[Math.floor(Math.random() * rareFish.length)];
-        } else if (randWeight < 45) {
+        } else if (randWeight < 48) {
           const medFish = FISH_TYPES_BASE.filter(f => f.category === 'medium');
           template = medFish[Math.floor(Math.random() * medFish.length)];
         } else {
@@ -402,11 +402,11 @@ export default function BanCaPage() {
         const w = canvas.width;
         const h = canvas.height;
 
-        // 1. Background cực đơn giản, nhẹ nhàng chống lag
+        // 1. Background đơn giản siêu nhẹ
         ctx.fillStyle = '#06284a';
         ctx.fillRect(0, 0, w, h);
 
-        // 2. Đạn & Hiệu ứng nổ đơn giản
+        // 2. Đạn & Hiệu ứng
         bulletsRef.current.forEach(b => {
           b.x += b.vx;
           b.y += b.vy;
@@ -488,7 +488,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(600000);
+                  updateJackpotInFirestore(650000);
                 }
 
                 setPoints(prev => {
@@ -517,7 +517,7 @@ export default function BanCaPage() {
 
         spawnFish(w, h);
 
-        // 4. VẼ EMOJI CÁ NGUYÊN BẢN (Sắc nét, không phát sáng, không bị chìm)
+        // 4. VẼ EMOJI CÁ NGUYÊN BẢN (Sắc nét, rõ ràng)
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
@@ -1004,11 +1004,12 @@ export default function BanCaPage() {
             )}
           </div>
 
-          {/* Thanh chọn đạn to rõ ở góc trái dưới */}
+          {/* Thanh chọn đạn to rõ ở góc trái dưới - Đã fix sự kiện click/touch chuẩn 100% */}
           <div className="absolute bottom-3 left-3 z-30 flex items-center gap-2.5 pointer-events-auto bg-slate-900/95 backdrop-blur-md border-2 border-cyan-400/60 px-3.5 py-2.5 rounded-3xl shadow-2xl">
             <button
-              onClick={(e) => {
+              onPointerDown={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 isHoldingRef.current = false;
                 setCurrentGunIndex((prev) => (prev - 1 + GUN_TYPES.length) % GUN_TYPES.length);
               }}
@@ -1023,8 +1024,9 @@ export default function BanCaPage() {
               </div>
             </div>
             <button
-              onClick={(e) => {
+              onPointerDown={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 isHoldingRef.current = false;
                 setCurrentGunIndex((prev) => (prev + 1) % GUN_TYPES.length);
               }}
