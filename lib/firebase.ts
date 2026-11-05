@@ -22,4 +22,6 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 
-export default app;
+export default app;git add .
+git commit -m "Update page.tsx"
+git push
