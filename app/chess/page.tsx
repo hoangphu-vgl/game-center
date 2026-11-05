@@ -51,10 +51,14 @@ export default function ChessPage() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setPoints(userSnap.data().points || 0);
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setPoints(userSnap.data().points || 0);
+          }
+        } catch (err) {
+          console.error("Lỗi lấy thông tin user:", err);
         }
       }
     });
@@ -63,9 +67,13 @@ export default function ChessPage() {
 
   const updatePointsInDB = async (newPoints: number) => {
     if (!user) return;
-    setPoints(newPoints);
-    const userRef = doc(db, "users", user.uid);
-    await updateDoc(userRef, { points: newPoints });
+    try {
+      setPoints(newPoints);
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, { points: newPoints });
+    } catch (err) {
+      console.error("Lỗi cập nhật điểm:", err);
+    }
   };
 
   const handleSelectBet = (amount: number) => {
@@ -89,29 +97,35 @@ export default function ChessPage() {
     setScreen('game');
   };
 
-  // Tạo phòng Online Realtime
+  // Tạo phòng Online Realtime trên Firestore
   const handleCreateRoom = async () => {
     if (points < currentBet) {
       alert('Bạn không đủ điểm cược!');
       return;
     }
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setRoomCode(code);
-    setGameMode('online');
-    setPlayerRole('w');
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setRoomCode(code);
+      setGameMode('online');
+      setPlayerRole('w');
 
-    const roomRef = doc(db, "chessRooms", code);
-    await setDoc(roomRef, {
-      board: INITIAL_BOARD,
-      turn: 'w',
-      bet: currentBet
-    });
+      const roomRef = doc(db, "chessRooms", code);
+      await setDoc(roomRef, {
+        board: INITIAL_BOARD,
+        turn: 'w',
+        bet: currentBet,
+        createdAt: new Date().toISOString()
+      });
 
-    setBoard(INITIAL_BOARD.map(r => [...r]));
-    setTurn('w');
-    setSelectedSquare(null);
-    setValidMoves([]);
-    setScreen('game');
+      setBoard(INITIAL_BOARD.map(r => [...r]));
+      setTurn('w');
+      setSelectedSquare(null);
+      setValidMoves([]);
+      setScreen('game');
+    } catch (err) {
+      console.error("Lỗi tạo phòng:", err);
+      alert("Không thể tạo phòng, vui lòng kiểm tra lại kết nối Firebase!");
+    }
   };
 
   // Vào phòng Online bằng mã
@@ -125,18 +139,23 @@ export default function ChessPage() {
       return;
     }
 
-    const roomRef = doc(db, "chessRooms", inputCode);
-    const roomSnap = await getDoc(roomRef);
+    try {
+      const roomRef = doc(db, "chessRooms", inputCode);
+      const roomSnap = await getDoc(roomRef);
 
-    if (!roomSnap.exists()) {
-      alert('Phòng không tồn tại!');
-      return;
+      if (!roomSnap.exists()) {
+        alert('Phòng không tồn tại hoặc đã hết hạn!');
+        return;
+      }
+
+      setRoomCode(inputCode);
+      setGameMode('online');
+      setPlayerRole('b');
+      setScreen('game');
+    } catch (err) {
+      console.error("Lỗi vào phòng:", err);
+      alert("Không thể kết nối vào phòng!");
     }
-
-    setRoomCode(inputCode);
-    setGameMode('online');
-    setPlayerRole('b');
-    setScreen('game');
   };
 
   // Lắng nghe realtime từ Firestore cho phòng Online
@@ -147,9 +166,11 @@ export default function ChessPage() {
     const unsubscribe = onSnapshot(roomRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setBoard(data.board);
-        setTurn(data.turn);
+        if (data.board) setBoard(data.board);
+        if (data.turn) setTurn(data.turn);
       }
+    }, (error) => {
+      console.error("Lỗi sync realtime phòng cờ:", error);
     });
 
     return () => unsubscribe();
@@ -260,15 +281,19 @@ export default function ChessPage() {
         endGame(false, 'Vua Trắng của bạn đã bị tiêu diệt!');
       }
     } else if (gameMode === 'online') {
-      const roomRef = doc(db, "chessRooms", roomCode);
-      await updateDoc(roomRef, {
-        board: newBoard,
-        turn: nextTurn
-      });
+      try {
+        const roomRef = doc(db, "chessRooms", roomCode);
+        await updateDoc(roomRef, {
+          board: newBoard,
+          turn: nextTurn
+        });
 
-      if (captured === 'bK' || captured === 'wK') {
-        const isWin = (captured === 'bK' && playerRole === 'w') || (captured === 'wK' && playerRole === 'b');
-        endGame(isWin, isWin ? "Bạn đã chiến thắng ván cược!" : "Bạn đã thua cuộc!");
+        if (captured === 'bK' || captured === 'wK') {
+          const isWin = (captured === 'bK' && playerRole === 'w') || (captured === 'wK' && playerRole === 'b');
+          endGame(isWin, isWin ? "Bạn đã chiến thắng ván cược!" : "Bạn đã thua cuộc!");
+        }
+      } catch (err) {
+        console.error("Lỗi cập nhật nước đi online:", err);
       }
     }
   };
