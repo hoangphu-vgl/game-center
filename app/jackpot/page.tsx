@@ -111,6 +111,19 @@ export default function JackpotPage() {
     }
   };
 
+  // Hàm bật/tắt toàn màn hình trên điện thoại
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error("Lỗi toàn màn hình:", err);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
   const handleSpin = async () => {
     if (spinning) return;
     if (points < currentBet) {
@@ -193,14 +206,24 @@ export default function JackpotPage() {
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
         </Link>
-        <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-500/50 px-3 py-1.5 rounded-xl shadow-lg">
-          <span>🪙</span>
-          <span className="font-extrabold text-amber-400 tracking-wide">{points.toLocaleString()}</span>
-          <span className="text-xs text-amber-300/70">KI PTS</span>
+        <div className="flex items-center gap-2">
+          {/* NÚT TOÀN MÀN HÌNH */}
+          <button
+            onClick={toggleFullScreen}
+            className="bg-slate-900/90 border border-amber-500/50 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400 hover:bg-slate-800 transition cursor-pointer flex items-center gap-1 shadow-md"
+          >
+            <span>⛶</span> Full
+          </button>
+
+          <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-500/50 px-3.5 py-1.5 rounded-xl shadow-lg">
+            <span>🪙</span>
+            <span className="font-extrabold text-amber-400 tracking-wide">{points.toLocaleString()}</span>
+            <span className="text-xs text-amber-300/70">PTS</span>
+          </div>
         </div>
       </div>
 
-      {/* Main Game Container thu gọn cân đối */}
+      {/* Main Game Container */}
       <div className="w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-3 sm:p-5 shadow-2xl flex flex-col gap-4">
         
         {/* 3 HŨ JACKPOT */}
