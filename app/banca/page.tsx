@@ -36,7 +36,7 @@ interface FishData {
   dead?: boolean;
 }
 
-// Đạn ít tiền bay cực nhanh, đạn nhiều tiền đầm chắc, bay chậm hơn một chút
+// Đạn ít tiền bay nhanh, đạn nhiều tiền bay đầm chắc hơn
 const GUN_TYPES: GunConfig[] = [
   { level: 1, cost: 1, name: "Đạn 1đ", damage: 1, speed: 18, size: 5, color: '#a855f7' },
   { level: 2, cost: 10, name: "Đạn 10đ", damage: 6, speed: 16, size: 6, color: '#38bdf8' },
@@ -65,7 +65,7 @@ const FISH_TYPES_BASE = [
 export default function BanCaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [points, setPoints] = useState<number>(1000);
-  const [jackpotPool, setJackpotPool] = useState<number>(550000);
+  const [jackpotPool, setJackpotPool] = useState<number>(600000);
   
   const [screenMode, setScreenMode] = useState<'lobby' | 'game'>('lobby');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -94,7 +94,6 @@ export default function BanCaPage() {
   const bulletsRef = useRef<any[]>([]);
   const explosionsRef = useRef<any[]>([]);
   const floatingTextsRef = useRef<any[]>([]);
-  const bubblesRef = useRef<any[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const roomPlayersRef = useRef<{ [key: string]: { active: boolean; email: string; angle?: number } }>({
@@ -147,9 +146,9 @@ export default function BanCaPage() {
     const jpRef = doc(db, "gameSettings", "bancaJackpot");
     const unsubJp = onSnapshot(jpRef, (docSnap) => {
       if (docSnap.exists()) {
-        setJackpotPool(docSnap.data().amount || 550000);
+        setJackpotPool(docSnap.data().amount || 600000);
       } else {
-        setDoc(jpRef, { amount: 550000 });
+        setDoc(jpRef, { amount: 600000 });
       }
     });
 
@@ -233,20 +232,6 @@ export default function BanCaPage() {
     } catch (e) {}
   };
 
-  useEffect(() => {
-    const bubbles = [];
-    for (let i = 0; i < 12; i++) {
-      bubbles.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        radius: Math.random() * 3 + 2,
-        speed: Math.random() * 0.6 + 0.2,
-        opacity: Math.random() * 0.3 + 0.15
-      });
-    }
-    bubblesRef.current = bubbles;
-  }, []);
-
   // Lắng nghe realtime phòng PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
@@ -319,7 +304,7 @@ export default function BanCaPage() {
     return () => clearInterval(interval);
   }, [screenMode, isPaused, currentGunIndex, points]);
 
-  // Game Loop Render Canvas tối ưu hóa siêu mượt
+  // Game Loop Render Canvas cực kỳ nhẹ và mượt
   useEffect(() => {
     if (screenMode !== 'game') return;
     const canvas = canvasRef.current;
@@ -343,7 +328,7 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.8 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if ((isPVE || isHost) && fishesRef.current.length < 14 && Math.random() < 0.18) {
+      if ((isPVE || isHost) && fishesRef.current.length < 12 && Math.random() < 0.15) {
         const randWeight = Math.random() * 100;
         let template;
 
@@ -417,36 +402,11 @@ export default function BanCaPage() {
         const w = canvas.width;
         const h = canvas.height;
 
-        // 1. Background Đại Dương Sáng Rõ
-        const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, '#042b57');
-        grad.addColorStop(0.5, '#07529a');
-        grad.addColorStop(1, '#021833');
-        ctx.fillStyle = grad;
+        // 1. Background cực đơn giản, nhẹ nhàng chống lag
+        ctx.fillStyle = '#06284a';
         ctx.fillRect(0, 0, w, h);
 
-        // Ánh sáng rọi
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.fillStyle = '#7dd3fc';
-        ctx.beginPath();
-        ctx.moveTo(w * 0.2, 0); ctx.lineTo(w * 0.4, 0); ctx.lineTo(w * 0.6, h); ctx.lineTo(w * 0.3, h);
-        ctx.fill();
-        ctx.restore();
-
-        // 2. Bong bóng nước
-        bubblesRef.current.forEach(b => {
-          b.y -= b.speed;
-          if (b.y < -10) { b.y = h + 10; b.x = Math.random() * w; }
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity})`;
-          ctx.fill();
-          ctx.restore();
-        });
-
-        // 3. Đạn & Hiệu ứng nổ
+        // 2. Đạn & Hiệu ứng nổ đơn giản
         bulletsRef.current.forEach(b => {
           b.x += b.vx;
           b.y += b.vy;
@@ -457,18 +417,18 @@ export default function BanCaPage() {
         bulletsRef.current = bulletsRef.current.filter(b => b.alive);
 
         explosionsRef.current.forEach(ex => {
-          ex.radius += 4;
-          ex.alpha -= 0.1;
+          ex.radius += 5;
+          ex.alpha -= 0.15;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
         floatingTextsRef.current.forEach(ft => {
           ft.y += ft.vy;
-          ft.alpha -= 0.035;
+          ft.alpha -= 0.04;
         });
         floatingTextsRef.current = floatingTextsRef.current.filter(ft => ft.alpha > 0);
 
-        // 4. Cá bơi
+        // 3. Cá bơi
         fishesRef.current.forEach(f => {
           f.x += f.vx;
           f.y += f.vy;
@@ -484,7 +444,7 @@ export default function BanCaPage() {
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
             if (dist < bullet.radius + fish.width / 2.3) {
               bullet.alive = false;
-              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 12, color: bullet.color, alpha: 1 });
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 10, color: bullet.color, alpha: 1 });
 
               let finalDamage = bullet.damage;
               const isCrit = Math.random() < 0.12;
@@ -494,7 +454,7 @@ export default function BanCaPage() {
               }
 
               fish.hp -= finalDamage;
-              fish.hitTimer = 5;
+              fish.hitTimer = 4;
 
               if (fish.hp <= 0 && !fish.dead) {
                 fish.dead = true;
@@ -528,7 +488,7 @@ export default function BanCaPage() {
                 if (Math.random() < jackpotChance) {
                   finalReward += jackpotPool;
                   isJackpot = true;
-                  updateJackpotInFirestore(550000);
+                  updateJackpotInFirestore(600000);
                 }
 
                 setPoints(prev => {
@@ -557,17 +517,14 @@ export default function BanCaPage() {
 
         spawnFish(w, h);
 
-        // 5. VẼ CÁ NỔI RỰC RỠ TRÊN LỚP ĐẦU TIÊN (Có viền sáng chống chìm)
+        // 4. VẼ EMOJI CÁ NGUYÊN BẢN (Sắc nét, không phát sáng, không bị chìm)
         fishesRef.current.forEach(f => {
           ctx.save();
           ctx.translate(f.x, f.y);
           if (f.vx < 0) ctx.scale(-1, 1);
 
           if (f.hitTimer > 0) {
-            ctx.filter = 'brightness(2.5) drop-shadow(0 0 15px #ffffff)';
-          } else {
-            ctx.shadowColor = '#ffffff';
-            ctx.shadowBlur = 8;
+            ctx.filter = 'brightness(2.0)';
           }
 
           ctx.font = `${f.height}px Arial`;
@@ -578,19 +535,17 @@ export default function BanCaPage() {
           ctx.restore();
         });
 
-        // 6. Vẽ Đạn
+        // 5. Vẽ Đạn
         bulletsRef.current.forEach(b => {
           ctx.save();
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
           ctx.fillStyle = b.color;
-          ctx.shadowColor = b.color;
-          ctx.shadowBlur = 12;
           ctx.fill();
           ctx.restore();
         });
 
-        // 7. Vẽ Hiệu ứng nổ & Chữ thưởng
+        // 6. Vẽ Nổ & Chữ thưởng
         explosionsRef.current.forEach(ex => {
           if (ex.alpha <= 0) return;
           ctx.save();
@@ -598,7 +553,7 @@ export default function BanCaPage() {
           ctx.beginPath();
           ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
           ctx.strokeStyle = ex.color;
-          ctx.lineWidth = 3;
+          ctx.lineWidth = 2;
           ctx.stroke();
           ctx.restore();
         });
@@ -606,15 +561,13 @@ export default function BanCaPage() {
         floatingTextsRef.current.forEach(ft => {
           ctx.save();
           ctx.globalAlpha = Math.max(0, ft.alpha);
-          ctx.font = '900 16px Fredoka, sans-serif';
+          ctx.font = '900 15px Fredoka, sans-serif';
           ctx.fillStyle = ft.color;
-          ctx.shadowColor = 'rgba(0,0,0,0.9)';
-          ctx.shadowBlur = 4;
           ctx.fillText(ft.text, ft.x, ft.y);
           ctx.restore();
         });
 
-        // 8. Vẽ Súng / Pháo thủ
+        // 7. Vẽ Súng / Pháo thủ
         if (isPVE) {
           const x = w / 2;
           const y = h - 50;
@@ -623,19 +576,16 @@ export default function BanCaPage() {
           ctx.save();
           ctx.translate(x, y);
           ctx.beginPath();
-          ctx.arc(0, 0, 40, 0, Math.PI * 2);
+          ctx.arc(0, 0, 38, 0, Math.PI * 2);
           ctx.fillStyle = '#0f172a';
           ctx.fill();
-          ctx.lineWidth = 3;
+          ctx.lineWidth = 2;
           ctx.strokeStyle = '#38bdf8';
           ctx.stroke();
 
           ctx.rotate(angle);
           ctx.fillStyle = '#f59e0b';
-          ctx.fillRect(0, -12, 48, 24);
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -12, 48, 24);
+          ctx.fillRect(0, -10, 45, 20);
           ctx.restore();
 
           ctx.font = "bold 12px Fredoka, sans-serif";
@@ -664,19 +614,16 @@ export default function BanCaPage() {
             }
 
             ctx.beginPath();
-            ctx.arc(0, 0, 36, 0, Math.PI * 2);
+            ctx.arc(0, 0, 34, 0, Math.PI * 2);
             ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
             ctx.fill();
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.strokeStyle = isActive ? '#38bdf8' : '#475569';
             ctx.stroke();
 
             ctx.rotate(angle);
             ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
-            ctx.fillRect(0, -10, 42, 20);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#ffffff';
-            ctx.strokeRect(0, -10, 42, 20);
+            ctx.fillRect(0, -9, 40, 18);
             ctx.restore();
 
             if (isActive) {
