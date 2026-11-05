@@ -28,6 +28,17 @@ const DRAGON_SYMBOLS = [
   { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 1 },
 ];
 
+const AURA_QUICK_REWARDS = [
+  { id: "ki_white", name: "⚪ Aura Ki Trắng", mult: 2, icon: "✨" },
+  { id: "kaioken", name: "🔴 Aura Kaioken", mult: 3, icon: "🔥" },
+  { id: "ssj1", name: "🟡 Aura Super Saiyan", mult: 5, icon: "⚡" },
+  { id: "ssj2", name: "⚡ Aura Super Saiyan 2", mult: 6, icon: "🌩️" },
+  { id: "ssj_god", name: "🔴 Aura SSJ God", mult: 8, icon: "☀️" },
+  { id: "ssj_blue", name: "🔵 Aura SSJ Blue", mult: 10, icon: "💎" },
+  { id: "ultra_ego", name: "🟣 Aura Ultra Ego", mult: 15, icon: "🔮" },
+  { id: "ultra_instinct", name: "🌌 Aura Ultra Instinct", mult: 20, icon: "🌌" },
+];
+
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 const LOSE_TAUNTS = [
@@ -83,7 +94,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Hệ thống võ đạo đã sẵn sàng: Có thể nổ chuỗi từ cột 1 hoặc kích hoạt các kiểu nổ tự do (Capsule, Senzu, Ngọc Rồng).",
+    text: "Võ đạo Dragon Ball: Đang zô chuỗi phải hoàn thành chuỗi! Ngoài chuỗi mới kích hoạt Aura Thưởng Nhanh.",
     type: "normal",
   });
 
@@ -224,7 +235,7 @@ export default function JackpotPage() {
     }, 75);
   };
 
-  // THUẬT TOÁN KẾT HỢP: QU Quét NỔ CHUỖI CỘT 1 HOẶC CÁC KIỂU NỔ TỰ DO (X3, X5, X10 KHÔNG ZÔ CHUỖI)
+  // THUẬT TOÁN QUÉT: ĐANG TRONG CHUỖI BẮT BUỘC ƯU TIÊN NỔ CHUỖI, NGOÀI CHUỖI MỚI CÓ THỂ RA AURA THƯỞNG NHANH
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
     let winChance = 0.35;
     if (currentBet <= 100) winChance = 0.42;
@@ -237,7 +248,7 @@ export default function JackpotPage() {
     let baseWinAmount = 0;
     let matchedIndices: number[] = [];
     let resultText = "";
-    let isStreakWin = false; // Phân biệt loại thắng: True = Zô chuỗi, False = Nổ tự do không zô chuỗi
+    let isStreakWin = false;
 
     // 1. Kiểm tra nổ hũ Rồng Thần
     if (shenronTotal >= 4 || (isTriggerWin && Math.random() < 0.02)) {
@@ -248,7 +259,7 @@ export default function JackpotPage() {
       triggerExplosion();
     } 
     else if (isTriggerWin) {
-      // THỬ KIỂM TRA KIỂU NỔ CHUỖI TỪ CỘT 1 TRƯỚC
+      // CHECK LUẬT CHUỖI TỪ CỘT 1
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
         const colItems = [];
@@ -296,7 +307,7 @@ export default function JackpotPage() {
       });
 
       if (streakWinningSet.size > 0 && totalStreakWin > 0) {
-        // THẮNG THEO DẠNG NỔ CHUỖI TỪ CỘT 1
+        // NỔ CHUỖI CỘT 1 THÀNH CÔNG
         baseWinAmount = totalStreakWin;
         matchedIndices = Array.from(streakWinningSet);
         isStreakWin = true;
@@ -304,53 +315,34 @@ export default function JackpotPage() {
         resultText = `✨ ${randomPraise} +${baseWinAmount.toLocaleString()} PTS`;
         triggerExplosion();
       } else {
-        // NẾU KHÔNG THỎA ĐIỀU KIỆN CỘT 1, KÍCH HOẠT CÁC KIỂU NỔ TỰ DO (X3, X5, X10 KHÔNG ZÔ CHUỖI)
-        const freeTypes = ["capsule", "senzu", "ball", "saiyan"];
-        const chosenFreeType = freeTypes[Math.floor(Math.random() * freeTypes.length)];
-
-        if (chosenFreeType === "capsule") {
-          const capsuleIndices = finalGrid.map((s, idx) => (s.id === "capsule" ? idx : -1)).filter(i => i !== -1);
-          if (capsuleIndices.length >= 3 || Math.random() < 0.5) {
-            baseWinAmount = currentBet * 3; // Nổ Capsule x3
-            matchedIndices = capsuleIndices.length > 0 ? capsuleIndices : [0, 1, 2];
-            resultText = `💊 Capsule Tụ Hợp! Thưởng nhanh x3 = +${baseWinAmount.toLocaleString()} PTS`;
-            isStreakWin = false; // KHÔNG ZÔ CHUỖI
-            triggerExplosion();
-          }
-        } else if (chosenFreeType === "senzu") {
-          const senzuIndices = finalGrid.map((s, idx) => (s.id === "senzu" ? idx : -1)).filter(i => i !== -1);
-          if (senzuIndices.length >= 3 || Math.random() < 0.5) {
-            baseWinAmount = currentBet * 5; // Nổ Đậu Senzu x5
-            matchedIndices = senzuIndices.length > 0 ? senzuIndices : [3, 4, 5];
-            resultText = `🫘 Đậu Senzu Phục Hồi! Thưởng nhanh x5 = +${baseWinAmount.toLocaleString()} PTS`;
-            isStreakWin = false; // KHÔNG ZÔ CHUỖI
-            triggerExplosion();
-          }
-        } else if (chosenFreeType === "ball") {
-          const ballIndices = finalGrid.map((s, idx) => (s.id.includes("ball") ? idx : -1)).filter(i => i !== -1);
-          if (ballIndices.length >= 3 || Math.random() < 0.5) {
-            baseWinAmount = currentBet * 10; // Ngọc Rồng Tụ Khí x10
-            matchedIndices = ballIndices.length > 0 ? ballIndices.slice(0, 4) : [6, 7, 8, 9];
-            resultText = `🔮 Ngọc Rồng Tụ Khí! Thưởng lớn x10 = +${baseWinAmount.toLocaleString()} PTS`;
-            isStreakWin = false; // KHÔNG ZÔ CHUỖI
-            triggerExplosion();
-          }
+        // NẾU KHÔNG NỔ CHUỖI: KIỂM TRA XEM CÓ ĐANG TRONG CHUỖI KHÔNG?
+        // NẾU ĐANG TRONG CHUỖI -> XEM NHƯ QUAY TRƯỢT ĐỂ BẮT BUỘC NGƯỜI CHƠI PHẢI HOÀN THÀNH/TIẾP TỤC CHUỖI (HOẶC RỚT CHUỖI NẾU XUI)
+        if (streakRef.current >= 0) {
+          baseWinAmount = 0; // Đang zô chuỗi mà không trúng đường cột 1 thì tính là rớt nhịp / đứt chuỗi!
         } else {
-          baseWinAmount = currentBet * 4; // Thắng tự do chung x4
-          matchedIndices = [10, 11, 12, 13];
-          resultText = `⚡ Đại Chiến Vũ Trụ! Thưởng nóng x4 = +${baseWinAmount.toLocaleString()} PTS`;
-          isStreakWin = false; // KHÔNG ZÔ CHUỖI
+          // KHÔNG ZÔ CHUỖI -> MỚI ĐƯỢC PHÉP KÍCH HOẠT AURA THƯỞNG NHANH
+          const chosenAura = AURA_QUICK_REWARDS[Math.floor(Math.random() * AURA_QUICK_REWARDS.length)];
+          baseWinAmount = currentBet * chosenAura.mult;
+          
+          matchedIndices = [
+            Math.floor(Math.random() * 6),
+            Math.floor(Math.random() * 6) + 6,
+            Math.floor(Math.random() * 6) + 12,
+          ];
+
+          resultText = `${chosenAura.icon} BỘC PHÁT ${chosenAura.name.toUpperCase()}! Thưởng nhanh x${chosenAura.mult} = +${baseWinAmount.toLocaleString()} PTS`;
+          isStreakWin = false;
           triggerExplosion();
         }
       }
     }
 
-    // 2. XỬ LÝ KẾT QUẢ VÀ CẬP NHẬT ĐIỂM
+    // 2. XỬ LÝ KẾT QUẢ
     let finalTotalWin = 0;
 
     if (baseWinAmount > 0) {
       if (isStreakWin) {
-        // NẾU LÀ THẮNG CHUỖI (CỘT 1 HOẶC HŨ) -> KÍCH HOẠT NHÂN DỒN CHUỖI (x2, x4, x8...)
+        // DUY TRÌ VÀ NHẢY CẤP CHUỖI
         const currentIdx = streakRef.current;
         const nextIdx = currentIdx < 0 ? 0 : Math.min(currentIdx + 1, STREAK_STEPS.length - 1);
         
@@ -361,7 +353,7 @@ export default function JackpotPage() {
         finalTotalWin = baseWinAmount * activeMultiplier;
         resultText = `🔥 CHUỖI NHÂN x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
       } else {
-        // NẾU LÀ NỔ TỰ DO (X3, X5, X10) -> GIỮ NGUYÊN ĐIỂM, KHÔNG ẢNH HƯỞNG GÌ ĐẾN CHUỖI HIỆN TẠI (GIỮ NGUYÊN MỐC CHUỖI CŨ HOẶC KHÔNG ZÔ CHUỖI)
+        // THƯỞNG NHANH AURA ĐỘC LẬP
         finalTotalWin = baseWinAmount;
       }
 
@@ -373,7 +365,7 @@ export default function JackpotPage() {
     } else {
       setWinningCoords([]);
       if (streakRef.current >= 0) {
-        // THUA KHI ĐANG CÓ CHUỖI -> ĐỨT CHUỖI, RESET VỀ -1
+        // ĐANG TRONG CHUỖI MÀ TRƯỢT HOẶC KHÔNG RA ĐƯỜNG CỘT 1 -> ĐỨT CHUỖI
         streakRef.current = -1;
         setStreakIndex(-1);
         const breakTaunt = STREAK_BROKEN_TAUNTS[Math.floor(Math.random() * STREAK_BROKEN_TAUNTS.length)];
@@ -464,6 +456,17 @@ export default function JackpotPage() {
             <div className="text-[9px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MINOR</div>
             <div className="text-xs sm:text-base font-black text-white font-mono">{jackpots.minor.toLocaleString()}</div>
           </div>
+        </div>
+
+        {/* DANH SÁCH AURA THƯỞNG NHANH DRAGON BALL */}
+        <div className="bg-slate-950/80 border border-amber-500/30 p-2 rounded-xl flex items-center justify-between gap-1 overflow-x-auto text-[10px] sm:text-xs">
+          {AURA_QUICK_REWARDS.map((aura) => (
+            <div key={aura.id} className="bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg shrink-0 flex items-center gap-1 font-bold">
+              <span>{aura.icon}</span>
+              <span className="text-amber-300">{aura.name.split(" ")[1]}</span>
+              <span className="text-orange-400 font-mono">x{aura.mult}</span>
+            </div>
+          ))}
         </div>
 
         {/* DÒNG THÔNG BÁO REALTIME & NÚT DỪNG AUTO */}
