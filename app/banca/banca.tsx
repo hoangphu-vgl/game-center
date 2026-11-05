@@ -90,7 +90,6 @@ export default function BanCaPage() {
     }
   };
 
-  // Khởi động phòng chơi
   const handleQuickJoin = () => {
     if (points < currentBet) {
       alert("Bạn không đủ điểm để tham gia bắn cá!");
@@ -111,14 +110,12 @@ export default function BanCaPage() {
     setScreen('game');
   };
 
-  // Vòng lặp sinh cá & di chuyển cá (Animation bơi lội sinh động)
   useEffect(() => {
     if (screen !== 'game') return;
 
-    // Sinh cá định kỳ
     const spawnInterval = setInterval(() => {
       setFishes(prev => {
-        if (prev.length > 12) return prev; // Giới hạn số lượng cá
+        if (prev.length > 14) return prev;
         const template = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
         const newFish: Fish = {
           id: Date.now() + Math.random(),
@@ -126,7 +123,7 @@ export default function BanCaPage() {
           name: template.name,
           icon: template.icon,
           x: -100,
-          y: Math.random() * 450 + 50,
+          y: Math.random() * 420 + 40,
           speed: template.speed + Math.random() * 0.5,
           hp: template.hp,
           maxHp: template.hp,
@@ -135,20 +132,17 @@ export default function BanCaPage() {
         };
         return [...prev, newFish];
       });
-    }, 2500);
+    }, 2200);
 
-    // Game Loop (Cập nhật vị trí cá và đạn)
     const gameLoop = setInterval(() => {
-      // 1. Di chuyển cá
       setFishes(prev => prev.map(f => {
         let nextX = f.x + f.speed;
-        if (nextX > 900) {
-          return { ...f, x: -100, y: Math.random() * 450 + 50 }; // Quay vòng bơi lại từ đầu
+        if (nextX > 880) {
+          return { ...f, x: -100, y: Math.random() * 420 + 40 };
         }
         return { ...f, x: nextX };
       }));
 
-      // 2. Di chuyển đạn & Kiểm tra va chạm
       setBullets(prevBullets => {
         const nextBullets: Bullet[] = [];
         prevBullets.forEach(b => {
@@ -157,7 +151,6 @@ export default function BanCaPage() {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < 15) {
-            // Đạn đã tới đích -> Gây sát thương cá xung quanh (Sát thương lan)
             triggerExplosion(b.targetX, b.targetY, b.damage, b.bet);
           } else {
             const nx = b.x + (dx / dist) * b.speed;
@@ -168,9 +161,7 @@ export default function BanCaPage() {
         return nextBullets;
       });
 
-      // Tăng nhẹ Jackpot theo thời gian thực
-      setJp(prev => prev + 1);
-
+      setJackpot(prev => prev + 1);
     }, 50);
 
     return () => {
@@ -179,9 +170,6 @@ export default function BanCaPage() {
     };
   }, [screen]);
 
-  const setJp = setJackpot;
-
-  // Xử lý bắn súng
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (points < currentBet) {
       alert("Bạn đã hết điểm cược!");
@@ -192,16 +180,13 @@ export default function BanCaPage() {
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    // Trừ điểm cược đạn
     updatePoints(points - currentBet);
 
-    // Tính góc súng hướng về điểm bắn
     const gunX = rect.width / 2;
     const gunY = rect.height - 40;
     const angle = Math.atan2(clickY - gunY, clickX - gunX) * (180 / Math.PI);
     setCannonAngle(angle + 90);
 
-    // Tạo viên đạn bay tới mục tiêu
     const newBullet: Bullet = {
       id: Date.now(),
       x: gunX,
@@ -216,18 +201,13 @@ export default function BanCaPage() {
     setBullets(prev => [...prev, newBullet]);
   };
 
-  // Hiệu ứng nổ và sát thương lan / Crit
   const triggerExplosion = (x: number, y: number, damage: number, bet: number) => {
     setFishes(prevFishes => {
-      let fishHit = false;
       const updated = prevFishes.map(f => {
-        // Kiểm tra bán kính sát thương lan (Cược càng to, bán kính lan càng lớn)
         const radius = 60 + bet * 0.1;
         const dist = Math.sqrt((f.x - x) * (f.x - x) + (f.y - y) * (f.y - y));
 
         if (dist <= radius) {
-          fishHit = true;
-          // Cơ hội chí mạng (Crit) x2 sát thương ngẫu nhiên 20%
           const isCrit = Math.random() < 0.2;
           const finalDmg = isCrit ? damage * 2 : damage;
           const newHp = f.hp - finalDmg;
@@ -237,20 +217,18 @@ export default function BanCaPage() {
           }
 
           if (newHp <= 0) {
-            // Tiêu diệt cá thành công!
             const earned = f.reward * (bet / 10 > 1 ? bet / 10 : 1);
             updatePoints(points + earned);
             showFloatingText(`+${earned} PTS`, f.x, f.y, "#4ade80");
 
-            // Nếu bắn trúng Cá Voi Vàng -> Nổ Hũ Jackpot!
             if (f.type === 'rare') {
               const bonusJp = jackpot;
               updatePoints(points + earned + bonusJp);
               showFloatingText(`🎉 NỔ HŨ JACKPOT: +${bonusJp} PTS!`, 400, 200, "#ec4899");
-              setJackpot(50000); // Reset hũ
+              setJackpot(50000);
             }
 
-            return null; // Cá chết biến mất
+            return null;
           }
           return { ...f, hp: newHp };
         }
@@ -271,20 +249,18 @@ export default function BanCaPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-2 sm:p-4 font-sans select-none">
-      {/* Header thanh thông tin */}
       <header className="w-full max-w-4xl flex justify-between items-center mb-3 bg-slate-900/90 border border-slate-800 p-3 rounded-2xl shadow-lg">
         <Link href="/" className="text-xs font-bold text-amber-400 hover:text-amber-300 transition flex items-center gap-1">
           ← Trang chủ
         </Link>
         <h1 className="text-base sm:text-lg font-black tracking-wider text-cyan-400 uppercase flex items-center gap-1">
-          🦈 BẮN CÁ ĐẠI DƯƠNG VIP
+          🦈 BẮN CÁ KI-BLAST
         </h1>
         <div className="text-xs bg-slate-800 px-3 py-1.5 rounded-xl border border-amber-500/30 font-bold text-amber-400">
           🪙 {points.toLocaleString()} PTS
         </div>
       </header>
 
-      {/* MÀN HÌNH LOBBY CHỌN PHÒNG */}
       {screen === 'lobby' && (
         <div className="w-full max-w-md flex flex-col gap-4 mt-6">
           <div className="bg-gradient-to-br from-blue-900/40 to-slate-900 border border-blue-500/30 p-6 rounded-3xl text-center shadow-2xl backdrop-blur-md">
@@ -323,10 +299,8 @@ export default function BanCaPage() {
         </div>
       )}
 
-      {/* MÀN HÌNH GAME BẮN CÁ */}
       {screen === 'game' && (
         <div className="flex flex-col items-center w-full max-w-4xl">
-          {/* Thông tin phòng & Jackpot */}
           <div className="w-full flex justify-between items-center bg-slate-900 px-4 py-2 rounded-t-2xl border border-slate-800 text-xs font-bold">
             <span className="text-cyan-400 flex items-center gap-1">
               🌊 {activeRoom} | Ghế #{seatIndex + 1}
@@ -338,19 +312,16 @@ export default function BanCaPage() {
               onClick={() => setScreen('lobby')}
               className="bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/40 px-3 py-1 rounded-lg text-xs transition cursor-pointer"
             >
-              Rời Phòng ✖
+              Đổi Phòng ⇄
             </button>
           </div>
 
-          {/* KHU VỰC ĐẠI DƯƠNG BẮN CÁ (Interactive Canvas/Div Arena) */}
           <div
             onClick={handleCanvasClick}
-            className="relative w-full h-[480px] sm:h-[540px] bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 border-4 border-blue-800/80 rounded-b-3xl shadow-2xl overflow-hidden cursor-crosshair"
+            className="relative w-full h-[450px] sm:h-[520px] bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 border-4 border-blue-800/80 rounded-b-3xl shadow-2xl overflow-hidden cursor-crosshair"
           >
-            {/* Hiệu ứng bong bóng nước nền */}
             <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px] animate-pulse" />
 
-            {/* DANH SÁCH CÁ BƠI LỘI */}
             {fishes.map(f => (
               <div
                 key={f.id}
@@ -360,7 +331,6 @@ export default function BanCaPage() {
                 <div className="text-3xl sm:text-4xl drop-shadow-[0_10px_8px_rgba(0,0,0,0.8)] animate-bounce">
                   {f.icon}
                 </div>
-                {/* Thanh máu ẩn nhẹ, chỉ hiển thị khi cá bị tấn công dưới maxHp */}
                 {f.hp < f.maxHp && (
                   <div className="w-10 bg-slate-800 h-1 rounded-full overflow-hidden border border-slate-700 mt-0.5">
                     <div
@@ -372,7 +342,6 @@ export default function BanCaPage() {
               </div>
             ))}
 
-            {/* ĐẠN BAY */}
             {bullets.map(b => (
               <div
                 key={b.id}
@@ -381,7 +350,6 @@ export default function BanCaPage() {
               />
             ))}
 
-            {/* HIỆU ỨNG SÁT THƯƠNG / CRIT / TIỀN THƯỞNG */}
             {effects.map(eff => (
               <div
                 key={eff.id}
@@ -392,7 +360,6 @@ export default function BanCaPage() {
               </div>
             ))}
 
-            {/* CẦN SÚNG CỦA NGƯỜI CHƠI Ở ĐÁY MÀN HÌNH */}
             <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center pointer-events-none">
               <div
                 style={{ transform: `rotate(${cannonAngle}deg)` }}
@@ -406,9 +373,7 @@ export default function BanCaPage() {
             </div>
           </div>
 
-          {/* BẢNG ĐIỀU KHIỂN SÚNG & CẤP CƯỢC ĐẠN */}
           <div className="w-full bg-slate-900 border border-slate-800 p-3 sm:p-4 rounded-2xl mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
-            {/* Chọn cấp cược đạn */}
             <div className="flex flex-col gap-1 w-full sm:w-auto">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center sm:text-left">
                 Chọn Cấp Cược Đạn (Sát thương lan rộng theo cược)
@@ -430,7 +395,6 @@ export default function BanCaPage() {
               </div>
             </div>
 
-            {/* Nút Phóng to súng / Đổi súng VIP */}
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 onClick={() => setIsBigGun(!isBigGun)}
