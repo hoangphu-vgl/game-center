@@ -90,7 +90,7 @@ export default function Home() {
         name: currentUser.displayName || "Chiến Binh Saiyan",
         email: currentUser.email,
         photoURL: currentUser.photoURL,
-        points: 1000, // Tặng ngay 1000 Ki khởi điểm
+        points: 1000,
         lastCheckIn: "",
       };
       await setDoc(userRef, newUser);
@@ -144,7 +144,7 @@ export default function Home() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-16">
-        {/* Header Header Aura */}
+        {/* Header Aura */}
         <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-amber-500/40 px-4 py-3 shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -194,12 +194,12 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Banner Chuẩn Dragon Ball Super Saiyan */}
+        {/* Banner Dragon Ball Super Saiyan */}
         <section
           className="relative flex items-center justify-center min-h-[340px] bg-cover bg-center text-center p-6 border-b border-amber-500/30 overflow-hidden"
           style={{
             backgroundImage:
-              "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')", // Wallpaper Dragon Ball Super Saiyan Aura
+              "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950"></div>
@@ -216,9 +216,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Main Content - Cấu trúc Phụ lục phân loại rõ ràng */}
+        {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 py-8 space-y-12">
-          {/* PHỤ LỤC 1: ĐẶC QUYỀN SỨC MẠNH */}
+          {/* PHỤ LỤC 1: ĐẶC QUYỀN SỨC MẠNH & JACKPOT */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
               <h2 className="text-xl font-black text-amber-400 tracking-wider uppercase">
@@ -237,16 +237,22 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="bg-slate-900/80 border border-orange-500/30 rounded-2xl p-6 hover:border-orange-400/60 transition shadow-lg relative overflow-hidden group">
-                <div className="absolute -right-6 -bottom-6 text-7xl opacity-10 group-hover:opacity-20 transition">🏺</div>
-                <h3 className="text-xl font-bold text-orange-400">🏺 Lọ Vương (Hũ Cầu Nguyện)</h3>
+              {/* JACKPOT RỒNG THẦN 4x6 THẾ CHỔ LỌ VƯƠNG */}
+              <Link
+                href="/jackpot"
+                className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 hover:border-amber-400 transition-all block group shadow-lg hover:-translate-y-1 relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -bottom-6 text-7xl opacity-10 group-hover:opacity-20 transition">🎰</div>
+                <h3 className="text-xl font-bold text-amber-400 group-hover:text-amber-300 transition">
+                  🎰 Jackpot Rồng Thần 4x6
+                </h3>
                 <p className="text-slate-400 text-sm mt-1">
-                  Gửi điểm Ki tích tụ hũ cầu nguyện Rồng Thần. Nổ hũ nhận toàn bộ Ki khủng!
+                  Thử vận may quay hũ 4 hàng 6 cột tích tụ Ki nổ hũ Grand cực khủng!
                 </p>
-                <div className="mt-4 text-xs font-bold text-orange-400/80 bg-orange-500/10 inline-block px-3 py-1 rounded-lg border border-orange-500/20">
-                  Đang chuẩn bị mở cửa trận pháp...
+                <div className="mt-4 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-4 rounded-xl text-center text-sm shadow-md">
+                  Vào Nổ Hũ ngay 🔮
                 </div>
-              </div>
+              </Link>
             </div>
           </section>
 
@@ -258,7 +264,6 @@ export default function Home() {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Cờ Vua Quyết Liệt */}
               <Link
                 href="/chess"
                 className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-6 hover:border-amber-400 transition-all block group shadow-lg hover:shadow-amber-500/10 hover:-translate-y-1"
@@ -275,7 +280,6 @@ export default function Home() {
                 </div>
               </Link>
 
-              {/* Game Trí Tuệ Khác (Phụ lục chờ) */}
               <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 opacity-60 relative flex flex-col justify-between">
                 <div>
                   <div className="text-4xl mb-2">🏮</div>
@@ -297,7 +301,6 @@ export default function Home() {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Phụ lục chờ Game Đối Kháng mới */}
               <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 opacity-60 relative flex flex-col justify-between">
                 <div>
                   <div className="text-4xl mb-2">⚡</div>
@@ -321,7 +324,6 @@ export default function Home() {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Phụ lục chờ Bắn Cá / Jackpot */}
               <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 opacity-60 relative flex flex-col justify-between">
                 <div>
                   <div className="text-4xl mb-2">🎯</div>
@@ -332,22 +334,11 @@ export default function Home() {
                   ⏳ Phụ lục đang phát triển
                 </div>
               </div>
-
-              <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 opacity-60 relative flex flex-col justify-between">
-                <div>
-                  <div className="text-4xl mb-2">🎰</div>
-                  <h3 className="font-bold text-xl text-slate-300">Jackpot Rồng Thần</h3>
-                  <p className="text-slate-500 text-sm mt-1">Thử vận may quay hũ 7 viên ngọc rồng nổ lớn.</p>
-                </div>
-                <div className="mt-4 text-xs font-bold text-slate-500 bg-slate-800/80 py-2 px-3 rounded-xl text-center">
-                  ⏳ Phụ lục đang phát triển
-                </div>
-              </div>
             </div>
           </section>
         </main>
 
-        {/* --- KHUNG CHAT CHUNG THÔNG MINH INTEGRATED (PC & MOBILE) --- */}
+        {/* CHAT BOX CHUNG */}
         <div className="fixed bottom-4 right-4 z-50">
           {!chatOpen ? (
             <button
@@ -359,7 +350,6 @@ export default function Home() {
             </button>
           ) : (
             <div className="bg-slate-900 border-2 border-amber-500/60 rounded-2xl shadow-2xl w-[320px] sm:w-[360px] h-[420px] flex flex-col overflow-hidden backdrop-blur-xl">
-              {/* Header Chat */}
               <div className="bg-slate-800/90 border-b border-amber-500/30 p-3 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <span>💬</span>
@@ -375,7 +365,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Khung chứa tin nhắn có thể cuộn (Scrollable) */}
               <div className="flex-1 p-3 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-amber-500/30">
                 {messages.length === 0 ? (
                   <div className="text-center text-xs text-slate-500 py-10">
@@ -408,7 +397,6 @@ export default function Home() {
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Ô Nhập Tin Nhắn */}
               <form onSubmit={handleSendMessage} className="p-2 border-t border-slate-800 bg-slate-950/80 flex gap-2">
                 <input
                   type="text"
