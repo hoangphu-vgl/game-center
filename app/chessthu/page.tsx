@@ -233,7 +233,8 @@ export default function ChessthuPage() {
                   const landTarget = currentBoard[jumpR][nc];
                   const landAnimal = landTarget ? ANIMAL_DATA[landTarget] : null;
                   if (!landTarget || landAnimal?.color !== color) {
-                    if (!landTarget || rank >= landAnimal!.rank || (rank === 8 && landAnimal!.rank === 1)) {
+                    const targetRank = landAnimal ? (landAnimal.rank as number) : 0;
+                    if (!landTarget || rank >= targetRank || (rank === 8 && targetRank === 1)) {
                       moves.push({ r: jumpR, c: nc });
                     }
                   }
@@ -249,7 +250,8 @@ export default function ChessthuPage() {
                   const landTarget = currentBoard[nr][jumpC];
                   const landAnimal = landTarget ? ANIMAL_DATA[landTarget] : null;
                   if (!landTarget || landAnimal?.color !== color) {
-                    if (!landTarget || rank >= landAnimal!.rank || (rank === 8 && landAnimal!.rank === 1)) {
+                    const targetRank = landAnimal ? (landAnimal.rank as number) : 0;
+                    if (!landTarget || rank >= targetRank || (rank === 8 && targetRank === 1)) {
                       moves.push({ r: nr, c: jumpC });
                     }
                   }
@@ -265,9 +267,10 @@ export default function ChessthuPage() {
         } else {
           if (targetAnimal?.color !== color) {
             let canEat = false;
-            if (rank === 1 && targetAnimal?.rank === 8) canEat = true;
-            else if (rank === 8 && targetAnimal?.rank === 1) canEat = false;
-            else if (rank >= targetAnimal!.rank) canEat = true;
+            const tRank = targetAnimal ? (targetAnimal.rank as number) : 0;
+            if (rank === 1 && tRank === 8) canEat = true;
+            else if (rank === 8 && tRank === 1) canEat = false;
+            else if (rank >= tRank) canEat = true;
 
             if (canEat) {
               moves.push({ r: nr, c: nc });
@@ -310,7 +313,6 @@ export default function ChessthuPage() {
   const executeMove = async (fromR: number, fromC: number, toR: number, toC: number) => {
     const newBoard = board.map((row) => [...row]);
     const movingPiece = newBoard[fromR][fromC];
-    const target = newBoard[toR][toC];
 
     newBoard[toR][toC] = movingPiece;
     newBoard[fromR][fromC] = '';
