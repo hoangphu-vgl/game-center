@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AuthGuard from "@/components/AuthGuard";
 import { auth, db } from "@/lib/firebase";
@@ -25,14 +25,13 @@ export default function VongQuayPage() {
   const [loading, setLoading] = useState(true);
 
   const [isSpinning, setIsSpinning] = useState(false);
+  const [wheelAngle, setWheelAngle] = useState(0);
   const [spinResultModal, setSpinResultModal] = useState<string | null>(null);
   const [lastIndex, setLastIndex] = useState<number | null>(null);
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const rotationRef = useRef<number>(0);
-
   const totalWeight = REWARDS.reduce((sum, r) => sum + r.weight, 0);
 
+  // Tính toán góc cho 8 ô
   let currentAngle = 0;
   const sectors = REWARDS.map((r) => {
     const angleSize = (r.weight / totalWeight) * 360;
@@ -45,65 +44,6 @@ export default function VongQuayPage() {
     currentAngle += angleSize;
     return sector;
   });
-
-  const drawWheel = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const cx = 250, cy = 250, radius = 245;
-    ctx.clearRect(0, 0, 500, 500);
-
-    sectors.forEach((sector) => {
-      const start = (sector.start * Math.PI) / 180;
-      const end = (sector.end * Math.PI) / 180;
-
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radius, start, end);
-      ctx.closePath();
-
-      ctx.fillStyle = sector.color;
-      ctx.fill();
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((sector.middle * Math.PI) / 180);
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 17px Arial";
-      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
-      ctx.shadowBlur = 4;
-      ctx.fillText(sector.label, 205, 0);
-      ctx.restore();
-    });
-
-    ctx.beginPath();
-    ctx.arc(cx, cy, 32, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 5;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-    ctx.fillStyle = "#f59e0b";
-    ctx.fill();
-  };
-
-  useEffect(() => {
-    // Đảm bảo canvas render ngay khi component mount
-    const timer = setTimeout(() => {
-      drawWheel();
-    }, 50);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -118,7 +58,6 @@ export default function VongQuayPage() {
         }
       }
       setLoading(false);
-      setTimeout(drawWheel, 100);
     });
     return () => unsubscribe();
   }, []);
@@ -126,7 +65,6 @@ export default function VongQuayPage() {
   const spinWheel = async () => {
     if (isSpinning) return;
     
-    // Kiểm tra gắt gao: Không có lượt thì nhịn!
     if (luckySpins <= 0) {
       alert("⚡ Hết lượt quay rồi ní ơi! Không có lượt thì nhịn nhé, hãy ghé Shop mua thêm lượt!");
       return;
@@ -167,14 +105,11 @@ export default function VongQuayPage() {
     const targetMiddleAngle = (winningSector.start + winningSector.end) / 2;
     const desiredDegree = 270 - targetMiddleAngle;
 
-    const currentNormalized = rotationRef.current % 360;
+    const currentNormalized = wheelAngle % 360;
     const extraOffset = (desiredDegree - currentNormalized + 360) % 360;
-    rotationRef.current += 360 * 8 + extraOffset;
+    const newTotalAngle = wheelAngle + 360 * 8 + extraOffset;
 
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.style.transform = `rotate(${rotationRef.current}deg)`;
-    }
+    setWheelAngle(newTotalAngle);
 
     setTimeout(async () => {
       setIsSpinning(false);
@@ -249,18 +184,30 @@ export default function VongQuayPage() {
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-            {/* Vòng quay Canvas mượt mà, hiển thị chuẩn 100% */}
+            {/* Vòng quay CSS Conic Gradient chuẩn xác, hiển thị 100% mượt mà */}
             <div className="relative w-[340px] h-[340px] sm:w-[400px] sm:h-[400px] flex items-center justify-center">
               <div className="absolute -top-3 z-30 text-3xl animate-bounce drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]">🔻</div>
-              <canvas
-                ref={canvasRef}
-                width={500}
-                height={500}
-                className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_40px_rgba(168,85,247,0.6)]"
+              <div
+                className="w-full h-full rounded-full border-8 border-amber-400 shadow-[0_0_40px_rgba(168,85,247,0.6)] relative overflow-hidden"
                 style={{
+                  transform: `rotate(${wheelAngle}deg)`,
                   transition: isSpinning ? "transform 4s cubic-bezier(0.15, 0.85, 0.15, 1)" : "none",
+                  background: "conic-gradient(#06b6d4 0deg 45deg, #ef4444 45deg 90deg, #eab308 90deg 135deg, #f97316 135deg 180deg, #a855f7 180deg 225deg, #64748b 225deg 270deg, #22c55e 270deg 315deg, #ec4899 315deg 360deg)"
                 }}
-              />
+              >
+                {/* Các nhãn chữ xuôi theo nan quạt vòng quay */}
+                <div className="absolute inset-0 flex items-center justify-center text-[12px] sm:text-[14px] font-black text-slate-950">
+                  <div className="absolute top-8 transform -translate-y-1/2 rotate-0 drop-shadow-sm">🥤 Nước Suối</div>
+                  <div className="absolute right-10 top-20 transform rotate-45 drop-shadow-sm">💀 Yamcha</div>
+                  <div className="absolute right-6 bottom-28 transform rotate-90 drop-shadow-sm">💵 1.000đ</div>
+                  <div className="absolute bottom-8 right-20 transform rotate-[135deg] drop-shadow-sm">🍩 Majin Buu</div>
+                  <div className="absolute bottom-7 left-20 transform rotate-180 drop-shadow-sm">🎟️ +1 Lượt</div>
+                  <div className="absolute left-6 bottom-28 transform rotate-[225deg] drop-shadow-sm">🌌 Zeno</div>
+                  <div className="absolute left-10 top-20 transform rotate-[270deg] drop-shadow-sm">🫘 Lọc Thận</div>
+                  <div className="absolute top-8 left-20 transform rotate-[315deg] drop-shadow-sm">🚀 Tàu Pảy Pảy</div>
+                </div>
+              </div>
+
               <div className="absolute z-20 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-4 border-slate-950 shadow-2xl flex items-center justify-center text-2xl font-black">
                 🐉
               </div>
