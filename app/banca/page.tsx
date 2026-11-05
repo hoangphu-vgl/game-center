@@ -66,6 +66,7 @@ export default function BanCaPage() {
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [isPVE, setIsPVE] = useState<boolean>(true);
+  const [isHost, setIsHost] = useState<boolean>(false);
   const [myCorner, setMyCorner] = useState<string>('bottom-right');
 
   const [currentGunIndex, setCurrentGunIndex] = useState<number>(1);
@@ -90,25 +91,33 @@ export default function BanCaPage() {
     'bottom-right': { active: true, email: 'Bạn' }
   });
 
-  // Dùng ref để lưu trạng thái phòng hiện tại phục vụ dọn dẹp khi thoát
-  const activeRoomRefData = useRef<{ roomId: string | null; corner: string; pve: boolean }>({
+  const activeRoomRefData = useRef<{ roomId: string | null; corner: string; pve: boolean; userEmail: string }>({
     roomId: null,
     corner: 'bottom-right',
-    pve: true
+    pve: true,
+    userEmail: ''
   });
 
   useEffect(() => {
-    activeRoomRefData.current = { roomId: activeRoomId, corner: myCorner, pve: isPVE };
-  }, [activeRoomId, myCorner, isPVE]);
+    activeRoomRefData.current = { 
+      roomId: activeRoomId, 
+      corner: myCorner, 
+      pve: isPVE, 
+      userEmail: user?.email || 'Thành viên' 
+    };
+  }, [activeRoomId, myCorner, isPVE, user]);
 
-  // Xử lý tự động xóa tên và giải phóng ghế khi người chơi đóng tab hoặc thoát trang đột ngột
+  // Giải phóng ghế tức thì khi thoát trang hoặc đóng tab
   useEffect(() => {
     const handleBeforeUnload = () => {
       const { roomId, corner, pve } = activeRoomRefData.current;
       if (roomId && !pve) {
-        // Gửi lệnh đồng bộ đồng thời giải phóng ghế
         const roomRef = doc(db, "banca_rooms", roomId);
-        // Dùng Beacon hoặc update trực tiếp nếu có thể
+        const currentPlayers = { ...roomPlayersRef.current };
+        if (currentPlayers[corner]) {
+          currentPlayers[corner] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
+          setDoc(roomRef, { players: currentPlayers }, { merge: true });
+        }
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -213,19 +222,19 @@ export default function BanCaPage() {
 
   useEffect(() => {
     const bubbles = [];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 25; i++) {
       bubbles.push({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
-        radius: Math.random() * 4 + 2,
-        speed: Math.random() * 1.0 + 0.3,
-        opacity: Math.random() * 0.3 + 0.1
+        radius: Math.random() * 3 + 2,
+        speed: Math.random() * 0.8 + 0.2,
+        opacity: Math.random() * 0.25 + 0.1
       });
     }
     bubblesRef.current = bubbles;
   }, []);
 
-  // Lắng nghe dữ liệu phòng PVP realtime
+  // Lắng nghe realtime phòng PVP
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -235,15 +244,16 @@ export default function BanCaPage() {
         if (data.players) {
           roomPlayersRef.current = data.players;
         }
-        if (data.fishes && Array.isArray(data.fishes)) {
+        // Nếu không phải Host, nhận danh sách cá từ Host để mượt mà tuyệt đối không giật lag
+        if (!isHost && data.fishes && Array.isArray(data.fishes)) {
           fishesRef.current = data.fishes;
         }
       }
     });
     return () => unsubscribe();
-  }, [activeRoomId, isPVE]);
+  }, [activeRoomId, isPVE, isHost]);
 
-  // Cập nhật góc súng tối ưu hóa tần số để chống giật lag
+  // Cập nhật góc súng mượt mà, tần số chuẩn 250ms chống nghẽn mạng
   useEffect(() => {
     if (!activeRoomId || isPVE) return;
     const interval = setInterval(async () => {
@@ -252,10 +262,10 @@ export default function BanCaPage() {
       const w = canvas.width;
       const h = canvas.height;
 
-      let startX = w - 70, startY = h - 70;
-      if (myCorner === 'bottom-left') { startX = 70; startY = h - 70; }
-      else if (myCorner === 'top-left') { startX = 70; startY = 70; }
-      else if (myCorner === 'top-right') { startX = w - 70; startY = 70; }
+      let startX = w - 60, startY = h - 60;
+      if (myCorner === 'bottom-left') { startX = 60; startY = h - 60; }
+      else if (myCorner === 'top-left') { startX = 60; startY = 60; }
+      else if (myCorner === 'top-right') { startX = w - 60; startY = 60; }
 
       const angle = Math.atan2(mousePosRef.current.y - startY, mousePosRef.current.x - startX);
       const roomRef = doc(db, "banca_rooms", activeRoomId);
@@ -264,10 +274,10 @@ export default function BanCaPage() {
         const currentPlayers = { ...roomPlayersRef.current };
         if (currentPlayers[myCorner]) {
           currentPlayers[myCorner].angle = angle;
-          await updateDoc(roomRef, { players: currentPlayers });
+          await setDoc(roomRef, { players: currentPlayers }, { merge: true });
         }
       } catch (e) {}
-    }, 200); // Giảm tần số gọi Firestore xuống 200ms giúp mượt mà, hết giật khung hình
+    }, 250);
 
     return () => clearInterval(interval);
   }, [activeRoomId, isPVE, myCorner]);
@@ -292,7 +302,8 @@ export default function BanCaPage() {
     const scaleFactor = isMobile ? 0.75 : 1.0;
 
     const spawnFish = async (w: number, h: number) => {
-      if (fishesRef.current.length < 24 && Math.random() < 0.3) {
+      // Chỉ Host mới sinh cá và đẩy lên server để tránh xung đột khung hình
+      if (isHost && fishesRef.current.length < 20 && Math.random() < 0.25) {
         const rand = Math.random();
         let template;
         if (rand < 0.05) {
@@ -346,7 +357,7 @@ export default function BanCaPage() {
 
           if (!isPVE && activeRoomId) {
             try {
-              await updateDoc(doc(db, "banca_rooms", activeRoomId), { fishes: fishesRef.current });
+              await setDoc(doc(db, "banca_rooms", activeRoomId), { fishes: fishesRef.current }, { merge: true });
             } catch (e) {}
           }
         }
@@ -374,13 +385,13 @@ export default function BanCaPage() {
 
         explosionsRef.current.forEach(ex => {
           ex.radius += 3;
-          ex.alpha -= 0.08;
+          ex.alpha -= 0.1;
         });
         explosionsRef.current = explosionsRef.current.filter(ex => ex.alpha > 0);
 
         floatingTextsRef.current.forEach(ft => {
           ft.y += ft.vy;
-          ft.alpha -= 0.025;
+          ft.alpha -= 0.03;
         });
         floatingTextsRef.current = floatingTextsRef.current.filter(ft => ft.alpha > 0);
 
@@ -398,7 +409,7 @@ export default function BanCaPage() {
             const dist = Math.hypot(bullet.x - fish.x, bullet.y - fish.y);
             if (dist < bullet.radius + fish.width / 2.5) {
               bullet.alive = false;
-              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 8, maxRadius: 60, color: bullet.color, alpha: 1 });
+              explosionsRef.current.push({ x: bullet.x, y: bullet.y, radius: 8, maxRadius: 50, color: bullet.color, alpha: 1 });
 
               fish.hp -= bullet.damage;
               fish.hitTimer = 4;
@@ -434,7 +445,9 @@ export default function BanCaPage() {
         });
         fishesRef.current = fishesRef.current.filter(f => !f.dead);
 
-        spawnFish(w, h);
+        if (isPVE || isHost) {
+          spawnFish(w, h);
+        }
 
         ctx.clearRect(0, 0, w, h);
 
@@ -462,7 +475,7 @@ export default function BanCaPage() {
         bulletsRef.current.forEach(b => {
           ctx.save();
           ctx.beginPath();
-          ctx.arc(b.x, b.y, b.radius + 5, 0, Math.PI * 2);
+          ctx.arc(b.x, b.y, b.radius + 4, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
           ctx.fill();
           ctx.beginPath();
@@ -479,7 +492,7 @@ export default function BanCaPage() {
           ctx.beginPath();
           ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
           ctx.strokeStyle = ex.color;
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 3;
           ctx.stroke();
           ctx.restore();
         });
@@ -487,7 +500,7 @@ export default function BanCaPage() {
         floatingTextsRef.current.forEach(ft => {
           ctx.save();
           ctx.globalAlpha = Math.max(0, ft.alpha);
-          ctx.font = '900 18px Fredoka, sans-serif';
+          ctx.font = '900 16px Fredoka, sans-serif';
           ctx.fillStyle = ft.color;
           ctx.shadowColor = 'rgba(0,0,0,0.8)';
           ctx.shadowBlur = 4;
@@ -511,7 +524,7 @@ export default function BanCaPage() {
           }
 
           ctx.beginPath();
-          ctx.arc(0, 0, 42, 0, Math.PI * 2);
+          ctx.arc(0, 0, 38, 0, Math.PI * 2);
           ctx.fillStyle = isActive ? '#0f172a' : '#1e293b';
           ctx.fill();
           ctx.lineWidth = 3;
@@ -520,19 +533,19 @@ export default function BanCaPage() {
 
           ctx.rotate(angle);
           ctx.fillStyle = isActive ? '#f59e0b' : '#475569';
-          ctx.fillRect(0, -14, 52, 28);
+          ctx.fillRect(0, -12, 46, 24);
           ctx.lineWidth = 2;
           ctx.strokeStyle = '#ffffff';
-          ctx.strokeRect(0, -14, 52, 28);
+          ctx.strokeRect(0, -12, 46, 24);
           ctx.fillStyle = isActive ? '#b45309' : '#334155';
-          ctx.fillRect(44, -18, 8, 36);
+          ctx.fillRect(38, -15, 8, 30);
           ctx.restore();
 
           if (isActive) {
             ctx.font = "bold 10px Fredoka, sans-serif";
             ctx.fillStyle = "#facc15";
             ctx.textAlign = 'center';
-            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 48 : 38));
+            ctx.fillText(`${label}: ${pData.email.split('@')[0]}`, x, y + (y > h / 2 ? 44 : 34));
           }
         };
 
@@ -553,7 +566,7 @@ export default function BanCaPage() {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner]);
+  }, [screenMode, isPaused, isPVE, activeRoomId, jackpotPool, isMuted, myCorner, isHost]);
 
   const handleShoot = () => {
     if (!isPVE) {
@@ -663,18 +676,20 @@ export default function BanCaPage() {
       if (foundRoomId && availableCorner) {
         setActiveRoomId(foundRoomId);
         setIsPVE(false);
+        setIsHost(false); // Vào phòng có sẵn thì không làm Host sinh cá
         setMyCorner(availableCorner);
 
         roomPlayersData[availableCorner] = { active: true, email: user?.email || 'Thành viên', angle: -Math.PI / 2 };
         roomPlayersRef.current = roomPlayersData;
 
-        await updateDoc(doc(db, "banca_rooms", foundRoomId), { players: roomPlayersData });
+        await setDoc(doc(db, "banca_rooms", foundRoomId), { players: roomPlayersData }, { merge: true });
         setScreenMode('game');
         showToast(`🎉 Đã ghép vào phòng đang có người #${foundRoomId}!`);
       } else {
         const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
         setActiveRoomId(newRoomId);
         setIsPVE(false);
+        setIsHost(true); // Mình tạo phòng mới nên mình là Host sinh cá
         setMyCorner('bottom-right');
 
         const newPlayers = {
@@ -704,6 +719,7 @@ export default function BanCaPage() {
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     setActiveRoomId(roomId);
     setIsPVE(false);
+    setIsHost(true);
     setMyCorner('bottom-right');
 
     const newPlayers = {
@@ -743,6 +759,7 @@ export default function BanCaPage() {
     const data = roomSnap.data();
     setActiveRoomId(roomId);
     setIsPVE(false);
+    setIsHost(false);
 
     const players = data.players || {};
     let corner = 'bottom-left';
@@ -755,31 +772,29 @@ export default function BanCaPage() {
     players[corner] = { active: true, email: user?.email || 'Thành viên', angle: -Math.PI / 2 };
     roomPlayersRef.current = players;
 
-    await updateDoc(roomRef, { players });
+    await setDoc(roomRef, { players }, { merge: true });
 
     setScreenMode('game');
     showToast(`🎉 Vào phòng ${roomId} thành công!`);
   };
 
-  // Thoát phòng triệt để: trả ghế về trạng thái Trống ngay lập tức để người khác vào
+  // Thoát phòng dứt điểm: ghi đè trạng thái Trống lên ghế bằng setDoc merge để không bị kẹt
   const handleLeaveRoom = async () => {
     if (activeRoomId && !isPVE) {
       const roomRef = doc(db, "banca_rooms", activeRoomId);
       try {
-        const roomSnap = await getDoc(roomRef);
-        if (roomSnap.exists()) {
-          const players = roomSnap.data().players || {};
-          if (players[myCorner]) {
-            players[myCorner] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
-            await updateDoc(roomRef, { players });
-          }
+        const currentPlayers = { ...roomPlayersRef.current };
+        if (currentPlayers[myCorner]) {
+          currentPlayers[myCorner] = { active: false, email: 'Trống', angle: -Math.PI / 2 };
+          await setDoc(roomRef, { players: currentPlayers }, { merge: true });
         }
       } catch (e) {}
     }
     setActiveRoomId(null);
     setIsPVE(true);
+    setIsHost(false);
     setScreenMode('lobby');
-    showToast("Đã rời phòng, ghế đã được giải phóng.");
+    showToast("Đã rời phòng, ghế đã được giải phóng sạch sẽ.");
   };
 
   return (
@@ -808,7 +823,7 @@ export default function BanCaPage() {
               </button>
 
               <button
-                onClick={() => { setIsPVE(true); setScreenMode('game'); }}
+                onClick={() => { setIsPVE(true); setIsHost(true); setScreenMode('game'); }}
                 className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-bold rounded-2xl transition uppercase text-xs cursor-pointer"
               >
                 🛡️ CHƠI ĐƠN (SOLO PVE)
