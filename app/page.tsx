@@ -278,16 +278,22 @@ export default function Home() {
                 </div>
               </Link>
 
-              <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 opacity-60 relative flex flex-col justify-between">
-                <div>
-                  <div className="text-4xl mb-2">🏮</div>
-                  <h3 className="font-bold text-xl text-slate-300">Cờ Tướng / Cờ Thú</h3>
-                  <p className="text-slate-500 text-sm mt-1">Trận chiến trí tuệ Phương Đông quy mô lớn.</p>
+              {/* ĐẤU TRƯỜNG CỜ THÚ */}
+              <Link
+                href="/cothu"
+                className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-6 hover:border-emerald-400 transition-all block group shadow-lg hover:-translate-y-1"
+              >
+                <div className="text-4xl mb-2">🦁</div>
+                <h3 className="font-black text-xl text-white group-hover:text-emerald-400 transition">
+                  Đấu Trường Cờ Thú
+                </h3>
+                <p className="text-slate-400 text-sm mt-1">
+                  Trận chiến chiến thuật động vật đỉnh cao, phòng Online Realtime cược lên đến 10,000 PTS!
+                </p>
+                <div className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2.5 px-4 rounded-xl text-center text-sm shadow-md">
+                  Vào Bàn Cờ Thú 🐅
                 </div>
-                <div className="mt-4 text-xs font-bold text-slate-500 bg-slate-800/80 py-2 px-3 rounded-xl text-center">
-                  ⏳ Phụ lục đang phát triển
-                </div>
-              </div>
+              </Link>
             </div>
           </section>
 
@@ -314,7 +320,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* PHỤ LỤC 4: GAME GIẢI TRÍ & MAY MẮN (ĐÃ XÓA JACKPOT TRÙNG LẶP) */}
+          {/* PHỤ LỤC 4: GAME GIẢI TRÍ & MAY MẮN */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
               <h2 className="text-xl font-black text-emerald-400 tracking-wider uppercase">
