@@ -12,7 +12,7 @@ const WHEEL_REWARDS = [
   { label: "+1 Lượt Quay", type: "spins", val: 1, weight: 10 },
   { label: "+2 Lượt Quay", type: "spins", val: 2, weight: 10 },
   { label: "Mất Ki! (0 PTS)", type: "pts", val: 0, weight: 20 },
-  { label: "+5 Lượt Quay", type: "spins", val: 5, weight: 4 },
+  { label: "1 chai nước", type: "spins", val: 1, weight: 1 },
   { label: "JACKPOT 1000K Ki!", type: "pts", val: 1000000, weight: 1 },
 ];
 

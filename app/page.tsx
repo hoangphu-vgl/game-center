@@ -4,13 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-interface ChatMessage {
-  id: number;
-  user_email: string;
-  message: string;
-  created_at?: any;
-}
-
 interface LeaderboardUser {
   id: string;
   full_name: string;
@@ -26,16 +19,16 @@ const DEFAULT_AVATARS = [
 ];
 
 const AURA_QUOTES = [
-  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn của chính mình!' - Son Goku[cite: 2]",
-  "⚡ 'Sức mạnh đến từ nhu cầu, không phải từ mong muốn.' - Vegeta[cite: 2]",
-  "🐉 'Khi bạn từ bỏ hy vọng, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi[cite: 2]",
-  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan!' - Vegeta[cite: 2]",
-  "🌟 'Hãy dồn toàn bộ Ki vào cú đánh quyết định!' - Gogeta[cite: 2]",
-  "🌀 'Nỗi sợ hãi không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku[cite: 2]",
-  "🥋 'Võ thuật không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa[cite: 2]",
-  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là kẻ mạnh nhất!' - Broly[cite: 2]",
-  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước số phận!' - Vegeta[cite: 2]",
-  "🐉 'Bản Năng Vô Thượng... trạng thái khi cơ thể tự động phản ứng!' - Whis[cite: 2]",
+  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn của chính mình!' - Son Goku",
+  "⚡ 'Sức mạnh đến từ nhu cầu, không phải từ mong muốn.' - Vegeta",
+  "🐉 'Khi bạn từ bỏ hy vọng, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi",
+  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan!' - Vegeta",
+  "🌟 'Hãy dồn toàn bộ Ki vào cú đánh quyết định!' - Gogeta",
+  "🌀 'Nỗi sợ hãi không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku",
+  "🥋 'Võ thuật không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
+  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là kẻ mạnh nhất!' - Broly",
+  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước số phận!' - Vegeta",
+  "🐉 'Bản Năng Vô Thượng... trạng thái khi cơ thể tự động phản ứng!' - Whis",
 ];
 
 // HỆ THỐNG PHÂN CẤP 10 CẤP ĐỘ SỨC MẠNH DRAGON BALL
@@ -63,8 +56,7 @@ export default function Home() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
-  const [authLoading, setAuthLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
 
   // Profile & Modal States
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -72,11 +64,11 @@ export default function Home() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Chat States (Chỉ dùng 1 khung chat duy nhất ở góc dưới phải)
-  const [chatOpen, setChatOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  // Ngọc Rồng (Mỗi user sở hữu số lượng từ 0 đến 7)
+  const [dragonBallsCount, setDragonBallsCount] = useState<number>(0);
+
+  // Popup Thông Báo Luật Chơi & Sưu Tập Ngọc Rồng
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
 
   // Leaderboard State
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
@@ -84,11 +76,19 @@ export default function Home() {
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
+  // Hàm lấy mã tuần (vd: "2026-W45") dùng để kiểm tra reset thứ Hai
+  const getWeekKey = () => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const week = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+    return `${now.getFullYear()}-W${week}`;
+  };
+
   useEffect(() => {
     setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
   }, []);
 
-  // LƯU TRỮ & LẮNG NGHE PHIÊN ĐĂNG NHẬP
+  // LƯU TRỮ & LẮNG NGHE PHIÊN ĐĂNG NHẬP + CHECK RESET THỨ HAI & NGỌC RỒNG
   useEffect(() => {
     async function loadUserProfile(currentUser: any) {
       if (!currentUser) {
@@ -96,6 +96,7 @@ export default function Home() {
         setPoints(5000);
         setLuckySpins(3);
         setLastCheckIn("");
+        setDragonBallsCount(0);
         setLoading(false);
         return;
       }
@@ -112,29 +113,60 @@ export default function Home() {
         const defaultName = currentUser.user_metadata?.username || "Chiến Binh Saiyan";
         const defaultAvatar = currentUser.user_metadata?.avatar_url || DEFAULT_AVATARS[0].url;
 
+        // Kiểm tra cơ chế tự động reset Sức Mạnh về 0 vào thứ Hai hàng tuần
+        const currentWeek = getWeekKey();
+        const lastCheckedWeek = localStorage.getItem(`last_reset_week_${currentUser.id}`);
+
+        let currentBalance = profile?.balance ?? 5000;
+        let currentSpins = profile?.lucky_spins ?? 3;
+        let lastCheck = profile?.last_check_in ?? "";
+
+        if (lastCheckedWeek !== currentWeek) {
+          // Sang tuần mới: Reset Sức Mạnh (balance) về 0 (hoặc giữ nguyên nếu muốn, ở đây theo ý ní reset về 0)
+          currentBalance = 0;
+          await supabase
+            .from("profiles")
+            .update({ balance: 0 })
+            .eq("id", currentUser.id);
+          
+          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
+        }
+
         if (!profile) {
           const initialData = {
             id: currentUser.id,
             email: currentUser.email || "",
             full_name: defaultName,
             avatar_url: defaultAvatar,
-            balance: 5000,
+            balance: 0,
             lucky_spins: 3,
             last_check_in: "",
           };
           await supabase.from("profiles").insert([initialData]);
-          setPoints(5000);
+          setPoints(0);
           setLuckySpins(3);
           setLastCheckIn("");
           setDisplayName(defaultName);
           setAvatarUrl(defaultAvatar);
         } else {
-          setPoints(profile.balance ?? 5000);
-          setLuckySpins(profile.lucky_spins ?? 3);
-          setLastCheckIn(profile.last_check_in ?? "");
+          setPoints(currentBalance);
+          setLuckySpins(currentSpins);
+          setLastCheckIn(lastCheck);
           setDisplayName(profile.full_name || defaultName);
           setAvatarUrl(profile.avatar_url || defaultAvatar);
         }
+
+        // Lấy số lượng ngọc rồng của user từ localStorage (hoặc mở rộng lưu supabase nếu thích)
+        const savedBalls = localStorage.getItem(`dragon_balls_${currentUser.id}`);
+        setDragonBallsCount(savedBalls ? parseInt(savedBalls) : 0);
+
+        // Kiểm tra xem hôm nay user đã tắt thông báo quy lệ chưa
+        const todayStr = getTodayString();
+        const hideNoticeDate = localStorage.getItem(`hide_notice_${currentUser.id}`);
+        if (hideNoticeDate !== todayStr) {
+          setShowNoticeModal(true);
+        }
+
       } catch (err) {
         console.error("Lỗi profile:", err);
       } finally {
@@ -154,6 +186,13 @@ export default function Home() {
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  const handleCloseNoticeForToday = () => {
+    if (!user) return;
+    const todayStr = getTodayString();
+    localStorage.setItem(`hide_notice_${user.id}`, todayStr);
+    setShowNoticeModal(false);
+  };
 
   // LẤY BẢNG XẾP HẠNG TOP 5
   useEffect(() => {
@@ -181,44 +220,33 @@ export default function Home() {
     };
   }, []);
 
-  // LẮNG NGHE CHAT CHUNG REALTIME
-  useEffect(() => {
+  // Xử lý quy đổi Ngọc Rồng lấy tiền mặt / VNĐ
+  const handleExchangeBalls = (type: 'single' | 'all') => {
     if (!user) return;
-
-    async function fetchInitialChat() {
-      const { data, error } = await supabase
-        .from("global_chat")
-        .select("*")
-        .order("id", { ascending: true })
-        .limit(50);
-      
-      if (!error && data) {
-        setMessages(data);
-        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    if (type === 'single') {
+      if (dragonBallsCount < 1) {
+        alert("🛡️ Bạn chưa có viên Ngọc Rồng nào để đổi!");
+        return;
+      }
+      if (confirm("Xác nhận quy đổi 1 Viên Ngọc Rồng lấy 10.000 VNĐ tiền mặt?")) {
+        const newCount = dragonBallsCount - 1;
+        setDragonBallsCount(newCount);
+        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
+        alert("🎉 Quy đổi thành công! Nhận ngay 10.000 VNĐ (Liên hệ Admin để nhận thưởng nhé)!");
+      }
+    } else if (type === 'all') {
+      if (dragonBallsCount < 7) {
+        alert("🐉 Bạn cần sưu tập đủ đúng 7 Viên Ngọc Rồng để thực hiện Điều Ước Rồng Thần nhận 100k VNĐ!");
+        return;
+      }
+      if (confirm("🌟 THỰC HIỆN ĐIỀU ƯỚC RỒNG THẦN! Dùng đủ 7 Viên Ngọc Rồng để nhận ngay 100.000 VNĐ?")) {
+        const newCount = dragonBallsCount - 7;
+        setDragonBallsCount(newCount);
+        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
+        alert("🐲 ĐIỀU ƯỚC ĐÃ THỰC HIỆN! Chúc mừng bạn húp trọn 100.000 VNĐ từ Rồng Thần (Chụp màn hình và báo Admin nhận thưởng ngay)!");
       }
     }
-    fetchInitialChat();
-
-    const channel = supabase
-      .channel("global_chat_realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "global_chat" },
-        (payload) => {
-          const newMsg = payload.new as any;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -335,41 +363,6 @@ export default function Home() {
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !user) return;
-    const textToSend = newMessage.trim();
-    setNewMessage("");
-
-    const userIdentifier = displayName || user.email || "Chiến Binh";
-
-    try {
-      const { error } = await supabase.from("global_chat").insert([
-        {
-          user_email: userIdentifier,
-          message: textToSend,
-        },
-      ]);
-      if (error) throw error;
-
-      const { data: allMsgs } = await supabase
-        .from("global_chat")
-        .select("id")
-        .order("created_at", { ascending: false });
-
-      if (allMsgs && allMsgs.length > 50) {
-        const idsToDelete = allMsgs.slice(50).map((m: any) => m.id);
-        await supabase
-          .from("global_chat")
-          .delete()
-          .in("id", idsToDelete);
-      }
-
-    } catch (err: any) {
-      console.error("Lỗi chat:", err.message);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-amber-400 font-black tracking-widest animate-pulse px-4 text-center">
@@ -393,7 +386,7 @@ export default function Home() {
               DRAGON ARCADE
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm font-medium">
-              {isSignUp ? "✨ Khởi tạo tài khoản nhận ngay 5000 Điểm Sức Mạnh & 3 Lượt Quay" : "⚡ Đăng nhập bước vào không gian võ đạo"}
+              {isSignUp ? "✨ Khởi tạo tài khoản tham gia đua top Sức Mạnh tuần" : "⚡ Đăng nhập bước vào không gian võ đạo"}
             </p>
           </div>
 
@@ -450,6 +443,81 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
+      
+      {/* ================= POPUP THÔNG BÁO / LUẬT CHƠI & SƯU TẬP NGỌC RỒNG ================= */}
+      {showNoticeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-5 sm:p-6 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-4 relative max-h-[90vh] overflow-y-auto">
+            
+            <div className="text-center space-y-1 border-b border-slate-800 pb-3">
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 font-black px-3 py-1 rounded-full border border-amber-500/30 uppercase tracking-widest">
+                ⚡ Sắc Lệnh Từ Thần Hủy Diệt ⚡
+              </span>
+              <h2 className="text-lg sm:text-xl font-black text-yellow-300 mt-2">
+                LUẬT CHƠI VÀ SĂN NGỌC RỒNG VŨ TRỤ
+              </h2>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              
+              {/* Luật chơi */}
+              <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
+                <h3 className="font-bold text-amber-400 flex items-center gap-1.5">
+                  📜 Luật Chơi Võ Đạo Vũ Trụ:
+                </h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Vui vẻ, hòa đồng, cùng nhau cày Sức Mạnh (Ki). <b className="text-amber-300">Đặc biệt vào thứ Hai hàng tuần, Sức Mạnh sẽ tự động reset về 0</b> để tất cả chiến binh bắt đầu cuộc đua mới từ vạch xuất phát!
+                </p>
+              </div>
+
+              {/* SỰ KIỆN: ĐUA TOP TUẦN SĂN NGỌC RỒNG ĐỔI THƯỞNG */}
+              <div className="bg-gradient-to-r from-amber-950/40 via-yellow-950/30 to-amber-950/40 p-3.5 rounded-2xl border border-amber-500/50 space-y-1.5 shadow-md">
+                <h3 className="font-bold text-yellow-400 flex items-center gap-1.5 text-sm">
+                  🔮 SĂN 7 VIÊN NGỌC RỒNG - ĐỔI 100K VNĐ!
+                </h3>
+                <p className="text-amber-200/90 leading-relaxed">
+                  Chiến binh nào đạt <b className="text-white">Sức Mạnh cao nhất trong tuần</b> sẽ nhận ngay <b className="text-yellow-400">1 Viên Ngọc Rồng</b> vào kho sưu tập cá nhân! 
+                </p>
+                <div className="text-[11px] text-amber-300 pt-1 font-semibold">
+                  ✨ <b>Quy đổi phần thưởng:</b> Đổi lẻ từng viên lấy <b className="text-white">10k VNĐ/viên</b> hoặc tích lũy đủ <b className="text-white">7 Viên Ngọc Rồng</b> để thực hiện điều ước Rồng Thần nhận ngay <b className="text-amber-400 underline">100.000 VNĐ</b>!
+                </div>
+              </div>
+
+              {/* Giới thiệu Shop */}
+              <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
+                <h3 className="font-bold text-emerald-400 flex items-center gap-1.5">
+                  🛒 Cửa Hàng Đổi Lượt & Siêu Gói Flex:
+                </h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Đổi Ki lấy lượt quay qua các gói từ <b className="text-amber-300">1 Lượt (100k Ki)</b> đến <b className="text-amber-300">50 Lượt Rồng Thần</b>. Có <b className="text-yellow-400">Siêu Gói Flex 1 Củ (5.000 VNĐ / 1.000.000 Ki)</b> giới hạn kho tổng <b className="text-amber-300">20 gói/tuần</b>, cá nhân <b className="text-amber-300">5 lần/tuần</b> để flex danh dự!
+                </p>
+              </div>
+
+              {/* Giới thiệu Vòng quay may mắn */}
+              <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
+                <h3 className="font-bold text-purple-400 flex items-center gap-1.5">
+                  🎡 Kho Quà Vòng Quay Rồng Thần:
+                </h3>
+                <p className="text-slate-400 leading-relaxed">
+                  Húp ngay các mốc khủng: <b className="text-emerald-400">+5.000 Ki</b>, <b className="text-amber-400">+100k / +200k Ki</b>, Lượt quay thêm, vật phẩm <b className="text-pink-400">1 chai nước</b>, và chí tôn <b className="text-yellow-400">JACKPOT 1.000K Ki</b>!
+                </p>
+              </div>
+
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleCloseNoticeForToday}
+                className="w-full bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-black text-xs py-3 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg shadow-amber-500/30 transition"
+              >
+                ĐÃ RÕ, HÔM NAY KHÔNG HIỆN LẠI 🚀
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
@@ -551,13 +619,22 @@ export default function Home() {
           <p className="text-amber-200/90 text-xs sm:text-sm italic font-medium max-w-xl mx-auto px-2 bg-slate-900/40 p-2 rounded-xl border border-amber-500/20">
             {dailyQuote}
           </p>
+          
+          <div>
+            <button
+              onClick={() => setShowNoticeModal(true)}
+              className="text-xs text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer bg-slate-900/80 px-3 py-1.5 rounded-xl border border-amber-500/30 transition shadow"
+            >
+              📖 Xem Luật Chơi, Reset Thứ Hai & Săn Ngọc Rồng
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Main Grid: Sảnh nổi bật bên trái, BXH đôn gọn bên phải */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* SẢNH NỔI BẬT (Tích hợp đủ 3 thẻ Jackpot, Wheel, Shop) */}
+        {/* SẢNH NỔI BẬT */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
             <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
@@ -566,7 +643,6 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             
-            {/* 1. Thẻ Nổ Hũ Jackpot */}
             <Link
               href="/jackpot"
               className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
@@ -579,7 +655,6 @@ export default function Home() {
               </div>
             </Link>
 
-            {/* 2. Thẻ Vòng Quay May Mắn */}
             <Link
               href="/wheel"
               className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
@@ -587,19 +662,18 @@ export default function Home() {
               <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎡</div>
               <h3 className="text-base font-bold text-purple-400">🎡 Vòng Quay May Mắn</h3>
               <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp thêm Điểm Sức Mạnh!</p>
-              <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+              <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-xs shadow-md">
                 Quay Ngay 🎟️
               </div>
             </Link>
 
-            {/* 3. Thẻ Shop Đổi Thưởng */}
             <Link
               href="/shop"
               className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
             >
               <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🛒</div>
               <h3 className="text-base font-bold text-emerald-400">🛒 Shop Võ Đạo</h3>
-              <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh quy đổi Lượt Quay!</p>
+              <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh quy đổi Lượt Quay & Flex!</p>
               <div className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                 Vào Shop 💎
               </div>
@@ -608,12 +682,15 @@ export default function Home() {
           </div>
         </div>
 
-        {/* BẢNG XẾP HẠNG TOP 5 (Đôn ra góc phải gọn gàng) */}
+        {/* BẢNG XẾP HẠNG TOP 5 */}
         <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit">
-          <div className="flex items-center gap-2 border-l-4 border-orange-500 pl-3">
+          <div className="flex items-center justify-between border-l-4 border-orange-500 pl-3">
             <h2 className="text-base sm:text-lg font-black text-orange-400 tracking-wider uppercase">
               🏆 Top 5 Võ Đạo Vũ Trụ
             </h2>
+            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
+              Săn Ngọc Rồng 🔮
+            </span>
           </div>
           <div className="space-y-2.5">
             {leaderboard.length === 0 ? (
@@ -652,14 +729,15 @@ export default function Home() {
 
       </main>
 
-      {/* POPUP HỒ SƠ */}
+      {/* POPUP HỒ SƠ & SƯU TẬP NGỌC RỒNG (BẤM VÀO AVATAR) */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
+          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-lg rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🛡️</span>
-                <h3 className="text-base sm:text-lg font-black text-amber-400">HỒ SƠ CHIẾN BINH</h3>
+                <h3 className="text-base sm:text-lg font-black text-amber-400">HỒ SƠ & SƯU TẬP NGỌC RỒNG</h3>
               </div>
               <button
                 onClick={() => setProfileModalOpen(false)}
@@ -669,6 +747,7 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Thông tin chiến binh */}
             <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400 shadow-md shrink-0">
                 <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
@@ -679,13 +758,71 @@ export default function Home() {
                   {currentLevel.name}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-amber-400 font-bold pt-1">
-                  <span>⚡ {points.toLocaleString()} Sức Mạnh</span>
+                  <span>⚡ {points.toLocaleString()} Ki</span>
                   <span>🎟️ {luckySpins} Lượt</span>
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
+            {/* --- GIAO DIỆN SƯU TẬP 7 VIÊN NGỌC RỒNG --- */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/40 space-y-3">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                  🔮 Kho Sưu Tập Ngọc Rồng ({dragonBallsCount}/7 Viên)
+                </h4>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
+                  Top Tuần Nhận Ngọc
+                </span>
+              </div>
+
+              {/* 7 Viên Ngọc Rồng Hiển Thị (Sáng / Tối) */}
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 py-2">
+                {[1, 2, 3, 4, 5, 6, 7].map((starNum) => {
+                  const isUnlocked = starNum <= dragonBallsCount;
+                  return (
+                    <div
+                      key={starNum}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                        isUnlocked
+                          ? "bg-gradient-to-t from-amber-600 to-yellow-400 border-yellow-200 shadow-[0_0_15px_rgba(250,204,21,0.6)] scale-105"
+                          : "bg-slate-900 border-slate-800 opacity-40 grayscale"
+                      }`}
+                      title={`Viên ${starNum} Sao ${isUnlocked ? '(Đã sở hữu)' : '(Chưa mở khóa)'}`}
+                    >
+                      <span className="text-xl sm:text-2xl">🟠</span>
+                      <span className={`text-[9px] font-black mt-1 ${isUnlocked ? 'text-slate-950' : 'text-slate-500'}`}>
+                        {starNum}⭐
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Nút quy đổi thưởng ngọc rồng */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleExchangeBalls('single')}
+                  className="bg-slate-900 hover:bg-slate-800 border border-emerald-500/50 text-emerald-400 font-bold text-xs py-2 rounded-xl transition cursor-pointer"
+                >
+                  Đổi 1 Viên = 10k VNĐ 💵
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExchangeBalls('all')}
+                  className={`font-black text-xs py-2 rounded-xl transition cursor-pointer shadow ${
+                    dragonBallsCount >= 7
+                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 animate-pulse"
+                      : "bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed"
+                  }`}
+                >
+                  Đủ 7 Viên Ước 100k VNĐ 🌟
+                </button>
+              </div>
+            </div>
+
+            {/* Form đổi tên & avatar */}
+            <form onSubmit={handleUpdateProfile} className="space-y-4 pt-1">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị (Display Name)</label>
                 <input
