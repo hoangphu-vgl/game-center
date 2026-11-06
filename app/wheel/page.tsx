@@ -5,23 +5,32 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 const WHEEL_REWARDS = [
-  { label: "+500 PTS", type: "pts", val: 500 },
-  { label: "+1.000 PTS", type: "pts", val: 1000 },
-  { label: "+5.000 PTS", type: "pts", val: 5000 },
+  { label: "+500 Ki", type: "pts", val: 500 },
+  { label: "+1.000 Ki", type: "pts", val: 1000 },
+  { label: "+5.000 Ki", type: "pts", val: 5000 },
   { label: "+1 Lượt Quay", type: "spins", val: 1 },
-  { label: "+20.000 PTS", type: "pts", val: 20000 },
+  { label: "+20.000 Ki", type: "pts", val: 20000 },
   { label: "Mất Ki! (0 PTS)", type: "pts", val: 0 },
   { label: "+5 Lượt Quay", type: "spins", val: 5 },
-  { label: "JACKPOT 100K PTS!", type: "pts", val: 100000 },
+  { label: "JACKPOT 100K Ki!", type: "pts", val: 100000 },
 ];
+
+interface WheelHistoryItem {
+  id: number;
+  user_email: string;
+  reward_label: string;
+  created_at: string;
+}
 
 export default function WheelPage() {
   const [user, setUser] = useState<any>(null);
+  const [displayName, setDisplayName] = useState("Chiến Binh");
   const [points, setPoints] = useState<number>(0);
   const [luckySpins, setLuckySpins] = useState<number>(0);
   const [spinning, setSpinning] = useState<boolean>(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<WheelHistoryItem[]>([]);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -30,11 +39,12 @@ export default function WheelPage() {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("balance, lucky_spins")
+          .select("full_name, balance, lucky_spins")
           .eq("id", user.id)
           .single();
         
         if (profile) {
+          setDisplayName(profile.full_name || "Chiến Binh");
           setPoints(profile.balance || 0);
           setLuckySpins(profile.lucky_spins || 0);
         }
@@ -42,6 +52,28 @@ export default function WheelPage() {
       setLoading(false);
     }
     fetchUserData();
+
+    // Lấy lịch sử vòng quay từ Server
+    async function fetchHistory() {
+      const { data } = await supabase
+        .from("wheel_history")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(10);
+      if (data) setHistory(data);
+    }
+    fetchHistory();
+
+    const channel = supabase
+      .channel("wheel_history_realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "wheel_history" }, (payload) => {
+        setHistory((prev) => [payload.new as WheelHistoryItem, ...prev.slice(0, 9)]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleSpin = async () => {
@@ -74,6 +106,14 @@ export default function WheelPage() {
         .eq("id", user.id);
 
       if (!error) {
+        // Ghi log lên server wheel_history
+        await supabase.from("wheel_history").insert([
+          {
+            user_email: displayName || user.email,
+            reward_label: chosenReward.label,
+          }
+        ]);
+
         setPoints(newPts);
         setLuckySpins(newSpins);
         setSpinning(false);
@@ -94,9 +134,9 @@ export default function WheelPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none">
+    <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none space-y-4">
       {/* Top Bar chuyển tiếp */}
-      <div className="w-full max-w-xl flex justify-between items-center mb-4">
+      <div className="w-full max-w-xl flex justify-between items-center">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
         </Link>
@@ -105,7 +145,7 @@ export default function WheelPage() {
             🛒 Đổi Lượt
           </Link>
           <div className="bg-slate-900 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-black text-amber-400">
-            ⚡ {points.toLocaleString()} PTS
+            ⚡ {points.toLocaleString()} Ki
           </div>
           <div className="bg-slate-900 border border-purple-500/40 px-3 py-1 rounded-xl text-xs font-black text-purple-300">
             🎟️ {luckySpins} Lượt
@@ -113,13 +153,13 @@ export default function WheelPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-xl bg-slate-900 border-2 border-purple-500/50 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-6">
+      <div className="w-full max-w-xl bg-slate-900 border-2 border-purple-500/50 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-5">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-purple-400">🎡 VÒNG QUAY MAY MẮN RỒNG THẦN</h1>
-          <p className="text-slate-400 text-xs mt-1">Dùng Lượt Quay để húp điểm Ki và phần thưởng khủng từ vũ trụ!</p>
+          <p className="text-slate-400 text-xs mt-1">Dùng Lượt Quay để húp Điểm Sức Mạnh và phần thưởng khủng từ vũ trụ!</p>
         </div>
 
-        <div className={`w-40 h-40 sm:w-48 sm:h-48 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-500 p-1 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.6)] ${spinning ? "animate-spin" : ""}`}>
+        <div className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-500 p-1 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.6)] ${spinning ? "animate-spin" : ""}`}>
           <div className="w-full h-full bg-slate-950 rounded-full flex flex-col items-center justify-center">
             <span className="text-4xl sm:text-5xl animate-bounce">🐲</span>
             <span className="text-[11px] text-amber-300 font-bold mt-1">SAIYAN WHEEL</span>
@@ -141,8 +181,32 @@ export default function WheelPage() {
         </button>
 
         <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-800 w-full flex justify-around">
-          <span>⚡ Không tốn điểm Ki</span>
+          <span>⚡ Không tốn Điểm Sức Mạnh</span>
           <span>🎁 Thưởng ngẫu nhiên 100%</span>
+        </div>
+      </div>
+
+      {/* BẢNG LỊCH SỬ QUAY THƯỞNG (Đồng bộ Server) */}
+      <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
+        <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
+          <h2 className="text-sm font-black text-purple-400 uppercase tracking-wider">
+            📜 Lịch Sử Trúng Thưởng (Toàn Server)
+          </h2>
+        </div>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {history.length === 0 ? (
+            <div className="text-xs text-slate-500 text-center py-4">Chưa có lượt quay nào gần đây.</div>
+          ) : (
+            history.map((item) => (
+              <div key={item.id} className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-3 py-2 rounded-xl text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-purple-400 font-bold">{item.user_email}</span>
+                  <span className="text-slate-400">quay trúng:</span>
+                </div>
+                <span className="text-amber-400 font-black">{item.reward_label}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
