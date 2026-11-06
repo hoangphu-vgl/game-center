@@ -58,7 +58,7 @@ export default function Home() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Chat States
+  // Chat States (Chỉ dùng 1 khung chat duy nhất ở góc dưới phải)
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -695,7 +695,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* CHAT CHUNG REALTIME GỌN GÀNG GÓC DƯỚI PHẢI */}
+      {/* CHAT CHUNG REALTIME (ĐÃ GỌN GÀNG DUY NHẤT 1 BONG BÓNG Ở GÓC DƯỚI PHẢI) */}
       <div className="fixed bottom-3 right-3 z-50">
         {!chatOpen ? (
           <button
