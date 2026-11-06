@@ -14,7 +14,7 @@ const AUTO_OPTIONS = [
 ];
 
 const DRAGON_SYMBOLS = [
-  { id: "scatter", icon: "🌟", name: "Ngọc Ước", type: "scatter", basePoints: 200, multiplier: 20 },
+  { id: "scatter", icon: "🌟", name: "Dragon Ball", type: "scatter", basePoints: 200, multiplier: 20 },
   { id: "long", icon: "🐉", name: "Thanh Long", type: "strong", basePoints: 100, multiplier: 10 },
   { id: "lan", icon: "🦄", name: "Kỳ Lân", type: "strong", basePoints: 120, multiplier: 12 },
   { id: "phung", icon: "🦅", name: "Phượng Hoàng", type: "strong", basePoints: 100, multiplier: 10 },
