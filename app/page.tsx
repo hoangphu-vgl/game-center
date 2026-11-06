@@ -30,60 +30,62 @@ export default function Home() {
 
   // KHỞI TẠO & LẮNG NGHE USER TRÊN SUPABASE CHUẨN XÁC 100%
   useEffect(() => {
-    async function initUserSession() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user || null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", currentUser.id)
-            .single();
-
-          if (!profile) {
-            const initialData = {
-              id: currentUser.id,
-              email: currentUser.email || "",
-              full_name: currentUser.user_metadata?.full_name || "Chiến Binh Saiyan",
-              avatar_url: currentUser.user_metadata?.avatar_url || "",
-              balance: 1000,
-              lucky_spins: 3,
-              last_check_in: "",
-            };
-            await supabase.from("profiles").insert([initialData]);
-            setPoints(1000);
-            setLuckySpins(3);
-          } else {
-            setPoints(profile.balance ?? 1000);
-            setLuckySpins(profile.lucky_spins ?? 3);
-            setLastCheckIn(profile.last_check_in ?? "");
-          }
-        }
-      } catch (err) {
-        console.error("Lỗi khởi tạo user trên Supabase:", err);
-      } finally {
+    async function loadUserProfile(currentUser: any) {
+      if (!currentUser) {
+        setUser(null);
+        setPoints(0);
+        setLuckySpins(0);
+        setLastCheckIn("");
         setLoading(false);
+        return;
       }
-    }
 
-    initUserSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user || null;
       setUser(currentUser);
-      if (currentUser) {
+
+      try {
         const { data: profile } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", currentUser.id)
           .single();
-        if (profile) {
+
+        if (!profile) {
+          const initialData = {
+            id: currentUser.id,
+            email: currentUser.email || "",
+            full_name: currentUser.user_metadata?.full_name || "Chiến Binh Saiyan",
+            avatar_url: currentUser.user_metadata?.avatar_url || "",
+            balance: 1000,
+            lucky_spins: 3,
+            last_check_in: "",
+          };
+          await supabase.from("profiles").insert([initialData]);
+          setPoints(1000);
+          setLuckySpins(3);
+        } else {
           setPoints(profile.balance ?? 1000);
           setLuckySpins(profile.lucky_spins ?? 3);
           setLastCheckIn(profile.last_check_in ?? "");
+        }
+      } catch (err) {
+        console.error("Lỗi lấy thông tin profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // 1. Kiểm tra session ban đầu
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadUserProfile(session?.user || null);
+    });
+
+    // 2. Lắng nghe sự kiện Auth (Bắt token từ Google OAuth trả về ngay lập tức)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        loadUserProfile(session.user);
+        // Tự động dọn dẹp hash token trên URL cho sạch đẹp
+        if (window.location.hash.includes("access_token")) {
+          window.history.replaceState(null, "", window.location.pathname);
         }
       }
     });
@@ -310,7 +312,6 @@ export default function Home() {
 
         {/* Danh Sách Game */}
         <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-8">
-          
           <section className="space-y-3">
             <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
               <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
@@ -318,7 +319,6 @@ export default function Home() {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              
               <Link
                 href="/jackpot"
                 className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden"
@@ -330,10 +330,8 @@ export default function Home() {
                   Vào Nổ Hũ 🔮
                 </div>
               </Link>
-
             </div>
           </section>
-
         </main>
 
         {/* CHAT BOX CHUNG TỐI ƯU MOBILE */}
