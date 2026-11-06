@@ -540,7 +540,7 @@ export default function Home() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
             <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
-              🔥 Trò Chơi Nổi Bật
+              🔥 Nổi Bật
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
