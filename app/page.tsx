@@ -41,15 +41,40 @@ export default function Home() {
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
+  // Lắng nghe trạng thái auth và Đồng bộ Realtime với Firestore
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    let unsubscribeUserDoc: () => void;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+
       if (currentUser) {
-        try {
-          await loadOrInitUser(currentUser);
-        } catch (e) {
-          console.error("Lỗi tải user:", e);
+        const userRef = doc(db, "users", currentUser.uid);
+
+        // Đảm bảo user đã tồn tại trên Firestore
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            uid: currentUser.uid,
+            name: currentUser.displayName || "Chiến Binh Saiyan",
+            email: currentUser.email || "",
+            photoURL: currentUser.photoURL || "",
+            points: 1000,
+            luckySpins: 3,
+            lastCheckIn: "",
+            createdAt: serverTimestamp(),
+          });
         }
+
+        // Lắng nghe dữ liệu realtime: Chơi game đổi điểm là header tự nhảy số liền!
+        unsubscribeUserDoc = onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setPoints(data.points !== undefined ? data.points : 1000);
+            setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 3);
+            setLastCheckIn(data.lastCheckIn || "");
+          }
+        });
       } else {
         setPoints(0);
         setLuckySpins(0);
@@ -57,9 +82,14 @@ export default function Home() {
       }
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeUserDoc) unsubscribeUserDoc();
+    };
   }, []);
 
+  // Lắng nghe tin nhắn Chat chung
   useEffect(() => {
     const q = query(
       collection(db, "globalChat"),
@@ -77,31 +107,6 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  const loadOrInitUser = async (currentUser: User) => {
-    const userRef = doc(db, "users", currentUser.uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      setPoints(data.points !== undefined ? data.points : 1000);
-      setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 3);
-      setLastCheckIn(data.lastCheckIn || "");
-    } else {
-      const newUser = {
-        uid: currentUser.uid,
-        name: currentUser.displayName || "Chiến Binh Saiyan",
-        email: currentUser.email || "",
-        photoURL: currentUser.photoURL || "",
-        points: 1000,
-        luckySpins: 3,
-        lastCheckIn: "",
-      };
-      await setDoc(userRef, newUser, { merge: true });
-      setPoints(1000);
-      setLuckySpins(3);
-      setLastCheckIn("");
-    }
-  };
-
   const handleCheckIn = async () => {
     if (!user) return;
     const today = getTodayString();
@@ -113,9 +118,6 @@ export default function Home() {
     const newPoints = points + 500;
     const newSpins = luckySpins + 1;
     await setDoc(userRef, { points: newPoints, luckySpins: newSpins, lastCheckIn: today }, { merge: true });
-    setPoints(newPoints);
-    setLuckySpins(newSpins);
-    setLastCheckIn(today);
     alert("🔥 Bứt phá giới hạn! Điểm danh thành công +500 PTS Ki Aura & +1 Lượt Quay Miễn Phí!");
   };
 
@@ -150,33 +152,47 @@ export default function Home() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
-        {/* Header Aura Tối Ưu Mobile */}
+        {/* Header Tối Ưu Bố Cục Cho Mobile (2 Dòng Gọn Gàng, Không Tràn Khung) */}
         <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
-          <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl sm:text-3xl animate-bounce">🐲</span>
-              <span className="font-black text-lg sm:text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 truncate">
-                DRAGON ARCADE
-              </span>
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            
+            {/* Dòng 1 (Trên Mobile): Logo + Nút Thoát */}
+            <div className="w-full sm:w-auto flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl sm:text-3xl animate-bounce">🐲</span>
+                <span className="font-black text-xl sm:text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500">
+                  DRAGON ARCADE
+                </span>
+              </div>
+
+              {user ? (
+                <button
+                  onClick={() => signOut(auth)}
+                  className="sm:hidden text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700 active:scale-95 transition"
+                >
+                  Thoát 🚪
+                </button>
+              ) : null}
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* Dòng 2 (Trên Mobile): 3 Ô Điểm - Lượt - Tụ Ki Dàn Hàng Ngang Đều Đặn */}
+            <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
               {user ? (
                 <>
-                  <div className="flex items-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2.5 py-1 rounded-xl shadow-inner text-xs sm:text-sm">
+                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
                     <span>⚡</span>
-                    <span className="font-black text-amber-400">{points.toLocaleString()}</span>
+                    <span className="font-black text-amber-400 truncate">{points.toLocaleString()}</span>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2.5 py-1 rounded-xl shadow-inner text-xs sm:text-sm">
+                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
                     <span>🎟️</span>
-                    <span className="font-black text-purple-300">{luckySpins}</span>
+                    <span className="font-black text-purple-300 truncate">{luckySpins}</span>
                   </div>
 
                   <button
                     onClick={handleCheckIn}
                     disabled={isCheckedInToday}
-                    className={`text-[11px] sm:text-sm font-black py-1.5 px-2.5 sm:px-4 rounded-xl transition-all shadow-md active:scale-95 ${
+                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-black py-1.5 px-3 sm:px-4 rounded-xl transition-all shadow-md active:scale-95 ${
                       isCheckedInToday
                         ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
                         : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 cursor-pointer shadow-amber-500/20"
@@ -187,7 +203,7 @@ export default function Home() {
 
                   <button
                     onClick={() => signOut(auth)}
-                    className="text-[11px] text-slate-400 hover:text-rose-400 font-semibold transition cursor-pointer p-1"
+                    className="hidden sm:block text-xs text-slate-400 hover:text-rose-400 font-semibold transition cursor-pointer ml-1"
                   >
                     Thoát
                   </button>
@@ -195,18 +211,18 @@ export default function Home() {
               ) : (
                 <button
                   onClick={() => signInWithPopup(auth, googleProvider)}
-                  className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs sm:text-sm py-2 px-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs sm:text-sm py-2 px-4 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg"
                 >
-                  Đăng Nhập
+                  Đăng Nhập Google
                 </button>
               )}
             </div>
           </div>
         </header>
 
-        {/* Banner Sayan Mobile Friendly */}
+        {/* Banner Dragon Gaming Arena */}
         <section
-          className="relative flex items-center justify-center min-h-[260px] sm:min-h-[320px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
+          className="relative flex items-center justify-center min-h-[240px] sm:min-h-[300px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
           style={{
             backgroundImage:
               "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
@@ -226,7 +242,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Main Content Mobile Grid */}
+        {/* Danh Sách Các Mục Game */}
         <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-8">
           
           {/* PHỤ LỤC 1: LỐI TẮT VÒNG QUAY, SHOP & JACKPOT */}
@@ -245,7 +261,7 @@ export default function Home() {
                 <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🎡</div>
                 <h3 className="text-lg font-bold text-purple-300">🎡 Vòng Quay Ngọc Rồng</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Săn nước suối, tiền mặt và thêm lượt quay!</p>
-                <div className="mt-3 bg-purple-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-purple-600 text-white font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Vòng Quay 🎟️
                 </div>
               </Link>
@@ -257,7 +273,7 @@ export default function Home() {
                 <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🛍️</div>
                 <h3 className="text-lg font-bold text-amber-400">🛍️ Cửa Hàng Đổi Quà</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Dùng điểm Ki đổi lượt quay hoặc VNĐ!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Cửa Hàng 🛒
                 </div>
               </Link>
@@ -269,7 +285,7 @@ export default function Home() {
                 <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🎰</div>
                 <h3 className="text-lg font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Quay hũ tích tụ Ki nổ hũ Grand cực khủng!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Nổ Hũ 🔮
                 </div>
               </Link>
@@ -292,7 +308,7 @@ export default function Home() {
                 <div className="text-3xl mb-1">♚</div>
                 <h3 className="font-black text-lg text-white">Cờ Vua Quyết Liệt</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Đấu AI 3 cấp độ, tạo phòng Online cược PTS!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Bàn Cờ ♟️
                 </div>
               </Link>
@@ -304,7 +320,7 @@ export default function Home() {
                 <div className="text-3xl mb-1">🦁</div>
                 <h3 className="font-black text-lg text-white">Đấu Trường Cờ Thú</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Trận chiến động vật đỉnh cao, phòng Online cược lớn!</p>
-                <div className="mt-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Bàn Cờ Thú 🐅
                 </div>
               </Link>
@@ -339,7 +355,7 @@ export default function Home() {
                     Đấu trường bài bạc đỉnh cao cùng bạn bè và AI Nhà Cái. Ghép phòng tự động!
                   </p>
                 </div>
-                <Link href="/xidach" className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 rounded-xl text-center text-xs shadow-md">
+                <Link href="/xidach" className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2.5 rounded-xl text-center text-xs shadow-md block">
                   Vào Bàn Xì Dách 🎴
                 </Link>
               </div>
@@ -352,7 +368,7 @@ export default function Home() {
                     Săn rồng biển bắn đạn nhận Ki, sát thương lan, crit x2 và nổ hũ Jackpot!
                   </p>
                 </div>
-                <Link href="/banca" className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black py-2 rounded-xl text-center text-xs shadow-md block">
+                <Link href="/banca" className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black py-2.5 rounded-xl text-center text-xs shadow-md block">
                   Vào Bàn Bắn Cá 🎯
                 </Link>
               </div>
@@ -361,7 +377,7 @@ export default function Home() {
           </section>
         </main>
 
-        {/* CHAT BOX CHUNG TỐI ƯU MOBILE */}
+        {/* CHAT BOX CHUNG */}
         <div className="fixed bottom-3 right-3 z-50">
           {!chatOpen ? (
             <button
