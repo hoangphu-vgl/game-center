@@ -41,7 +41,6 @@ export default function Home() {
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
-  // Lắng nghe trạng thái auth và Đồng bộ Realtime với Firestore
   useEffect(() => {
     let unsubscribeUserDoc: () => void;
 
@@ -50,10 +49,10 @@ export default function Home() {
 
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
-
-        // Đảm bảo user đã tồn tại trên Firestore
         const userSnap = await getDoc(userRef);
+
         if (!userSnap.exists()) {
+          // CHỈ TẠO LẦN ĐẦU TIÊN CHO USER MỚI TINH
           await setDoc(userRef, {
             uid: currentUser.uid,
             name: currentUser.displayName || "Chiến Binh Saiyan",
@@ -64,14 +63,25 @@ export default function Home() {
             lastCheckIn: "",
             createdAt: serverTimestamp(),
           });
+        } else {
+          // USER CŨ: CHỈ CẬP NHẬT TÊN/ẢNH, NÓI KHÔNG VỚI GHI ĐÈ ĐIỂM!
+          await setDoc(
+            userRef,
+            {
+              name: currentUser.displayName || "Chiến Binh Saiyan",
+              email: currentUser.email || "",
+              photoURL: currentUser.photoURL || "",
+            },
+            { merge: true }
+          );
         }
 
-        // Lắng nghe dữ liệu realtime: Chơi game đổi điểm là header tự nhảy số liền!
+        // LẮNG NGHE ĐỒNG BỘ REALTIME TỪ FIRESTORE
         unsubscribeUserDoc = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setPoints(data.points !== undefined ? data.points : 1000);
-            setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 3);
+            setPoints(data.points !== undefined ? data.points : 0);
+            setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 0);
             setLastCheckIn(data.lastCheckIn || "");
           }
         });
@@ -89,7 +99,6 @@ export default function Home() {
     };
   }, []);
 
-  // Lắng nghe tin nhắn Chat chung
   useEffect(() => {
     const q = query(
       collection(db, "globalChat"),
@@ -152,11 +161,11 @@ export default function Home() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
-        {/* Header Tối Ưu Bố Cục Cho Mobile (2 Dòng Gọn Gàng, Không Tràn Khung) */}
+        {/* Header Tối Ưu Bố Cục Cho Mobile */}
         <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
             
-            {/* Dòng 1 (Trên Mobile): Logo + Nút Thoát */}
+            {/* Dòng 1: Logo + Nút Thoát */}
             <div className="w-full sm:w-auto flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="text-2xl sm:text-3xl animate-bounce">🐲</span>
@@ -175,7 +184,7 @@ export default function Home() {
               ) : null}
             </div>
 
-            {/* Dòng 2 (Trên Mobile): 3 Ô Điểm - Lượt - Tụ Ki Dàn Hàng Ngang Đều Đặn */}
+            {/* Dòng 2: 3 Ô Điểm - Lượt - Tụ Ki Dàn Hàng Ngang */}
             <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
               {user ? (
                 <>
@@ -242,10 +251,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Danh Sách Các Mục Game */}
+        {/* Danh Sách Game */}
         <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-8">
           
-          {/* PHỤ LỤC 1: LỐI TẮT VÒNG QUAY, SHOP & JACKPOT */}
           <section className="space-y-3">
             <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
               <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
@@ -273,7 +281,7 @@ export default function Home() {
                 <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🛍️</div>
                 <h3 className="text-lg font-bold text-amber-400">🛍️ Cửa Hàng Đổi Quà</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Dùng điểm Ki đổi lượt quay hoặc VNĐ!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Cửa Hàng 🛒
                 </div>
               </Link>
@@ -285,7 +293,7 @@ export default function Home() {
                 <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🎰</div>
                 <h3 className="text-lg font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Quay hũ tích tụ Ki nổ hũ Grand cực khủng!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Nổ Hũ 🔮
                 </div>
               </Link>
@@ -293,7 +301,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* PHỤ LỤC 2: GAME TRÍ TUỆ & CHIẾN THUẬT */}
           <section className="space-y-3">
             <div className="flex items-center gap-2 border-l-4 border-blue-500 pl-3">
               <h2 className="text-lg sm:text-xl font-black text-blue-400 tracking-wider uppercase">
@@ -308,7 +315,7 @@ export default function Home() {
                 <div className="text-3xl mb-1">♚</div>
                 <h3 className="font-black text-lg text-white">Cờ Vua Quyết Liệt</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Đấu AI 3 cấp độ, tạo phòng Online cược PTS!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Bàn Cờ ♟️
                 </div>
               </Link>
@@ -320,7 +327,7 @@ export default function Home() {
                 <div className="text-3xl mb-1">🦁</div>
                 <h3 className="font-black text-lg text-white">Đấu Trường Cờ Thú</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Trận chiến động vật đỉnh cao, phòng Online cược lớn!</p>
-                <div className="mt-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Bàn Cờ Thú 🐅
                 </div>
               </Link>
@@ -338,7 +345,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* PHỤ LỤC 3: GAME GIẢI TRÍ & MAY MẮN */}
           <section className="space-y-3">
             <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
               <h2 className="text-lg sm:text-xl font-black text-emerald-400 tracking-wider uppercase">
@@ -377,7 +383,7 @@ export default function Home() {
           </section>
         </main>
 
-        {/* CHAT BOX CHUNG */}
+        {/* CHAT BOX CHUNG TỐI ƯU MOBILE */}
         <div className="fixed bottom-3 right-3 z-50">
           {!chatOpen ? (
             <button
