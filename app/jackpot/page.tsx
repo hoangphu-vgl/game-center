@@ -87,7 +87,6 @@ export default function JackpotPage() {
     Array(24).fill(DRAGON_SYMBOLS[0])
   );
 
-  // GOM HŨ JACKPOT VỀ CHUNG MỘT MỤC: gameSettings -> jackpots
   const [jackpots, setJackpots] = useState({
     grand: 150000,
     major: 80000,
@@ -109,41 +108,36 @@ export default function JackpotPage() {
     currentBetRef.current = currentBet;
   }, [currentBet]);
 
-  // Lắng nghe Auth và Realtime Points của User
   useEffect(() => {
-    let unsubscribeUserDoc: () => void;
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
-        unsubscribeUserDoc = onSnapshot(userRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const pts = docSnap.data().points || 0;
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const pts = userSnap.data().points || 0;
             setPoints(pts);
             pointsRef.current = pts;
           }
-        });
-      } else {
-        setPoints(0);
-        pointsRef.current = 0;
+        } catch (e) {
+          console.error(e);
+        }
       }
     });
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeUserDoc) unsubscribeUserDoc();
-    };
+    return () => unsubscribe();
   }, []);
 
-  // LẮNG NGHE JACKPOT CHUNG TỪ: gameSettings -> jackpots
+  // ĐÃ SỬA ĐƯỜNG DẪN CHUẨN: gameSettings/jackpots
   useEffect(() => {
     const jackpotRef = doc(db, "gameSettings", "jackpots");
     const unsubscribe = onSnapshot(jackpotRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setJackpots({
-          grand: data.grand !== undefined ? data.grand : 150000,
-          major: data.major !== undefined ? data.major : 80000,
-          minor: data.minor !== undefined ? data.minor : 40000,
+          grand: data.grand || 150000,
+          major: data.major || 80000,
+          minor: data.minor || 40000,
         });
       } else {
         setDoc(jackpotRef, {
@@ -189,9 +183,9 @@ export default function JackpotPage() {
     if (!user) return;
     try {
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, { points: newPts });
+      updateDoc(userRef, { points: newPts }).catch((err) => console.log(err));
     } catch (e) {
-      console.error("Lỗi cập nhật điểm:", e);
+      console.error(e);
     }
   };
 
@@ -237,11 +231,11 @@ export default function JackpotPage() {
 
     try {
       const jackpotRef = doc(db, "gameSettings", "jackpots");
-      await updateDoc(jackpotRef, {
+      updateDoc(jackpotRef, {
         grand: jackpots.grand + Math.floor(bet * 0.2),
         major: jackpots.major + Math.floor(bet * 0.1),
         minor: jackpots.minor + Math.floor(bet * 0.05),
-      });
+      }).catch((e) => console.log(e));
     } catch (e) {
       console.error(e);
     }
@@ -263,10 +257,15 @@ export default function JackpotPage() {
     const bet = currentBetRef.current;
     
     let winChance = 0.28;
-    if (bet <= 50) winChance = 0.38;
-    else if (bet >= 100 && bet <= 500) winChance = 0.28;
-    else if (bet >= 1000 && bet <= 2000) winChance = 0.20;
-    else if (bet >= 5000) winChance = 0.14;
+    if (bet <= 50) {
+      winChance = 0.38;
+    } else if (bet >= 100 && bet <= 500) {
+      winChance = 0.28;
+    } else if (bet >= 1000 && bet <= 2000) {
+      winChance = 0.20;
+    } else if (bet >= 5000) {
+      winChance = 0.14;
+    }
 
     const isTriggerWin = Math.random() < winChance;
     const jackpotChance = bet >= 2000 ? 0.005 : bet >= 1000 ? 0.003 : 0.001;
@@ -290,11 +289,11 @@ export default function JackpotPage() {
 
       try {
         const jackpotRef = doc(db, "gameSettings", "jackpots");
-        await updateDoc(jackpotRef, {
+        updateDoc(jackpotRef, {
           grand: 150000,
           major: 80000,
           minor: 40000,
-        });
+        }).catch((e) => console.log(e));
       } catch (e) {
         console.error(e);
       }
@@ -464,7 +463,7 @@ export default function JackpotPage() {
   return (
     <div className={`min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-2 sm:p-4 overflow-x-hidden transition-all duration-300 ${explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""}`}>
       
-      {/* Top Bar */}
+      {/* Top Bar tối ưu mobile */}
       <div className="w-full max-w-4xl flex justify-between items-center mb-2 px-2">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
@@ -488,7 +487,7 @@ export default function JackpotPage() {
       {/* Main Game Container */}
       <div className={`w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-2.5 sm:p-5 shadow-2xl flex flex-col gap-2.5 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
-        {/* 3 HŨ JACKPOT */}
+        {/* 3 HŨ JACKPOT VỚI HIỆU ỨNG 2 BÊN KHI NỔ */}
         <div className="grid grid-cols-3 gap-1.5 relative">
           {jackpotSideGlow && (
             <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur-md opacity-75 animate-pulse -z-10"></div>
@@ -510,7 +509,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* DANH SÁCH AURA */}
+        {/* DANH SÁCH AURA THƯỞNG NHANH */}
         <div className="bg-slate-950/80 border border-amber-500/30 p-1.5 rounded-xl flex items-center justify-between gap-1 overflow-x-auto text-[9px] sm:text-xs">
           {AURA_QUICK_REWARDS.map((aura) => (
             <div key={aura.id} className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg shrink-0 flex items-center gap-1 font-bold">
@@ -521,7 +520,7 @@ export default function JackpotPage() {
           ))}
         </div>
 
-        {/* THÔNG BÁO & DỪNG AUTO */}
+        {/* DÒNG THÔNG BÁO REALTIME & NÚT DỪNG AUTO */}
         <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold gap-2">
           <div className={`truncate ${messageBox.type === "break" ? "text-rose-500 font-black animate-bounce" : messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
             💬 {messageBox.text}
@@ -541,7 +540,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* LƯỚI 4x6 */}
+        {/* LƯỚI 4 HÀNG X 6 CỘT - TỐI ƯU MOBILE */}
         <div className="bg-slate-950 p-2 rounded-xl border border-amber-500/30 shadow-inner">
           <div className="grid grid-cols-6 grid-rows-4 gap-1.5">
             {grid.map((sym, idx) => {
@@ -571,7 +570,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* THANH ĐIỀU KHIỂN CƯỢC */}
+        {/* THANH ĐIỀU KHIỂN CƯỢC & AUTO & QUAY */}
         <div className="flex flex-col gap-1.5 pt-0.5">
           <div className="flex items-center gap-1 flex-wrap justify-center sm:justify-start">
             <span className="text-[11px] font-bold text-amber-300 mr-1">CƯỢC:</span>
@@ -624,7 +623,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* LỊCH SỬ */}
+        {/* LỊCH SỬ QUAY GẦN NHẤT */}
         <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-2 max-h-24 overflow-y-auto text-[10px] sm:text-[11px]">
           <div className="font-bold text-slate-400 mb-0.5">📜 Lịch sử chiến đấu gần đây:</div>
           {history.length === 0 ? (
