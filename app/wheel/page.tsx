@@ -44,36 +44,24 @@ export default function WheelPage() {
           .single();
         
         if (profile) {
-          setDisplayName(profile.full_name || "Chiến Binh");
+          const currentName = profile.full_name || "Chiến Binh";
+          setDisplayName(currentName);
           setPoints(profile.balance || 0);
           setLuckySpins(profile.lucky_spins || 0);
+
+          // Lấy lịch sử CÁ NHÂN từ Server
+          const { data: historyData } = await supabase
+            .from("wheel_history")
+            .select("*")
+            .eq("user_email", currentName)
+            .order("id", { ascending: false })
+            .limit(10);
+          if (historyData) setHistory(historyData);
         }
       }
       setLoading(false);
     }
     fetchUserData();
-
-    // Lấy lịch sử vòng quay từ Server
-    async function fetchHistory() {
-      const { data } = await supabase
-        .from("wheel_history")
-        .select("*")
-        .order("id", { ascending: false })
-        .limit(10);
-      if (data) setHistory(data);
-    }
-    fetchHistory();
-
-    const channel = supabase
-      .channel("wheel_history_realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "wheel_history" }, (payload) => {
-        setHistory((prev) => [payload.new as WheelHistoryItem, ...prev.slice(0, 9)]);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const handleSpin = async () => {
@@ -106,13 +94,17 @@ export default function WheelPage() {
         .eq("id", user.id);
 
       if (!error) {
-        // Ghi log lên server wheel_history
-        await supabase.from("wheel_history").insert([
+        // Ghi log cá nhân lên wheel_history
+        const { data: newLog } = await supabase.from("wheel_history").insert([
           {
-            user_email: displayName || user.email,
+            user_email: displayName,
             reward_label: chosenReward.label,
           }
-        ]);
+        ]).select();
+
+        if (newLog && newLog[0]) {
+          setHistory((prev) => [newLog[0] as WheelHistoryItem, ...prev.slice(0, 9)]);
+        }
 
         setPoints(newPts);
         setLuckySpins(newSpins);
@@ -186,23 +178,20 @@ export default function WheelPage() {
         </div>
       </div>
 
-      {/* BẢNG LỊCH SỬ QUAY THƯỞNG (Đồng bộ Server) */}
+      {/* BẢNG LỊCH SỬ QUAY THƯỞNG CÁ NHÂN */}
       <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
         <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
           <h2 className="text-sm font-black text-purple-400 uppercase tracking-wider">
-            📜 Lịch Sử Trúng Thưởng (Toàn Server)
+            📜 Lịch Sử Quay Thưởng Của Bạn
           </h2>
         </div>
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {history.length === 0 ? (
-            <div className="text-xs text-slate-500 text-center py-4">Chưa có lượt quay nào gần đây.</div>
+            <div className="text-xs text-slate-500 text-center py-4">Bạn chưa có lượt quay thưởng nào.</div>
           ) : (
             history.map((item) => (
               <div key={item.id} className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-3 py-2 rounded-xl text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-purple-400 font-bold">{item.user_email}</span>
-                  <span className="text-slate-400">quay trúng:</span>
-                </div>
+                <span className="text-slate-300">Quay trúng phần thưởng:</span>
                 <span className="text-amber-400 font-black">{item.reward_label}</span>
               </div>
             ))

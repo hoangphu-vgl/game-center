@@ -40,36 +40,24 @@ export default function ShopPage() {
           .single();
         
         if (profile) {
-          setDisplayName(profile.full_name || "Chiến Binh");
+          const currentName = profile.full_name || "Chiến Binh";
+          setDisplayName(currentName);
           setPoints(profile.balance || 0);
           setLuckySpins(profile.lucky_spins || 0);
+
+          // Lấy lịch sử CÁ NHÂN từ Server theo tên/email user
+          const { data: historyData } = await supabase
+            .from("shop_history")
+            .select("*")
+            .eq("user_email", currentName)
+            .order("id", { ascending: false })
+            .limit(10);
+          if (historyData) setHistory(historyData);
         }
       }
       setLoading(false);
     }
     fetchUserData();
-
-    // Lấy lịch sử mua hàng từ Server
-    async function fetchHistory() {
-      const { data } = await supabase
-        .from("shop_history")
-        .select("*")
-        .order("id", { ascending: false })
-        .limit(10);
-      if (data) setHistory(data);
-    }
-    fetchHistory();
-
-    const channel = supabase
-      .channel("shop_history_realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "shop_history" }, (payload) => {
-        setHistory((prev) => [payload.new as ShopHistoryItem, ...prev.slice(0, 9)]);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const handleBuySpins = async (pack: typeof SHOP_SPIN_PACKS[0]) => {
@@ -89,14 +77,18 @@ export default function ShopPage() {
         .eq("id", user.id);
 
       if (!error) {
-        // Ghi log lên server shop_history
-        await supabase.from("shop_history").insert([
+        // Ghi log cá nhân lên server shop_history
+        const { data: newLog } = await supabase.from("shop_history").insert([
           {
-            user_email: displayName || user.email,
+            user_email: displayName,
             pack_name: pack.name,
             cost: pack.cost,
           }
-        ]);
+        ]).select();
+
+        if (newLog && newLog[0]) {
+          setHistory((prev) => [newLog[0] as ShopHistoryItem, ...prev.slice(0, 9)]);
+        }
 
         setPoints(newPts);
         setLuckySpins(newSpins);
@@ -162,23 +154,20 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* BẢNG LỊCH SỬ MUA GÓI LƯỢT QUAY (Đồng bộ Server) */}
+      {/* BẢNG LỊCH SỬ MUA GÓI LƯỢT QUAY CÁ NHÂN */}
       <div className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
         <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
           <h2 className="text-sm font-black text-emerald-400 uppercase tracking-wider">
-            📜 Lịch Sử Đổi Lượt Gần Đây (Toàn Server)
+            📜 Lịch Sử Đổi Lượt Của Bạn
           </h2>
         </div>
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {history.length === 0 ? (
-            <div className="text-xs text-slate-500 text-center py-4">Chưa có giao dịch đổi lượt nào gần đây.</div>
+            <div className="text-xs text-slate-500 text-center py-4">Bạn chưa đổi gói lượt quay nào.</div>
           ) : (
             history.map((item) => (
               <div key={item.id} className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-3 py-2 rounded-xl text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-400 font-bold">{item.user_email}</span>
-                  <span className="text-slate-400">đã đổi gói <b className="text-amber-300">{item.pack_name}</b></span>
-                </div>
+                <span className="text-slate-300">Đã đổi gói <b className="text-amber-300">{item.pack_name}</b></span>
                 <span className="text-amber-400 font-black">-{item.cost.toLocaleString()} Ki</span>
               </div>
             ))
