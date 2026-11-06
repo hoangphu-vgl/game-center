@@ -8,7 +8,7 @@ import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 const BET_OPTIONS = [20, 50, 100, 200, 500, 1000, 2000, 5000];
 const AUTO_OPTIONS = [
-  { label: "Thủ Công", value: 0 },
+  { label: "Tự lọ :))", value: 0 },
   { label: "10 Lượt", value: 10 },
   { label: "20 Lượt", value: 20 },
   { label: "50 Lượt", value: 50 },
@@ -108,6 +108,7 @@ export default function JackpotPage() {
     currentBetRef.current = currentBet;
   }, [currentBet]);
 
+  // Auth listener gọn nhẹ
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -128,29 +129,9 @@ export default function JackpotPage() {
     return () => unsubscribe();
   }, []);
 
-  // TỰ ĐỘNG KHỞI TẠO VÀ ĐỒNG BỘ FIRESTORE 'gameSettings/jackpots' REALTIME
+  // Lắng nghe real-time hũ jackpot an toàn, không gây kẹt luồng
   useEffect(() => {
     const jackpotRef = doc(db, "gameSettings", "jackpots");
-
-    // Khởi tạo ngay lập tức nếu Firestore chưa có document này
-    const initDoc = async () => {
-      try {
-        const snap = await getDoc(jackpotRef);
-        if (!snap.exists()) {
-          await setDoc(jackpotRef, {
-            grand: 150000,
-            major: 80000,
-            minor: 40000,
-          });
-        }
-      } catch (err) {
-        console.error("Lỗi tự động khởi tạo gameSettings/jackpots:", err);
-      }
-    };
-
-    initDoc();
-
-    // Lắng nghe thay đổi real-time từ Firestore
     const unsubscribe = onSnapshot(jackpotRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -159,7 +140,11 @@ export default function JackpotPage() {
           major: Number(data.major) || 80000,
           minor: Number(data.minor) || 40000,
         });
+      } else {
+        setDoc(jackpotRef, { grand: 150000, major: 80000, minor: 40000 }).catch(() => {});
       }
+    }, (error) => {
+      console.error("Lỗi lắng nghe jackpot:", error);
     });
 
     return () => unsubscribe();

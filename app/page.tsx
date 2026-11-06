@@ -164,7 +164,7 @@ export default function Home() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-amber-400 font-black tracking-widest animate-pulse px-4 text-center">
         <span className="text-5xl mb-4">🔮</span>
-        ĐANG TRIỆU HOỒI RỒNG THẦN DRAGON ARCADE...
+        ĐANG TRIỆU HỒI RỒNG THẦN DRAGON ARCADE...
       </div>
     );
   }
