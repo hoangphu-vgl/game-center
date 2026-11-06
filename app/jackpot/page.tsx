@@ -13,21 +13,25 @@ const AUTO_OPTIONS = [
   { label: "Vô Cực", value: 99999 },
 ];
 
-// Biểu tượng Ngũ Linh & Dragon Ball mới tối ưu
+// Trọn bộ Ngũ Linh, Thần Long & Đầy đủ 7 Viên Ngọc Rồng (1 đến 7 sao)
 const DRAGON_SYMBOLS = [
-  // Ngũ Linh & Thần Long (Cực hiếm / Giá trị cao)
-  { id: "long", icon: "🐉", name: "Thanh Long", type: "strong", multiplier: 25 },
-  { id: "lan", icon: "🦁", name: "Kỳ Lân", type: "strong", multiplier: 20 },
-  { id: "phung", icon: "🦅", name: "Phượng Hoàng", type: "strong", multiplier: 16 },
-  { id: "quy", icon: "🐢", name: "Thần Quy", type: "strong", multiplier: 12 },
-  { id: "linh", icon: "🦌", name: "Linh thú", type: "strong", multiplier: 10 },
-  // Emoji Dragon Ball & Bảo vật (Trung bình & Thấp)
-  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "mid", multiplier: 8 },
+  { id: "long", icon: "🐉", name: "Thanh Long", type: "strong", multiplier: 8 },
+  { id: "lan", icon: "🦄", name: "Kỳ Lân", type: "strong", multiplier: 8 },
+  { id: "phung", icon: "🦅", name: "Phượng Hoàng", type: "strong", multiplier: 8 },
+  { id: "quy", icon: "🐢", name: "Thần Quy", type: "strong", multiplier: 8 },
+  { id: "linh", icon: "🦖", name: "Linh thú", type: "strong", multiplier: 10 },
+  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "mid", multiplier: 25 },
   { id: "goku", icon: "⭐", name: "Goku SSJ", type: "mid", multiplier: 6 },
-  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "mid", multiplier: 5 },
-  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "weak", multiplier: 3 },
-  { id: "senzu", icon: "🫘", name: "Đậu Senzu", type: "weak", multiplier: 2 },
-  { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 1 },
+  // Đầy đủ 7 viên ngọc rồng từ 1 đến 7 sao
+  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", multiplier: 5 },
+  { id: "ball6", icon: "🔮", name: "Ngọc 6 Sao", type: "mid", multiplier: 3.5 },
+  { id: "ball5", icon: "🔮", name: "Ngọc 5 Sao", type: "weak", multiplier: 3 },
+  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "weak", multiplier: 2.5 },
+  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "weak", multiplier: 2 },
+  { id: "ball2", icon: "🔮", name: "Ngọc 2 Sao", type: "weak", multiplier: 1.5 },
+  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", multiplier: 1 },
+  { id: "senzu", icon: "🫘", name: "Đậu Senzu", type: "weak", multiplier: 0.5 },
+  { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 0.5 },
 ];
 
 const AURA_QUICK_REWARDS = [
@@ -35,7 +39,7 @@ const AURA_QUICK_REWARDS = [
   { id: "kaioken", name: "🔴 Kaioken", mult: 2, icon: "🔥" },
   { id: "ssj1", name: "🟡 SSJ", mult: 2.5, icon: "⚡" },
   { id: "ssj2", name: "⚡ SSJ 2", mult: 3, icon: "🌩️" },
-  { id: "ssj_god", name: "🔴 SSJ God", mult: 4, icon: "☀️" },
+  { id: "ssj_god", name: "🔴 SSJ God", mult: 5, icon: "☀️" },
 ];
 
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
@@ -76,7 +80,7 @@ export default function JackpotPage() {
 
   const [winningCoords, setWinningCoords] = useState<number[]>([]);
   const [autoCount, setAutoCount] = useState<number>(0);
-  const [autoSpeed, setAutoSpeed] = useState<number>(1); // 1: x1, 2: x2
+  const [autoSpeed, setAutoSpeed] = useState<number>(1);
   
   const pointsRef = useRef<number>(0);
   const autoSpinRef = useRef<number>(0);
@@ -85,12 +89,10 @@ export default function JackpotPage() {
   const streakRef = useRef<number>(-1);
   const [streakIndex, setStreakIndex] = useState<number>(-1);
 
-  // Lưới 5 hàng x 6 cột = 30 ô
   const [grid, setGrid] = useState<typeof DRAGON_SYMBOLS>(
     Array(30).fill(DRAGON_SYMBOLS[0])
   );
 
-  // Hũ Jackpot khởi điểm và tự động tăng trưởng ít một
   const [jackpots, setJackpots] = useState({
     minor: 15000,
     major: 45000,
@@ -100,7 +102,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Săn Ngũ Linh, húp trọn Minor, Major, Grand Jackpot cực đỉnh!",
+    text: "Võ đạo Dragon Ball: Sưu tập đủ 7 Viên Ngọc Rồng & Ngũ Linh săn hũ cực đỉnh!",
     type: "normal",
   });
 
@@ -138,16 +140,16 @@ export default function JackpotPage() {
 
   const generateValidGrid = () => {
     const newGrid: typeof DRAGON_SYMBOLS = [];
-    for (let r = 0; r < 5; r++) { // 5 hàng
+    for (let r = 0; r < 5; r++) {
       let prevId = "";
-      for (let c = 0; c < 6; c++) { // 6 cột
+      for (let c = 0; c < 6; c++) {
         const rand = Math.random();
         let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
         if (rand > 0.5) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
-        if (rand > 0.8) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
+        if (rand > 0.82) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
 
         let selected = pool[Math.floor(Math.random() * pool.length)];
-        if (selected.id === prevId && Math.random() < 0.7) {
+        if (selected.id === prevId && Math.random() < 0.65) {
           const altPool = pool.filter((s) => s.id !== prevId);
           if (altPool.length > 0) selected = altPool[Math.floor(Math.random() * altPool.length)];
         }
@@ -210,7 +212,6 @@ export default function JackpotPage() {
     setSpinning(true);
     setWinningCoords([]);
     
-    // Mỗi lần quay, các hủ tích tụ tăng lên một lượng nhỏ hợp lý dựa theo mức cược
     setJackpots(prev => ({
       minor: prev.minor + Math.floor(bet * 0.15),
       major: prev.major + Math.floor(bet * 0.10),
@@ -221,8 +222,8 @@ export default function JackpotPage() {
     await updatePointsInDB(newPointsAfterBet);
 
     let counter = 0;
-    const speedDelay = autoSpeed === 2 ? 30 : 60; // Tốc độ x2 nhanh gấp đôi x1
-    const maxSteps = autoSpeed === 2 ? 6 : 10;
+    const speedDelay = autoSpeed === 2 ? 30 : 90; 
+    const maxSteps = autoSpeed === 2 ? 6 : 12;
 
     const interval = setInterval(() => {
       generateValidGrid();
@@ -239,11 +240,11 @@ export default function JackpotPage() {
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
     const bet = currentBetRef.current;
     
-    let winChance = 0.32;
-    if (bet <= 50) winChance = 0.40;
-    else if (bet <= 500) winChance = 0.32;
-    else if (bet <= 2000) winChance = 0.24;
-    else winChance = 0.16;
+    let winChance = 0.30;
+    if (bet <= 50) winChance = 0.38;
+    else if (bet <= 500) winChance = 0.30;
+    else if (bet <= 2000) winChance = 0.22;
+    else winChance = 0.15;
 
     const isTriggerWin = Math.random() < winChance;
     const grandHit = Math.random() < 0.0008;
@@ -263,7 +264,6 @@ export default function JackpotPage() {
       resultText = `👑 NỔ HŨ GRAND JACKPOT! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
-      // Nổ hủ xong reset về mức gốc
       setJackpots(prev => ({ ...prev, grand: 120000 }));
     } else if (majorHit) {
       hitJackpotType = "major";
@@ -285,7 +285,7 @@ export default function JackpotPage() {
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
         const colItems = [];
-        for (let r = 0; r < 5; r++) { // 5 hàng
+        for (let r = 0; r < 5; r++) {
           const idx = r * 6 + c;
           colItems.push({ symbol: finalGrid[idx], index: idx });
         }
@@ -407,7 +407,7 @@ export default function JackpotPage() {
     const currentAutoSetting = autoSpinRef.current;
     if (currentAutoSetting === 0) return;
 
-    const delayTime = autoSpeed === 2 ? 150 : 300;
+    const delayTime = autoSpeed === 2 ? 150 : 350;
 
     if (remainingAuto === 99999) {
       setTimeout(() => executeSpin(99999), delayTime);
@@ -430,8 +430,6 @@ export default function JackpotPage() {
     };
     setHistory((prev) => [newEntry, ...prev.slice(0, 8)]);
   };
-
-  const currentMultiplierDisplay = streakIndex >= 0 ? STREAK_STEPS[streakIndex] : 0;
 
   return (
     <div className={`min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-1.5 sm:p-3 overflow-x-hidden transition-all duration-300 ${explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""}`}>
@@ -457,10 +455,10 @@ export default function JackpotPage() {
         </div>
       </div>
 
-      {/* Main Container Full & Cân Đối */}
+      {/* Main Container */}
       <div className={`w-full max-w-md sm:max-w-4xl bg-slate-900/98 border-2 border-amber-500/50 rounded-2xl p-2 sm:p-4 shadow-2xl flex flex-col gap-2 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
-        {/* 3 HŨ JACKPOT: MINOR, MAJOR, GRAND */}
+        {/* 3 HŨ JACKPOT */}
         <div className="grid grid-cols-3 gap-1.5 relative">
           {jackpotSideGlow && (
             <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur-md opacity-75 animate-pulse -z-10"></div>
@@ -493,15 +491,29 @@ export default function JackpotPage() {
           ))}
         </div>
 
-        {/* THANH CHUỖI CHIẾU SÁNG (GLOWING STREAK BAR) ĐẶT GIỮA AURA VÀ THÔNG BÁO */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-amber-950 via-orange-950 to-amber-950 border-2 border-yellow-400/80 rounded-xl px-3 py-1.5 flex items-center justify-between shadow-[0_0_15px_rgba(250,204,21,0.5)]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-400/20 via-transparent to-transparent animate-pulse pointer-events-none"></div>
-          <div className="flex items-center gap-1.5 relative z-10">
-            <span className="text-sm animate-bounce">⚡</span>
-            <span className="text-[11px] sm:text-xs font-black text-yellow-300 tracking-wider uppercase">CHUỖI LIÊN HOÀN AURA:</span>
+        {/* THANH CHUỖI LIÊN HOÀN AURA */}
+        <div className="bg-slate-950 border-2 border-amber-500/40 rounded-xl p-2 space-y-1 shadow-inner">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
+              <span>⚡</span> THANH CHUỖI LIÊN HOÀN AURA:
+            </span>
           </div>
-          <div className="relative z-10 bg-yellow-500 text-slate-950 px-2.5 py-0.5 rounded-lg font-black text-xs sm:text-sm shadow-md font-mono">
-            {currentMultiplierDisplay === 0 ? "KHÔNG" : `x${currentMultiplierDisplay} LẦN`}
+          <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 pt-1">
+            {STREAK_STEPS.map((step, idx) => {
+              const isActive = streakIndex >= idx;
+              return (
+                <div
+                  key={step}
+                  className={`flex flex-col items-center justify-center py-1 px-0.5 rounded-lg border text-[9px] sm:text-[10px] font-black transition-all duration-300 ${
+                    isActive
+                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 border-yellow-200 shadow-[0_0_12px_rgba(250,204,21,0.8)] scale-105 animate-pulse"
+                      : "bg-slate-900/80 border-slate-800 text-slate-500 opacity-60"
+                  }`}
+                >
+                  <span>x{step}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -520,7 +532,7 @@ export default function JackpotPage() {
           )}
         </div>
 
-        {/* LƯỚI 5 HÀNG X 6 CỘT (TỐI ƯU FULL MÀN HÌNH ĐIỆN THOẠI) */}
+        {/* LƯỚI 5 HÀNG X 6 CỘT */}
         <div className="bg-slate-950 p-1.5 sm:p-2 rounded-xl border border-amber-500/30 shadow-inner">
           <div className="grid grid-cols-6 grid-rows-5 gap-1">
             {grid.map((sym, idx) => {
@@ -589,14 +601,13 @@ export default function JackpotPage() {
               ))}
             </div>
 
-            {/* Nút chỉnh tốc độ Auto x1 / x2 */}
             <div className="flex items-center gap-1">
               <span className="text-[11px] font-bold text-amber-400">TỐC ĐỘ:</span>
               <button
                 onClick={() => setAutoSpeed(autoSpeed === 1 ? 2 : 1)}
                 className="bg-slate-800 border border-amber-500/50 text-amber-300 px-2 py-1 rounded-lg text-[10px] font-black cursor-pointer hover:bg-slate-700 shadow"
               >
-                ⚡ {autoSpeed === 1 ? "x1 (Chuẩn)" : "🚀 x2 (Siêu tốc)"}
+                ⚡ {autoSpeed === 1 ? "x1 (Chuẩn Chậm)" : "🚀 x2 (Siêu Tốc)"}
               </button>
             </div>
           </div>
