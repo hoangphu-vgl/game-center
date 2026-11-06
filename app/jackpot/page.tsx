@@ -14,7 +14,7 @@ const AUTO_OPTIONS = [
 ];
 
 const DRAGON_SYMBOLS = [
-  { id: "scatter", icon: "🌟", name: "Dragon Ball", type: "scatter", basePoints: 200, multiplier: 20 },
+  { id: "scatter", icon: "🌟", name: "Ngọc Ước", type: "scatter", basePoints: 200, multiplier: 20 },
   { id: "long", icon: "🐉", name: "Thanh Long", type: "strong", basePoints: 100, multiplier: 10 },
   { id: "lan", icon: "🦄", name: "Kỳ Lân", type: "strong", basePoints: 120, multiplier: 12 },
   { id: "phung", icon: "🦅", name: "Phượng Hoàng", type: "strong", basePoints: 100, multiplier: 10 },
@@ -222,9 +222,9 @@ export default function JackpotPage() {
       for (let c = 0; c < 6; c++) {
         const rand = Math.random();
         let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
-        if (rand > 0.4) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
+        if (rand > 0.5) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
         if (rand > 0.70) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
-        if (rand > 0.85) pool = DRAGON_SYMBOLS.filter((s) => s.type === "scatter"); // Nâng tỉ lệ ra Ngọc Ước lên 15% mỗi ô
+        if (rand > 0.88) pool = DRAGON_SYMBOLS.filter((s) => s.type === "scatter"); // 12% mỗi ô
 
         let selected = pool[Math.floor(Math.random() * pool.length)];
         if (selected.id === prevId && selected.type !== "scatter" && Math.random() < 0.65) {
@@ -356,7 +356,7 @@ export default function JackpotPage() {
       }
     }
 
-    // KÍCH HOẶC HOẶC CỘNG DỒN (RETRIGGER) 20 FREE SPINS KHI ĐỦ 6 CỘT NGỌC ƯỚC
+    // KHI TRÚNG NGỌC ƯỚC (SCATTER) HOẶC RETRIGGER: CHO DỪNG CHẬM & HIỂN THỊ KHUNG LÂU HƠN BÌNH THƯỜNG
     if (hasScatterInAllCols) {
       setFreeSpinsLeft(prev => prev + 20);
       setWinningCoords(scatterIndices);
@@ -368,14 +368,19 @@ export default function JackpotPage() {
       setMessageBox({ text: freeSpinMsg, type: "win" });
       triggerBroadcast(`📢 HUYỀN THOẠI NGỌC ƯỚC: Chiến binh [${playerName}] vừa sưu tập đủ 6 cột Ngọc Ước, nhận thêm 20 Free Spins cực khủng! 🌟🔥`);
       addHistory(freeSpinMsg, true);
-      continueAutoIfNeeded(remainingAuto);
+
+      // Tăng độ trễ hiển thị khung trúng Scatter chậm hơn bình thường (khoảng giữa x1 và x2: ~1600ms) trước khi cho phép chạy tiếp lượt tiếp theo
+      const cinematicPause = autoSpeed === 2 ? 1000 : 1600;
+      setTimeout(() => {
+        continueAutoIfNeeded(remainingAuto);
+      }, cinematicPause);
       return;
     }
 
-    let winChance = isFreeSpinActive ? 0.50 : 0.30;
+    let winChance = isFreeSpinActive ? 0.45 : 0.20;
     if (!isFreeSpinActive) {
       if (bet <= 50) winChance = 0.25;
-      else if (bet <= 500) winChance = 0.20;
+      else if (bet <= 500) winChance = 0.15;
       else if (bet <= 2000) winChance = 0.10;
       else winChance = 0.05;
     }
