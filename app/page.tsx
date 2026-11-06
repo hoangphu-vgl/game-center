@@ -332,22 +332,35 @@ export default function Home() {
     const textToSend = newMessage.trim();
     setNewMessage("");
 
-    // Dùng đúng các cột sẵn có trên Supabase của ní: user_email và message
     const userIdentifier = displayName || user.email || "Chiến Binh";
 
     try {
+      // 1. Gửi tin nhắn mới lên Supabase
       const { error } = await supabase.from("global_chat").insert([
         {
           user_email: userIdentifier,
           message: textToSend,
         },
       ]);
-      if (error) {
-        console.error("Lỗi gửi tin nhắn:", error.message);
-        alert("Không thể gửi tin nhắn: " + error.message);
+      if (error) throw error;
+
+      // 2. Tự động dọn dẹp: Chỉ giữ lại 50 tin nhắn mới nhất trong database, xóa sạch các tin cũ hơn
+      const { data: allMsgs } = await supabase
+        .from("global_chat")
+        .select("id")
+        .order("created_at", { ascending: false });
+
+      if (allMsgs && allMsgs.length > 50) {
+        // Lấy danh sách các ID tin nhắn cũ vượt quá mốc 50
+        const idsToDelete = allMsgs.slice(50).map((m: any) => m.id);
+        await supabase
+          .from("global_chat")
+          .delete()
+          .in("id", idsToDelete);
       }
-    } catch (err) {
-      console.error("Lỗi chat:", err);
+
+    } catch (err: any) {
+      console.error("Lỗi chat:", err.message);
     }
   };
 
