@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 
 const BET_OPTIONS = [20, 50, 100, 200, 500, 1000, 2000, 5000];
 const AUTO_OPTIONS = [
-  { label: "Tự lọ :))", value: 0 },
+  { label: "Thủ Công", value: 0 },
   { label: "10 Lượt", value: 10 },
   { label: "20 Lượt", value: 20 },
   { label: "50 Lượt", value: 50 },
@@ -66,7 +64,7 @@ interface HistoryItem {
 }
 
 export default function JackpotPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [points, setPoints] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(100);
   const [spinning, setSpinning] = useState<boolean>(false);
@@ -96,7 +94,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Cược thấp dễ thắng, cược 5K thách thức đại gia săn hũ khủng!",
+    text: "Võ đạo Dragon Ball: Cược thấp dễ thắng, săn hũ Minor, Major, Grand tự động cực đỉnh!",
     type: "normal",
   });
 
@@ -108,47 +106,25 @@ export default function JackpotPage() {
     currentBetRef.current = currentBet;
   }, [currentBet]);
 
-  // Auth listener gọn nhẹ
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        try {
-          const userRef = doc(db, "users", currentUser.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            const pts = userSnap.data().points || 0;
-            setPoints(pts);
-            pointsRef.current = pts;
-          }
-        } catch (e) {
-          console.error(e);
+    async function fetchUserData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("balance")
+          .eq("id", user.id)
+          .single();
+        
+        if (profile) {
+          setPoints(profile.balance);
+          pointsRef.current = profile.balance;
         }
       }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Lắng nghe real-time hũ jackpot an toàn, không gây kẹt luồng
-  useEffect(() => {
-    const jackpotRef = doc(db, "gameSettings", "jackpots");
-    const unsubscribe = onSnapshot(jackpotRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setJackpots({
-          grand: Number(data.grand) || 150000,
-          major: Number(data.major) || 80000,
-          minor: Number(data.minor) || 40000,
-        });
-      } else {
-        setDoc(jackpotRef, { grand: 150000, major: 80000, minor: 40000 }).catch(() => {});
-      }
-    }, (error) => {
-      console.error("Lỗi lắng nghe jackpot:", error);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    }
+    fetchUserData();
+  }, [supabase]);
 
   useEffect(() => {
     generateValidGrid();
@@ -182,8 +158,10 @@ export default function JackpotPage() {
     pointsRef.current = newPts;
     if (!user) return;
     try {
-      const userRef = doc(db, "users", user.uid);
-      updateDoc(userRef, { points: newPts }).catch((err) => console.log(err));
+      await supabase
+        .from("profiles")
+        .update({ balance: newPts })
+        .eq("id", user.id);
     } catch (e) {
       console.error(e);
     }
@@ -229,17 +207,6 @@ export default function JackpotPage() {
     const newPointsAfterBet = currentPts - bet;
     await updatePointsInDB(newPointsAfterBet);
 
-    try {
-      const jackpotRef = doc(db, "gameSettings", "jackpots");
-      updateDoc(jackpotRef, {
-        grand: jackpots.grand + Math.floor(bet * 0.2),
-        major: jackpots.major + Math.floor(bet * 0.1),
-        minor: jackpots.minor + Math.floor(bet * 0.05),
-      }).catch((e) => console.log(e));
-    } catch (e) {
-      console.error(e);
-    }
-
     let counter = 0;
     const interval = setInterval(() => {
       generateValidGrid();
@@ -257,48 +224,47 @@ export default function JackpotPage() {
     const bet = currentBetRef.current;
     
     let winChance = 0.28;
-    if (bet <= 50) {
-      winChance = 0.38;
-    } else if (bet >= 100 && bet <= 500) {
-      winChance = 0.28;
-    } else if (bet >= 1000 && bet <= 2000) {
-      winChance = 0.20;
-    } else if (bet >= 5000) {
-      winChance = 0.14;
-    }
+    if (bet <= 50) winChance = 0.38;
+    else if (bet <= 500) winChance = 0.28;
+    else if (bet <= 2000) winChance = 0.20;
+    else winChance = 0.14;
 
     const isTriggerWin = Math.random() < winChance;
-    const jackpotChance = bet >= 2000 ? 0.005 : bet >= 1000 ? 0.003 : 0.001;
-    const isJackpotHit = Math.random() < jackpotChance;
+    const grandHit = Math.random() < 0.001;
+    const majorHit = !grandHit && Math.random() < 0.004;
+    const minorHit = !grandHit && !majorHit && Math.random() < 0.012;
+
     const shenronTotal = finalGrid.filter((s) => s.id === "shenron").length;
 
     let baseWinAmount = 0;
     let matchedIndices: number[] = [];
     let resultText = "";
     let isStreakWin = false;
-    let isGrandJackpot = false;
+    let hitJackpotType = "";
 
-    if (isJackpotHit || shenronTotal >= 5) {
-      isGrandJackpot = true;
+    if (grandHit || shenronTotal >= 5) {
+      hitJackpotType = "grand";
       baseWinAmount = jackpots.grand;
       matchedIndices = finalGrid.map((s, idx) => (s.id === "shenron" ? idx : -1)).filter((i) => i !== -1);
       if (matchedIndices.length === 0) matchedIndices = [0, 1, 2, 3, 4, 5];
-      resultText = `👑 NỔ HŨ GRAND JACKPOT VŨ TRỤ! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
+      resultText = `👑 NỔ HŨ GRAND JACKPOT! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
-
-      try {
-        const jackpotRef = doc(db, "gameSettings", "jackpots");
-        updateDoc(jackpotRef, {
-          grand: 150000,
-          major: 80000,
-          minor: 40000,
-        }).catch((e) => console.log(e));
-      } catch (e) {
-        console.error(e);
-      }
-    } 
-    else if (isTriggerWin) {
+    } else if (majorHit) {
+      hitJackpotType = "major";
+      baseWinAmount = jackpots.major;
+      matchedIndices = [0, 1, 2, 3, 4, 5];
+      resultText = `💎 NỔ HŨ MAJOR JACKPOT! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
+      isStreakWin = true;
+      triggerJackpotSideGlow();
+    } else if (minorHit) {
+      hitJackpotType = "minor";
+      baseWinAmount = jackpots.minor;
+      matchedIndices = [0, 1, 2, 3];
+      resultText = `🔥 NỔ HŨ MINOR JACKPOT! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
+      isStreakWin = true;
+      triggerJackpotSideGlow();
+    } else if (isTriggerWin) {
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
         const colItems = [];
@@ -332,12 +298,7 @@ export default function JackpotPage() {
         if (mustExistInCol1 && consecutiveColsCount >= 3) {
           const symObj = DRAGON_SYMBOLS.find((s) => s.id === symId);
           if (symObj) {
-            let symbolWin = 0;
-            if (symObj.type === "weak") {
-              symbolWin = (bet * 0.3) * symObj.multiplier * consecutiveColsCount;
-            } else {
-              symbolWin = (bet * 0.7) * symObj.multiplier * consecutiveColsCount;
-            }
+            let symbolWin = symObj.type === "weak" ? (bet * 0.3) * symObj.multiplier * consecutiveColsCount : (bet * 0.7) * symObj.multiplier * consecutiveColsCount;
             const columnBonus = consecutiveColsCount >= 5 ? 2.2 : consecutiveColsCount === 4 ? 1.6 : 1;
             totalStreakWin += Math.floor(symbolWin * columnBonus);
             tempMatchedIndices.forEach(idx => streakWinningSet.add(idx));
@@ -358,13 +319,7 @@ export default function JackpotPage() {
         } else {
           const chosenAura = AURA_QUICK_REWARDS[Math.floor(Math.random() * AURA_QUICK_REWARDS.length)];
           baseWinAmount = Math.floor(bet * chosenAura.mult);
-          
-          matchedIndices = [
-            Math.floor(Math.random() * 6),
-            Math.floor(Math.random() * 6) + 6,
-            Math.floor(Math.random() * 6) + 12,
-          ];
-
+          matchedIndices = [Math.floor(Math.random() * 6), Math.floor(Math.random() * 6) + 6];
           resultText = `${chosenAura.icon} BỘC PHÁT ${chosenAura.name.toUpperCase()}! Thưởng nhanh x${chosenAura.mult} = +${baseWinAmount.toLocaleString()} PTS`;
           isStreakWin = false;
           triggerExplosion();
@@ -378,14 +333,13 @@ export default function JackpotPage() {
       if (isStreakWin) {
         const currentIdx = streakRef.current;
         const nextIdx = currentIdx < 0 ? 0 : Math.min(currentIdx + 1, STREAK_STEPS.length - 1);
-        
         streakRef.current = nextIdx;
         setStreakIndex(nextIdx);
 
-        const activeMultiplier = isGrandJackpot ? 1 : STREAK_STEPS[nextIdx];
-        finalTotalWin = isGrandJackpot ? baseWinAmount : baseWinAmount * activeMultiplier;
-        resultText = isGrandJackpot 
-          ? `👑 NỔ HŨ GRAND JACKPOT! NHẬN NGAY +${finalTotalWin.toLocaleString()} PTS`
+        const activeMultiplier = hitJackpotType ? 1 : STREAK_STEPS[nextIdx];
+        finalTotalWin = hitJackpotType ? baseWinAmount : baseWinAmount * activeMultiplier;
+        resultText = hitJackpotType 
+          ? resultText
           : `🔥 CHUỖI NHÂN x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
       } else {
         finalTotalWin = baseWinAmount;
@@ -463,7 +417,7 @@ export default function JackpotPage() {
   return (
     <div className={`min-h-screen bg-slate-950 text-white font-sans select-none flex flex-col items-center justify-start p-2 sm:p-4 overflow-x-hidden transition-all duration-300 ${explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""}`}>
       
-      {/* Top Bar tối ưu mobile */}
+      {/* Top Bar */}
       <div className="w-full max-w-4xl flex justify-between items-center mb-2 px-2">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
@@ -484,28 +438,28 @@ export default function JackpotPage() {
         </div>
       </div>
 
-      {/* Main Game Container */}
+      {/* Main Container */}
       <div className={`w-full max-w-4xl bg-slate-900/95 border-2 border-amber-500/50 rounded-2xl p-2.5 sm:p-5 shadow-2xl flex flex-col gap-2.5 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
-        {/* 3 HŨ JACKPOT VỚI HIỆU ỨNG 2 BÊN KHI NỔ */}
+        {/* 3 HŨ JACKPOT: MINOR, MAJOR, GRAND */}
         <div className="grid grid-cols-3 gap-1.5 relative">
           {jackpotSideGlow && (
             <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur-md opacity-75 animate-pulse -z-10"></div>
           )}
 
           <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-1.5 sm:p-2 text-center shadow-md">
-            <div className="text-[8px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MAJOR</div>
-            <div className="text-[11px] sm:text-base font-black text-white font-mono">{jackpots.major.toLocaleString()}</div>
+            <div className="text-[8px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">🔥 MINOR HŨ</div>
+            <div className="text-[11px] sm:text-base font-black text-white font-mono">{jackpots.minor.toLocaleString()}</div>
+          </div>
+
+          <div className="bg-gradient-to-b from-purple-700 via-indigo-700 to-slate-900 border border-purple-300 rounded-xl p-1.5 sm:p-2 text-center shadow-lg">
+            <div className="text-[9px] sm:text-xs font-black text-purple-200 uppercase tracking-wider">💎 MAJOR HŨ</div>
+            <div className="text-xs sm:text-lg font-black text-purple-300 font-mono">{jackpots.major.toLocaleString()}</div>
           </div>
 
           <div className="bg-gradient-to-b from-red-600 via-orange-600 to-amber-600 border border-yellow-200 rounded-xl p-1.5 sm:p-2 text-center shadow-lg animate-pulse">
             <div className="text-[9px] sm:text-xs font-black text-yellow-200 uppercase tracking-wider">👑 GRAND HŨ</div>
             <div className="text-xs sm:text-xl font-black text-yellow-300 font-mono">{jackpots.grand.toLocaleString()}</div>
-          </div>
-
-          <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-1.5 sm:p-2 text-center shadow-md">
-            <div className="text-[8px] sm:text-xs font-black text-amber-200 uppercase tracking-wider">MINOR</div>
-            <div className="text-[11px] sm:text-base font-black text-white font-mono">{jackpots.minor.toLocaleString()}</div>
           </div>
         </div>
 
@@ -520,7 +474,7 @@ export default function JackpotPage() {
           ))}
         </div>
 
-        {/* DÒNG THÔNG BÁO REALTIME & NÚT DỪNG AUTO */}
+        {/* THÔNG BÁO & NÚT DỪNG AUTO */}
         <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold gap-2">
           <div className={`truncate ${messageBox.type === "break" ? "text-rose-500 font-black animate-bounce" : messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
             💬 {messageBox.text}
@@ -540,7 +494,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* LƯỚI 4 HÀNG X 6 CỘT - TỐI ƯU MOBILE */}
+        {/* LƯỚI 4 HÀNG X 6 CỘT */}
         <div className="bg-slate-950 p-2 rounded-xl border border-amber-500/30 shadow-inner">
           <div className="grid grid-cols-6 grid-rows-4 gap-1.5">
             {grid.map((sym, idx) => {
@@ -623,7 +577,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* LỊCH SỬ QUAY GẦN NHẤT */}
+        {/* LỊCH SỬ GẦN NHẤT */}
         <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-2 max-h-24 overflow-y-auto text-[10px] sm:text-[11px]">
           <div className="font-bold text-slate-400 mb-0.5">📜 Lịch sử chiến đấu gần đây:</div>
           {history.length === 0 ? (
