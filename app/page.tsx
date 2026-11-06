@@ -18,6 +18,15 @@ interface LeaderboardUser {
   balance: number;
 }
 
+// 5 Avatar mặc định chủ đề Dragon Ball cực chất
+const DEFAULT_AVATARS = [
+  { name: "Son Goku Super Saiyan", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=150&auto=format&fit=crop&q=80" },
+  { name: "Vegeta Prince", url: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=150&auto=format&fit=crop&q=80" },
+  { name: "Super Saiyan God", url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&auto=format&fit=crop&q=80" },
+  { name: "Dragon Shenron", url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80" },
+  { name: "Saiyan Aura", url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=150&auto=format&fit=crop&q=80" },
+];
+
 const AURA_QUOTES = [
   "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn của chính mình!' - Son Goku",
   "⚡ 'Sức mạnh đến từ nhu cầu, không phải từ mong muốn.' - Vegeta",
@@ -37,7 +46,14 @@ export default function Home() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
+  const [rememberMe, setRememberMe] = useState(true); // Ghi nhớ đăng nhập
   const [authLoading, setAuthLoading] = useState(false);
+
+  // Profile & Modal States
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [updatingProfile, setUpdatingProfile] = useState(false);
 
   // Chat States
   const [chatOpen, setChatOpen] = useState(false);
@@ -47,8 +63,6 @@ export default function Home() {
 
   // Leaderboard State
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-
-  // Random Aura Quote
   const [dailyQuote, setDailyQuote] = useState("");
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
@@ -57,7 +71,7 @@ export default function Home() {
     setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
   }, []);
 
-  // LƯU TRỮ & LẮNG NGHE PHIÊN ĐĂNG NHẬP (LƯU ĐĂNG NHẬP TỰ ĐỘNG)
+  // KHỞI TẠO & LẮNG NGHE SESSION (LƯU ĐĂNG NHẬP)
   useEffect(() => {
     async function loadUserProfile(currentUser: any) {
       if (!currentUser) {
@@ -78,26 +92,31 @@ export default function Home() {
           .eq("id", currentUser.id)
           .single();
 
-        const displayName = currentUser.user_metadata?.username || "Chiến Binh Saiyan";
+        const defaultName = currentUser.user_metadata?.username || "Chiến Binh Saiyan";
+        const defaultAvatar = currentUser.user_metadata?.avatar_url || DEFAULT_AVATARS[0].url;
 
         if (!profile) {
           const initialData = {
             id: currentUser.id,
             email: currentUser.email || "",
-            full_name: displayName,
-            avatar_url: "",
+            full_name: defaultName,
+            avatar_url: defaultAvatar,
             balance: 5000,
             lucky_spins: 0,
             last_check_in: "",
           };
           await supabase.from("profiles").insert([initialData]);
-          setPoints(1000);
-          setLuckySpins(3);
+          setPoints(5000);
+          setLuckySpins(0);
           setLastCheckIn("");
+          setDisplayName(defaultName);
+          setAvatarUrl(defaultAvatar);
         } else {
-          setPoints(profile.balance ?? 1000);
-          setLuckySpins(profile.lucky_spins ?? 3);
+          setPoints(profile.balance ?? 5000);
+          setLuckySpins(profile.lucky_spins ?? 0);
           setLastCheckIn(profile.last_check_in ?? "");
+          setDisplayName(profile.full_name || defaultName);
+          setAvatarUrl(profile.avatar_url || defaultAvatar);
         }
       } catch (err) {
         console.error("Lỗi profile:", err);
@@ -119,7 +138,7 @@ export default function Home() {
     };
   }, []);
 
-  // LẤY BẢNG XẾP HẠNG TOP 5 VŨ TRỤ
+  // LẤY BẢNG XẾP HẠNG TOP 5
   useEffect(() => {
     async function fetchLeaderboard() {
       const { data } = await supabase
@@ -215,6 +234,7 @@ export default function Home() {
           data: {
             username: cleanUsername,
             full_name: cleanUsername,
+            avatar_url: DEFAULT_AVATARS[0].url,
           },
         },
       });
@@ -233,7 +253,7 @@ export default function Home() {
       setAuthLoading(false);
 
       if (signInError) {
-        alert("Tạo tài khoản thành công! Vui lòng đăng nhập lại.");
+        alert("Tạo tài khoản thành công! Vui lòng đăng nhập.");
         setIsSignUp(false);
       } else if (signInData.session?.user) {
         setUser(signInData.session.user);
@@ -257,6 +277,36 @@ export default function Home() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setUpdatingProfile(true);
+
+    const newCleanName = displayName.trim() || "Chiến Binh";
+
+    try {
+      // Cập nhật bảng profiles
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ full_name: newCleanName, avatar_url: avatarUrl })
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
+      // Cập nhật metadata auth
+      await supabase.auth.updateUser({
+        data: { full_name: newCleanName, avatar_url: avatarUrl }
+      });
+
+      alert("✨ Cập nhật thông tin chiến binh thành công!");
+      setProfileModalOpen(false);
+    } catch (err: any) {
+      alert("Lỗi cập nhật: " + err.message);
+    } finally {
+      setUpdatingProfile(false);
+    }
   };
 
   const handleCheckIn = async () => {
@@ -288,13 +338,11 @@ export default function Home() {
     const textToSend = newMessage.trim();
     setNewMessage("");
 
-    const currentName = user.user_metadata?.username || user.user_metadata?.full_name || "Chiến Binh";
-
     try {
       await supabase.from("global_chat").insert([
         {
           uid: user.id,
-          name: currentName,
+          name: displayName,
           text: textToSend,
         },
       ]);
@@ -356,6 +404,18 @@ export default function Home() {
               />
             </div>
 
+            <div className="flex items-center justify-between text-xs text-slate-300 px-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-amber-500"
+                />
+                <span>Ghi nhớ phiên đăng nhập</span>
+              </label>
+            </div>
+
             <button
               type="submit"
               disabled={authLoading}
@@ -379,9 +439,7 @@ export default function Home() {
     );
   }
 
-  // MÀN HÌNH CHÍNH (SẢNH GAME SAU KHI ĐĂNG NHẬP)
   const isCheckedInToday = lastCheckIn === getTodayString();
-  const displayName = user.user_metadata?.username || user.user_metadata?.full_name || "Chiến Binh";
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
@@ -395,12 +453,22 @@ export default function Home() {
                 DRAGON ARCADE
               </span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="sm:hidden text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700 active:scale-95 transition"
-            >
-              Thoát 🚪
-            </button>
+
+            {/* Avatar góc phải trên mobile */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <button
+                onClick={() => setProfileModalOpen(true)}
+                className="w-9 h-9 rounded-full overflow-hidden border-2 border-amber-400 active:scale-95 transition"
+              >
+                <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
+              </button>
+              <button
+                onClick={handleLogout}
+                className="text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700"
+              >
+                Thoát 🚪
+              </button>
+            </div>
           </div>
 
           <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
@@ -426,17 +494,30 @@ export default function Home() {
               {isCheckedInToday ? "✅ Đã Tụ Ki" : "🔥 Tụ Ki"}
             </button>
 
-            <button
-              onClick={handleLogout}
-              className="hidden sm:block text-xs text-slate-400 hover:text-rose-400 font-semibold transition cursor-pointer ml-1"
-            >
-              Thoát
-            </button>
+            {/* Avatar góc phải trên PC */}
+            <div className="hidden sm:flex items-center gap-3 ml-2">
+              <button
+                onClick={() => setProfileModalOpen(true)}
+                className="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 border border-amber-500/40 p-1.5 pr-3 rounded-full cursor-pointer transition active:scale-95 shadow-md group"
+              >
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-amber-400">
+                  <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover group-hover:scale-110 transition" />
+                </div>
+                <span className="text-xs font-bold text-amber-300 truncate max-w-[100px]">{displayName}</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="text-xs text-slate-400 hover:text-rose-400 font-semibold transition cursor-pointer"
+              >
+                Thoát
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Banner Dragon Ball & Aura Quote */}
+      {/* Banner & Quote */}
       <section
         className="relative flex items-center justify-center min-h-[260px] sm:min-h-[320px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
         style={{
@@ -446,7 +527,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950"></div>
         <div className="relative z-10 max-w-3xl space-y-3">
           <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
-            ✨ Xin chào chiến binh: <span className="text-white">{displayName}</span>
+            ✨ Chiến Binh: <span className="text-white">{displayName}</span>
           </div>
           <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-lg tracking-wide">
             DRAGON GAMING ARENA
@@ -457,9 +538,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Nội Dung Sảnh Game & Bảng Xếp Hạng */}
+      {/* Main Grid */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Trò Chơi Nổi Bật */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
             <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
@@ -481,7 +561,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Bảng Xếp Hạng Top 5 Vũ Trụ */}
+        {/* Bảng Xếp Hạng Top 5 */}
         <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4">
           <div className="flex items-center gap-2 border-l-4 border-orange-500 pl-3">
             <h2 className="text-base sm:text-lg font-black text-orange-400 tracking-wider uppercase">
@@ -499,9 +579,7 @@ export default function Home() {
                   <div
                     key={item.id}
                     className={`flex items-center justify-between p-2.5 rounded-xl border ${
-                      isMe
-                        ? "bg-amber-500/15 border-amber-500/60 font-bold"
-                        : "bg-slate-950/60 border-slate-800"
+                      isMe ? "bg-amber-500/15 border-amber-500/60 font-bold" : "bg-slate-950/60 border-slate-800"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
@@ -521,6 +599,91 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* POPUP THÔNG TIN CÁ NHÂN & ĐỔI AVATAR / TÊN */}
+      {profileModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🛡️</span>
+                <h3 className="text-base sm:text-lg font-black text-amber-400">HỒ SƠ CHIẾN BINH</h3>
+              </div>
+              <button
+                onClick={() => setProfileModalOpen(false)}
+                className="text-slate-400 hover:text-white font-bold text-sm px-2 py-1 cursor-pointer"
+              >
+                ✖
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400 shadow-md shrink-0">
+                <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-sm text-white truncate">{displayName}</h4>
+                <div className="flex items-center gap-3 text-xs text-amber-400 font-bold">
+                  <span>⚡ {points.toLocaleString()} PTS</span>
+                  <span>🎟️ {luckySpins} Lượt</span>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị (Display Name)</label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
+                  required
+                />
+                <p className="text-[10px] text-slate-500 ml-1">Tên này hiển thị trên bảng xếp hạng và khung chat, không đổi tên đăng nhập.</p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-amber-400 ml-1">Chọn 5 Avatar Dragon Ball Mặc Định</label>
+                <div className="grid grid-cols-5 gap-2 pt-1">
+                  {DEFAULT_AVATARS.map((av, idx) => (
+                    <button
+                      type="button"
+                      key={idx}
+                      onClick={() => setAvatarUrl(av.url)}
+                      className={`w-12 h-12 rounded-xl overflow-hidden border-2 cursor-pointer transition ${
+                        avatarUrl === av.url ? "border-amber-400 scale-105 shadow-lg shadow-amber-500/30" : "border-slate-700 opacity-60 hover:opacity-100"
+                      }`}
+                      title={av.name}
+                    >
+                      <img src={av.url} alt={av.name} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-amber-400 ml-1">Hoặc dán Link Ảnh (URL) Tùy Ý</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-xs text-white px-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={updatingProfile}
+                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs py-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-md shadow-amber-500/20 disabled:opacity-50"
+              >
+                {updatingProfile ? "Đang lưu..." : "LƯU THAY ĐỔI 💾"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* CHAT CHUNG REALTIME */}
       <div className="fixed bottom-3 right-3 z-50">
