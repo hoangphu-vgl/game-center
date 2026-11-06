@@ -5,11 +5,10 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 interface ChatMessage {
-  id: string;
-  uid: string;
-  name: string;
-  text: string;
-  createdAt?: any;
+  id: number;
+  user_email: string;
+  message: string;
+  created_at?: any;
 }
 
 interface LeaderboardUser {
@@ -64,7 +63,7 @@ export default function Home() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Chat States (Fix Realtime chuẩn xác)
+  // Chat States
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -173,7 +172,7 @@ export default function Home() {
     };
   }, []);
 
-  // LẮNG NGHE CHAT CHUNG REALTIME CHUẨN XÁC 100%
+  // LẮNG NGHE CHAT CHUNG REALTIME KHỚP VỚI BẢNG CỦA NÍ
   useEffect(() => {
     if (!user) return;
 
@@ -181,18 +180,11 @@ export default function Home() {
       const { data, error } = await supabase
         .from("global_chat")
         .select("*")
-        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .limit(50);
       
       if (!error && data) {
-        const formattedMsgs = data.map((item: any) => ({
-          id: item.id,
-          uid: item.uid,
-          name: item.name,
-          text: item.text,
-          createdAt: item.created_at,
-        }));
-        setMessages(formattedMsgs);
+        setMessages(data);
         setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
       }
     }
@@ -206,18 +198,8 @@ export default function Home() {
         (payload) => {
           const newMsg = payload.new as any;
           setMessages((prev) => {
-            // Tránh duplicate tin nhắn nếu chính mình vừa gửi
             if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [
-              ...prev,
-              {
-                id: newMsg.id,
-                uid: newMsg.uid,
-                name: newMsg.name,
-                text: newMsg.text,
-                createdAt: newMsg.created_at,
-              },
-            ];
+            return [...prev, newMsg];
           });
           setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
@@ -350,16 +332,18 @@ export default function Home() {
     const textToSend = newMessage.trim();
     setNewMessage("");
 
+    // Dùng đúng các cột sẵn có trên Supabase của ní: user_email và message
+    const userIdentifier = displayName || user.email || "Chiến Binh";
+
     try {
       const { error } = await supabase.from("global_chat").insert([
         {
-          uid: user.id,
-          name: displayName,
-          text: textToSend,
+          user_email: userIdentifier,
+          message: textToSend,
         },
       ]);
       if (error) {
-        console.error("Lỗi khi gửi tin nhắn lên DB:", error.message);
+        console.error("Lỗi gửi tin nhắn:", error.message);
         alert("Không thể gửi tin nhắn: " + error.message);
       }
     } catch (err) {
@@ -376,7 +360,6 @@ export default function Home() {
     );
   }
 
-  // MÀN HÌNH ĐĂNG NHẬP / ĐĂNG KÝ
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden select-none"
@@ -732,14 +715,14 @@ export default function Home() {
                 </div>
               ) : (
                 messages.map((msg) => {
-                  const isMe = msg.uid === user?.id;
+                  const isMe = msg.user_email === displayName || msg.user_email === user?.email;
                   return (
                     <div
                       key={msg.id}
                       className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
                     >
                       <span className="text-[10px] text-amber-400/80 mb-0.5 px-1 font-bold">
-                        {msg.name}
+                        {msg.user_email}
                       </span>
                       <div
                         className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs break-words font-medium shadow-sm ${
@@ -748,7 +731,7 @@ export default function Home() {
                             : "bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none"
                         }`}
                       >
-                        {msg.text}
+                        {msg.message}
                       </div>
                     </div>
                   );
