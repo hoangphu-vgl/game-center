@@ -31,22 +31,23 @@ export default function Home() {
   useEffect(() => {
     async function initUserSession() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUser = session?.user || null;
+        setUser(currentUser);
 
-        if (user) {
+        if (currentUser) {
           const { data: profile } = await supabase
             .from("profiles")
             .select("*")
-            .eq("id", user.id)
+            .eq("id", currentUser.id)
             .single();
 
           if (!profile) {
             const initialData = {
-              id: user.id,
-              email: user.email || "",
-              full_name: user.user_metadata?.full_name || "Chiến Binh Saiyan",
-              avatar_url: user.user_metadata?.avatar_url || "",
+              id: currentUser.id,
+              email: currentUser.email || "",
+              full_name: currentUser.user_metadata?.full_name || "Chiến Binh Saiyan",
+              avatar_url: currentUser.user_metadata?.avatar_url || "",
               balance: 1000,
               lucky_spins: 3,
               last_check_in: "",
@@ -269,7 +270,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Danh Sách Game Cốt Lõi */}
+        {/* Danh Sách Game Cốt Lõi (Chỉ giữ lại Jackpot) */}
         <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-8">
           <section className="space-y-3">
             <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
@@ -287,30 +288,6 @@ export default function Home() {
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Quay hũ tích tụ Ki nổ hũ Grand, Major, Minor cực khủng!</p>
                 <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Nổ Hũ 🔮
-                </div>
-              </Link>
-
-              <Link
-                href="/chess"
-                className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 active:scale-[0.98] transition block shadow-lg"
-              >
-                <div className="text-3xl mb-1">♚</div>
-                <h3 className="font-black text-lg text-white">Cờ Vua Quyết Liệt</h3>
-                <p className="text-slate-400 text-xs sm:text-sm mt-1">Đấu AI 3 cấp độ, tạo phòng Online cược PTS!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                  Vào Bàn Cờ ♟️
-                </div>
-              </Link>
-
-              <Link
-                href="/chessthu"
-                className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-5 active:scale-[0.98] transition block shadow-lg"
-              >
-                <div className="text-3xl mb-1">🦁</div>
-                <h3 className="font-black text-lg text-white">Đấu Trường Cờ Thú</h3>
-                <p className="text-slate-400 text-xs sm:text-sm mt-1">Trận chiến động vật đỉnh cao, phòng Online cược lớn!</p>
-                <div className="mt-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                  Vào Bàn Cờ Thú 🐅
                 </div>
               </Link>
             </div>
