@@ -12,21 +12,18 @@ const SHOP_SPIN_PACKS = [
   { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 35000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
 ];
 
-interface ShopHistoryItem {
+interface LocalHistory {
   id: number;
-  user_email: string;
-  pack_name: string;
-  cost: number;
-  created_at: string;
+  text: string;
+  time: string;
 }
 
 export default function ShopPage() {
   const [user, setUser] = useState<any>(null);
-  const [displayName, setDisplayName] = useState("Chiến Binh");
   const [points, setPoints] = useState<number>(0);
   const [luckySpins, setLuckySpins] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState<ShopHistoryItem[]>([]);
+  const [history, setHistory] = useState<LocalHistory[]>([]);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -35,24 +32,19 @@ export default function ShopPage() {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, balance, lucky_spins")
+          .select("balance, lucky_spins")
           .eq("id", user.id)
           .single();
         
         if (profile) {
-          const currentName = profile.full_name || "Chiến Binh";
-          setDisplayName(currentName);
           setPoints(profile.balance || 0);
           setLuckySpins(profile.lucky_spins || 0);
+        }
 
-          // Lấy lịch sử CÁ NHÂN từ Server theo tên/email user
-          const { data: historyData } = await supabase
-            .from("shop_history")
-            .select("*")
-            .eq("user_email", currentName)
-            .order("id", { ascending: false })
-            .limit(10);
-          if (historyData) setHistory(historyData);
+        // Lấy lịch sử từ localStorage theo user id
+        const saved = localStorage.getItem(`shop_history_${user.id}`);
+        if (saved) {
+          try { setHistory(JSON.parse(saved)); } catch (e) {}
         }
       }
       setLoading(false);
@@ -77,18 +69,15 @@ export default function ShopPage() {
         .eq("id", user.id);
 
       if (!error) {
-        // Ghi log cá nhân lên server shop_history
-        const { data: newLog } = await supabase.from("shop_history").insert([
-          {
-            user_email: displayName,
-            pack_name: pack.name,
-            cost: pack.cost,
-          }
-        ]).select();
+        const newItem: LocalHistory = {
+          id: Date.now(),
+          text: `Đã đổi ${pack.name} (-${pack.cost.toLocaleString()} Ki)`,
+          time: new Date().toLocaleTimeString(),
+        };
 
-        if (newLog && newLog[0]) {
-          setHistory((prev) => [newLog[0] as ShopHistoryItem, ...prev.slice(0, 9)]);
-        }
+        const updatedHistory = [newItem, ...history].slice(0, 15);
+        setHistory(updatedHistory);
+        localStorage.setItem(`shop_history_${user.id}`, JSON.stringify(updatedHistory));
 
         setPoints(newPts);
         setLuckySpins(newSpins);
@@ -109,7 +98,6 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none space-y-4">
-      {/* Top Bar chuyển tiếp */}
       <div className="w-full max-w-3xl flex justify-between items-center">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
@@ -154,7 +142,6 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* BẢNG LỊCH SỬ MUA GÓI LƯỢT QUAY CÁ NHÂN */}
       <div className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
         <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
           <h2 className="text-sm font-black text-emerald-400 uppercase tracking-wider">
@@ -167,8 +154,8 @@ export default function ShopPage() {
           ) : (
             history.map((item) => (
               <div key={item.id} className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-3 py-2 rounded-xl text-xs">
-                <span className="text-slate-300">Đã đổi gói <b className="text-amber-300">{item.pack_name}</b></span>
-                <span className="text-amber-400 font-black">-{item.cost.toLocaleString()} Ki</span>
+                <span className="text-slate-300">{item.text}</span>
+                <span className="text-slate-500 text-[10px]">{item.time}</span>
               </div>
             ))
           )}

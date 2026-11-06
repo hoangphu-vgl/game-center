@@ -15,22 +15,20 @@ const WHEEL_REWARDS = [
   { label: "JACKPOT 100K Ki!", type: "pts", val: 100000 },
 ];
 
-interface WheelHistoryItem {
+interface LocalHistory {
   id: number;
-  user_email: string;
-  reward_label: string;
-  created_at: string;
+  text: string;
+  time: string;
 }
 
 export default function WheelPage() {
   const [user, setUser] = useState<any>(null);
-  const [displayName, setDisplayName] = useState("Chiến Binh");
   const [points, setPoints] = useState<number>(0);
   const [luckySpins, setLuckySpins] = useState<number>(0);
   const [spinning, setSpinning] = useState<boolean>(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState<WheelHistoryItem[]>([]);
+  const [history, setHistory] = useState<LocalHistory[]>([]);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -39,24 +37,18 @@ export default function WheelPage() {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, balance, lucky_spins")
+          .select("balance, lucky_spins")
           .eq("id", user.id)
           .single();
         
         if (profile) {
-          const currentName = profile.full_name || "Chiến Binh";
-          setDisplayName(currentName);
           setPoints(profile.balance || 0);
           setLuckySpins(profile.lucky_spins || 0);
+        }
 
-          // Lấy lịch sử CÁ NHÂN từ Server
-          const { data: historyData } = await supabase
-            .from("wheel_history")
-            .select("*")
-            .eq("user_email", currentName)
-            .order("id", { ascending: false })
-            .limit(10);
-          if (historyData) setHistory(historyData);
+        const saved = localStorage.getItem(`wheel_history_${user.id}`);
+        if (saved) {
+          try { setHistory(JSON.parse(saved)); } catch (e) {}
         }
       }
       setLoading(false);
@@ -94,17 +86,15 @@ export default function WheelPage() {
         .eq("id", user.id);
 
       if (!error) {
-        // Ghi log cá nhân lên wheel_history
-        const { data: newLog } = await supabase.from("wheel_history").insert([
-          {
-            user_email: displayName,
-            reward_label: chosenReward.label,
-          }
-        ]).select();
+        const newItem: LocalHistory = {
+          id: Date.now(),
+          text: `Quay trúng: ${chosenReward.label}`,
+          time: new Date().toLocaleTimeString(),
+        };
 
-        if (newLog && newLog[0]) {
-          setHistory((prev) => [newLog[0] as WheelHistoryItem, ...prev.slice(0, 9)]);
-        }
+        const updatedHistory = [newItem, ...history].slice(0, 15);
+        setHistory(updatedHistory);
+        localStorage.setItem(`wheel_history_${user.id}`, JSON.stringify(updatedHistory));
 
         setPoints(newPts);
         setLuckySpins(newSpins);
@@ -127,7 +117,6 @@ export default function WheelPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none space-y-4">
-      {/* Top Bar chuyển tiếp */}
       <div className="w-full max-w-xl flex justify-between items-center">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
@@ -178,7 +167,6 @@ export default function WheelPage() {
         </div>
       </div>
 
-      {/* BẢNG LỊCH SỬ QUAY THƯỞNG CÁ NHÂN */}
       <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
         <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
           <h2 className="text-sm font-black text-purple-400 uppercase tracking-wider">
@@ -191,8 +179,8 @@ export default function WheelPage() {
           ) : (
             history.map((item) => (
               <div key={item.id} className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-3 py-2 rounded-xl text-xs">
-                <span className="text-slate-300">Quay trúng phần thưởng:</span>
-                <span className="text-amber-400 font-black">{item.reward_label}</span>
+                <span className="text-slate-300">{item.text}</span>
+                <span className="text-slate-500 text-[10px]">{item.time}</span>
               </div>
             ))
           )}
