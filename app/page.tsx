@@ -26,21 +26,16 @@ const DEFAULT_AVATARS = [
 ];
 
 const AURA_QUOTES = [
-  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn của chính mình!' - Son Goku",
-  "⚡ 'Sức mạnh đến từ nhu cầu, không phải từ mong muốn.' - Vegeta",
-  "🐉 'Khi bạn từ bỏ hy vọng, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi",
-  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan!' - Vegeta",
-  "🌟 'Hãy dồn toàn bộ Ki vào cú đánh quyết định!' - Gogeta",
-  "🌀 'Nỗi sợ hãi không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình và trở nên mạnh mẽ hơn.' - Goku",
-  "🥋 'Võ thuật không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa (Master Roshi)",
-  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là kẻ mạnh nhất!' - Broly",
-  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước số phận, kể cả khi đối mặt với thần linh!' - Vegeta",
-  "🐉 'Bản Năng Vô Thượng (Ultra Instinct)... đó là trạng thái khi cơ thể tự động phản ứng mà không cần suy nghĩ!' - Whis",
-  "💥 'Hãy nhớ lấy điều này: Ta không chiến đấu vì công lý, ta chiến đấu vì những kẻ ta yêu thương!' - Son Goku",
-  "🌟 'Tuyệt chiêu Kamehameha không chỉ là năng lượng, nó là ý chí được cô đọng lại!' - Son Gohan",
-  "🌀 'Giới hạn chỉ tồn tại trong tâm trí của những kẻ chịu bỏ cuộc.' - Piccolo",
-  "🔥 'Sự tức giận chính là cội nguồn của sức mạnh tiềm ẩn trong người Saiyan chúng ta!' - Vegeta",
-  "⚡ 'Tương lai là thứ do chính đôi tay này tự viết nên, không một vị thần nào có quyền phán xét!' - Trunks Tương Lai"
+  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn của chính mình!' - Son Goku[cite: 2]",
+  "⚡ 'Sức mạnh đến từ nhu cầu, không phải từ mong muốn.' - Vegeta[cite: 2]",
+  "🐉 'Khi bạn từ bỏ hy vọng, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi[cite: 2]",
+  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan!' - Vegeta[cite: 2]",
+  "🌟 'Hãy dồn toàn bộ Ki vào cú đánh quyết định!' - Gogeta[cite: 2]",
+  "🌀 'Nỗi sợ hãi không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku[cite: 2]",
+  "🥋 'Võ thuật không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa[cite: 2]",
+  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là kẻ mạnh nhất!' - Broly[cite: 2]",
+  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước số phận!' - Vegeta[cite: 2]",
+  "🐉 'Bản Năng Vô Thượng... trạng thái khi cơ thể tự động phản ứng!' - Whis[cite: 2]",
 ];
 
 export default function Home() {
@@ -172,7 +167,7 @@ export default function Home() {
     };
   }, []);
 
-  // LẮNG NGHE CHAT CHUNG REALTIME KHỚP VỚI BẢNG CỦA NÍ
+  // LẮNG NGHE CHAT CHUNG REALTIME
   useEffect(() => {
     if (!user) return;
 
@@ -310,7 +305,7 @@ export default function Home() {
       alert("Hôm nay chiến binh đã tụ Ki nhận thưởng rồi!");
       return;
     }
-    const newPoints = points + 500;
+    const newPoints = points + 1000;
     const newSpins = luckySpins + 1;
 
     const { error } = await supabase
@@ -322,7 +317,7 @@ export default function Home() {
       setPoints(newPoints);
       setLuckySpins(newSpins);
       setLastCheckIn(today);
-      alert("🔥 Bứt phá giới hạn! +500 PTS Ki Aura & +1 Lượt Quay!");
+      alert("🔥 TỤ KI THÀNH CÔNG! +1.000 PTS & +1 Lượt Quay Free!");
     }
   };
 
@@ -335,7 +330,6 @@ export default function Home() {
     const userIdentifier = displayName || user.email || "Chiến Binh";
 
     try {
-      // 1. Gửi tin nhắn mới lên Supabase
       const { error } = await supabase.from("global_chat").insert([
         {
           user_email: userIdentifier,
@@ -344,14 +338,12 @@ export default function Home() {
       ]);
       if (error) throw error;
 
-      // 2. Tự động dọn dẹp: Chỉ giữ lại 50 tin nhắn mới nhất trong database, xóa sạch các tin cũ hơn
       const { data: allMsgs } = await supabase
         .from("global_chat")
         .select("id")
         .order("created_at", { ascending: false });
 
       if (allMsgs && allMsgs.length > 50) {
-        // Lấy danh sách các ID tin nhắn cũ vượt quá mốc 50
         const idsToDelete = allMsgs.slice(50).map((m: any) => m.id);
         await supabase
           .from("global_chat")
@@ -414,18 +406,6 @@ export default function Home() {
                 className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 transition"
                 required
               />
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-slate-300 px-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-amber-500"
-                />
-                <span>Ghi nhớ phiên đăng nhập</span>
-              </label>
             </div>
 
             <button
@@ -529,7 +509,7 @@ export default function Home() {
 
       {/* Banner & Quote */}
       <section
-        className="relative flex items-center justify-center min-h-[260px] sm:min-h-[320px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
+        className="relative flex items-center justify-center min-h-[240px] sm:min-h-[300px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
         style={{
           backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
         }}
@@ -539,7 +519,7 @@ export default function Home() {
           <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
             ✨ Chiến Binh: <span className="text-white">{displayName}</span>
           </div>
-          <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-lg tracking-wide">
+          <h1 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-lg tracking-wide">
             DRAGON GAMING ARENA
           </h1>
           <p className="text-amber-200/90 text-xs sm:text-sm italic font-medium max-w-xl mx-auto px-2 bg-slate-900/40 p-2 rounded-xl border border-amber-500/20">
@@ -548,31 +528,62 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Main Grid */}
+      {/* Main Grid: Sảnh nổi bật bên trái, BXH đôn gọn bên phải */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* SẢNH NỔI BẬT (Tích hợp đủ 3 thẻ Jackpot, Wheel, Shop) */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
             <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
-              🔥 Nổi Bật
+              🔥 Sảnh Nổi Bật
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            
+            {/* 1. Thẻ Nổ Hũ Jackpot */}
             <Link
               href="/jackpot"
-              className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden"
+              className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
             >
-              <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🎰</div>
-              <h3 className="text-lg font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
-              <p className="text-slate-400 text-xs sm:text-sm mt-1">Quay hũ tích tụ Ki nổ hũ Grand, Major, Minor cực khủng!</p>
-              <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
+              <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎰</div>
+              <h3 className="text-base font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
+              <p className="text-slate-400 text-xs mt-1">Quay hũ tích tụ Ki nổ hũ Grand, Major, Minor!</p>
+              <div className="mt-4 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                 Vào Nổ Hũ 🔮
               </div>
             </Link>
+
+            {/* 2. Thẻ Vòng Quay May Mắn */}
+            <Link
+              href="/wheel"
+              className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
+            >
+              <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎡</div>
+              <h3 className="text-base font-bold text-purple-400">🎡 Vòng Quay May Mắn</h3>
+              <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp điểm Ki thưởng!</p>
+              <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                Quay Ngay 🎟️
+              </div>
+            </Link>
+
+            {/* 3. Thẻ Shop Đổi Thưởng */}
+            <Link
+              href="/shop"
+              className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
+            >
+              <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🛒</div>
+              <h3 className="text-base font-bold text-emerald-400">🛒 Shop Võ Đạo</h3>
+              <p className="text-slate-400 text-xs mt-1">Đổi Điểm Ki lấy Lượt Quay Vòng May Mắn!</p>
+              <div className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                Vào Shop 💎
+              </div>
+            </Link>
+
           </div>
         </div>
 
-        {/* Bảng Xếp Hạng Top 5 */}
-        <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4">
+        {/* BẢNG XẾP HẠNG TOP 5 (Đôn ra góc phải gọn gàng) */}
+        <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit">
           <div className="flex items-center gap-2 border-l-4 border-orange-500 pl-3">
             <h2 className="text-base sm:text-lg font-black text-orange-400 tracking-wider uppercase">
               🏆 Top 5 Võ Đạo Vũ Trụ
@@ -594,7 +605,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="text-base">{medals[index]}</span>
-                      <span className="text-xs sm:text-sm text-slate-200 truncate max-w-[120px] sm:max-w-[140px]">
+                      <span className="text-xs sm:text-sm text-slate-200 truncate max-w-[120px]">
                         {item.full_name} {isMe && "(Tôi)"}
                       </span>
                     </div>
@@ -608,12 +619,13 @@ export default function Home() {
             )}
           </div>
         </div>
+
       </main>
 
       {/* POPUP HỒ SƠ */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🛡️</span>
@@ -653,7 +665,7 @@ export default function Home() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-amber-400 ml-1">Chọn 5 Avatar Dragon Ball Mặc Định</label>
+                <label className="text-xs font-bold text-amber-400 ml-1">Chọn Avatar Dragon Ball</label>
                 <div className="grid grid-cols-5 gap-2 pt-1">
                   {DEFAULT_AVATARS.map((av, idx) => (
                     <button
@@ -671,21 +683,10 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-amber-400 ml-1">Hoặc dán Link Ảnh (URL) Tùy Ý</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/avatar.jpg"
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 text-xs text-white px-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
               <button
                 type="submit"
                 disabled={updatingProfile}
-                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs py-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-md shadow-amber-500/20 disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs py-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-md disabled:opacity-50"
               >
                 {updatingProfile ? "Đang lưu..." : "LƯU THAY ĐỔI 💾"}
               </button>
@@ -694,12 +695,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* CHAT CHUNG REALTIME */}
+      {/* CHAT CHUNG REALTIME GỌN GÀNG GÓC DƯỚI PHẢI */}
       <div className="fixed bottom-3 right-3 z-50">
         {!chatOpen ? (
           <button
             onClick={() => setChatOpen(true)}
-            className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3.5 rounded-full shadow-2xl flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-300 hover:scale-105 transition"
+            className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3.5 rounded-full shadow-2xl flex items-center gap-2 cursor-pointer border-2 border-amber-300 hover:scale-105 transition"
           >
             <span className="text-xl">💬</span>
             <span className="text-xs tracking-wider hidden sm:inline">CHAT VŨ TRỤ</span>
@@ -763,7 +764,7 @@ export default function Home() {
               />
               <button
                 type="submit"
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-95 shadow"
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer shadow"
               >
                 Gửi
               </button>
