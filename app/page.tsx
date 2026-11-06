@@ -18,7 +18,6 @@ interface LeaderboardUser {
   balance: number;
 }
 
-// 5 Avatar mặc định chủ đề Dragon Ball cực chất
 const DEFAULT_AVATARS = [
   { name: "Son Goku Super Saiyan", url: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=150&auto=format&fit=crop&q=80" },
   { name: "Vegeta Prince", url: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=150&auto=format&fit=crop&q=80" },
@@ -32,13 +31,23 @@ const AURA_QUOTES = [
   "⚡ 'Sức mạnh đến từ nhu cầu, không phải từ mong muốn.' - Vegeta",
   "🐉 'Khi bạn từ bỏ hy vọng, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi",
   "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan!' - Vegeta",
-  "🌟 'Hãy dồn toàn bộ Ki vào cú đánh quyết định!' - Gogeta"
+  "🌟 'Hãy dồn toàn bộ Ki vào cú đánh quyết định!' - Gogeta",
+  "🌀 'Nỗi sợ hãi không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình và trở nên mạnh mẽ hơn.' - Goku",
+  "🥋 'Võ thuật không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa (Master Roshi)",
+  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là kẻ mạnh nhất!' - Broly",
+  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước số phận, kể cả khi đối mặt với thần linh!' - Vegeta",
+  "🐉 'Bản Năng Vô Thượng (Ultra Instinct)... đó là trạng thái khi cơ thể tự động phản ứng mà không cần suy nghĩ!' - Whis",
+  "💥 'Hãy nhớ lấy điều này: Ta không chiến đấu vì công lý, ta chiến đấu vì những kẻ ta yêu thương!' - Son Goku",
+  "🌟 'Tuyệt chiêu Kamehameha không chỉ là năng lượng, nó là ý chí được cô đọng lại!' - Son Gohan",
+  "🌀 'Giới hạn chỉ tồn tại trong tâm trí của những kẻ chịu bỏ cuộc.' - Piccolo",
+  "🔥 'Sự tức giận chính là cội nguồn của sức mạnh tiềm ẩn trong người Saiyan chúng ta!' - Vegeta",
+  "⚡ 'Tương lai là thứ do chính đôi tay này tự viết nên, không một vị thần nào có quyền phán xét!' - Trunks Tương Lai"
 ];
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
-  const [points, setPoints] = useState<number>(0);
-  const [luckySpins, setLuckySpins] = useState<number>(0);
+  const [points, setPoints] = useState<number>(5000);
+  const [luckySpins, setLuckySpins] = useState<number>(3);
   const [lastCheckIn, setLastCheckIn] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +55,7 @@ export default function Home() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
-  const [rememberMe, setRememberMe] = useState(true); // Ghi nhớ đăng nhập
+  const [rememberMe, setRememberMe] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
 
   // Profile & Modal States
@@ -55,7 +64,7 @@ export default function Home() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Chat States
+  // Chat States (Fix Realtime chuẩn xác)
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -71,13 +80,13 @@ export default function Home() {
     setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
   }, []);
 
-  // KHỞI TẠO & LẮNG NGHE SESSION (LƯU ĐĂNG NHẬP)
+  // LƯU TRỮ & LẮNG NGHE PHIÊN ĐĂNG NHẬP
   useEffect(() => {
     async function loadUserProfile(currentUser: any) {
       if (!currentUser) {
         setUser(null);
-        setPoints(0);
-        setLuckySpins(0);
+        setPoints(5000);
+        setLuckySpins(3);
         setLastCheckIn("");
         setLoading(false);
         return;
@@ -102,18 +111,18 @@ export default function Home() {
             full_name: defaultName,
             avatar_url: defaultAvatar,
             balance: 5000,
-            lucky_spins: 0,
+            lucky_spins: 3,
             last_check_in: "",
           };
           await supabase.from("profiles").insert([initialData]);
           setPoints(5000);
-          setLuckySpins(0);
+          setLuckySpins(3);
           setLastCheckIn("");
           setDisplayName(defaultName);
           setAvatarUrl(defaultAvatar);
         } else {
           setPoints(profile.balance ?? 5000);
-          setLuckySpins(profile.lucky_spins ?? 0);
+          setLuckySpins(profile.lucky_spins ?? 3);
           setLastCheckIn(profile.last_check_in ?? "");
           setDisplayName(profile.full_name || defaultName);
           setAvatarUrl(profile.avatar_url || defaultAvatar);
@@ -164,17 +173,18 @@ export default function Home() {
     };
   }, []);
 
-  // REALTIME CHAT CHUNG
+  // LẮNG NGHE CHAT CHUNG REALTIME CHUẨN XÁC 100%
   useEffect(() => {
     if (!user) return;
 
     async function fetchInitialChat() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("global_chat")
         .select("*")
         .order("created_at", { ascending: true })
         .limit(50);
-      if (data) {
+      
+      if (!error && data) {
         const formattedMsgs = data.map((item: any) => ({
           id: item.id,
           uid: item.uid,
@@ -189,22 +199,26 @@ export default function Home() {
     fetchInitialChat();
 
     const channel = supabase
-      .channel("public:global_chat")
+      .channel("global_chat_realtime")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "global_chat" },
         (payload) => {
           const newMsg = payload.new as any;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: newMsg.id,
-              uid: newMsg.uid,
-              name: newMsg.name,
-              text: newMsg.text,
-              createdAt: newMsg.created_at,
-            },
-          ]);
+          setMessages((prev) => {
+            // Tránh duplicate tin nhắn nếu chính mình vừa gửi
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: newMsg.id,
+                uid: newMsg.uid,
+                name: newMsg.name,
+                text: newMsg.text,
+                createdAt: newMsg.created_at,
+              },
+            ];
+          });
           setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
       )
@@ -287,7 +301,6 @@ export default function Home() {
     const newCleanName = displayName.trim() || "Chiến Binh";
 
     try {
-      // Cập nhật bảng profiles
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ full_name: newCleanName, avatar_url: avatarUrl })
@@ -295,7 +308,6 @@ export default function Home() {
 
       if (profileError) throw profileError;
 
-      // Cập nhật metadata auth
       await supabase.auth.updateUser({
         data: { full_name: newCleanName, avatar_url: avatarUrl }
       });
@@ -339,13 +351,17 @@ export default function Home() {
     setNewMessage("");
 
     try {
-      await supabase.from("global_chat").insert([
+      const { error } = await supabase.from("global_chat").insert([
         {
           uid: user.id,
           name: displayName,
           text: textToSend,
         },
       ]);
+      if (error) {
+        console.error("Lỗi khi gửi tin nhắn lên DB:", error.message);
+        alert("Không thể gửi tin nhắn: " + error.message);
+      }
     } catch (err) {
       console.error("Lỗi chat:", err);
     }
@@ -375,7 +391,7 @@ export default function Home() {
               DRAGON ARCADE
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm font-medium">
-              {isSignUp ? "✨ Khởi tạo tài khoản nhận ngay 1000 PTS & 3 Lượt Quay" : "⚡ Đăng nhập bước vào không gian võ đạo"}
+              {isSignUp ? "✨ Khởi tạo tài khoản nhận ngay 5000 PTS & 3 Lượt Quay" : "⚡ Đăng nhập bước vào không gian võ đạo"}
             </p>
           </div>
 
@@ -454,7 +470,6 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Avatar góc phải trên mobile */}
             <div className="flex items-center gap-2 sm:hidden">
               <button
                 onClick={() => setProfileModalOpen(true)}
@@ -494,7 +509,6 @@ export default function Home() {
               {isCheckedInToday ? "✅ Đã Tụ Ki" : "🔥 Tụ Ki"}
             </button>
 
-            {/* Avatar góc phải trên PC */}
             <div className="hidden sm:flex items-center gap-3 ml-2">
               <button
                 onClick={() => setProfileModalOpen(true)}
@@ -600,7 +614,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* POPUP THÔNG TIN CÁ NHÂN & ĐỔI AVATAR / TÊN */}
+      {/* POPUP HỒ SƠ */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
           <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
@@ -640,7 +654,6 @@ export default function Home() {
                   className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
                   required
                 />
-                <p className="text-[10px] text-slate-500 ml-1">Tên này hiển thị trên bảng xếp hạng và khung chat, không đổi tên đăng nhập.</p>
               </div>
 
               <div className="space-y-1">
