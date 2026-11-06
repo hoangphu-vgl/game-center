@@ -38,6 +38,20 @@ const AURA_QUOTES = [
   "🐉 'Bản Năng Vô Thượng... trạng thái khi cơ thể tự động phản ứng!' - Whis[cite: 2]",
 ];
 
+// HỆ THỐNG PHÂN CẤP 10 CẤP ĐỘ SỨC MẠNH DRAGON BALL
+const getSaiyanLevel = (power: number) => {
+  if (power >= 1000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
+  if (power >= 7500000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
+  if (power >= 4500000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
+  if (power >= 100000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
+  if (power >= 75000000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
+  if (power >= 50000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
+  if (power >= 30000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
+  if (power >= 1000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/40 bg-yellow-950/30" };
+  if (power >= 500000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
+  return { name: "🌍 Lv.1 - Người Trái Đất", color: "text-slate-300 border-slate-700 bg-slate-900/50" };
+};
+
 export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [points, setPoints] = useState<number>(5000);
@@ -58,7 +72,7 @@ export default function Home() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Chat States (Chỉ dùng 1 khung chat duy nhất ở góc dưới phải)
+  // Chat States
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -305,8 +319,8 @@ export default function Home() {
       alert("Hôm nay chiến binh đã tụ Ki nhận thưởng rồi!");
       return;
     }
-    const newPoints = points + 1000;
-    const newSpins = luckySpins + 1;
+    const newPoints = points + 5000; // Nhận 5k điểm sức mạnh khi check-in
+    const newSpins = luckySpins + 2;
 
     const { error } = await supabase
       .from("profiles")
@@ -317,7 +331,7 @@ export default function Home() {
       setPoints(newPoints);
       setLuckySpins(newSpins);
       setLastCheckIn(today);
-      alert("🔥 TỤ KI THÀNH CÔNG! +1.000 PTS & +1 Lượt Quay Free!");
+      alert("🔥 TỤ KI THÀNH CÔNG! +5.000 Điểm Sức Mạnh & +2 Lượt Quay Free!");
     }
   };
 
@@ -379,7 +393,7 @@ export default function Home() {
               DRAGON ARCADE
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm font-medium">
-              {isSignUp ? "✨ Khởi tạo tài khoản nhận ngay 5000 PTS & 3 Lượt Quay" : "⚡ Đăng nhập bước vào không gian võ đạo"}
+              {isSignUp ? "✨ Khởi tạo tài khoản nhận ngay 5.000 Điểm Sức Mạnh" : "⚡ Đăng nhập bước vào không gian võ đạo"}
             </p>
           </div>
 
@@ -432,6 +446,7 @@ export default function Home() {
   }
 
   const isCheckedInToday = lastCheckIn === getTodayString();
+  const currentLevel = getSaiyanLevel(points);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
@@ -463,12 +478,15 @@ export default function Home() {
           </div>
 
           <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
-            <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
+            {/* Điểm Sức Mạnh (Ki) */}
+            <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2.5 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
               <span>⚡</span>
               <span className="font-black text-amber-400 truncate">{points.toLocaleString()}</span>
+              <span className="text-[10px] text-amber-300/70">Ki</span>
             </div>
 
-            <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
+            {/* Lượt Quay */}
+            <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2.5 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
               <span>🎟️</span>
               <span className="font-black text-purple-300 truncate">{luckySpins}</span>
             </div>
@@ -493,7 +511,10 @@ export default function Home() {
                 <div className="w-8 h-8 rounded-full overflow-hidden border border-amber-400">
                   <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover group-hover:scale-110 transition" />
                 </div>
-                <span className="text-xs font-bold text-amber-300 truncate max-w-[100px]">{displayName}</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-bold text-amber-300 truncate max-w-[100px]">{displayName}</span>
+                  <span className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${currentLevel.color}`}>{currentLevel.name}</span>
+                </div>
               </button>
 
               <button
@@ -516,8 +537,13 @@ export default function Home() {
       >
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950"></div>
         <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
-            ✨ Chiến Binh: <span className="text-white">{displayName}</span>
+          <div className="flex flex-wrap justify-center items-center gap-2">
+            <span className="px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
+              ✨ Chiến Binh: <span className="text-white">{displayName}</span>
+            </span>
+            <span className={`px-3 py-1 border rounded-full text-[11px] font-black backdrop-blur-sm shadow ${currentLevel.color}`}>
+              {currentLevel.name}
+            </span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-lg tracking-wide">
             DRAGON GAMING ARENA
@@ -531,7 +557,7 @@ export default function Home() {
       {/* Main Grid: Sảnh nổi bật bên trái, BXH đôn gọn bên phải */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* SẢNH NỔI BẬT (Tích hợp đủ 3 thẻ Jackpot, Wheel, Shop) */}
+        {/* SẢNH NỔI BẬT (3 Thẻ: Jackpot, Vòng Quay, Shop) */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
             <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
@@ -547,7 +573,7 @@ export default function Home() {
             >
               <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎰</div>
               <h3 className="text-base font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
-              <p className="text-slate-400 text-xs mt-1">Quay hũ tích tụ Ki nổ hũ Grand, Major, Minor!</p>
+              <p className="text-slate-400 text-xs mt-1">Quay hũ tích tụ Điểm Sức Mạnh nổ hũ Grand, Major!</p>
               <div className="mt-4 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                 Vào Nổ Hũ 🔮
               </div>
@@ -560,7 +586,7 @@ export default function Home() {
             >
               <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎡</div>
               <h3 className="text-base font-bold text-purple-400">🎡 Vòng Quay May Mắn</h3>
-              <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp điểm Ki thưởng!</p>
+              <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp thêm Điểm Sức Mạnh!</p>
               <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                 Quay Ngay 🎟️
               </div>
@@ -573,7 +599,7 @@ export default function Home() {
             >
               <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🛒</div>
               <h3 className="text-base font-bold text-emerald-400">🛒 Shop Võ Đạo</h3>
-              <p className="text-slate-400 text-xs mt-1">Đổi Điểm Ki lấy Lượt Quay Vòng May Mắn!</p>
+              <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh quy đổi Lượt Quay!</p>
               <div className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                 Vào Shop 💎
               </div>
@@ -596,6 +622,7 @@ export default function Home() {
               leaderboard.map((item, index) => {
                 const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
                 const isMe = item.id === user?.id;
+                const userLvl = getSaiyanLevel(item.balance);
                 return (
                   <div
                     key={item.id}
@@ -605,9 +632,12 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="text-base">{medals[index]}</span>
-                      <span className="text-xs sm:text-sm text-slate-200 truncate max-w-[120px]">
-                        {item.full_name} {isMe && "(Tôi)"}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-xs sm:text-sm text-slate-200 truncate max-w-[110px]">
+                          {item.full_name} {isMe && "(Tôi)"}
+                        </span>
+                        <span className="text-[9px] text-amber-300 font-semibold">{userLvl.name.split(" - ")[1]}</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1 text-xs text-amber-400 font-black">
                       <span>⚡</span>
@@ -622,7 +652,7 @@ export default function Home() {
 
       </main>
 
-      {/* POPUP HỒ SƠ */}
+      {/* POPUP HỒ SƠ & CẤP ĐỘ */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
           <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
@@ -645,8 +675,11 @@ export default function Home() {
               </div>
               <div className="space-y-1">
                 <h4 className="font-extrabold text-sm text-white truncate">{displayName}</h4>
-                <div className="flex items-center gap-3 text-xs text-amber-400 font-bold">
-                  <span>⚡ {points.toLocaleString()} PTS</span>
+                <div className={`inline-block text-[10px] font-black px-2 py-0.5 rounded border ${currentLevel.color}`}>
+                  {currentLevel.name}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-amber-400 font-bold pt-1">
+                  <span>⚡ {points.toLocaleString()} Sức Mạnh</span>
                   <span>🎟️ {luckySpins} Lượt</span>
                 </div>
               </div>
@@ -654,7 +687,7 @@ export default function Home() {
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị (Display Name)</label>
+                <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị</label>
                 <input
                   type="text"
                   value={displayName}
@@ -695,7 +728,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* CHAT CHUNG REALTIME (ĐÃ GỌN GÀNG DUY NHẤT 1 BONG BÓNG Ở GÓC DƯỚI PHẢI) */}
+      {/* CHAT CHUNG REALTIME (1 BONG BÓNG Ở GÓC DƯỚI PHẢI) */}
       <div className="fixed bottom-3 right-3 z-50">
         {!chatOpen ? (
           <button
