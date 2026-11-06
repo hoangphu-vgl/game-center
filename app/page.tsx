@@ -41,6 +41,7 @@ export default function Home() {
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
+  // KHỞI TẠO & LẮNG NGHE USER TRÊN FIRESTORE CHUẨN XÁC 100%
   useEffect(() => {
     let unsubscribeUserDoc: () => void;
 
@@ -49,39 +50,46 @@ export default function Home() {
 
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
 
-        if (!userSnap.exists()) {
-          // CHỈ TẠO LẦN ĐẦU TIÊN CHO USER MỚI TINH
-          await setDoc(userRef, {
-            uid: currentUser.uid,
-            name: currentUser.displayName || "Chiến Binh Saiyan",
-            email: currentUser.email || "",
-            photoURL: currentUser.photoURL || "",
-            points: 1000,
-            luckySpins: 3,
-            lastCheckIn: "",
-            createdAt: serverTimestamp(),
-          });
-        } else {
-          // USER CŨ: CHỈ CẬP NHẬT TÊN/ẢNH, NÓI KHÔNG VỚI GHI ĐÈ ĐIỂM!
-          await setDoc(
-            userRef,
-            {
+        try {
+          const userSnap = await getDoc(userRef);
+
+          if (!userSnap.exists()) {
+            // NẾU CHƯA CÓ TRÊN FIRESTORE -> TẠO MỚI NGAY LẬP TỨC CHO CẢ BẠN BÈ & CHỦ NHÀ
+            await setDoc(userRef, {
+              uid: currentUser.uid,
               name: currentUser.displayName || "Chiến Binh Saiyan",
               email: currentUser.email || "",
               photoURL: currentUser.photoURL || "",
-            },
-            { merge: true }
-          );
+              points: 1000,
+              luckySpins: 3,
+              lastCheckIn: "",
+              createdAt: serverTimestamp(),
+            });
+            setPoints(1000);
+            setLuckySpins(3);
+          } else {
+            // NẾU ĐÃ CÓ RỒI -> CHỈ CẬP NHẬT THÔNG TIN PROFILE, GIỮ NGUYÊN ĐIỂM SỐ
+            await setDoc(
+              userRef,
+              {
+                name: currentUser.displayName || "Chiến Binh Saiyan",
+                email: currentUser.email || "",
+                photoURL: currentUser.photoURL || "",
+              },
+              { merge: true }
+            );
+          }
+        } catch (err) {
+          console.error("Lỗi khởi tạo user trên Firestore:", err);
         }
 
-        // LẮNG NGHE ĐỒNG BỘ REALTIME TỪ FIRESTORE
+        // LẮNG NGHE REALTIME: ĐIỂM SỐ NHẬY SỐ LẬP TỨC KHI THAY ĐỔI
         unsubscribeUserDoc = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setPoints(data.points !== undefined ? data.points : 0);
-            setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 0);
+            setPoints(data.points !== undefined ? data.points : 1000);
+            setLuckySpins(data.luckySpins !== undefined ? data.luckySpins : 3);
             setLastCheckIn(data.lastCheckIn || "");
           }
         });
@@ -99,6 +107,7 @@ export default function Home() {
     };
   }, []);
 
+  // LẮNG NGHE CHAT CHUNG
   useEffect(() => {
     const q = query(
       collection(db, "globalChat"),
@@ -136,7 +145,7 @@ export default function Home() {
     try {
       await addDoc(collection(db, "globalChat"), {
         uid: user.uid,
-        name: user.displayName || "Chiến Binh",
+        name: currentUserDisplayName() || "Chiến Binh", // Đã xử lý an toàn ní bên dưới
         photoURL: user.photoURL || "",
         text: newMessage.trim(),
         createdAt: serverTimestamp(),
@@ -146,6 +155,10 @@ export default function Home() {
       console.error("Lỗi gửi tin nhắn:", err);
     }
   };
+
+  function currentUserDisplayName() {
+    return user?.displayName;
+  }
 
   if (loading) {
     return (
@@ -281,7 +294,7 @@ export default function Home() {
                 <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🛍️</div>
                 <h3 className="text-lg font-bold text-amber-400">🛍️ Cửa Hàng Đổi Quà</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Dùng điểm Ki đổi lượt quay hoặc VNĐ!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Cửa Hàng 🛒
                 </div>
               </Link>
@@ -293,7 +306,7 @@ export default function Home() {
                 <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🎰</div>
                 <h3 className="text-lg font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Quay hũ tích tụ Ki nổ hũ Grand cực khủng!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
                   Vào Nổ Hũ 🔮
                 </div>
               </Link>
