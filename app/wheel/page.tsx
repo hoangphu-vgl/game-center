@@ -4,15 +4,16 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
+// BẢNG PHẦN THƯỞNG MỚI THEO Ý NÍ (CÓ JACKPOT 1.000.000 KI)
 const WHEEL_REWARDS = [
-  { label: "+500 Ki", type: "pts", val: 500 },
-  { label: "+1.000 Ki", type: "pts", val: 1000 },
-  { label: "+5.000 Ki", type: "pts", val: 5000 },
-  { label: "+1 Lượt Quay", type: "spins", val: 1 },
-  { label: "+20.000 Ki", type: "pts", val: 20000 },
-  { label: "Mất Ki! (0 PTS)", type: "pts", val: 0 },
-  { label: "+5 Lượt Quay", type: "spins", val: 5 },
-  { label: "JACKPOT 100K Ki!", type: "pts", val: 100000 },
+  { label: "+5.000 Ki", type: "pts", val: 5000, weight: 30 },
+  { label: "+100.000 Ki", type: "pts", val: 100000, weight: 15 },
+  { label: "+200.000 Ki", type: "pts", val: 200000, weight: 10 },
+  { label: "+1 Lượt Quay", type: "spins", val: 1, weight: 10 },
+  { label: "+2 Lượt Quay", type: "spins", val: 2, weight: 10 },
+  { label: "Mất Ki! (0 PTS)", type: "pts", val: 0, weight: 20 },
+  { label: "+5 Lượt Quay", type: "spins", val: 5, weight: 4 },
+  { label: "JACKPOT 1000K Ki!", type: "pts", val: 1000000, weight: 1 },
 ];
 
 interface LocalHistory {
@@ -56,6 +57,33 @@ export default function WheelPage() {
     fetchUserData();
   }, []);
 
+  // THUẬT TOÁN QUAY THƯỞNG TRỌNG SỐ & CHỐNG LẶP JACKPOT 1 CỦ LIÊN TIẾP
+  const getRandomReward = (userId: string) => {
+    let availableRewards = [...WHEEL_REWARDS];
+
+    const savedHistory = localStorage.getItem(`wheel_history_${userId}`);
+    if (savedHistory) {
+      try {
+        const parsedHistory = JSON.parse(savedHistory);
+        if (parsedHistory.length > 0 && parsedHistory[0].text.includes("JACKPOT")) {
+          availableRewards = WHEEL_REWARDS.filter(r => !r.label.includes("JACKPOT"));
+        }
+      } catch (e) {}
+    }
+
+    const totalWeight = availableRewards.reduce((sum, item) => sum + item.weight, 0);
+    let randomNum = Math.random() * totalWeight;
+
+    for (let reward of availableRewards) {
+      if (randomNum < reward.weight) {
+        return reward;
+      }
+      randomNum -= reward.weight;
+    }
+
+    return availableRewards[0];
+  };
+
   const handleSpin = async () => {
     if (!user) return;
     if (luckySpins <= 0) {
@@ -68,7 +96,7 @@ export default function WheelPage() {
     setResultMessage(null);
 
     const remainingSpins = luckySpins - 1;
-    const chosenReward = WHEEL_REWARDS[Math.floor(Math.random() * WHEEL_REWARDS.length)];
+    const chosenReward = getRandomReward(user.id);
 
     setTimeout(async () => {
       let newPts = points;
@@ -92,8 +120,8 @@ export default function WheelPage() {
           time: new Date().toLocaleTimeString(),
         };
 
-        const updatedHistory = [newItem, ...history].slice(0, 15);
-        setHistory(updatedHistory);
+        const updatedHistory = [newItem, [...history]].slice(0, 15);
+        setHistory(updatedHistory as any);
         localStorage.setItem(`wheel_history_${user.id}`, JSON.stringify(updatedHistory));
 
         setPoints(newPts);
@@ -104,7 +132,7 @@ export default function WheelPage() {
         setSpinning(false);
         alert("Lỗi vòng quay: " + error.message);
       }
-    }, 1600);
+    }, 1800);
   };
 
   if (loading) {
@@ -116,64 +144,107 @@ export default function WheelPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none space-y-4">
-      <div className="w-full max-w-xl flex justify-between items-center">
+    <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none space-y-5">
+      {/* Top Bar điều hướng */}
+      <div className="w-full max-w-2xl flex justify-between items-center">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
         </Link>
         <div className="flex gap-2 items-center">
-          <Link href="/shop" className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-xl text-[11px] font-black transition">
+          <Link href="/shop" className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-3 py-1 rounded-xl text-xs font-black transition shadow">
             🛒 Đổi Lượt
           </Link>
-          <div className="bg-slate-900 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-black text-amber-400">
+          <div className="bg-slate-900 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-black text-amber-400 shadow">
             ⚡ {points.toLocaleString()} Ki
           </div>
-          <div className="bg-slate-900 border border-purple-500/40 px-3 py-1 rounded-xl text-xs font-black text-purple-300">
+          <div className="bg-slate-900 border border-purple-500/40 px-3 py-1 rounded-xl text-xs font-black text-purple-300 shadow">
             🎟️ {luckySpins} Lượt
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-xl bg-slate-900 border-2 border-purple-500/50 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center space-y-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black text-purple-400">🎡 VÒNG QUAY MAY MẮN RỒNG THẦN</h1>
-          <p className="text-slate-400 text-xs mt-1">Dùng Lượt Quay để húp Điểm Sức Mạnh và phần thưởng khủng từ vũ trụ!</p>
-        </div>
-
-        <div className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-500 p-1 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.6)] ${spinning ? "animate-spin" : ""}`}>
-          <div className="w-full h-full bg-slate-950 rounded-full flex flex-col items-center justify-center">
-            <span className="text-4xl sm:text-5xl animate-bounce">🐲</span>
-            <span className="text-[11px] text-amber-300 font-bold mt-1">SAIYAN WHEEL</span>
+      {/* BANNER QUẢNG CÁO JACKPOT 1 TRIỆU KI (ĐẶC SẮC Ở GIỮA) */}
+      <div className="w-full max-w-2xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 p-[2px] rounded-3xl shadow-[0_0_25px_rgba(245,158,11,0.4)] animate-pulse">
+        <div className="bg-slate-950 rounded-[22px] p-4 text-center flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl sm:text-4xl">👑</span>
+            <div className="text-left">
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 font-black px-2 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-widest">
+                Sự Kiện Đặc Biệt
+              </span>
+              <h2 className="text-sm sm:text-base font-black text-yellow-300 mt-1">
+                JACKPOT SIÊU KHỦNG 1.000.000 KI ĐANG CHỜ!
+              </h2>
+            </div>
           </div>
-        </div>
-
-        {resultMessage && (
-          <div className="bg-purple-500/20 border border-purple-400/50 px-4 py-2 rounded-xl text-purple-300 text-xs sm:text-sm font-bold animate-bounce">
-            {resultMessage}
+          <div className="text-xs text-slate-300 font-medium bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 text-center sm:text-right">
+            Quay ngay vận may đổi đời thành Thần Hủy Diệt! ⚡
           </div>
-        )}
-
-        <button
-          onClick={handleSpin}
-          disabled={spinning || luckySpins <= 0}
-          className="w-full max-w-sm bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 text-slate-950 font-black text-sm py-3.5 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg shadow-purple-500/30 disabled:opacity-50"
-        >
-          {spinning ? "Rồng Thần Đang Quay..." : luckySpins <= 0 ? "HẾT LƯỢT QUAY (ĐẾN SHOP ĐỔI NGAY)" : `QUAY NGAY (${luckySpins} Lượt) 🚀`}
-        </button>
-
-        <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-800 w-full flex justify-around">
-          <span>⚡ Không tốn Điểm Sức Mạnh</span>
-          <span>🎁 Thưởng ngẫu nhiên 100%</span>
         </div>
       </div>
 
-      <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
+      {/* KHUNG CHÍNH: VÒNG QUAY + GÓC XEM PHẦN THƯỞNG */}
+      <div className="w-full max-w-2xl grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        {/* Vòng quay chính (Chiếm 2 cột) */}
+        <div className="md:col-span-2 bg-slate-900 border-2 border-purple-500/50 rounded-3xl p-5 shadow-2xl flex flex-col items-center text-center space-y-4">
+          <div>
+            <h1 className="text-lg sm:text-xl font-black text-purple-400">🎡 VÒNG QUAY RỒNG THẦN</h1>
+            <p className="text-slate-400 text-xs mt-0.5">Thử thách nhân phẩm, rinh thưởng cực đại!</p>
+          </div>
+
+          <div className={`w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-500 p-1 flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.7)] ${spinning ? "animate-spin" : ""}`}>
+            <div className="w-full h-full bg-slate-950 rounded-full flex flex-col items-center justify-center border-4 border-slate-900">
+              <span className="text-4xl sm:text-5xl animate-bounce">🐲</span>
+              <span className="text-[10px] text-amber-300 font-black mt-1 tracking-wider">SAIYAN WHEEL</span>
+            </div>
+          </div>
+
+          {resultMessage && (
+            <div className="bg-purple-500/20 border border-purple-400/50 px-4 py-2 rounded-xl text-purple-300 text-xs font-bold animate-bounce">
+              {resultMessage}
+            </div>
+          )}
+
+          <button
+            onClick={handleSpin}
+            disabled={spinning || luckySpins <= 0}
+            className="w-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 text-slate-950 font-black text-sm py-3 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg shadow-purple-500/30 disabled:opacity-50 transition"
+          >
+            {spinning ? "Rồng Thần Đang Quay..." : luckySpins <= 0 ? "HẾT LƯỢT QUAY (ĐẾN SHOP)" : `QUAY NGAY (${luckySpins} Lượt) 🚀`}
+          </button>
+        </div>
+
+        {/* GÓC THUẬN TIỆN: BẢNG TÓM TẮT GIẢI THƯỞNG (Chiếm 1 cột) */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl flex flex-col space-y-3">
+          <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-2">
+            <h3 className="text-xs font-black text-amber-400 uppercase tracking-wider">
+              🎁 Kho Phần Thưởng
+            </h3>
+          </div>
+          <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
+            {WHEEL_REWARDS.map((item, idx) => (
+              <div key={idx} className="flex justify-between items-center bg-slate-950/80 border border-slate-800 px-2.5 py-1.5 rounded-xl text-[11px]">
+                <span className="text-slate-300 font-medium truncate max-w-[100px]">{item.label}</span>
+                <span className={`font-black ${item.val >= 1000000 ? 'text-yellow-400 animate-pulse' : item.val >= 100000 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {item.val >= 1000000 ? '👑 1M Ki' : item.val >= 100000 ? `${item.val / 1000}K Ki` : item.type === 'spins' ? '🎟️ Lượt' : `${item.val} Ki`}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-500 text-center italic">Tỷ lệ công khai theo nhân phẩm!</p>
+        </div>
+
+      </div>
+
+      {/* LỊCH SỬ QUAY THƯỞNG CÁ NHÂN */}
+      <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl space-y-3">
         <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
-          <h2 className="text-sm font-black text-purple-400 uppercase tracking-wider">
+          <h2 className="text-xs sm:text-sm font-black text-purple-400 uppercase tracking-wider">
             📜 Lịch Sử Quay Thưởng Của Bạn
           </h2>
         </div>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
           {history.length === 0 ? (
             <div className="text-xs text-slate-500 text-center py-4">Bạn chưa có lượt quay thưởng nào.</div>
           ) : (

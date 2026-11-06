@@ -5,12 +5,23 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 const SHOP_SPIN_PACKS = [
-  { id: 1, name: "🎟️ 1 Lượt Quay Tập Sự", cost: 1000, spins: 1, desc: "Gói đổi Ki lấy lượt quay thử vận may nhỏ lẻ!" },
-  { id: 2, name: "🎟️ 5 Lượt Quay Saiyan", cost: 4500, spins: 5, desc: "Khuyến mãi tiết kiệm 500 Điểm Sức Mạnh!" },
-  { id: 3, name: "🎟️ 10 Lượt Quay SSJ", cost: 8500, spins: 10, desc: "Siêu ưu đãi bứt phá giới hạn!" },
-  { id: 4, name: "🎟️ 20 Lượt Quay Ultra Instinct", cost: 16000, spins: 20, desc: "Gói lượt quay tối thượng húp trọn kho phần thưởng!" },
-  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 35000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
+  { id: 1, name: "🎟️ 1 Lượt Quay Tập Sự", cost: 100000, spins: 1, desc: "Gói đổi Ki lấy lượt quay thử vận may nhỏ lẻ!" },
+  { id: 2, name: "🎟️ 5 Lượt Quay Saiyan", cost: 450000, spins: 5, desc: "Khuyến mãi tiết kiệm Điểm Sức Mạnh!" },
+  { id: 3, name: "🎟️ 10 Lượt Quay SSJ", cost: 850000, spins: 10, desc: "Siêu ưu đãi bứt phá giới hạn chiến lực!" },
+  { id: 4, name: "🎟️ 20 Lượt Quay Ultra Instinct", cost: 1600000, spins: 20, desc: "Gói lượt quay tối thượng húp trọn kho phần thưởng!" },
+  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 4500000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
 ];
+
+// SIÊU GÓI 1 CỦ (5.000 VNĐ / CỰC PHẨM ĐẠI GIA)
+const MEGA_VIP_PACK = {
+  id: 99,
+  name: "👑 SIÊU GÓI 1 CỦ - RỒNG THẦN TỈNH GIẤC",
+  cost: 5000000, // 5 triệu Ki (tương đương 1 củ flex)
+  spins: 100,    // 100 lượt quay cực khủng
+  desc: "Chỉ dành cho các Thiên Sứ và Thần Hủy Diệt thực thụ! Sức mạnh hủy diệt vũ trụ trong tầm tay!",
+  maxGlobalStock: 20, // Kho chung còn lại mỗi tuần
+  maxUserLimit: 5,    // Giới hạn cá nhân mỗi user/tuần
+};
 
 interface LocalHistory {
   id: number;
@@ -24,6 +35,10 @@ export default function ShopPage() {
   const [luckySpins, setLuckySpins] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<LocalHistory[]>([]);
+  
+  // State quản lý giới hạn Gói 1 Củ theo tuần
+  const [globalStock, setGlobalStock] = useState<number>(20);
+  const [userBuyCount, setUserBuyCount] = useState<number>(0);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -41,10 +56,25 @@ export default function ShopPage() {
           setLuckySpins(profile.lucky_spins || 0);
         }
 
-        // Lấy lịch sử từ localStorage theo user id
-        const saved = localStorage.getItem(`shop_history_${user.id}`);
-        if (saved) {
-          try { setHistory(JSON.parse(saved)); } catch (e) {}
+        // Lấy lịch sử shop từ localStorage
+        const savedHistory = localStorage.getItem(`shop_history_${user.id}`);
+        if (savedHistory) {
+          try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
+        }
+
+        // Kiểm tra dữ liệu kho và giới hạn tuần của gói 1 củ từ localStorage (reset theo tuần dạng mock đơn giản hoặc lưu key tuần)
+        const currentWeekKey = getWeekKey();
+        const storedStock = localStorage.getItem(`mega_global_stock_${currentWeekKey}`);
+        if (storedStock !== null) {
+          setGlobalStock(parseInt(storedStock));
+        } else {
+          localStorage.setItem(`mega_global_stock_${currentWeekKey}`, "20");
+          setGlobalStock(20);
+        }
+
+        const storedUserCount = localStorage.getItem(`mega_user_count_${user.id}_${currentWeekKey}`);
+        if (storedUserCount !== null) {
+          setUserBuyCount(parseInt(storedUserCount));
         }
       }
       setLoading(false);
@@ -52,16 +82,38 @@ export default function ShopPage() {
     fetchUserData();
   }, []);
 
-  const handleBuySpins = async (pack: typeof SHOP_SPIN_PACKS[0]) => {
+  // Hàm lấy key tuần hiện tại để tự động reset
+  const getWeekKey = () => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const week = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+    return `${now.getFullYear()}-W${week}`;
+  };
+
+  const handleBuySpins = async (packName: string, cost: number, spins: number, isMega: boolean = false) => {
     if (!user) return;
-    if (points < pack.cost) {
-      alert("⚡ Điểm Sức Mạnh không đủ! Hãy cược game hoặc Tụ Ki mỗi ngày để kiếm thêm điểm nhé!");
+
+    // Kiểm tra giới hạn nếu là Gói 1 Củ
+    const currentWeekKey = getWeekKey();
+    if (isMega) {
+      if (userBuyCount >= MEGA_VIP_PACK.maxUserLimit) {
+        alert("🛡️ KỲ LÂN KHIÊM TỐN! Bạn đã húp trọn 5/5 lần hạn mức của tuần này rồi, để phần cho các vũ trụ khác thở với chứ!");
+        return;
+      }
+      if (globalStock <= 0) {
+        alert("💨 CHẬM CHÂN RỒI CHIẾN BINH! Kho tổng gói 1 củ tuần này đã bị anh em húp sạch bách 20/20 gói. Hẹn tuần sau reset kho nhé!");
+        return;
+      }
+    }
+
+    if (points < cost) {
+      alert("⚡ Ki tích lũy của bạn quá nghèo nàn để chạm tới cảnh giới này! Hãy đi cược hoặc Tụ Ki tích cực hơn đi, đừng làm Zeno-sama thất vọng!");
       return;
     }
 
-    if (confirm(`Bạn có chắc muốn dùng ${pack.cost.toLocaleString()} Điểm Sức Mạnh để đổi +${pack.spins} Lượt Quay không?`)) {
-      const newPts = points - pack.cost;
-      const newSpins = luckySpins + pack.spins;
+    if (confirm(`Xác nhận dùng ${cost.toLocaleString()} Điểm Sức Mạnh để đổi ${packName}?`)) {
+      const newPts = points - cost;
+      const newSpins = luckySpins + spins;
 
       const { error } = await supabase
         .from("profiles")
@@ -69,9 +121,21 @@ export default function ShopPage() {
         .eq("id", user.id);
 
       if (!error) {
+        let newGlobal = globalStock;
+        let newUserCount = userBuyCount;
+
+        if (isMega) {
+          newGlobal = globalStock - 1;
+          newUserCount = userBuyCount + 1;
+          setGlobalStock(newGlobal);
+          setUserBuyCount(newUserCount);
+          localStorage.setItem(`mega_global_stock_${currentWeekKey}`, newGlobal.toString());
+          localStorage.setItem(`mega_user_count_${user.id}_${currentWeekKey}`, newUserCount.toString());
+        }
+
         const newItem: LocalHistory = {
           id: Date.now(),
-          text: `Đã đổi ${pack.name} (-${pack.cost.toLocaleString()} Ki)`,
+          text: `Đã đổi ${packName} (-${cost.toLocaleString()} Ki)`,
           time: new Date().toLocaleTimeString(),
         };
 
@@ -81,7 +145,12 @@ export default function ShopPage() {
 
         setPoints(newPts);
         setLuckySpins(newSpins);
-        alert(`🎉 ĐỔI THÀNH CÔNG! Nhận ngay +${pack.spins} Lượt Quay Vòng May Mắn!`);
+        
+        if (isMega) {
+          alert(`👑 ĐỈNH CAO NHÂN PHẨM! Bạn đã sở hữu Siêu Gói 1 Củ (+${spins} Lượt)! Đã mua ${newUserCount}/5 lần trong tuần này. Uy tín của Thần Hủy Diệt là đây chứ đâu! 🔥`);
+        } else {
+          alert(`🎉 ĐỔI THÀNH CÔNG! Nhận ngay +${spins} Lượt Quay Vòng May Mắn!`);
+        }
       } else {
         alert("Có lỗi xảy ra: " + error.message);
       }
@@ -96,32 +165,72 @@ export default function ShopPage() {
     );
   }
 
+  const isMegaLocked = userBuyCount >= MEGA_VIP_PACK.maxUserLimit || globalStock <= 0;
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none space-y-4">
+      {/* Top Bar điều hướng */}
       <div className="w-full max-w-3xl flex justify-between items-center">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
         </Link>
         <div className="flex gap-2 items-center">
-          <Link href="/wheel" className="bg-purple-600/80 hover:bg-purple-500 text-white px-2.5 py-1 rounded-xl text-[11px] font-black transition">
+          <Link href="/wheel" className="bg-purple-600/80 hover:bg-purple-500 text-white px-3 py-1 rounded-xl text-xs font-black transition shadow">
             🎡 Vòng Quay
           </Link>
-          <div className="bg-slate-900 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-black text-amber-400">
+          <div className="bg-slate-900 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-black text-amber-400 shadow">
             ⚡ {points.toLocaleString()} Ki
           </div>
-          <div className="bg-slate-900 border border-purple-500/40 px-3 py-1 rounded-xl text-xs font-black text-purple-300">
+          <div className="bg-slate-900 border border-purple-500/40 px-3 py-1 rounded-xl text-xs font-black text-purple-300 shadow">
             🎟️ {luckySpins} Lượt
           </div>
         </div>
       </div>
 
-      <div className="w-full max-w-3xl bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4">
+      <div className="w-full max-w-3xl bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-5">
         <div className="border-b border-slate-800 pb-3 text-center sm:text-left">
-          <h1 className="text-xl sm:text-2xl font-black text-emerald-400">🛒 CỬA HÀNG ĐỔI LƯỢT QUAY</h1>
-          <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh tích lũy để lấy Lượt Quay Vòng May Mắn rinh quà khủng!</p>
+          <h1 className="text-xl sm:text-2xl font-black text-emerald-400">🛒 CỬA HÀNG VÕ ĐẠO SANG CHẢNH</h1>
+          <p className="text-slate-400 text-xs mt-1">Nơi trao đổi chiến lực, bứt phá sức mạnh vượt mọi giới hạn vũ trụ!</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* --- SIÊU GÓI 1 CỦ (TO BỰ, PHÁT SÁNG, ĐẶC BIỆT NHẤT) --- */}
+        <div className="relative bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 p-[3px] rounded-3xl shadow-[0_0_30px_rgba(245,158,11,0.5)] animate-pulse">
+          <div className="bg-slate-950 rounded-[22px] p-5 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="space-y-1.5 text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <span className="text-[10px] bg-yellow-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  🔥 Độc Quyền Siêu Vip
+                </span>
+                <span className="text-[10px] bg-slate-900 text-amber-400 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                  Kho tổng: {globalStock}/20 gói tuần này
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-yellow-300">{MEGA_VIP_PACK.name}</h3>
+              <p className="text-xs text-slate-300 max-w-md">{MEGA_VIP_PACK.desc}</p>
+              <div className="text-[11px] text-amber-400/90 font-bold">
+                ⚠️ Giới hạn của bạn: <span className="text-white">{userBuyCount}/5 lần</span> tuần này
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
+              <span className="text-sm font-black text-yellow-400">{MEGA_VIP_PACK.cost.toLocaleString()} Ki</span>
+              <button
+                onClick={() => handleBuySpins(MEGA_VIP_PACK.name, MEGA_VIP_PACK.cost, MEGA_VIP_PACK.spins, true)}
+                disabled={isMegaLocked}
+                className={`w-full sm:w-auto font-black text-xs px-5 py-3 rounded-xl transition shadow-lg ${
+                  isMegaLocked 
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                    : "bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 text-slate-950 hover:brightness-110 active:scale-95 cursor-pointer shadow-amber-500/40"
+                }`}
+              >
+                {userBuyCount >= MEGA_VIP_PACK.maxUserLimit ? "ĐÃ HÚP TỐI ĐA (KHÓA)" : globalStock <= 0 ? "HẾT KHO TỔNG" : "SĂN NGAY 1 CỦ 👑"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* --- CÁC GÓI THƯỜNG KHÁC --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           {SHOP_SPIN_PACKS.map((pack) => (
             <div key={pack.id} className="bg-slate-950 border border-slate-800 p-4 rounded-2xl flex flex-col justify-between gap-3 hover:border-emerald-500/50 transition">
               <div>
@@ -131,7 +240,7 @@ export default function ShopPage() {
               <div className="flex items-center justify-between pt-2 border-t border-slate-900">
                 <span className="text-xs font-black text-emerald-400">{pack.cost.toLocaleString()} Ki</span>
                 <button
-                  onClick={() => handleBuySpins(pack)}
+                  onClick={() => handleBuySpins(pack.name, pack.cost, pack.spins, false)}
                   className="bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow"
                 >
                   Đổi Lượt 🎟️
@@ -142,15 +251,16 @@ export default function ShopPage() {
         </div>
       </div>
 
+      {/* BẢNG LỊCH SỬ ĐỔI LƯỢT CÁ NHÂN */}
       <div className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
         <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
-          <h2 className="text-sm font-black text-emerald-400 uppercase tracking-wider">
+          <h2 className="text-xs sm:text-sm font-black text-emerald-400 uppercase tracking-wider">
             📜 Lịch Sử Đổi Lượt Của Bạn
           </h2>
         </div>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
           {history.length === 0 ? (
-            <div className="text-xs text-slate-500 text-center py-4">Bạn chưa đổi gói lượt quay nào.</div>
+            <div className="text-xs text-slate-500 text-center py-4">Bạn chưa đổi gói lượt quay nào. Tụ Ki lẹ lên nào chiến binh!</div>
           ) : (
             history.map((item) => (
               <div key={item.id} className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-3 py-2 rounded-xl text-xs">
