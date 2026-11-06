@@ -121,7 +121,7 @@ export default function JackpotPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
   const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
-    text: "Võ đạo Dragon Ball: Sưu tập đủ 6 Scatter trên 6 cột để kích hoạt 20 Free Spins!",
+    text: "Võ đạo Dragon Ball: Sưu tập đủ 6 Ngọc Ước trên 6 cột để kích hoạt 20 Free Spins!",
     type: "normal",
   });
 
@@ -223,8 +223,8 @@ export default function JackpotPage() {
         const rand = Math.random();
         let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
         if (rand > 0.4) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
-        if (rand > 0.75) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
-        if (rand > 0.90) pool = DRAGON_SYMBOLS.filter((s) => s.type === "scatter"); // Mức cân bằng ở giữa (~10% mỗi ô)
+        if (rand > 0.70) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
+        if (rand > 0.85) pool = DRAGON_SYMBOLS.filter((s) => s.type === "scatter"); // Nâng tỉ lệ ra Ngọc Ước lên 15% mỗi ô
 
         let selected = pool[Math.floor(Math.random() * pool.length)];
         if (selected.id === prevId && selected.type !== "scatter" && Math.random() < 0.65) {
@@ -356,22 +356,26 @@ export default function JackpotPage() {
       }
     }
 
+    // KÍCH HOẶC HOẶC CỘNG DỒN (RETRIGGER) 20 FREE SPINS KHI ĐỦ 6 CỘT NGỌC ƯỚC
     if (hasScatterInAllCols) {
       setFreeSpinsLeft(prev => prev + 20);
       setWinningCoords(scatterIndices);
       triggerJackpotSideGlow();
-      const freeSpinMsg = `🌟 KÍCH HOẠT THÀNH CÔNG SCATTER! Nhận ngay 20 VÒNG QUAY MIỄN PHÍ sảnh ${bet} PTS! 🚀`;
+      const freeSpinMsg = isFreeSpinActive 
+        ? `🌟 CỘNG DỒN THÀNH CÔNG! Thêm +20 VÒNG QUAY MIỄN PHÍ sảnh ${bet} PTS! 🚀`
+        : `🌟 KÍCH HOẠT THÀNH CÔNG NGỌC ƯỚC! Nhận ngay 20 VÒNG QUAY MIỄN PHÍ sảnh ${bet} PTS! 🚀`;
+      
       setMessageBox({ text: freeSpinMsg, type: "win" });
-      triggerBroadcast(`📢 HUYỀN THOẠI SCATTER: Chiến binh [${playerName}] vừa sưu tập đủ 6 cột Scatter, nhận ngay 20 Free Spins cực khủng! 🌟🔥`);
+      triggerBroadcast(`📢 HUYỀN THOẠI NGỌC ƯỚC: Chiến binh [${playerName}] vừa sưu tập đủ 6 cột Ngọc Ước, nhận thêm 20 Free Spins cực khủng! 🌟🔥`);
       addHistory(freeSpinMsg, true);
       continueAutoIfNeeded(remainingAuto);
       return;
     }
 
-    let winChance = isFreeSpinActive ? 0.45 : 0.20;
+    let winChance = isFreeSpinActive ? 0.50 : 0.30;
     if (!isFreeSpinActive) {
       if (bet <= 50) winChance = 0.25;
-      else if (bet <= 500) winChance = 0.15;
+      else if (bet <= 500) winChance = 0.20;
       else if (bet <= 2000) winChance = 0.10;
       else winChance = 0.05;
     }
