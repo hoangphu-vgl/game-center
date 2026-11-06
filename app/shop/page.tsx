@@ -9,16 +9,15 @@ const SHOP_SPIN_PACKS = [
   { id: 2, name: "🎟️ 5 Lượt Quay Saiyan", cost: 450000, spins: 5, desc: "Khuyến mãi tiết kiệm Điểm Sức Mạnh!" },
   { id: 3, name: "🎟️ 10 Lượt Quay SSJ", cost: 850000, spins: 10, desc: "Siêu ưu đãi bứt phá giới hạn chiến lực!" },
   { id: 4, name: "🎟️ 20 Lượt Quay Ultra Instinct", cost: 1600000, spins: 20, desc: "Gói lượt quay tối thượng húp trọn kho phần thưởng!" },
-  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 4500000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
+  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 2500000, spins: 30, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
 ];
 
-// SIÊU GÓI 1 CỦ (5.000 VNĐ / CỰC PHẨM ĐẠI GIA)
+// SIÊU GÓI 1 CỦ (FLEX TƯỢNG TRƯNG - CHỈ GHI LỊCH SỬ, KHÔNG CỘNG LƯỢT, KHÔNG TRỪ KI)
 const MEGA_VIP_PACK = {
   id: 99,
-  name: "👑 SIÊU GÓI 1 CỦ - RỒNG THẦN TỈNH GIẤC",
-  cost: 5000000, // 5 triệu Ki (tương đương 1 củ flex)
-  spins: 100,    // 100 lượt quay cực khủng
-  desc: "Chỉ dành cho các Thiên Sứ và Thần Hủy Diệt thực thụ! Sức mạnh hủy diệt vũ trụ trong tầm tay!",
+  name: "👑 SIÊU GÓI 3.000.000 KI",
+  costText: "3.000.000 Ki / 5.000 VNĐ",
+  desc: "Gói flex danh dự vũ trụ!",
   maxGlobalStock: 20, // Kho chung còn lại mỗi tuần
   maxUserLimit: 5,    // Giới hạn cá nhân mỗi user/tuần
 };
@@ -36,7 +35,6 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<LocalHistory[]>([]);
   
-  // State quản lý giới hạn Gói 1 Củ theo tuần
   const [globalStock, setGlobalStock] = useState<number>(20);
   const [userBuyCount, setUserBuyCount] = useState<number>(0);
 
@@ -56,13 +54,11 @@ export default function ShopPage() {
           setLuckySpins(profile.lucky_spins || 0);
         }
 
-        // Lấy lịch sử shop từ localStorage
         const savedHistory = localStorage.getItem(`shop_history_${user.id}`);
         if (savedHistory) {
           try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
         }
 
-        // Kiểm tra dữ liệu kho và giới hạn tuần của gói 1 củ từ localStorage (reset theo tuần dạng mock đơn giản hoặc lưu key tuần)
         const currentWeekKey = getWeekKey();
         const storedStock = localStorage.getItem(`mega_global_stock_${currentWeekKey}`);
         if (storedStock !== null) {
@@ -82,7 +78,6 @@ export default function ShopPage() {
     fetchUserData();
   }, []);
 
-  // Hàm lấy key tuần hiện tại để tự động reset
   const getWeekKey = () => {
     const now = new Date();
     const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -90,24 +85,10 @@ export default function ShopPage() {
     return `${now.getFullYear()}-W${week}`;
   };
 
-  const handleBuySpins = async (packName: string, cost: number, spins: number, isMega: boolean = false) => {
+  const handleBuySpins = async (packName: string, cost: number, spins: number) => {
     if (!user) return;
-
-    // Kiểm tra giới hạn nếu là Gói 1 Củ
-    const currentWeekKey = getWeekKey();
-    if (isMega) {
-      if (userBuyCount >= MEGA_VIP_PACK.maxUserLimit) {
-        alert("🛡️ KỲ LÂN KHIÊM TỐN! Bạn đã húp trọn 5/5 lần hạn mức của tuần này rồi, để phần cho các vũ trụ khác thở với chứ!");
-        return;
-      }
-      if (globalStock <= 0) {
-        alert("💨 CHẬM CHÂN RỒI CHIẾN BINH! Kho tổng gói 1 củ tuần này đã bị anh em húp sạch bách 20/20 gói. Hẹn tuần sau reset kho nhé!");
-        return;
-      }
-    }
-
     if (points < cost) {
-      alert("⚡ Ki tích lũy của bạn quá nghèo nàn để chạm tới cảnh giới này! Hãy đi cược hoặc Tụ Ki tích cực hơn đi, đừng làm Zeno-sama thất vọng!");
+      alert("⚡ Ki tích lũy của bạn không đủ để đổi gói này! Hãy chăm chỉ cược game hoặc Tụ Ki đi nhé chiến binh!");
       return;
     }
 
@@ -121,18 +102,6 @@ export default function ShopPage() {
         .eq("id", user.id);
 
       if (!error) {
-        let newGlobal = globalStock;
-        let newUserCount = userBuyCount;
-
-        if (isMega) {
-          newGlobal = globalStock - 1;
-          newUserCount = userBuyCount + 1;
-          setGlobalStock(newGlobal);
-          setUserBuyCount(newUserCount);
-          localStorage.setItem(`mega_global_stock_${currentWeekKey}`, newGlobal.toString());
-          localStorage.setItem(`mega_user_count_${user.id}_${currentWeekKey}`, newUserCount.toString());
-        }
-
         const newItem: LocalHistory = {
           id: Date.now(),
           text: `Đã đổi ${packName} (-${cost.toLocaleString()} Ki)`,
@@ -145,15 +114,46 @@ export default function ShopPage() {
 
         setPoints(newPts);
         setLuckySpins(newSpins);
-        
-        if (isMega) {
-          alert(`👑 ĐỈNH CAO NHÂN PHẨM! Bạn đã sở hữu Siêu Gói 1 Củ (+${spins} Lượt)! Đã mua ${newUserCount}/5 lần trong tuần này. Uy tín của Thần Hủy Diệt là đây chứ đâu! 🔥`);
-        } else {
-          alert(`🎉 ĐỔI THÀNH CÔNG! Nhận ngay +${spins} Lượt Quay Vòng May Mắn!`);
-        }
+        alert(`🎉 ĐỔI THÀNH CÔNG! Nhận ngay +${spins} Lượt Quay Vòng May Mắn!`);
       } else {
         alert("Có lỗi xảy ra: " + error.message);
       }
+    }
+  };
+
+  // Mua Siêu Gói 1 Củ (CHỈ GHI LỊCH SỬ FLEX, KHÔNG CỘNG GÌ CẢ)
+  const handleFlexMegaVip = () => {
+    if (!user) return;
+    const currentWeekKey = getWeekKey();
+
+    if (userBuyCount >= MEGA_VIP_PACK.maxUserLimit) {
+      alert("🛡️ THẦN HỦY DIỆT CŨNG PHẢI KHIÊM TỐN! Bạn đã flex đủ 5/5 lần trong tuần này rồi, nhường đất diễn cho anh em vũ trụ khác với chứ!");
+      return;
+    }
+    if (globalStock <= 0) {
+      alert("💨 CHẬM CHÂN RỒI ĐẠI GIA! Kho tổng gói 1 củ tuần này đã bị anh em húp sạch bách 20/20 vé flex. Đợi tuần sau reset kho nhé!");
+      return;
+    }
+
+    if (confirm(`Xác nhận Flex Siêu Gói 1 Củ (5.000 VNĐ / 1.000.000 Ki) để lưu danh sử sách vũ trụ?`)) {
+      const newGlobal = globalStock - 1;
+      const newUserCount = userBuyCount + 1;
+      setGlobalStock(newGlobal);
+      setUserBuyCount(newUserCount);
+      localStorage.setItem(`mega_global_stock_${currentWeekKey}`, newGlobal.toString());
+      localStorage.setItem(`mega_user_count_${user.id}_${currentWeekKey}`, newUserCount.toString());
+
+      const newItem: LocalHistory = {
+        id: Date.now(),
+        text: `👑 Đã flex thành công [SIÊU GÓI 1 CỦ] - Đẳng cấp đại gia vô đối!`,
+        time: new Date().toLocaleTimeString(),
+      };
+
+      const updatedHistory = [newItem, ...history].slice(0, 15);
+      setHistory(updatedHistory);
+      localStorage.setItem(`shop_history_${user.id}`, JSON.stringify(updatedHistory));
+
+      alert(`👑 FLEX THÀNH CÔNG RỰC RỠ! Tên của bạn đã được khắc ghi vào sử sách với Siêu Gói 1 Củ! Đã flex ${newUserCount}/5 lần tuần này. Zeno-sama phải thán phục! 🔥`);
     }
   };
 
@@ -169,7 +169,6 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-3 sm:p-6 flex flex-col items-center select-none space-y-4">
-      {/* Top Bar điều hướng */}
       <div className="w-full max-w-3xl flex justify-between items-center">
         <Link href="/" className="text-xs sm:text-sm font-black text-amber-400 hover:underline">
           ← Về Cổng Game
@@ -190,32 +189,32 @@ export default function ShopPage() {
       <div className="w-full max-w-3xl bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-5">
         <div className="border-b border-slate-800 pb-3 text-center sm:text-left">
           <h1 className="text-xl sm:text-2xl font-black text-emerald-400">🛒 CỬA HÀNG VÕ ĐẠO SANG CHẢNH</h1>
-          <p className="text-slate-400 text-xs mt-1">Nơi trao đổi chiến lực, bứt phá sức mạnh vượt mọi giới hạn vũ trụ!</p>
+          <p className="text-slate-400 text-xs mt-1">Nơi trao đổi chiến lực và flex đẳng cấp vượt mọi giới hạn vũ trụ!</p>
         </div>
 
-        {/* --- SIÊU GÓI 1 CỦ (TO BỰ, PHÁT SÁNG, ĐẶC BIỆT NHẤT) --- */}
-        <div className="relative bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 p-[3px] rounded-3xl shadow-[0_0_30px_rgba(245,158,11,0.5)] animate-pulse">
+        {/* --- SIÊU GÓI 1 CỦ (FLEX TƯỢNG TRƯNG - KHÔNG CỘNG LƯỢT) --- */}
+        <div className="relative bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 p-[3px] rounded-3xl shadow-[0_0_35px_rgba(245,158,11,0.6)] animate-pulse">
           <div className="bg-slate-950 rounded-[22px] p-5 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="space-y-1.5 text-center sm:text-left">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                 <span className="text-[10px] bg-yellow-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  🔥 Độc Quyền Siêu Vip
+                  🔥 Độc Quyền Flex Danh Dự
                 </span>
                 <span className="text-[10px] bg-slate-900 text-amber-400 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/30">
-                  Kho tổng: {globalStock}/20 gói tuần này
+                  Kho tổng tuần: {globalStock}/20 vé
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-yellow-300">{MEGA_VIP_PACK.name}</h3>
               <p className="text-xs text-slate-300 max-w-md">{MEGA_VIP_PACK.desc}</p>
               <div className="text-[11px] text-amber-400/90 font-bold">
-                ⚠️ Giới hạn của bạn: <span className="text-white">{userBuyCount}/5 lần</span> tuần này
+                ⚠️ Hạn mức flex của bạn: <span className="text-white">{userBuyCount}/5 lần</span> tuần này
               </div>
             </div>
             
             <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
-              <span className="text-sm font-black text-yellow-400">{MEGA_VIP_PACK.cost.toLocaleString()} Ki</span>
+              <span className="text-xs font-black text-yellow-400 bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/30">{MEGA_VIP_PACK.costText}</span>
               <button
-                onClick={() => handleBuySpins(MEGA_VIP_PACK.name, MEGA_VIP_PACK.cost, MEGA_VIP_PACK.spins, true)}
+                onClick={handleFlexMegaVip}
                 disabled={isMegaLocked}
                 className={`w-full sm:w-auto font-black text-xs px-5 py-3 rounded-xl transition shadow-lg ${
                   isMegaLocked 
@@ -223,7 +222,7 @@ export default function ShopPage() {
                     : "bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 text-slate-950 hover:brightness-110 active:scale-95 cursor-pointer shadow-amber-500/40"
                 }`}
               >
-                {userBuyCount >= MEGA_VIP_PACK.maxUserLimit ? "ĐÃ HÚP TỐI ĐA (KHÓA)" : globalStock <= 0 ? "HẾT KHO TỔNG" : "SĂN NGAY 1 CỦ 👑"}
+                {userBuyCount >= MEGA_VIP_PACK.maxUserLimit ? "ĐÃ FLEX TỐI ĐA (KHÓA)" : globalStock <= 0 ? "HẾT KHO TỔNG" : "FLEX NGAY 1 CỦ 👑"}
               </button>
             </div>
           </div>
@@ -240,7 +239,7 @@ export default function ShopPage() {
               <div className="flex items-center justify-between pt-2 border-t border-slate-900">
                 <span className="text-xs font-black text-emerald-400">{pack.cost.toLocaleString()} Ki</span>
                 <button
-                  onClick={() => handleBuySpins(pack.name, pack.cost, pack.spins, false)}
+                  onClick={() => handleBuySpins(pack.name, pack.cost, pack.spins)}
                   className="bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs px-3 py-1.5 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow"
                 >
                   Đổi Lượt 🎟️
@@ -251,20 +250,20 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* BẢNG LỊCH SỬ ĐỔI LƯỢT CÁ NHÂN */}
+      {/* BẢNG LỊCH SỬ CÁ NHÂN */}
       <div className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-3">
         <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
           <h2 className="text-xs sm:text-sm font-black text-emerald-400 uppercase tracking-wider">
-            📜 Lịch Sử Đổi Lượt Của Bạn
+            📜 Lịch Sử Đổi Lượt & Flex Của Bạn
           </h2>
         </div>
         <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
           {history.length === 0 ? (
-            <div className="text-xs text-slate-500 text-center py-4">Bạn chưa đổi gói lượt quay nào. Tụ Ki lẹ lên nào chiến binh!</div>
+            <div className="text-xs text-slate-500 text-center py-4">Bạn chưa có lịch sử giao dịch nào. Tụ Ki hoặc flex ngay đi nào chiến binh!</div>
           ) : (
             history.map((item) => (
               <div key={item.id} className="flex justify-between items-center bg-slate-950/70 border border-slate-800/80 px-3 py-2 rounded-xl text-xs">
-                <span className="text-slate-300">{item.text}</span>
+                <span className={`font-medium ${item.text.includes("FLEX") ? "text-yellow-300 font-bold" : "text-slate-300"}`}>{item.text}</span>
                 <span className="text-slate-500 text-[10px]">{item.time}</span>
               </div>
             ))
