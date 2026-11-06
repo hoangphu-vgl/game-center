@@ -92,6 +92,10 @@ export default function JackpotPage() {
   const streakRef = useRef<number>(-1);
   const [streakIndex, setStreakIndex] = useState<number>(-1);
 
+  // State cho thông báo toàn thể giữ 10s
+  const [broadcastMsg, setBroadcastMsg] = useState<string | null>(null);
+  const broadcastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [grid, setGrid] = useState<typeof DRAGON_SYMBOLS>(
     Array(30).fill(DRAGON_SYMBOLS[0])
   );
@@ -140,6 +144,17 @@ export default function JackpotPage() {
   useEffect(() => {
     generateValidGrid();
   }, []);
+
+  // Hàm kích hoạt thông báo toàn thể (Giữ nguyên 10 giây)
+  const triggerBroadcast = (text: string) => {
+    if (broadcastTimerRef.current) {
+      clearTimeout(broadcastTimerRef.current);
+    }
+    setBroadcastMsg(text);
+    broadcastTimerRef.current = setTimeout(() => {
+      setBroadcastMsg(null);
+    }, 10000); // 10 giây
+  };
 
   const getRandomAura = () => {
     const totalWeight = AURA_QUICK_REWARDS.reduce((sum, aura) => sum + aura.weight, 0);
@@ -228,7 +243,7 @@ export default function JackpotPage() {
     setSpinning(true);
     setWinningCoords([]);
     
-    // X3 TỐC ĐỘ TÍCH HŨ: Trích tỷ lệ cược nhân 3 lần đổ thẳng vào hũ (Minor 75%, Major 45%, Grand 30%)
+    // Tích hũ x3
     setJackpots(prev => ({
       minor: prev.minor + Math.floor(bet * 0.75),
       major: prev.major + Math.floor(bet * 0.45),
@@ -256,6 +271,7 @@ export default function JackpotPage() {
 
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
     const bet = currentBetRef.current;
+    const playerName = user?.email ? user.email.split("@")[0] : "Chiến binh ẩn danh";
     
     let winChance = 0.20;
     if (bet <= 50) winChance = 0.25;
@@ -265,7 +281,6 @@ export default function JackpotPage() {
 
     const isTriggerWin = Math.random() < winChance;
     
-    // TỶ LỆ NỔ HŨ ĐÃ SIẾT CỰC GẮT
     const grandHit = Math.random() < 0.00002; // 0.002%
     const majorHit = !grandHit && Math.random() < 0.0001; // 0.01%
     const minorHit = !grandHit && !majorHit && Math.random() < 0.0004; // 0.04%
@@ -283,6 +298,7 @@ export default function JackpotPage() {
       resultText = `👑 NỔ HŨ GRAND JACKPOT! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
+      triggerBroadcast(`📢 KHO TÀNG CHẤN ĐỘNG: Chiến binh [${playerName}] vừa HÚP TRỌN GRAND JACKPOT khủng khiếp +${baseWinAmount.toLocaleString()} PTS! 👑🔥`);
       setJackpots(prev => ({ ...prev, grand: 100000 }));
     } else if (majorHit) {
       hitJackpotType = "major";
@@ -291,6 +307,7 @@ export default function JackpotPage() {
       resultText = `💎 NỔ HŨ MAJOR JACKPOT! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
+      triggerBroadcast(`📢 TIN VUI SẢNH: Chiến binh [${playerName}] vừa nổ tung MAJOR JACKPOT nhận +${baseWinAmount.toLocaleString()} PTS! 💎⚡`);
       setJackpots(prev => ({ ...prev, major: 45000 }));
     } else if (minorHit) {
       hitJackpotType = "minor";
@@ -299,6 +316,7 @@ export default function JackpotPage() {
       resultText = `🔥 NỔ HŨ MINOR JACKPOT! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
+      triggerBroadcast(`📢 CHÚ MỪNG: Chiến binh [${playerName}] vừa giật hũ MINOR JACKPOT +${baseWinAmount.toLocaleString()} PTS! 🔥`);
       setJackpots(prev => ({ ...prev, minor: 15000 }));
     } else if (isTriggerWin) {
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
@@ -478,6 +496,15 @@ export default function JackpotPage() {
       {/* Main Container */}
       <div className={`w-full max-w-md sm:max-w-4xl bg-slate-900/98 border-2 border-amber-500/50 rounded-2xl p-2 sm:p-4 shadow-2xl flex flex-col gap-2 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
+        {/* THANH THÔNG BÁO TOÀN THỂ (BROADCAST GIỮ 10S KHI CÓ NGƯỜI NỔ HŨ) */}
+        {broadcastMsg && (
+          <div className="bg-gradient-to-r from-amber-600 via-yellow-500 to-red-600 border-2 border-yellow-200 text-slate-950 font-black px-3 py-1.5 rounded-xl text-center text-xs sm:text-sm shadow-[0_0_20px_rgba(250,204,21,0.8)] animate-bounce flex items-center justify-center gap-2">
+            <span>⚡</span>
+            <span className="truncate">{broadcastMsg}</span>
+            <span>⚡</span>
+          </div>
+        )}
+
         {/* 3 HŨ JACKPOT */}
         <div className="grid grid-cols-3 gap-1.5 relative">
           {jackpotSideGlow && (
@@ -537,7 +564,7 @@ export default function JackpotPage() {
           </div>
         </div>
 
-        {/* KHUNG THÔNG BÁO */}
+        {/* KHUNG THÔNG BÁO CÁ NHÂN */}
         <div className="flex justify-between items-center bg-slate-950 border border-amber-500/30 px-3 py-1 rounded-xl text-[11px] sm:text-xs font-bold gap-2">
           <div className={`truncate ${messageBox.type === "break" ? "text-rose-500 font-black animate-bounce" : messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
             💬 {messageBox.text}
