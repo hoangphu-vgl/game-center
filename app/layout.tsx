@@ -1,6 +1,5 @@
 "use client";
 
-import type { Metadata } from "next";
 import "./globals.css";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
@@ -63,7 +62,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ
+  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ (Chỉ 1 luồng duy nhất)
   useEffect(() => {
     if (!user) return;
 
@@ -82,7 +81,7 @@ export default function RootLayout({
     fetchInitialChat();
 
     const channel = supabase
-      .channel("global_chat_overlay_realtime")
+      .channel("global_chat_layout_realtime")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "global_chat" },
@@ -92,7 +91,7 @@ export default function RootLayout({
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
-          setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
         }
       )
       .subscribe();
@@ -155,7 +154,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // Gửi tin nhắn siêu tốc (Đã loại bỏ code xóa rác gây nghẽn)
+  // Gửi tin nhắn siêu tốc
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
@@ -165,7 +164,6 @@ export default function RootLayout({
     const userIdentifier = displayName || user.email || "Chiến Binh";
 
     try {
-      // Gửi trực tiếp lên database cực nhanh không bị độ trễ
       const { error } = await supabase.from("global_chat").insert([
         {
           user_email: userIdentifier,
