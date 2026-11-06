@@ -13,33 +13,38 @@ const AUTO_OPTIONS = [
   { label: "Vô Cực", value: 99999 },
 ];
 
-// Trọn bộ Ngũ Linh, Thần Long & Đầy đủ 7 Viên Ngọc Rồng (1 đến 7 sao)
+// BẢNG BIỂU TƯỢNG HOÀN CHỈNH: Kết hợp Điểm gốc (basePoints) và Hệ số nhân (multiplier)
 const DRAGON_SYMBOLS = [
-  { id: "long", icon: "🐉", name: "Thanh Long", type: "strong", multiplier: 8 },
-  { id: "lan", icon: "🦄", name: "Kỳ Lân", type: "strong", multiplier: 8 },
-  { id: "phung", icon: "🦅", name: "Phượng Hoàng", type: "strong", multiplier: 8 },
-  { id: "quy", icon: "🐢", name: "Thần Quy", type: "strong", multiplier: 8 },
-  { id: "linh", icon: "🦖", name: "Linh thú", type: "strong", multiplier: 10 },
-  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "mid", multiplier: 25 },
-  { id: "goku", icon: "⭐", name: "Goku SSJ", type: "mid", multiplier: 6 },
-  // Đầy đủ 7 viên ngọc rồng từ 1 đến 7 sao
-  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", multiplier: 5 },
-  { id: "ball6", icon: "🔮", name: "Ngọc 6 Sao", type: "mid", multiplier: 3.5 },
-  { id: "ball5", icon: "🔮", name: "Ngọc 5 Sao", type: "weak", multiplier: 3 },
-  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "weak", multiplier: 2.5 },
-  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "weak", multiplier: 2 },
-  { id: "ball2", icon: "🔮", name: "Ngọc 2 Sao", type: "weak", multiplier: 1.5 },
-  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", multiplier: 1 },
-  { id: "senzu", icon: "🫘", name: "Đậu Senzu", type: "weak", multiplier: 0.5 },
-  { id: "capsule", icon: "💊", name: "Capsule", type: "weak", multiplier: 0.5 },
+  { id: "long", icon: "🐉", name: "Thanh Long", type: "strong", basePoints: 100, multiplier: 10 },
+  { id: "lan", icon: "🦄", name: "Kỳ Lân", type: "strong", basePoints: 120, multiplier: 12 },
+  { id: "phung", icon: "🦅", name: "Phượng Hoàng", type: "strong", basePoints: 100, multiplier: 10 },
+  { id: "quy", icon: "🐢", name: "Thần Quy", type: "strong", basePoints: 100, multiplier: 10 },
+  { id: "linh", icon: "🦖", name: "Linh thú", type: "strong", basePoints: 120, multiplier: 12 },
+  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "mid", basePoints: 150, multiplier: 15 },
+  { id: "goku", icon: "⭐", name: "Goku SSJ", type: "mid", basePoints: 60, multiplier: 6 },
+  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", basePoints: 50, multiplier: 5 },
+  { id: "ball6", icon: "🔮", name: "Ngọc 6 Sao", type: "mid", basePoints: 40, multiplier: 4 },
+  { id: "ball5", icon: "🔮", name: "Ngọc 5 Sao", type: "weak", basePoints: 30, multiplier: 3 },
+  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "weak", basePoints: 25, multiplier: 2.5 },
+  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "weak", basePoints: 20, multiplier: 2 },
+  { id: "ball2", icon: "🔮", name: "Ngọc 2 Sao", type: "weak", basePoints: 15, multiplier: 1.5 },
+  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", basePoints: 10, multiplier: 1 },
+  { id: "senzu", icon: "🫘", name: "Đậu Senzu", type: "weak", basePoints: 5, multiplier: 0.5 },
+  { id: "capsule", icon: "💊", name: "Capsule", type: "weak", basePoints: 5, multiplier: 0.5 },
 ];
 
+// MẢNG AURA THƯỞNG NHANH: Tích hợp Trọng số (weight) để cân bằng tỷ lệ xuất hiện
 const AURA_QUICK_REWARDS = [
-  { id: "ki_white", name: "⚪ Ki Trắng", mult: 1.5, icon: "✨" },
-  { id: "kaioken", name: "🔴 Kaioken", mult: 2, icon: "🔥" },
-  { id: "ssj1", name: "🟡 SSJ", mult: 2.5, icon: "⚡" },
-  { id: "ssj2", name: "⚡ SSJ 2", mult: 3, icon: "🌩️" },
-  { id: "ssj_god", name: "🔴 SSJ God", mult: 5, icon: "☀️" },
+  { id: "ki_white", name: "⚪ Ki Trắng", mult: 1.5, weight: 400, icon: "✨" },     // 35%
+  { id: "kaioken", name: "🔴 Kaioken", mult: 2.0, weight: 300, icon: "🔥" },        // 20%
+  { id: "ssj1", name: "🟡 SSJ", mult: 2.5, weight: 150, icon: "⚡" },             // 15%
+  { id: "ssj2", name: "⚡ SSJ 2", mult: 3.0, weight: 120, icon: "🌩️" },          // 12%
+  { id: "ssj3", name: "💥 SSJ 3", mult: 4.0, weight: 50, icon: "🌀" },           // 5%
+  { id: "ssj_blue", name: "🔵 SSJ Blue", mult: 5.0, weight: 40, icon: "💠" },     // 4%
+  { id: "ssj_god", name: "🔴 SSJ God", mult: 6.0, weight: 25, icon: "☀️" },        // 2.5%
+  { id: "android", name: "🤖 Đám Android", mult: 10.0, weight: 15, icon: "⚡" },   // 1.5%
+  { id: "ultra", name: "⚪ Ultra Instinct", mult: 12.0, weight: 5, icon: "🌌" },   // 0.5%
+  { id: "hakai", name: "🟣 Hakai Hủy Diệt", mult: 20.0, weight: 3, icon: "💀" },  // 0.3%
 ];
 
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
@@ -95,8 +100,8 @@ export default function JackpotPage() {
 
   const [jackpots, setJackpots] = useState({
     minor: 15000,
+    grand: 100000,
     major: 45000,
-    grand: 120000,
   });
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -137,6 +142,20 @@ export default function JackpotPage() {
   useEffect(() => {
     generateValidGrid();
   }, []);
+
+  // Hàm bốc thăm Aura ngẫu nhiên theo trọng số weight
+  const getRandomAura = () => {
+    const totalWeight = AURA_QUICK_REWARDS.reduce((sum, aura) => sum + aura.weight, 0);
+    let randomNum = Math.random() * totalWeight;
+    
+    for (const aura of AURA_QUICK_REWARDS) {
+      if (randomNum < aura.weight) {
+        return aura;
+      }
+      randomNum -= aura.weight;
+    }
+    return AURA_QUICK_REWARDS[0];
+  };
 
   const generateValidGrid = () => {
     const newGrid: typeof DRAGON_SYMBOLS = [];
@@ -240,16 +259,19 @@ export default function JackpotPage() {
   const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
     const bet = currentBetRef.current;
     
-    let winChance = 0.30;
-    if (bet <= 50) winChance = 0.38;
-    else if (bet <= 500) winChance = 0.30;
-    else if (bet <= 2000) winChance = 0.22;
-    else winChance = 0.15;
+    // Tỷ lệ thắng phân tầng theo mức cược
+    let winChance = 0.20;
+    if (bet <= 50) winChance = 0.25;
+    else if (bet <= 500) winChance = 0.15;
+    else if (bet <= 2000) winChance = 0.10;
+    else winChance = 0.05;
 
     const isTriggerWin = Math.random() < winChance;
-    const grandHit = Math.random() < 0.0008;
-    const majorHit = !grandHit && Math.random() < 0.003;
-    const minorHit = !grandHit && !majorHit && Math.random() < 0.01;
+    
+    // Tỷ lệ nổ hũ Jackpot
+    const grandHit = Math.random() < 0.0001;
+    const majorHit = !grandHit && Math.random() < 0.0005;
+    const minorHit = !grandHit && !majorHit && Math.random() < 0.002;
 
     let baseWinAmount = 0;
     let matchedIndices: number[] = [];
@@ -264,7 +286,7 @@ export default function JackpotPage() {
       resultText = `👑 NỔ HŨ GRAND JACKPOT! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
-      setJackpots(prev => ({ ...prev, grand: 120000 }));
+      setJackpots(prev => ({ ...prev, grand: 100000 }));
     } else if (majorHit) {
       hitJackpotType = "major";
       baseWinAmount = jackpots.major;
@@ -312,11 +334,13 @@ export default function JackpotPage() {
         }
 
         const mustExistInCol1 = columns[0].some(item => item.symbol.id === symId);
-        if (mustExistInCol1 && consecutiveColsCount >= 3) {
+        if (mustExistInCol1 && consecutiveColsCount >= 4) {
           const symObj = DRAGON_SYMBOLS.find((s) => s.id === symId);
           if (symObj) {
-            let symbolWin = symObj.type === "weak" ? (bet * 0.4) * symObj.multiplier * consecutiveColsCount : (bet * 0.8) * symObj.multiplier * consecutiveColsCount;
-            const columnBonus = consecutiveColsCount >= 5 ? 2.5 : consecutiveColsCount === 4 ? 1.8 : 1;
+            // CÔNG THỨC HYBRID: (basePoints + bet * 0.05) * multiplier * consecutiveColsCount * columnBonus
+            const baseScore = symObj.basePoints + (bet * 0.05);
+            let symbolWin = baseScore * symObj.multiplier * consecutiveColsCount;
+            const columnBonus = consecutiveColsCount >= 6 ? 2.5 : (consecutiveColsCount === 5 ? 1.8 : 1.2);
             totalStreakWin += Math.floor(symbolWin * columnBonus);
             tempMatchedIndices.forEach(idx => streakWinningSet.add(idx));
           }
@@ -334,7 +358,8 @@ export default function JackpotPage() {
         if (streakRef.current >= 0) {
           baseWinAmount = 0;
         } else {
-          const chosenAura = AURA_QUICK_REWARDS[Math.floor(Math.random() * AURA_QUICK_REWARDS.length)];
+          // Bốc thăm Aura nhanh theo trọng số weight
+          const chosenAura = getRandomAura();
           baseWinAmount = Math.floor(bet * chosenAura.mult);
           matchedIndices = [Math.floor(Math.random() * 6), Math.floor(Math.random() * 6) + 6];
           resultText = `${chosenAura.icon} BỘC PHÁT ${chosenAura.name.toUpperCase()}! Thưởng nhanh x${chosenAura.mult} = +${baseWinAmount.toLocaleString()} PTS`;

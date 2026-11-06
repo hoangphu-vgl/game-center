@@ -63,7 +63,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // Lắng nghe Chat Realtime toàn cục
+  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ
   useEffect(() => {
     if (!user) return;
 
@@ -155,7 +155,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // Gửi tin nhắn & Tự động cắt bỏ tin cũ vượt quá 50 tin
+  // Gửi tin nhắn siêu tốc (Đã loại bỏ code xóa rác gây nghẽn)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
@@ -165,6 +165,7 @@ export default function RootLayout({
     const userIdentifier = displayName || user.email || "Chiến Binh";
 
     try {
+      // Gửi trực tiếp lên database cực nhanh không bị độ trễ
       const { error } = await supabase.from("global_chat").insert([
         {
           user_email: userIdentifier,
@@ -172,22 +173,9 @@ export default function RootLayout({
         },
       ]);
       if (error) throw error;
-
-      // Tự động dọn dẹp: Chỉ giữ lại 50 tin nhắn mới nhất trong database
-      const { data: allMsgs } = await supabase
-        .from("global_chat")
-        .select("id")
-        .order("created_at", { ascending: false });
-
-      if (allMsgs && allMsgs.length > 50) {
-        const idsToDelete = allMsgs.slice(50).map((m: any) => m.id);
-        await supabase
-          .from("global_chat")
-          .delete()
-          .in("id", idsToDelete);
-      }
     } catch (err: any) {
       console.error("Lỗi chat:", err.message);
+      alert("Không thể gửi tin nhắn: " + err.message);
     }
   };
 
@@ -196,7 +184,7 @@ export default function RootLayout({
       <body className="antialiased bg-slate-950 text-white relative min-h-screen">
         {children}
 
-        {/* KHUNG CHAT NỔI TOÀN CỤC (HIỂN THỊ XUYÊN SUỐT TRÊN MỌI TRANG) */}
+        {/* KHUNG CHAT NỔI TOÀN CỤC */}
         {user && (
           <div className="fixed z-50 select-none" style={{ left: `${chatPosition.x}px`, top: `${chatPosition.y}px` }}>
             {!chatOpen ? (
@@ -211,7 +199,7 @@ export default function RootLayout({
             ) : (
               <div className="bg-slate-900/95 border-2 border-amber-500/70 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] w-[300px] sm:w-[350px] h-[380px] sm:h-[420px] flex flex-col overflow-hidden backdrop-blur-xl">
                 
-                {/* THANH TIÊU ĐỀ KÉO THẢ (DRAG HANDLE) */}
+                {/* THANH TIÊU ĐỀ KÉO THẢ */}
                 <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
