@@ -40,15 +40,15 @@ const AURA_QUOTES = [
 
 // HỆ THỐNG PHÂN CẤP 10 CẤP ĐỘ SỨC MẠNH DRAGON BALL
 const getSaiyanLevel = (power: number) => {
-  if (power >= 1000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
-  if (power >= 750000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
-  if (power >= 450000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
-  if (power >= 10000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
-  if (power >= 7500000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
-  if (power >= 5000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
-  if (power >= 3000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
-  if (power >= 1000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/40 bg-yellow-950/30" };
-  if (power >= 500000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
+  if (power >= 25000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
+  if (power >= 12000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
+  if (power >= 6000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
+  if (power >= 3000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
+  if (power >= 1500000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
+  if (power >= 500000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
+  if (power >= 200000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
+  if (power >= 50000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/50 bg-yellow-950/30" };
+  if (power >= 10000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
   return { name: "🌍 Lv.1 - Người Trái Đất", color: "text-slate-300 border-slate-700 bg-slate-900/50" };
 };
 
@@ -72,7 +72,7 @@ export default function Home() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Chat States
+  // Chat States (Chỉ dùng 1 khung chat duy nhất ở góc dưới phải)
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -319,8 +319,8 @@ export default function Home() {
       alert("Hôm nay chiến binh đã tụ Ki nhận thưởng rồi!");
       return;
     }
-    const newPoints = points + 5000; // Nhận 5k điểm sức mạnh khi check-in
-    const newSpins = luckySpins + 2;
+    const newPoints = points + 1000;
+    const newSpins = luckySpins + 1;
 
     const { error } = await supabase
       .from("profiles")
@@ -331,7 +331,7 @@ export default function Home() {
       setPoints(newPoints);
       setLuckySpins(newSpins);
       setLastCheckIn(today);
-      alert("🔥 TỤ KI THÀNH CÔNG! +5.000 Điểm Sức Mạnh & +2 Lượt Quay Free!");
+      alert("🔥 TỤ KI THÀNH CÔNG! +1.000 Điểm Sức Mạnh & +1 Lượt Quay Free!");
     }
   };
 
@@ -393,7 +393,7 @@ export default function Home() {
               DRAGON ARCADE
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm font-medium">
-              {isSignUp ? "✨ Khởi tạo tài khoản nhận ngay 5.000 Điểm Sức Mạnh" : "⚡ Đăng nhập bước vào không gian võ đạo"}
+              {isSignUp ? "✨ Khởi tạo tài khoản nhận ngay 5000 Điểm Sức Mạnh & 3 Lượt Quay" : "⚡ Đăng nhập bước vào không gian võ đạo"}
             </p>
           </div>
 
@@ -557,7 +557,7 @@ export default function Home() {
       {/* Main Grid: Sảnh nổi bật bên trái, BXH đôn gọn bên phải */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* SẢNH NỔI BẬT (3 Thẻ: Jackpot, Vòng Quay, Shop) */}
+        {/* SẢNH NỔI BẬT (Tích hợp đủ 3 thẻ Jackpot, Wheel, Shop) */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
             <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
@@ -652,7 +652,7 @@ export default function Home() {
 
       </main>
 
-      {/* POPUP HỒ SƠ & CẤP ĐỘ */}
+      {/* POPUP HỒ SƠ */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
           <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
@@ -687,7 +687,7 @@ export default function Home() {
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị</label>
+                <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị (Display Name)</label>
                 <input
                   type="text"
                   value={displayName}
@@ -727,84 +727,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      {/* CHAT CHUNG REALTIME (1 BONG BÓNG Ở GÓC DƯỚI PHẢI) */}
-      <div className="fixed bottom-3 right-3 z-50">
-        {!chatOpen ? (
-          <button
-            onClick={() => setChatOpen(true)}
-            className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3.5 rounded-full shadow-2xl flex items-center gap-2 cursor-pointer border-2 border-amber-300 hover:scale-105 transition"
-          >
-            <span className="text-xl">💬</span>
-            <span className="text-xs tracking-wider hidden sm:inline">CHAT VŨ TRỤ</span>
-          </button>
-        ) : (
-          <div className="bg-slate-900 border-2 border-amber-500/60 rounded-2xl shadow-2xl w-[92vw] sm:w-[380px] h-[400px] sm:h-[450px] flex flex-col overflow-hidden backdrop-blur-xl">
-            <div className="bg-slate-800/95 border-b border-amber-500/30 p-3 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span>💬</span>
-                <span className="font-black text-xs sm:text-sm text-amber-400 tracking-wider">
-                  CHAT CHUNG VŨ TRỤ (REALTIME)
-                </span>
-              </div>
-              <button
-                onClick={() => setChatOpen(false)}
-                className="text-slate-400 hover:text-white font-bold text-xs px-2 py-1 rounded-lg cursor-pointer"
-              >
-                ✖
-              </button>
-            </div>
-
-            <div className="flex-1 p-3 overflow-y-auto space-y-2.5">
-              {messages.length === 0 ? (
-                <div className="text-center text-xs text-slate-500 py-12">
-                  Chưa có tin nhắn. Hãy phát tín hiệu Ki đầu tiên!
-                </div>
-              ) : (
-                messages.map((msg) => {
-                  const isMe = msg.user_email === displayName || msg.user_email === user?.email;
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
-                    >
-                      <span className="text-[10px] text-amber-400/80 mb-0.5 px-1 font-bold">
-                        {msg.user_email}
-                      </span>
-                      <div
-                        className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs break-words font-medium shadow-sm ${
-                          isMe
-                            ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold rounded-tr-none"
-                            : "bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none"
-                        }`}
-                      >
-                        {msg.message}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-              <div ref={chatBottomRef} />
-            </div>
-
-            <form onSubmit={handleSendMessage} className="p-2.5 border-t border-slate-800 bg-slate-950 flex gap-2">
-              <input
-                type="text"
-                placeholder="Nhập thông điệp vũ trụ..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1 bg-slate-900 border border-slate-700 text-xs text-white px-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
-              />
-              <button
-                type="submit"
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer shadow"
-              >
-                Gửi
-              </button>
-            </form>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
