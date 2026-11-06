@@ -54,7 +54,6 @@ export default function Home() {
           .eq("id", currentUser.id)
           .single();
 
-        // Lấy tên hiển thị từ metadata lúc đăng ký
         const displayName = currentUser.user_metadata?.username || "Chiến Binh Saiyan";
 
         if (!profile) {
@@ -148,7 +147,7 @@ export default function Home() {
     };
   }, [user]);
 
-  // XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ BẰNG TÊN ĐĂNG NHẬP (Dùng chuẩn @gamecenter.com để vượt qua Supabase)
+  // XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ (ĐÃ FIX LỖI TỰ ĐỘNG ĐĂNG NHẬP SAU KHI ĐĂNG KÝ)
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUsername = usernameInput.trim().toLowerCase();
@@ -157,14 +156,11 @@ export default function Home() {
       return;
     }
 
-    // Đổi đuôi thành .com để Supabase chấp nhận định dạng email hợp lệ
     const internalEmail = `${cleanUsername}@gamecenter.com`;
-
     setAuthLoading(true);
 
     if (isSignUp) {
-      // Đăng ký tài khoản mới
-      const { data, error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email: internalEmail,
         password: passwordInput,
         options: {
@@ -175,18 +171,27 @@ export default function Home() {
         },
       });
 
+      if (signUpError) {
+        setAuthLoading(false);
+        alert("Lỗi đăng ký: " + signUpError.message);
+        return;
+      }
+
+      // Đăng ký xong tự động gọi luôn hàm đăng nhập để đồng bộ session chuẩn 100%
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: internalEmail,
+        password: passwordInput,
+      });
+
       setAuthLoading(false);
 
-      if (error) {
-        alert("Lỗi đăng ký: " + error.message);
-      } else {
-        alert("🎉 Tạo tài khoản thành công! Chào mừng chiến binh gia nhập vũ trụ!");
-        if (data.session?.user) {
-          setUser(data.session.user);
-        }
+      if (signInError) {
+        alert("Tạo tài khoản thành công! Vui lòng đăng nhập lại thủ công.");
+        setIsSignUp(false);
+      } else if (signInData.session?.user) {
+        setUser(signInData.session.user);
       }
     } else {
-      // Đăng nhập tài khoản
       const { data, error } = await supabase.auth.signInWithPassword({
         email: internalEmail,
         password: passwordInput,
@@ -260,7 +265,7 @@ export default function Home() {
     );
   }
 
-  // 2. MÀN HÌNH ĐĂNG NHẬP / ĐĂNG KÝ BẰNG USERNAME & PASSWORD HOÀNH TRÁNG
+  // 2. MÀN HÌNH ĐĂNG NHẬP / ĐĂNG KÝ
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
@@ -325,7 +330,7 @@ export default function Home() {
     );
   }
 
-  // 3. MÀN HÌNH TRANG CHỦ GAME (SAU KHI ĐĂNG NHẬP THÀNH CÔNG)
+  // 3. MÀN HÌNH TRANG CHỦ GAME
   const isCheckedInToday = lastCheckIn === getTodayString();
 
   return (
