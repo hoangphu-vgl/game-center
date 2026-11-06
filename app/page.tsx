@@ -21,7 +21,6 @@ export default function Home() {
   const [lastCheckIn, setLastCheckIn] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // Trạng thái Chat Box nổi toàn cục
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -29,7 +28,6 @@ export default function Home() {
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
-  // KHỞI TẠO & LẮNG NGHE USER & PROFILE TỪ SUPABASE
   useEffect(() => {
     async function initUserSession() {
       try {
@@ -37,8 +35,7 @@ export default function Home() {
         setUser(user);
 
         if (user) {
-          // Kiểm tra xem đã có bảng profiles chưa, nếu chưa có thì tạo mới
-          const { data: profile, error } = await supabase
+          const { data: profile } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", user.id)
@@ -72,7 +69,6 @@ export default function Home() {
 
     initUserSession();
 
-    // Lắng nghe thay đổi Auth state của Supabase
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
@@ -95,7 +91,6 @@ export default function Home() {
     };
   }, []);
 
-  // LẮNG NGHE REALTIME CHAT CHUNG TỪ SUPABASE (BẢNG global_chat)
   useEffect(() => {
     async function fetchInitialChat() {
       const { data } = await supabase
@@ -107,7 +102,6 @@ export default function Home() {
     }
     fetchInitialChat();
 
-    // Đăng ký Realtime channel của Supabase cho bảng global_chat
     const channel = supabase
       .channel("public:global_chat")
       .on(
@@ -124,13 +118,6 @@ export default function Home() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  // Tự động cuộn xuống tin nhắn mới nhất khi mở khung chat
-  useEffect(() => {
-    if (chatOpen) {
-      setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    }
-  }, [chatOpen]);
 
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
@@ -166,7 +153,7 @@ export default function Home() {
       setPoints(newPoints);
       setLuckySpins(newSpins);
       setLastCheckIn(today);
-      alert("🔥 Bứt phá giới hạn! Điểm danh thành công +500 PTS Ki Aura & +1 Lượt Quay Miễn Phí!");
+      alert("🔥 Bứt phá giới hạn! Điểm danh thành công +500 PTS Ki Aura!");
     }
   };
 
@@ -205,10 +192,9 @@ export default function Home() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
-        {/* Header Tối Ưu Bố Cục Cho Mobile */}
-        <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-md">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-            
             <div className="w-full sm:w-auto flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="text-2xl sm:text-3xl animate-bounce">🐲</span>
@@ -216,37 +202,31 @@ export default function Home() {
                   DRAGON ARCADE
                 </span>
               </div>
-
-              {user ? (
+              {user && (
                 <button
                   onClick={handleLogout}
-                  className="sm:hidden text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700 active:scale-95 transition"
+                  className="sm:hidden text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700"
                 >
                   Thoát 🚪
                 </button>
-              ) : null}
+              )}
             </div>
 
             <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
               {user ? (
                 <>
-                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
+                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2 sm:px-3 py-1.5 rounded-xl text-xs sm:text-sm">
                     <span>⚡</span>
                     <span className="font-black text-amber-400 truncate">{points.toLocaleString()}</span>
-                  </div>
-
-                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
-                    <span>🎟️</span>
-                    <span className="font-black text-purple-300 truncate">{luckySpins}</span>
                   </div>
 
                   <button
                     onClick={handleCheckIn}
                     disabled={isCheckedInToday}
-                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-black py-1.5 px-3 sm:px-4 rounded-xl transition-all shadow-md active:scale-95 ${
+                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-black py-1.5 px-3 sm:px-4 rounded-xl transition-all ${
                       isCheckedInToday
                         ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
-                        : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 cursor-pointer shadow-amber-500/20"
+                        : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 cursor-pointer"
                     }`}
                   >
                     {isCheckedInToday ? "✅ Đã Tụ Ki" : "🔥 Tụ Ki"}
@@ -254,7 +234,7 @@ export default function Home() {
 
                   <button
                     onClick={handleLogout}
-                    className="hidden sm:block text-xs text-slate-400 hover:text-rose-400 font-semibold transition cursor-pointer ml-1"
+                    className="hidden sm:block text-xs text-slate-400 hover:text-rose-400 font-semibold cursor-pointer ml-1"
                   >
                     Thoát
                   </button>
@@ -262,7 +242,7 @@ export default function Home() {
               ) : (
                 <button
                   onClick={handleGoogleLogin}
-                  className="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs sm:text-sm py-2 px-4 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs sm:text-sm py-2 px-4 rounded-xl cursor-pointer"
                 >
                   Đăng Nhập Google
                 </button>
@@ -271,63 +251,33 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Banner Dragon Gaming Arena */}
+        {/* Banner */}
         <section
           className="relative flex items-center justify-center min-h-[240px] sm:min-h-[300px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
           style={{
-            backgroundImage:
-              "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
+            backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950"></div>
           <div className="relative z-10 max-w-3xl space-y-2 sm:space-y-3">
-            <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
+            <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest">
               ✨ Khai Phá Sức Mạnh Ultra Instinct
             </div>
-            <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-md tracking-wide">
+            <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500">
               DRAGON GAMING ARENA
             </h1>
-            <p className="text-slate-300 text-xs sm:text-base font-medium max-w-xl mx-auto px-2">
-              Thách đấu võ đạo trí tuệ, bứt phá giới hạn Ki, quay vòng may mắn & đổi quà rực rỡ!
-            </p>
           </div>
         </section>
 
-        {/* Danh Sách Game */}
+        {/* Danh Sách Game Cốt Lõi */}
         <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-8">
-          
           <section className="space-y-3">
             <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
               <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
-                🔥 Đặc Quyền & Cửa Hàng
+                🔥 Trò Chơi Nổi Bật
               </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              
-              <Link
-                href="/vongquay"
-                className="bg-slate-900/90 border border-purple-500/50 rounded-2xl p-5 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden"
-              >
-                <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🎡</div>
-                <h3 className="text-lg font-bold text-purple-300">🎡 Vòng Quay Ngọc Rồng</h3>
-                <p className="text-slate-400 text-xs sm:text-sm mt-1">Săn nước suối, tiền mặt và thêm lượt quay!</p>
-                <div className="mt-3 bg-purple-600 text-white font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
-                  Vào Vòng Quay 🎟️
-                </div>
-              </Link>
-
-              <Link
-                href="/shop"
-                className="bg-slate-900/90 border border-amber-500/50 rounded-2xl p-5 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden"
-              >
-                <div className="absolute -right-4 -bottom-4 text-6xl opacity-10">🛍️</div>
-                <h3 className="text-lg font-bold text-amber-400">🛍️ Cửa Hàng Đổi Quà</h3>
-                <p className="text-slate-400 text-xs sm:text-sm mt-1">Dùng điểm Ki đổi lượt quay hoặc VNĐ!</p>
-                <div className="mt-3 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md">
-                  Vào Cửa Hàng 🛒
-                </div>
-              </Link>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Link
                 href="/jackpot"
                 className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden"
@@ -340,16 +290,6 @@ export default function Home() {
                 </div>
               </Link>
 
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <div className="flex items-center gap-2 border-l-4 border-blue-500 pl-3">
-              <h2 className="text-lg sm:text-xl font-black text-blue-400 tracking-wider uppercase">
-                🧠 Game Trí Tuệ & Chiến Thuật
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Link
                 href="/chess"
                 className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 active:scale-[0.98] transition block shadow-lg"
@@ -377,18 +317,18 @@ export default function Home() {
           </section>
         </main>
 
-        {/* CHAT BOX CHUNG NỔI TOÀN CỤC (Z-[9999]) LUÔN HIỆN KHI CHƠI GAME */}
+        {/* CHAT BOX NỔI TOÀN CỤC */}
         <div className="fixed bottom-4 right-4 z-[9999]">
           {!chatOpen ? (
             <button
               onClick={() => setChatOpen(true)}
-              className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black px-4 py-3 rounded-full shadow-[0_0_25px_rgba(245,158,11,0.6)] flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-200 animate-bounce"
+              className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black px-4 py-3 rounded-full shadow-xl flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-200 animate-bounce"
             >
               <span className="text-xl">💬</span>
               <span className="text-xs tracking-wider">CHAT SAIYAN ({messages.length})</span>
             </button>
           ) : (
-            <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] w-[92vw] sm:w-[380px] h-[400px] sm:h-[450px] flex flex-col overflow-hidden backdrop-blur-xl">
+            <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl shadow-2xl w-[92vw] sm:w-[380px] h-[400px] sm:h-[450px] flex flex-col overflow-hidden backdrop-blur-xl">
               <div className="bg-slate-800/95 border-b border-amber-500/30 p-3 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <span>💬</span>
@@ -446,7 +386,7 @@ export default function Home() {
                 />
                 <button
                   type="submit"
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-95 shadow"
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-95"
                 >
                   Gửi
                 </button>
