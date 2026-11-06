@@ -224,7 +224,7 @@ export default function JackpotPage() {
         let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
         if (rand > 0.5) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
         if (rand > 0.70) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
-        if (rand > 0.85) pool = DRAGON_SYMBOLS.filter((s) => s.type === "scatter"); // 12% mỗi ô
+        if (rand > 0.88) pool = DRAGON_SYMBOLS.filter((s) => s.type === "scatter"); // 12% mỗi ô
 
         let selected = pool[Math.floor(Math.random() * pool.length)];
         if (selected.id === prevId && selected.type !== "scatter" && Math.random() < 0.65) {
