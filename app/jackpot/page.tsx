@@ -34,12 +34,12 @@ const DRAGON_SYMBOLS = [
 ];
 
 const AURA_QUICK_REWARDS = [
-  { id: "ki_white", name: "⚪ Ki Trắng", mult: 2.0, weight: 400, icon: "✨" },
-  { id: "kaioken", name: "🔴 Kaioken", mult: 3.0, weight: 250, icon: "🔥" },
-  { id: "ssj1", name: "🟡 SSJ", mult: 5.0, weight: 150, icon: "⚡" },
-  { id: "ssj2", name: "⚡ SSJ 2", mult: 6.0, weight: 100, icon: "🌩️" },
-  { id: "ssj3", name: "💥 SSJ 3", mult: 7.0, weight: 50, icon: "🌀" },
-  { id: "ssj_blue", name: "🔵 SSJ Blue", mult: 8.0, weight: 30, icon: "💠" },
+  { id: "ki_white", name: "⚪ Ki Trắng", mult: 2.0, weight: 450, icon: "✨" },
+  { id: "kaioken", name: "🔴 Kaioken", mult: 3.0, weight: 350, icon: "🔥" },
+  { id: "ssj1", name: "🟡 SSJ", mult: 5.0, weight: 200, icon: "⚡" },
+  { id: "ssj2", name: "⚡ SSJ 2", mult: 6.0, weight: 150, icon: "🌩️" },
+  { id: "ssj3", name: "💥 SSJ 3", mult: 7.0, weight: 100, icon: "🌀" },
+  { id: "ssj_blue", name: "🔵 SSJ Blue", mult: 8.0, weight: 50, icon: "💠" },
   { id: "ssj_god", name: "🔴 SSJ God", mult: 10.0, weight: 10, icon: "☀️" },
   { id: "android", name: "🤖 Đám Android", mult: 15.0, weight: 5, icon: "⚡" },
   { id: "ultra", name: "⚪ Ultra Instinct", mult: 20.0, weight: 3, icon: "🌌" },
