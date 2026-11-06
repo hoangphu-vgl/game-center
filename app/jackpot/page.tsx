@@ -128,25 +128,40 @@ export default function JackpotPage() {
     return () => unsubscribe();
   }, []);
 
-  // ĐÃ SỬA ĐƯỜNG DẪN CHUẨN: gameSettings/jackpots
+  // TỰ ĐỘNG KHỞI TẠO VÀ ĐỒNG BỘ FIRESTORE 'gameSettings/jackpots' REALTIME
   useEffect(() => {
     const jackpotRef = doc(db, "gameSettings", "jackpots");
+
+    // Khởi tạo ngay lập tức nếu Firestore chưa có document này
+    const initDoc = async () => {
+      try {
+        const snap = await getDoc(jackpotRef);
+        if (!snap.exists()) {
+          await setDoc(jackpotRef, {
+            grand: 150000,
+            major: 80000,
+            minor: 40000,
+          });
+        }
+      } catch (err) {
+        console.error("Lỗi tự động khởi tạo gameSettings/jackpots:", err);
+      }
+    };
+
+    initDoc();
+
+    // Lắng nghe thay đổi real-time từ Firestore
     const unsubscribe = onSnapshot(jackpotRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setJackpots({
-          grand: data.grand || 150000,
-          major: data.major || 80000,
-          minor: data.minor || 40000,
-        });
-      } else {
-        setDoc(jackpotRef, {
-          grand: 150000,
-          major: 80000,
-          minor: 40000,
+          grand: Number(data.grand) || 150000,
+          major: Number(data.major) || 80000,
+          minor: Number(data.minor) || 40000,
         });
       }
     });
+
     return () => unsubscribe();
   }, []);
 
