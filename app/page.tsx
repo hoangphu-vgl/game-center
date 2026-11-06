@@ -86,7 +86,7 @@ export default function Home() {
       loadUserProfile(session?.user || null);
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       loadUserProfile(session?.user || null);
     });
 
@@ -148,7 +148,7 @@ export default function Home() {
     };
   }, [user]);
 
-  // XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ BẰNG TÊN ĐĂNG NHẬP
+  // XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ BẰNG TÊN ĐĂNG NHẬP (Dùng chuẩn @gamecenter.com để vượt qua Supabase)
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUsername = usernameInput.trim().toLowerCase();
@@ -157,8 +157,8 @@ export default function Home() {
       return;
     }
 
-    // Chuyển username thành định dạng email nội bộ để qua mặt Supabase Auth
-    const internalEmail = `${cleanUsername}@gamecenter.local`;
+    // Đổi đuôi thành .com để Supabase chấp nhận định dạng email hợp lệ
+    const internalEmail = `${cleanUsername}@gamecenter.com`;
 
     setAuthLoading(true);
 
