@@ -92,7 +92,6 @@ export default function JackpotPage() {
   const streakRef = useRef<number>(-1);
   const [streakIndex, setStreakIndex] = useState<number>(-1);
 
-  // State cho thông báo toàn thể giữ 10s
   const [broadcastMsg, setBroadcastMsg] = useState<string | null>(null);
   const broadcastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -100,11 +99,17 @@ export default function JackpotPage() {
     Array(30).fill(DRAGON_SYMBOLS[0])
   );
 
+  // KẾT NỐI CHUẨN VÀO BẢNG system_jackpot (DÒNG global)
   const [jackpots, setJackpots] = useState({
     minor: 15000,
-    grand: 100000,
     major: 45000,
+    grand: 100000,
   });
+  const jackpotsRef = useRef(jackpots);
+
+  useEffect(() => {
+    jackpotsRef.current = jackpots;
+  }, [jackpots]);
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   
@@ -120,6 +125,42 @@ export default function JackpotPage() {
   useEffect(() => {
     currentBetRef.current = currentBet;
   }, [currentBet]);
+
+  // LẤY HŨ CHUNG TỪ BẢNG system_jackpot & REALTIME
+  useEffect(() => {
+    async function fetchGlobalJackpot() {
+      const { data } = await supabase
+        .from("system_jackpot")
+        .select("minor, major, grand")
+        .eq("id", "global")
+        .single();
+      if (data) {
+        setJackpots({ minor: data.minor, major: data.major, grand: data.grand });
+      }
+    }
+    fetchGlobalJackpot();
+
+    const channel = supabase
+      .channel("system_jackpot_realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "system_jackpot", filter: "id=eq.global" },
+        (payload) => {
+          if (payload.new) {
+            setJackpots({
+              minor: payload.new.minor,
+              major: payload.new.major,
+              grand: payload.new.grand,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -145,7 +186,6 @@ export default function JackpotPage() {
     generateValidGrid();
   }, []);
 
-  // Hàm kích hoạt thông báo toàn thể (Giữ nguyên 10 giây)
   const triggerBroadcast = (text: string) => {
     if (broadcastTimerRef.current) {
       clearTimeout(broadcastTimerRef.current);
@@ -153,7 +193,7 @@ export default function JackpotPage() {
     setBroadcastMsg(text);
     broadcastTimerRef.current = setTimeout(() => {
       setBroadcastMsg(null);
-    }, 10000); // 10 giây
+    }, 10000);
   };
 
   const getRandomAura = () => {
@@ -206,6 +246,19 @@ export default function JackpotPage() {
     }
   };
 
+  // CẬP NHẬT HŨ CHUNG LÊN BẢNG system_jackpot (X3 TỐC ĐỘ TÍCH)
+  const updateGlobalJackpotInDB = async (newPool: { minor: number; major: number; grand: number }) => {
+    setJackpots(newPool);
+    try {
+      await supabase
+        .from("system_jackpot")
+        .update(newPool)
+        .eq("id", "global");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => console.log(err));
@@ -243,12 +296,13 @@ export default function JackpotPage() {
     setSpinning(true);
     setWinningCoords([]);
     
-    // Tích hũ x3
-    setJackpots(prev => ({
-      minor: prev.minor + Math.floor(bet * 0.75),
-      major: prev.major + Math.floor(bet * 0.45),
-      grand: prev.grand + Math.floor(bet * 0.30),
-    }));
+    // TÍCH HŨ X3 VÀO system_jackpot
+    const updatedJackpots = {
+      minor: jackpotsRef.current.minor + Math.floor(bet * 0.75),
+      major: jackpotsRef.current.major + Math.floor(bet * 0.45),
+      grand: jackpotsRef.current.grand + Math.floor(bet * 0.30),
+    };
+    await updateGlobalJackpotInDB(updatedJackpots);
 
     const newPointsAfterBet = currentPts - bet;
     await updatePointsInDB(newPointsAfterBet);
@@ -281,9 +335,10 @@ export default function JackpotPage() {
 
     const isTriggerWin = Math.random() < winChance;
     
-    const grandHit = Math.random() < 0.00002; // 0.002%
-    const majorHit = !grandHit && Math.random() < 0.0001; // 0.01%
-    const minorHit = !grandHit && !majorHit && Math.random() < 0.0004; // 0.04%
+    // SIẾT CỰC GẮT TỶ LỆ NỔ HŨ
+    const grandHit = Math.random() < 0.00002;
+    const majorHit = !grandHit && Math.random() < 0.0001;
+    const minorHit = !grandHit && !majorHit && Math.random() < 0.0004;
 
     let baseWinAmount = 0;
     let matchedIndices: number[] = [];
@@ -293,31 +348,31 @@ export default function JackpotPage() {
 
     if (grandHit) {
       hitJackpotType = "grand";
-      baseWinAmount = jackpots.grand;
+      baseWinAmount = jackpotsRef.current.grand;
       matchedIndices = [0, 1, 2, 3, 4, 5];
       resultText = `👑 NỔ HŨ GRAND JACKPOT! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
       triggerBroadcast(`📢 KHO TÀNG CHẤN ĐỘNG: Chiến binh [${playerName}] vừa HÚP TRỌN GRAND JACKPOT khủng khiếp +${baseWinAmount.toLocaleString()} PTS! 👑🔥`);
-      setJackpots(prev => ({ ...prev, grand: 100000 }));
+      await updateGlobalJackpotInDB({ ...jackpotsRef.current, grand: 100000 });
     } else if (majorHit) {
       hitJackpotType = "major";
-      baseWinAmount = jackpots.major;
+      baseWinAmount = jackpotsRef.current.major;
       matchedIndices = [0, 1, 2, 3, 4];
       resultText = `💎 NỔ HŨ MAJOR JACKPOT! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
       triggerBroadcast(`📢 TIN VUI SẢNH: Chiến binh [${playerName}] vừa nổ tung MAJOR JACKPOT nhận +${baseWinAmount.toLocaleString()} PTS! 💎⚡`);
-      setJackpots(prev => ({ ...prev, major: 45000 }));
+      await updateGlobalJackpotInDB({ ...jackpotsRef.current, major: 45000 });
     } else if (minorHit) {
       hitJackpotType = "minor";
-      baseWinAmount = jackpots.minor;
+      baseWinAmount = jackpotsRef.current.minor;
       matchedIndices = [0, 1, 2, 3];
       resultText = `🔥 NỔ HŨ MINOR JACKPOT! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
       isStreakWin = true;
       triggerJackpotSideGlow();
       triggerBroadcast(`📢 CHÚ MỪNG: Chiến binh [${playerName}] vừa giật hũ MINOR JACKPOT +${baseWinAmount.toLocaleString()} PTS! 🔥`);
-      setJackpots(prev => ({ ...prev, minor: 15000 }));
+      await updateGlobalJackpotInDB({ ...jackpotsRef.current, minor: 15000 });
     } else if (isTriggerWin) {
       const columns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {
@@ -496,7 +551,7 @@ export default function JackpotPage() {
       {/* Main Container */}
       <div className={`w-full max-w-md sm:max-w-4xl bg-slate-900/98 border-2 border-amber-500/50 rounded-2xl p-2 sm:p-4 shadow-2xl flex flex-col gap-2 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
-        {/* THANH THÔNG BÁO TOÀN THỂ (BROADCAST GIỮ 10S KHI CÓ NGƯỜI NỔ HŨ) */}
+        {/* THANH THÔNG BÁO TOÀN THỂ GIỮ 10 GIÂY */}
         {broadcastMsg && (
           <div className="bg-gradient-to-r from-amber-600 via-yellow-500 to-red-600 border-2 border-yellow-200 text-slate-950 font-black px-3 py-1.5 rounded-xl text-center text-xs sm:text-sm shadow-[0_0_20px_rgba(250,204,21,0.8)] animate-bounce flex items-center justify-center gap-2">
             <span>⚡</span>
@@ -505,7 +560,7 @@ export default function JackpotPage() {
           </div>
         )}
 
-        {/* 3 HŨ JACKPOT */}
+        {/* 3 HŨ JACKPOT CHUNG CẢ SẢNH */}
         <div className="grid grid-cols-3 gap-1.5 relative">
           {jackpotSideGlow && (
             <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur-md opacity-75 animate-pulse -z-10"></div>
