@@ -9,15 +9,15 @@ interface ChatMessage {
   id: string;
   uid: string;
   name: string;
-  avatar_url?: string;
+  photoURL?: string;
   text: string;
-  created_at?: string;
+  createdAt?: any;
 }
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
-  const [points, setPoints] = useState<number>(1000);
-  const [luckySpins, setLuckySpins] = useState<number>(3);
+  const [points, setPoints] = useState<number>(0);
+  const [luckySpins, setLuckySpins] = useState<number>(0);
   const [lastCheckIn, setLastCheckIn] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +28,7 @@ export default function Home() {
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
+  // KHỞI TẠO & LẮNG NGHE USER TRÊN SUPABASE CHUẨN XÁC 100%
   useEffect(() => {
     async function initUserSession() {
       try {
@@ -62,7 +63,7 @@ export default function Home() {
           }
         }
       } catch (err) {
-        console.error("Lỗi lấy thông tin session Supabase:", err);
+        console.error("Lỗi khởi tạo user trên Supabase:", err);
       } finally {
         setLoading(false);
       }
@@ -92,6 +93,7 @@ export default function Home() {
     };
   }, []);
 
+  // LẮNG NGHE CHAT CHUNG REALTIME
   useEffect(() => {
     async function fetchInitialChat() {
       const { data } = await supabase
@@ -99,7 +101,18 @@ export default function Home() {
         .select("*")
         .order("created_at", { ascending: true })
         .limit(50);
-      if (data) setMessages(data);
+      if (data) {
+        const formattedMsgs = data.map((item: any) => ({
+          id: item.id,
+          uid: item.uid,
+          name: item.name,
+          photoURL: item.avatar_url,
+          text: item.text,
+          createdAt: item.created_at,
+        }));
+        setMessages(formattedMsgs);
+        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      }
     }
     fetchInitialChat();
 
@@ -109,7 +122,18 @@ export default function Home() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "global_chat" },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as ChatMessage]);
+          const newMsg = payload.new as any;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: newMsg.id,
+              uid: newMsg.uid,
+              name: newMsg.name,
+              photoURL: newMsg.avatar_url,
+              text: newMsg.text,
+              createdAt: newMsg.created_at,
+            },
+          ]);
           setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         }
       )
@@ -124,7 +148,7 @@ export default function Home() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: window.location.origin,
       },
     });
   };
@@ -154,14 +178,13 @@ export default function Home() {
       setPoints(newPoints);
       setLuckySpins(newSpins);
       setLastCheckIn(today);
-      alert("🔥 Bứt phá giới hạn! Điểm danh thành công +500 PTS Ki Aura!");
+      alert("🔥 Bứt phá giới hạn! Điểm danh thành công +500 PTS Ki Aura & +1 Lượt Quay Miễn Phí!");
     }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
-
     const textToSend = newMessage.trim();
     setNewMessage("");
 
@@ -169,21 +192,25 @@ export default function Home() {
       await supabase.from("global_chat").insert([
         {
           uid: user.id,
-          name: user.user_metadata?.full_name || "Chiến Binh",
+          name: currentUserDisplayName() || "Chiến Binh",
           avatar_url: user.user_metadata?.avatar_url || "",
           text: textToSend,
         },
       ]);
     } catch (err) {
-      console.error("Lỗi gửi tin nhắn Supabase:", err);
+      console.error("Lỗi gửi tin nhắn:", err);
     }
   };
+
+  function currentUserDisplayName() {
+    return user?.user_metadata?.full_name || user?.email || "Chiến Binh";
+  }
 
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-amber-400 font-black tracking-widest animate-pulse px-4 text-center">
         <span className="text-5xl mb-4">🔮</span>
-        ĐANG KẾT NỐI VŨ TRỤ SUPABASE...
+        ĐANG TRIỆU HỒI RỒNG THẦN DRAGON ARCADE...
       </div>
     );
   }
@@ -193,9 +220,10 @@ export default function Home() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-md">
+        {/* Header Tối Ưu Bố Cục Cho Mobile */}
+        <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            
             <div className="w-full sm:w-auto flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="text-2xl sm:text-3xl animate-bounce">🐲</span>
@@ -203,31 +231,37 @@ export default function Home() {
                   DRAGON ARCADE
                 </span>
               </div>
-              {user && (
+
+              {user ? (
                 <button
                   onClick={handleLogout}
-                  className="sm:hidden text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700"
+                  className="sm:hidden text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700 active:scale-95 transition"
                 >
                   Thoát 🚪
                 </button>
-              )}
+              ) : null}
             </div>
 
             <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
               {user ? (
                 <>
-                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2 sm:px-3 py-1.5 rounded-xl text-xs sm:text-sm">
+                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
                     <span>⚡</span>
                     <span className="font-black text-amber-400 truncate">{points.toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2 sm:px-3 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
+                    <span>🎟️</span>
+                    <span className="font-black text-purple-300 truncate">{luckySpins}</span>
                   </div>
 
                   <button
                     onClick={handleCheckIn}
                     disabled={isCheckedInToday}
-                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-black py-1.5 px-3 sm:px-4 rounded-xl transition-all ${
+                    className={`flex-1 sm:flex-none text-xs sm:text-sm font-black py-1.5 px-3 sm:px-4 rounded-xl transition-all shadow-md active:scale-95 ${
                       isCheckedInToday
                         ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
-                        : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 cursor-pointer"
+                        : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 cursor-pointer shadow-amber-500/20"
                     }`}
                   >
                     {isCheckedInToday ? "✅ Đã Tụ Ki" : "🔥 Tụ Ki"}
@@ -235,7 +269,7 @@ export default function Home() {
 
                   <button
                     onClick={handleLogout}
-                    className="hidden sm:block text-xs text-slate-400 hover:text-rose-400 font-semibold cursor-pointer ml-1"
+                    className="hidden sm:block text-xs text-slate-400 hover:text-rose-400 font-semibold transition cursor-pointer ml-1"
                   >
                     Thoát
                   </button>
@@ -243,7 +277,7 @@ export default function Home() {
               ) : (
                 <button
                   onClick={handleGoogleLogin}
-                  className="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs sm:text-sm py-2 px-4 rounded-xl cursor-pointer"
+                  className="w-full sm:w-auto bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs sm:text-sm py-2 px-4 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg"
                 >
                   Đăng Nhập Google
                 </button>
@@ -252,33 +286,39 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Banner */}
+        {/* Banner Dragon Gaming Arena */}
         <section
           className="relative flex items-center justify-center min-h-[240px] sm:min-h-[300px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
           style={{
-            backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
+            backgroundImage:
+              "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950"></div>
           <div className="relative z-10 max-w-3xl space-y-2 sm:space-y-3">
-            <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest">
+            <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
               ✨ Khai Phá Sức Mạnh Ultra Instinct
             </div>
-            <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500">
+            <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-md tracking-wide">
               DRAGON GAMING ARENA
             </h1>
+            <p className="text-slate-300 text-xs sm:text-base font-medium max-w-xl mx-auto px-2">
+              Thách đấu võ đạo trí tuệ, bứt phá giới hạn Ki, quay vòng may mắn & đổi quà rực rỡ!
+            </p>
           </div>
         </section>
 
-        {/* Danh Sách Game Cốt Lõi (Chỉ giữ lại Jackpot) */}
+        {/* Danh Sách Game */}
         <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-8">
+          
           <section className="space-y-3">
             <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
               <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
                 🔥 Trò Chơi Nổi Bật
               </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              
               <Link
                 href="/jackpot"
                 className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden"
@@ -290,41 +330,43 @@ export default function Home() {
                   Vào Nổ Hũ 🔮
                 </div>
               </Link>
+
             </div>
           </section>
+
         </main>
 
-        {/* CHAT BOX NỔI TOÀN CỤC */}
-        <div className="fixed bottom-4 right-4 z-[9999]">
+        {/* CHAT BOX CHUNG TỐI ƯU MOBILE */}
+        <div className="fixed bottom-3 right-3 z-50">
           {!chatOpen ? (
             <button
               onClick={() => setChatOpen(true)}
-              className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black px-4 py-3 rounded-full shadow-xl flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-200 animate-bounce"
+              className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3 rounded-full shadow-xl flex items-center gap-1.5 cursor-pointer active:scale-95 border-2 border-amber-300"
             >
-              <span className="text-xl">💬</span>
-              <span className="text-xs tracking-wider">CHAT SAIYAN ({messages.length})</span>
+              <span className="text-lg">💬</span>
+              <span className="text-xs tracking-wider hidden sm:inline">CHAT SAIYAN</span>
             </button>
           ) : (
-            <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl shadow-2xl w-[92vw] sm:w-[380px] h-[400px] sm:h-[450px] flex flex-col overflow-hidden backdrop-blur-xl">
-              <div className="bg-slate-800/95 border-b border-amber-500/30 p-3 flex justify-between items-center">
-                <div className="flex items-center gap-2">
+            <div className="bg-slate-900 border-2 border-amber-500/60 rounded-2xl shadow-2xl w-[90vw] sm:w-[360px] h-[380px] sm:h-[420px] flex flex-col overflow-hidden backdrop-blur-xl">
+              <div className="bg-slate-800/95 border-b border-amber-500/30 p-2.5 flex justify-between items-center">
+                <div className="flex items-center gap-1.5">
                   <span>💬</span>
                   <span className="font-black text-xs sm:text-sm text-amber-400 tracking-wider">
-                    CHAT CHUNG VŨ TRỤ (REALTIME)
+                    CHAT CHUNG VŨ TRỤ
                   </span>
                 </div>
                 <button
                   onClick={() => setChatOpen(false)}
-                  className="text-slate-400 hover:text-white font-bold text-sm px-2 py-1 rounded-lg cursor-pointer bg-slate-800"
+                  className="text-slate-400 hover:text-white font-bold text-xs px-2 py-1 rounded-lg cursor-pointer"
                 >
                   ✖
                 </button>
               </div>
 
-              <div className="flex-1 p-3 overflow-y-auto space-y-3 bg-slate-950/80">
+              <div className="flex-1 p-2.5 overflow-y-auto space-y-2.5">
                 {messages.length === 0 ? (
-                  <div className="text-center text-xs text-slate-500 py-16">
-                    Chưa có tin nhắn nào. Hãy phát tín hiệu Ki đầu tiên!
+                  <div className="text-center text-xs text-slate-500 py-10">
+                    Chưa có tin nhắn. Hãy phát tín hiệu Ki đầu tiên!
                   </div>
                 ) : (
                   messages.map((msg) => {
@@ -338,7 +380,7 @@ export default function Home() {
                           {msg.name}
                         </span>
                         <div
-                          className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs break-words font-medium shadow-md ${
+                          className={`max-w-[85%] px-3 py-1.5 rounded-2xl text-xs break-words font-medium shadow-sm ${
                             isMe
                               ? "bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold rounded-tr-none"
                               : "bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none"
@@ -353,17 +395,17 @@ export default function Home() {
                 <div ref={chatBottomRef} />
               </div>
 
-              <form onSubmit={handleSendMessage} className="p-2.5 border-t border-slate-800 bg-slate-950 flex gap-2">
+              <form onSubmit={handleSendMessage} className="p-2 border-t border-slate-800 bg-slate-950 flex gap-1.5">
                 <input
                   type="text"
-                  placeholder="Nhập tin nhắn vũ trụ..."
+                  placeholder="Nhập tin nhắn..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-700 text-xs text-white px-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
+                  className="flex-1 bg-slate-900 border border-slate-700 text-xs text-white px-3 py-2 rounded-xl focus:outline-none focus:border-amber-500"
                 />
                 <button
                   type="submit"
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-95"
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-3 py-2 rounded-xl cursor-pointer active:scale-95"
                 >
                   Gửi
                 </button>
