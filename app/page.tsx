@@ -20,7 +20,7 @@ export default function Home() {
   const [lastCheckIn, setLastCheckIn] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // Trạng thái cho Form Tên đăng nhập / Mật khẩu
+  // Trạng thái Form Đăng Nhập / Đăng Ký
   const [isSignUp, setIsSignUp] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -57,6 +57,7 @@ export default function Home() {
         const displayName = currentUser.user_metadata?.username || "Chiến Binh Saiyan";
 
         if (!profile) {
+          // Tự động cấp vốn khởi nghiệp 1000 điểm và 3 lượt quay cho user mới tạo
           const initialData = {
             id: currentUser.id,
             email: currentUser.email || "",
@@ -69,6 +70,7 @@ export default function Home() {
           await supabase.from("profiles").insert([initialData]);
           setPoints(1000);
           setLuckySpins(3);
+          setLastCheckIn("");
         } else {
           setPoints(profile.balance ?? 1000);
           setLuckySpins(profile.lucky_spins ?? 3);
@@ -147,7 +149,7 @@ export default function Home() {
     };
   }, [user]);
 
-  // XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ (ĐÃ FIX LỖI TỰ ĐỘNG ĐĂNG NHẬP SAU KHI ĐĂNG KÝ)
+  // XỬ LÝ ĐĂNG NHẬP / ĐĂNG KÝ
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUsername = usernameInput.trim().toLowerCase();
@@ -177,7 +179,6 @@ export default function Home() {
         return;
       }
 
-      // Đăng ký xong tự động gọi luôn hàm đăng nhập để đồng bộ session chuẩn 100%
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: internalEmail,
         password: passwordInput,
@@ -278,7 +279,7 @@ export default function Home() {
               DRAGON ARCADE
             </h1>
             <p className="text-slate-400 text-xs sm:text-sm">
-              {isSignUp ? "Tạo tên đăng nhập mới cho chiến binh" : "Đăng nhập vào không gian võ đạo"}
+              {isSignUp ? "Tạo tên đăng nhập mới (Nhận ngay 1000 PTS & 3 Lượt Quay)" : "Đăng nhập vào không gian võ đạo"}
             </p>
           </div>
 
@@ -287,7 +288,7 @@ export default function Home() {
               <label className="text-xs font-bold text-amber-400 ml-1">Tên Đăng Nhập</label>
               <input
                 type="text"
-                placeholder="Ví dụ: son_goku_99"
+                placeholder="Ví dụ: kennylor298"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 transition lowercase"
@@ -312,7 +313,7 @@ export default function Home() {
               disabled={authLoading}
               className="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-slate-950 font-black text-sm py-3.5 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg shadow-amber-500/20 disabled:opacity-50"
             >
-              {authLoading ? "Đang kết nối Ki..." : isSignUp ? "ĐĂNG KÝ TÀI KHOẢN 🚀" : "VÀO VŨ TRỤ GAME ⚡"}
+              {authLoading ? "Đang kết nối Ki..." : isSignUp ? "ĐĂNG KÝ & NHẬN QUÀ 🚀" : "VÀO VŨ TRỤ GAME ⚡"}
             </button>
           </form>
 
