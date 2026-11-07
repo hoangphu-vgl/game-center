@@ -93,7 +93,7 @@ export default function PokerPage() {
     loadUser();
   }, []);
 
-  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB
+  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB (DÙNG BEACON API CHỐNG RỚT GÓI)
   useEffect(() => {
     const removePlayerFromRoom = async () => {
       if (!roomIdRef.current || !currentUserRef.current) return;
@@ -272,7 +272,6 @@ export default function PokerPage() {
     }
   };
 
-  // Tạo bộ bài ngẫu nhiên mới
   const generateDeck = (): Card[] => {
     const deck: Card[] = [];
     for (const suit of SUITS) {
@@ -341,7 +340,7 @@ export default function PokerPage() {
     return current;
   };
 
-  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN TỪ GHẾ 0
+  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN TỪ GHẾ 0 (BỎ QUA GHẾ NULL)
   const getFirstActiveSeat = (seatsList: (SeatPlayer | null)[]) => {
     for (let i = 0; i < 5; i++) {
       const p = seatsList[i];
@@ -409,22 +408,18 @@ export default function PokerPage() {
       const deck = generateDeck();
 
       if (phase === 'PREFLOP') {
-        // Lật 3 lá đầu tiên (FLOP)
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
         setDealerMsg("Whis: Lật 3 lá bài chung đầu tiên (FLOP). Mời cược vòng mới!");
       } else if (phase === 'FLOP') {
-        // Lật lá thứ 4 (TURN)
-        nextCards.push(deck.pop()!);
+        nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'TURN';
         setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN). Mời các tay chơi cược!");
       } else if (phase === 'TURN') {
-        // Lật lá thứ 5 (RIVER)
-        nextCards.push(deck.pop()!);
+        nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'RIVER';
         setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối cùng!");
       } else if (phase === 'RIVER') {
-        // Hết vòng cược RIVER -> Chuyển ngay sang SHOWDOWN để chấm điểm
         nextPhase = 'SHOWDOWN';
         setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
