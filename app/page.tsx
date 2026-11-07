@@ -57,6 +57,7 @@ export default function Home() {
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(true); // SỬA: Thêm state Lưu đăng nhập
 
   // Profile & Modal States
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -113,7 +114,7 @@ export default function Home() {
         const defaultName = currentUser.user_metadata?.username || "Chiến Binh Saiyan";
         const defaultAvatar = currentUser.user_metadata?.avatar_url || DEFAULT_AVATARS[0].url;
 
-        // Kiểm tra cơ chế tự động reset Sức Mạnh về 0 vào thứ Hai hàng tuần
+        // KIỂM TRA RESET THỨ 2
         const currentWeek = getWeekKey();
         const lastCheckedWeek = localStorage.getItem(`last_reset_week_${currentUser.id}`);
 
@@ -121,7 +122,11 @@ export default function Home() {
         let currentSpins = profile?.lucky_spins ?? 3;
         let lastCheck = profile?.last_check_in ?? "";
 
-        if (lastCheckedWeek !== currentWeek) {
+        // 🛠️ FIX LỖI RESET OAN: Nếu chưa có lastCheckedWeek (Đăng nhập máy mới/trình duyệt mới)
+        if (!lastCheckedWeek) {
+          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
+        } else if (lastCheckedWeek !== currentWeek) {
+          // Thực sự chuyển sang tuần mới (Thứ 2) -> Reset Ki về 0 để đua top
           currentBalance = 0;
           await supabase
             .from("profiles")
@@ -308,7 +313,6 @@ export default function Home() {
     setUser(null);
   };
 
-  // SỬA: BỎ BALANCE KHỎI CÂU LỆNH UPDATE ĐỂ KHÔNG BỊ RESET ĐIỂM VỀ 0
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -322,7 +326,6 @@ export default function Home() {
         .update({ 
           full_name: newCleanName, 
           avatar_url: avatarUrl 
-          // Không truyền balance ở đây để bảo toàn điểm số tích lũy của người chơi!
         })
         .eq("id", user.id);
 
@@ -414,6 +417,20 @@ export default function Home() {
                 className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 transition"
                 required
               />
+            </div>
+
+            {/* 🛠️ MỤC LƯU ĐĂNG NHẬP MỚI THÊM */}
+            <div className="flex items-center gap-2 mt-1 px-1">
+              <input
+                type="checkbox"
+                id="remember"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="accent-amber-500 w-4 h-4 rounded cursor-pointer"
+              />
+              <label htmlFor="remember" className="text-xs font-semibold text-slate-300 cursor-pointer">
+                Lưu thông tin đăng nhập
+              </label>
             </div>
 
             <button
@@ -626,75 +643,87 @@ export default function Home() {
       {/* Main Grid: Sảnh nổi bật bên trái, BXH đôn gọn bên phải */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* SẢNH NỔI BẬT */}
-        <div className="lg:col-span-2 space-y-3">
-          <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
-            <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
-              🔥 Sảnh Nổi Bật & Game Bài
-            </h2>
-          </div>
+        {/* CỘT TRÁI (SẢNH GAME & GAME GIẢI TRÍ ĐƯỢC CHIA LÀM 2) */}
+        <div className="lg:col-span-2 space-y-6">
           
-          {/* LƯỚI GAME 4 Ô (CÓ GAME BÀI POKER MỚI) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* 1. SẢNH NỔI BẬT */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
+              <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
+                🔥 Sảnh Nổi Bật
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link
+                href="/jackpot"
+                className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
+              >
+                <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎰</div>
+                <h3 className="text-base font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
+                <p className="text-slate-400 text-xs mt-1">Quay hũ tích tụ Điểm Sức Mạnh nổ hũ Grand, Major!</p>
+                <div className="mt-4 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                  Vào Nổ Hũ 🔮
+                </div>
+              </Link>
 
-            {/* GAME BÀI POKER MULTIPLAYER (MỚI BỔ SUNG) */}
-            <Link
-              href="/poker"
-              className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-emerald-950/40 relative overflow-hidden hover:border-emerald-400 hover:shadow-emerald-500/20"
-            >
-              <div className="absolute -right-3 -bottom-3 text-6xl opacity-15">🃏</div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">♠️</span>
-                <h3 className="text-base font-black text-emerald-400">🃏 Poker Texas Hold'em</h3>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Hot</span>
-              </div>
-              <p className="text-slate-300 text-xs mt-1.5">Sát phạt Poker Multiplayer 6 ghế, nhà cái Whis chia bài tự động!</p>
-              <div className="mt-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-emerald-500/20 group-hover:brightness-110">
-                VÀO SÒNG POKER ♠️
-              </div>
-            </Link>
+              <Link
+                href="/wheel"
+                className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
+              >
+                <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎡</div>
+                <h3 className="text-base font-bold text-purple-400">🎡 Vòng Quay May Mắn</h3>
+                <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp thêm Điểm Sức Mạnh!</p>
+                <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                  Quay Ngay 🎟️
+                </div>
+              </Link>
 
-            <Link
-              href="/jackpot"
-              className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
-            >
-              <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎰</div>
-              <h3 className="text-base font-bold text-amber-400">🎰 Jackpot Rồng Thần</h3>
-              <p className="text-slate-400 text-xs mt-1">Quay hũ tích tụ Điểm Sức Mạnh nổ hũ Grand, Major!</p>
-              <div className="mt-4 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                Vào Nổ Hũ 🔮
-              </div>
-            </Link>
-
-            <Link
-              href="/wheel"
-              className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
-            >
-              <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎡</div>
-              <h3 className="text-base font-bold text-purple-400">🎡 Vòng Quay May Mắn</h3>
-              <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp thêm Điểm Sức Mạnh!</p>
-              <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                Quay Ngay 🎟️
-              </div>
-            </Link>
-
-            <Link
-              href="/shop"
-              className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"
-            >
-              <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🛒</div>
-              <h3 className="text-base font-bold text-yellow-400">🛒 Shop Võ Đạo</h3>
-              <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh quy đổi Lượt Quay & Flex!</p>
-              <div className="mt-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                Vào Shop 💎
-              </div>
-            </Link>
-
+              <Link
+                href="/shop"
+                className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400 sm:col-span-2 md:col-span-1 lg:col-span-2 xl:col-span-1"
+              >
+                <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🛒</div>
+                <h3 className="text-base font-bold text-yellow-400">🛒 Shop Võ Đạo</h3>
+                <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh quy đổi Lượt Quay & Flex!</p>
+                <div className="mt-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+                  Vào Shop 💎
+                </div>
+              </Link>
+            </div>
           </div>
+
+          {/* 2. GAME GIẢI TRÍ */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
+              <h2 className="text-lg sm:text-xl font-black text-emerald-400 tracking-wider uppercase">
+                🎮 Game Giải Trí
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <Link
+                href="/poker"
+                className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-emerald-950/40 relative overflow-hidden hover:border-emerald-400 hover:shadow-emerald-500/20"
+              >
+                <div className="absolute -right-3 -bottom-3 text-6xl opacity-15">🃏</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">♠️</span>
+                  <h3 className="text-base font-black text-emerald-400">🃏 Poker Texas Hold'em</h3>
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Phòng VIP</span>
+                </div>
+                <p className="text-slate-300 text-xs mt-1.5">Sát phạt Poker Multiplayer 6 ghế, nhà cái Whis chia bài tự động. Đặt cược bằng Ki!</p>
+                <div className="mt-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-emerald-500/20 group-hover:brightness-110">
+                  VÀO SÒNG POKER ♠️
+                </div>
+              </Link>
+            </div>
+          </div>
+
         </div>
 
         {/* BẢNG XẾP HẠNG TOP 5 */}
-        <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit">
+        <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit lg:sticky lg:top-[85px]">
           <div className="flex items-center justify-between border-l-4 border-orange-500 pl-3">
             <h2 className="text-base sm:text-lg font-black text-orange-400 tracking-wider uppercase">
               🏆 Top 5 Võ Đạo Vũ Trụ
