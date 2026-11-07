@@ -55,10 +55,8 @@ export default function PokerPage() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [raiseVal, setRaiseVal] = useState(100);
 
-  const [turnTimer, setTurnTimer] = useState<number>(30);
   const [resetCountdown, setResetCountdown] = useState<number | null>(null);
 
-  const turnTimerRef = useRef<any>(null);
   const seatsRef = useRef(seats);
   const roomIdRef = useRef(roomId);
   const currentUserRef = useRef(currentUser);
@@ -94,7 +92,6 @@ export default function PokerPage() {
     loadUser();
   }, []);
 
-  // TỰ ĐỘNG DỌN GHẾ KHI THOÁT TAB / F5
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (roomIdRef.current && currentUserRef.current) {
@@ -216,7 +213,6 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // RESET VÁN KHI VỀ SHOWDOWN (TRẬN KẾT THÚC)
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId) {
       setResetCountdown(4);
@@ -237,7 +233,6 @@ export default function PokerPage() {
     }
   }, [phase, roomId]);
 
-  // BẮT ĐẦU VÁN ĐẤU KHI TẤT CẢ READY
   const handleToggleReady = async () => {
     const myIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
     if (myIndex === -1) return;
@@ -308,6 +303,7 @@ export default function PokerPage() {
     setDealerMsg("Whis: Đã chia 2 lá bài tẩy! Vòng PREFLOP bắt đầu.");
   };
 
+  // TÌM GHẾ KẾ TIẾP CÓ NGƯỜI CHƠI VÀ CHƯA ÚP BÀI
   const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
     let next = (current + 1) % 5;
     let count = 0;
@@ -320,6 +316,17 @@ export default function PokerPage() {
       count++;
     }
     return current;
+  };
+
+  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN (TỪ GHẾ 0)
+  const getFirstActiveSeat = (seatsList: (SeatPlayer | null)[]) => {
+    for (let i = 0; i < 5; i++) {
+      const p = seatsList[i];
+      if (p && p.cards && p.cards.length > 0 && !p.folded) {
+        return i;
+      }
+    }
+    return 0;
   };
 
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
@@ -402,7 +409,8 @@ export default function PokerPage() {
         setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
 
-      nextTurnIdx = updatedSeats.findIndex(s => s && s.cards.length > 0 && !s.folded);
+      // ĐÂY LÀ ĐOẠN ĐÃ FIX: TRẢ LẠI LƯỢT CHO NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG MỖI KHI SANG VÒNG MỚI
+      nextTurnIdx = getFirstActiveSeat(updatedSeats);
     }
 
     if (nextPhase === 'SHOWDOWN') {
