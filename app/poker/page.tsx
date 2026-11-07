@@ -33,6 +33,15 @@ const RANK_VALUES: Record<Rank, number> = {
   '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
 };
 
+const WHIS_QUOTES = [
+  "Whis: Bài đẹp thế này mà nhà cái không khóc mới lạ! Khéo lại đi bán muối!",
+  "Whis: Trơ trẽn thật đấy, bài thì rác mà tố cứ như tỷ phú USD thế à?",
+  "Whis: Nhà cái dạo này đói kém hay sao mà nhìn mâm pot thèm thuồng thế!",
+  "Whis: Ai da, nhà cái hốt bạc mỏi tay, cẩn thận sập sàn lúc nào không hay nha!",
+  "Whis: Oai phong lẫm liệt đấy, nhưng chuẩn bị tinh thần ôm hận đi cưng!",
+  "Whis: Đánh kiểu này thì đến thần linh cũng phải chào thua độ lỳ của nhà cái!"
+];
+
 export default function PokerPage() {
   const [inRoom, setInRoom] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -51,11 +60,12 @@ export default function PokerPage() {
   const [currentTurn, setCurrentTurn] = useState<number>(0);
   const [highestBet, setHighestBet] = useState<number>(100);
 
-  const [dealerMsg, setDealerMsg] = useState("Whis: Đang chờ các tay chơi sẵn sàng!");
+  const [dealerMsg, setDealerMsg] = useState("Whis: Đang chờ các tay chơi sẵn sàng nhập cuộc!");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [raiseVal, setRaiseVal] = useState(100);
-
   const [resetCountdown, setResetCountdown] = useState<number | null>(null);
+
+  const [isZoomed, setIsZoomed] = useState(false);
 
   const seatsRef = useRef(seats);
   const roomIdRef = useRef(roomId);
@@ -92,18 +102,35 @@ export default function PokerPage() {
     loadUser();
   }, []);
 
-  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB
-  useEffect(() => {
-    const removePlayerFromRoom = async () => {
-      if (!roomIdRef.current || !currentUserRef.current) return;
-      const updatedSeats = seatsRef.current.map(s =>
-        (s && (String(s.id) === String(currentUserRef.current.id) || s.name === myName)) ? null : s
-      );
-      await supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", roomIdRef.current);
-    };
+  // 🛠️ HÀM HỖ TRỢ: RỜI BÀN HOẶC ĐÓNG TAB SẼ TỰ ĐỘNG RESET BÀN NẾU TRỐNG GHẾ
+  const processLeaveOrUnload = async (currentRoomId: string, currentSeats: (SeatPlayer | null)[], currentUserId: string, currentName: string) => {
+    if (!currentRoomId) return;
+    const updatedSeats = currentSeats.map(s =>
+      (s && (String(s.id) === String(currentUserId) || s.name === currentName)) ? null : s
+    );
 
+    const activeCount = updatedSeats.filter(s => s !== null).length;
+
+    if (activeCount === 0) {
+      // Nếu bàn trống trơn không còn ai -> Reset hoàn toàn phòng về IDLE
+      await supabase.from("poker_rooms").update({
+        seats: [null, null, null, null, null],
+        pot: 0,
+        community_cards: [],
+        phase: 'IDLE',
+        current_turn: 0
+      }).eq("id", currentRoomId);
+    } else {
+      // Vẫn còn người thì chỉ cập nhật lại danh sách ghế
+      await supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", currentRoomId);
+    }
+  };
+
+  useEffect(() => {
     const handleBeforeUnload = () => {
-      removePlayerFromRoom();
+      if (roomIdRef.current && currentUserRef.current) {
+        processLeaveOrUnload(roomIdRef.current, seatsRef.current, currentUserRef.current.id, myName);
+      }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -119,10 +146,7 @@ export default function PokerPage() {
 
   const handleLeaveRoom = async () => {
     if (roomId && currentUser) {
-      const updatedSeats = seats.map(s =>
-        (s && (String(s.id) === String(currentUser.id) || s.name === myName)) ? null : s
-      );
-      await supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", roomId);
+      await processLeaveOrUnload(roomId, seats, currentUser.id, myName);
     }
     setInRoom(false);
     setRoomId(null);
@@ -220,10 +244,12 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // RESET VÁN KHI VỀ SHOWDOWN (10S TỔNG KẾT)
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId) {
       setResetCountdown(10);
+      const randomQuote = WHIS_QUOTES[Math.floor(Math.random() * WHIS_QUOTES.length)];
+      setDealerMsg(randomQuote);
+
       const interval = setInterval(() => {
         setResetCountdown(prev => (prev !== null && prev > 1 ? prev - 1 : 0));
       }, 1000);
@@ -320,7 +346,7 @@ export default function PokerPage() {
         current_turn: firstTurn
       }).eq("id", roomId);
     }
-    setDealerMsg("Whis: Đã chia 2 lá bài tẩy! Vòng PREFLOP bắt đầu.");
+    setDealerMsg("Whis: Đã chia 2 bài tẩy! Cẩn thận cái ví của nhà cái đấy nhé!");
   };
 
   const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
@@ -384,15 +410,13 @@ export default function PokerPage() {
     const newPot = pot + addedBet;
 
     if (activePlayers.length === 1) {
-      setDealerMsg(`Whis: ${activePlayers[0]!.name} chiến thắng do đối thủ đã úp bài!`);
+      setDealerMsg(`Whis: ${activePlayers[0]!.name} hốt trọn ổ vì đối thủ hèn nhát úp bài!`);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, communityCards, 'SHOWDOWN', currentTurn);
       return;
     }
 
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
-    
-    // ĐIỀU KIỆN HOÀN THÀNH VÒNG: Tất cả người chơi còn lại có tiền cược ngang nhau bằng highestBet
-    const isRoundComplete = activePlayers.every(p => p && p.currentBet === newHighest);
+    const isRoundComplete = activePlayers.every(p => p && (p.currentBet === newHighest || p.folded));
 
     let nextPhase = phase;
     let nextCards = [...communityCards];
@@ -404,24 +428,20 @@ export default function PokerPage() {
       const deck = generateDeck();
 
       if (phase === 'PREFLOP') {
-        // Chuyển sang FLOP: Lật 3 lá bài chung đầu tiên
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
-        setDealerMsg("Whis: Lật 3 lá bài chung (FLOP). Mời cược vòng mới!");
+        setDealerMsg("Whis: Lật 3 lá FLOP! Nhà cái bắt đầu run rẩy rồi đấy!");
       } else if (phase === 'FLOP') {
-        // Chuyển sang TURN: Thêm lá thứ 4
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'TURN';
-        setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN). Mời cược!");
+        setDealerMsg("Whis: Lá TURN thứ 4 xuất hiện! Máu chảy thành sông!");
       } else if (phase === 'TURN') {
-        // Chuyển sang RIVER: Thêm lá thứ 5
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'RIVER';
-        setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối!");
+        setDealerMsg("Whis: Lá RIVER cuối cùng! Ai sống sót đây?");
       } else if (phase === 'RIVER') {
-        // Kết thúc vòng RIVER -> SHOWDOWN
         nextPhase = 'SHOWDOWN';
-        setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
+        setDealerMsg("Whis: Hết giờ lật bài! Mở hàng xem ai là vua!");
       }
 
       nextTurnIdx = getFirstActiveSeat(updatedSeats);
@@ -460,9 +480,9 @@ export default function PokerPage() {
 
     if (String(winner.id) === String(currentUser?.id) || winner.name === myName) {
       setMyKi(newBalance);
-      showToast(`🎉 Bạn thắng Pot $${finalPot.toLocaleString()} Ki!`);
+      showToast(`🎉 Bạn hốt trọn Pot $${finalPot.toLocaleString()} Ki! Đỉnh chóp!`);
     } else {
-      showToast(`🏆 ${winner.name} thắng Pot $${finalPot.toLocaleString()} Ki!`);
+      showToast(`🏆 ${winner.name} lượm gọn $${finalPot.toLocaleString()} Ki! Quá khét!`);
     }
 
     if (roomId) {
@@ -478,20 +498,20 @@ export default function PokerPage() {
 
   if (!inRoom) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
-        <div className="relative z-10 w-full max-w-sm bg-gray-900/90 border-2 border-yellow-500/50 rounded-3xl p-5 shadow-2xl space-y-5 text-center">
-          <span className="text-3xl animate-bounce">👑</span>
-          <h1 className="text-xl font-black text-yellow-400 uppercase font-mono">TEXAS HOLD'EM POKER</h1>
-          <p className="text-slate-400 text-[11px]">Đấu Bài 5 Ghế Realtime Supabase</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-emerald-950 to-black text-white flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
+        <div className="relative z-10 w-full max-w-sm bg-gray-900/95 border-2 border-yellow-500/60 rounded-3xl p-6 shadow-2xl space-y-6 text-center backdrop-blur-md">
+          <span className="text-4xl animate-bounce inline-block">👑</span>
+          <h1 className="text-xl font-black text-yellow-400 uppercase font-mono tracking-wider">TEXAS HOLD'EM POKER</h1>
+          <p className="text-slate-400 text-xs">Sòng bài VIP Realtime • Đỉnh cao đấu trí</p>
           <button
             onClick={handleAutoMatch}
             disabled={matching}
-            className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-950 font-black py-3 rounded-xl hover:brightness-110 active:scale-95 transition text-xs"
+            className="w-full bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-gray-950 font-black py-3.5 rounded-xl hover:scale-[1.02] active:scale-95 transition shadow-lg text-sm tracking-wide uppercase"
           >
-            ⚡ GHÉP BÀN TỰ ĐỘNG
+            ⚡ GHÉP BÀN NHANH
           </button>
           <div>
-            <Link href="/" className="text-[11px] text-gray-400 hover:text-yellow-400 font-bold">← Trang Chủ</Link>
+            <Link href="/" className="text-xs text-gray-400 hover:text-yellow-400 font-bold transition">← Quay lại trang chủ</Link>
           </div>
         </div>
       </div>
@@ -503,90 +523,102 @@ export default function PokerPage() {
   const mySeat = mySeatIndex !== -1 ? seats[mySeatIndex] : null;
 
   return (
-    <div className="bg-gray-950 text-white min-h-screen flex flex-col justify-between select-none overflow-hidden font-sans">
+    <div className="bg-gray-950 text-white min-h-screen flex flex-col justify-between select-none overflow-x-hidden font-sans relative">
       
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(16,185,129,0.08),transparent_70%)] pointer-events-none" />
+
       {toastMsg && (
-        <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-yellow-500 text-gray-950 px-4 py-1 rounded-full font-black text-[11px] z-50 shadow-2xl">
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 bg-yellow-400 text-gray-950 px-5 py-2 rounded-full font-black text-xs z-50 shadow-2xl animate-bounce border-2 border-white/40">
           🔔 {toastMsg}
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-gray-900/90 border-b border-yellow-600/30 px-3 py-1 flex justify-between items-center z-30">
+      {/* HEADER */}
+      <header className="bg-gray-900/95 border-b border-yellow-600/30 px-3 py-2 flex justify-between items-center z-30 backdrop-blur">
         <div className="flex items-center gap-2">
-          <span className="text-sm">👑</span>
+          <span className="text-base animate-pulse">👑</span>
           <div>
-            <h1 className="text-[11px] font-black text-yellow-400 uppercase font-mono leading-none">Poker VIP Pro</h1>
-            <p className="text-[8px] text-gray-400 leading-tight">Phòng #{roomCode} • Blinds $50/$100</p>
+            <h1 className="text-xs font-black text-yellow-400 uppercase font-mono tracking-tight leading-none">Poker VIP Royale</h1>
+            <p className="text-[9px] text-emerald-400 font-bold leading-tight">Phòng #{roomCode} • Blinds $50/$100</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="text-right">
-            <p className="text-[8px] text-gray-400 font-bold uppercase leading-none">Tổng Pot</p>
+          <div className="text-right bg-black/40 px-2 py-0.5 rounded-lg border border-yellow-500/20">
+            <p className="text-[7px] text-gray-400 font-bold uppercase leading-none">Tổng Pot</p>
             <p className="text-xs font-black text-yellow-400 font-mono leading-tight">${pot.toLocaleString()}</p>
           </div>
-          <button onClick={handleLeaveRoom} className="bg-gray-800 text-rose-400 px-2 py-0.5 rounded text-[10px] font-bold hover:bg-gray-700">Rời Bàn 🚪</button>
+
+          <button
+            onClick={() => setIsZoomed(!isZoomed)}
+            className="bg-gray-800 hover:bg-gray-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-xs font-black shadow transition active:scale-95"
+            title={isZoomed ? "Thu nhỏ bàn" : "Phóng to bàn"}
+          >
+            {isZoomed ? "🔍➖" : "🔍➕"}
+          </button>
+
+          <button onClick={handleLeaveRoom} className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-lg text-[11px] font-bold shadow transition">
+            Rời 🚪
+          </button>
         </div>
       </header>
 
       {/* BÀN BÀI OVAL */}
-      <main className="flex-1 flex items-center justify-center p-1 relative overflow-hidden">
+      <main className="flex-1 flex items-center justify-center p-2 relative overflow-hidden">
         
         <div 
-          className="w-[98%] max-w-[780px] h-[280px] sm:h-[350px] rounded-[150px] border-4 sm:border-6 border-yellow-700/40 relative flex items-center justify-center shadow-2xl"
+          className={`w-[98%] max-w-[850px] transition-all duration-300 rounded-[140px] sm:rounded-[180px] border-4 sm:border-8 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)] ${
+            isZoomed ? "h-[340px] sm:h-[440px] scale-105" : "h-[290px] sm:h-[370px]"
+          }`}
           style={{ 
-            background: "radial-gradient(circle at center, #1b7a3e 0%, #0e4b25 70%, #062b14 100%)",
-            boxShadow: "inset 0 0 60px rgba(0,0,0,0.8), 0 0 0 8px #4a2810, 0 15px 30px rgba(0,0,0,0.9)"
+            background: "radial-gradient(circle at center, #065f2c 0%, #064e21 60%, #022c12 100%)",
+            boxShadow: "inset 0 0 70px rgba(0,0,0,0.85), 0 0 0 10px #381d09, 0 20px 40px rgba(0,0,0,0.9)"
           }}
         >
-          <div className="absolute inset-4 rounded-[120px] border border-emerald-400/10 pointer-events-none flex items-center justify-center">
-            <span className="text-emerald-500/10 font-black text-2xl sm:text-4xl tracking-[0.2em] font-mono uppercase select-none">
-              POKER ROYALE
+          <div className="absolute inset-4 rounded-[110px] sm:rounded-[150px] border border-emerald-300/10 pointer-events-none flex items-center justify-center">
+            <span className="text-emerald-400/15 font-black text-xl sm:text-5xl tracking-[0.25em] font-mono uppercase select-none drop-shadow">
+              TEXAS HOLD'EM
             </span>
           </div>
 
-          {/* TRỌNG TÀI WHIS */}
-          <div className="absolute top-1.5 flex flex-col items-center z-20">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-400 overflow-hidden bg-indigo-950 shadow-md">
+          <div className="absolute top-2 flex flex-col items-center z-20 px-2 max-w-[280px]">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-yellow-400 overflow-hidden bg-indigo-950 shadow-lg animate-pulse">
               <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
             </div>
-            <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase mt-0.5">TRỌNG TÀI WHIS</span>
-            <p className="text-[9px] text-yellow-200 bg-black/60 px-2 rounded-full border border-yellow-500/30 mt-0.5 font-mono">
-              {resetCountdown !== null ? `⏳ Tổng kết ván kết thúc (Tự reset bàn sau ${resetCountdown}s)...` : dealerMsg}
+            <span className="text-[7px] bg-yellow-400 text-gray-950 px-2 rounded-full font-black uppercase mt-0.5 shadow">TRỌNG TÀI WHIS</span>
+            <p className="text-[9px] sm:text-[10px] text-yellow-200 bg-black/75 px-3 py-0.5 rounded-full border border-yellow-500/40 mt-1 font-mono text-center shadow-lg leading-tight">
+              {resetCountdown !== null ? `⏳ Tổng kết ván (Tự reset sau ${resetCountdown}s)...` : dealerMsg}
             </p>
           </div>
 
-          {/* BÀI CHUNG VÀ POT */}
-          <div className="absolute flex flex-col items-center gap-0.5 z-10">
-            <div className="bg-gray-950/80 px-2.5 py-0.5 rounded-full border border-yellow-500/50 text-yellow-400 text-[10px] font-black flex items-center gap-1 shadow-lg">
+          <div className="absolute flex flex-col items-center gap-1 z-10">
+            <div className="bg-gray-950/90 px-3 py-0.5 rounded-full border border-yellow-500/60 text-yellow-400 text-xs font-black flex items-center gap-1.5 shadow-xl font-mono">
               <span>🪙 POT:</span>
-              <span className="font-mono">${pot.toLocaleString()}</span>
+              <span className="text-amber-300">${pot.toLocaleString()}</span>
             </div>
 
-            <div className="flex gap-1 bg-black/40 p-1.5 rounded-lg border border-white/10 min-h-[45px] items-center">
+            <div className="flex gap-1.5 bg-black/50 p-2 rounded-xl border border-white/15 min-h-[52px] sm:min-h-[64px] items-center shadow-inner">
               {communityCards.length === 0 ? (
-                <span className="text-[9px] text-emerald-200/60 font-mono italic px-2">
-                  Cần tất cả người chơi Ready để bắt đầu!
+                <span className="text-[10px] text-emerald-200/60 font-mono italic px-2">
+                  Chờ người chơi sẵn sàng chia bài...
                 </span>
               ) : (
                 communityCards.map((card, idx) => (
-                  <div key={idx} className="w-7 h-10 sm:w-8 sm:h-12 bg-white rounded flex flex-col justify-between p-0.5 font-black shadow text-gray-900">
-                    <span className={`text-[9px] leading-none ${card.color}`}>{card.rank}</span>
-                    <span className={`text-xs self-center leading-none ${card.color}`}>{card.suit}</span>
-                    <span className={`text-[9px] self-end leading-none ${card.color}`}>{card.rank}</span>
+                  <div key={idx} className="w-8 h-12 sm:w-10 sm:h-14 bg-white rounded-lg flex flex-col justify-between p-1 font-black shadow-2xl text-gray-900 transform transition hover:scale-110">
+                    <span className={`text-[10px] sm:text-xs leading-none ${card.color}`}>{card.rank}</span>
+                    <span className={`text-sm sm:text-base self-center leading-none ${card.color}`}>{card.suit}</span>
+                    <span className={`text-[10px] sm:text-xs self-end leading-none ${card.color}`}>{card.rank}</span>
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          {/* 5 GHẾ NGỒI POKER */}
           {seats.map((seat, index) => {
             if (!seat) {
               return (
-                <div key={index} className={`absolute text-[7px] text-white/40 border border-dashed border-white/20 w-7 h-7 rounded-full flex items-center justify-center bg-black/20 ${
-                  index === 0 ? "bottom-1" : index === 1 ? "bottom-4 left-[6%]" : index === 2 ? "top-6 left-[6%]" : index === 3 ? "top-6 right-[6%]" : "bottom-4 right-[6%]"
+                <div key={index} className={`absolute text-[8px] text-white/40 border border-dashed border-white/30 w-8 h-8 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-sm ${
+                  index === 0 ? "bottom-2" : index === 1 ? "bottom-6 left-[4%]" : index === 2 ? "top-8 left-[4%]" : index === 3 ? "top-8 right-[4%]" : "bottom-6 right-[4%]"
                 }`}>
                   Ghế {index + 1}
                 </div>
@@ -597,39 +629,39 @@ export default function PokerPage() {
             const isMySeat = String(seat.id) === String(currentUser?.id) || seat.name === myName;
 
             return (
-              <div key={index} className={`absolute flex flex-col items-center transition-all ${
-                index === 0 ? "bottom-1 z-20" : index === 1 ? "bottom-4 left-[6%] z-10" : index === 2 ? "top-6 left-[6%] z-10" : index === 3 ? "top-6 right-[6%] z-10" : "bottom-4 right-[6%] z-10"
+              <div key={index} className={`absolute flex flex-col items-center transition-all duration-200 ${
+                index === 0 ? "bottom-2 z-25" : index === 1 ? "bottom-6 left-[4%] z-15" : index === 2 ? "top-8 left-[4%] z-15" : index === 3 ? "top-8 right-[4%] z-15" : "bottom-6 right-[4%] z-15"
               }`}>
                 
                 {isTurn && (
-                  <span className="text-[8px] bg-red-600 text-white px-1.5 py-0.2 rounded-full font-bold animate-pulse mb-0.5">
-                    ⏳ Lượt chọn...
+                  <span className="text-[8px] bg-red-600 text-white px-2 py-0.5 rounded-full font-bold animate-ping mb-0.5 shadow-lg">
+                    ⚡ ĐẾN LƯỢT
                   </span>
                 )}
                 {phase === 'IDLE' && (
-                  <span className={`text-[7px] px-1.5 py-0.2 rounded-full font-bold mb-0.5 ${seat.isReady ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>
-                    {seat.isReady ? '✅ ĐÃ READY' : '⏳ CHỜ READY'}
+                  <span className={`text-[7px] px-2 py-0.5 rounded-full font-bold mb-0.5 shadow ${seat.isReady ? 'bg-emerald-400 text-gray-950 font-black' : 'bg-gray-800 text-gray-400'}`}>
+                    {seat.isReady ? '✅ SẴN SÀNG' : '⏳ CHỜ'}
                   </span>
                 )}
-                {seat.folded && <span className="text-[7px] bg-red-950 text-red-400 px-1 rounded mb-0.5">ĐÃ ÚP BÀI</span>}
+                {seat.folded && <span className="text-[8px] bg-red-950 text-red-400 border border-red-500/40 px-1.5 rounded mb-0.5 font-bold">ĐÃ ÚP BÀI</span>}
 
-                <div className="flex -space-x-2 mb-0.5">
+                <div className="flex -space-x-2.5 mb-1">
                   {isMySeat || phase === 'SHOWDOWN' ? (
                     seat.cards.map((c, i) => (
-                      <div key={i} className="w-6 h-9 bg-white rounded flex flex-col justify-between p-0.5 text-gray-900 text-[8px] font-bold shadow">
+                      <div key={i} className="w-7 h-10 sm:w-8 sm:h-12 bg-white rounded-md flex flex-col justify-between p-0.5 text-gray-900 text-[9px] font-black shadow-xl">
                         <span className={`leading-none ${c.color}`}>{c.rank}{c.suit}</span>
                       </div>
                     ))
                   ) : (
-                    seat.cards.length > 0 && <div className="w-6 h-9 bg-blue-900 border border-white/40 rounded flex items-center justify-center text-[7px] font-mono">🎴🎴</div>
+                    seat.cards.length > 0 && <div className="w-7 h-10 sm:w-8 sm:h-12 bg-indigo-950 border border-indigo-400/50 rounded-md flex items-center justify-center text-[8px] font-mono shadow-lg">🎴🎴</div>
                   )}
                 </div>
 
-                <div className={`flex items-center gap-1 bg-gray-900/90 px-2 py-0.5 rounded-full border ${isTurn ? 'border-yellow-400 ring-2 ring-yellow-400/50' : 'border-gray-700'}`}>
-                  <img src={seat.avatar} className="w-4 h-4 rounded-full bg-gray-800" />
+                <div className={`flex items-center gap-1.5 bg-gray-900/95 px-2.5 py-1 rounded-full border backdrop-blur shadow-xl ${isTurn ? 'border-yellow-400 ring-4 ring-yellow-400/40 scale-105' : 'border-gray-700'}`}>
+                  <img src={seat.avatar} className="w-5 h-5 rounded-full bg-gray-800 border border-yellow-500/40" />
                   <div className="text-left">
-                    <p className="text-[7px] font-black text-yellow-400 leading-none truncate max-w-[60px]">{seat.name}</p>
-                    <p className="text-[8px] font-mono font-bold leading-none">${seat.chips.toLocaleString()}</p>
+                    <p className="text-[8px] font-black text-yellow-400 leading-none truncate max-w-[65px]">{seat.name}</p>
+                    <p className="text-[9px] font-mono font-black text-emerald-300 leading-tight">${seat.chips.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -640,20 +672,20 @@ export default function PokerPage() {
       </main>
 
       {/* FOOTER ĐẶT CƯỢC */}
-      <footer className="bg-gray-900 border-t border-gray-800 p-1.5 px-3 z-30">
-        <div className="max-w-3xl mx-auto flex flex-col gap-1">
+      <footer className="bg-gray-900/95 border-t border-yellow-600/30 p-2 px-3 z-30 backdrop-blur">
+        <div className="max-w-2xl mx-auto flex flex-col gap-1.5">
           
           {phase === 'IDLE' ? (
             <div className="flex gap-2 w-full">
               <button
                 onClick={handleToggleReady}
-                className={`flex-1 py-2 font-black rounded-lg shadow active:scale-95 transition text-xs uppercase ${
+                className={`w-full py-2.5 font-black rounded-xl shadow-lg active:scale-95 transition text-xs tracking-wider uppercase ${
                   mySeat?.isReady 
                     ? "bg-rose-600 hover:bg-rose-500 text-white" 
-                    : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                    : "bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-gray-950"
                 }`}
               >
-                {mySeat?.isReady ? "❌ HỦY SẮN SÀNG" : "🟢 SẴN SÀNG THAM GIA"}
+                {mySeat?.isReady ? "❌ HỦY SẴN SÀNG" : "🟢 SẴN SÀNG NHẬP CUỘC"}
               </button>
             </div>
           ) : phase === 'SHOWDOWN' ? (
@@ -661,9 +693,9 @@ export default function PokerPage() {
               ⏳ Ván đấu kết thúc. Tự động reset bàn sau {resetCountdown ?? 10}s...
             </div>
           ) : (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between gap-1.5 bg-gray-950/80 p-1 px-2.5 rounded-lg border border-gray-800">
-                <span className="text-[9px] text-yellow-400 font-mono font-bold shrink-0">Cược: ${raiseVal}</span>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2 bg-black/60 p-1.5 px-3 rounded-xl border border-gray-800">
+                <span className="text-[10px] text-yellow-400 font-mono font-black shrink-0">Cược: ${raiseVal}</span>
                 <input
                   type="range"
                   min={50}
@@ -672,41 +704,41 @@ export default function PokerPage() {
                   value={raiseVal}
                   onChange={(e) => setRaiseVal(Number(e.target.value))}
                   disabled={!isMyTurn}
-                  className="flex-1 accent-yellow-500 h-1 disabled:opacity-30"
+                  className="flex-1 accent-yellow-400 h-1.5 rounded-lg disabled:opacity-30 cursor-pointer"
                 />
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => setRaiseVal(50)} disabled={!isMyTurn} className="bg-emerald-950 text-emerald-400 border border-emerald-600/40 px-1.5 py-0.2 rounded text-[9px] font-bold disabled:opacity-30">🪙 $50</button>
-                  <button onClick={() => setRaiseVal(100)} disabled={!isMyTurn} className="bg-blue-950 text-blue-400 border border-blue-600/40 px-1.5 py-0.2 rounded text-[9px] font-bold disabled:opacity-30">🪙 $100</button>
-                  <button onClick={() => setRaiseVal(500)} disabled={!isMyTurn} className="bg-purple-950 text-purple-400 border border-purple-600/40 px-1.5 py-0.2 rounded text-[9px] font-bold disabled:opacity-30">🪙 $500</button>
+                  <button onClick={() => setRaiseVal(50)} disabled={!isMyTurn} className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/40 px-2 py-0.5 rounded text-[10px] font-bold disabled:opacity-30 transition">🪙 50</button>
+                  <button onClick={() => setRaiseVal(100)} disabled={!isMyTurn} className="bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-600/40 px-2 py-0.5 rounded text-[10px] font-bold disabled:opacity-30 transition">🪙 100</button>
+                  <button onClick={() => setRaiseVal(500)} disabled={!isMyTurn} className="bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-600/40 px-2 py-0.5 rounded text-[10px] font-bold disabled:opacity-30 transition">🪙 500</button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 w-full">
+              <div className="grid grid-cols-4 gap-1.5 w-full">
                 <button 
                   onClick={() => handleAction('fold')} 
                   disabled={!isMyTurn}
-                  className="flex-1 bg-red-600/30 text-red-400 border border-red-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
+                  className="bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-500/50 py-2 rounded-xl font-black text-xs transition active:scale-95 disabled:opacity-30 shadow"
                 >
-                  ÚP BÀI
+                  ÚP BÀI 🏳️
                 </button>
                 <button 
                   onClick={() => handleAction('call')} 
                   disabled={!isMyTurn}
-                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
+                  className="bg-blue-950/70 hover:bg-blue-900 text-blue-300 border border-blue-500/50 py-2 rounded-xl font-black text-xs transition active:scale-95 disabled:opacity-30 shadow"
                 >
-                  THEO
+                  THEO 🤝
                 </button>
                 <button 
                   onClick={() => handleAction('raise')} 
                   disabled={!isMyTurn}
-                  className="flex-1 bg-yellow-500 text-gray-950 font-black py-1.5 rounded-lg text-[11px] shadow disabled:opacity-30"
+                  className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:brightness-110 text-gray-950 font-black py-2 rounded-xl text-xs transition active:scale-95 disabled:opacity-30 shadow"
                 >
-                  TỐ (${raiseVal})
+                  TỐ 🚀
                 </button>
                 <button 
                   onClick={() => handleAction('allin')} 
                   disabled={!isMyTurn}
-                  className="bg-purple-600 text-white font-black px-3 py-1.5 rounded-lg text-[11px] shadow disabled:opacity-30"
+                  className="bg-gradient-to-r from-purple-600 to-indigo-700 hover:brightness-110 text-white font-black py-2 rounded-xl text-xs transition active:scale-95 disabled:opacity-30 shadow animate-pulse"
                 >
                   ALL-IN 🔥
                 </button>
