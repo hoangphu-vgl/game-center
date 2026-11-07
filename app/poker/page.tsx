@@ -119,6 +119,10 @@ export default function PokerPage() {
         }) || fixedRooms[0];
 
         let currentSeats: (SeatPlayer | null)[] = targetRoom.seats || [null, null, null, null, null];
+        
+        // LỌC BỎ HOÀN TOÀN BẤT KỲ BOT NÀO CÒN SÓT LẠI TRÊN SUPABASE
+        currentSeats = currentSeats.map(s => (s && (s.id.includes("bot") || s.name.toLowerCase().includes("bot"))) ? null : s);
+
         const existingIdx = currentSeats.findIndex(s => s && s.id === currentUser.id);
 
         if (existingIdx !== -1) {
@@ -149,7 +153,10 @@ export default function PokerPage() {
     const fetchRoom = async () => {
       const { data } = await supabase.from("poker_rooms").select("*").eq("id", roomId).single();
       if (data) {
-        setSeats(data.seats || [null, null, null, null, null]);
+        let cleanSeats = (data.seats || [null, null, null, null, null]).map((s: any) => 
+          (s && (s.id?.includes("bot") || s.name?.toLowerCase().includes("bot"))) ? null : s
+        );
+        setSeats(cleanSeats);
         setPot(data.pot || 0);
         setCommunityCards(data.community_cards || []);
         setPhase(data.phase || 'IDLE');
@@ -162,7 +169,10 @@ export default function PokerPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "poker_rooms", filter: `id=eq.${roomId}` }, (payload: any) => {
         const room = payload.new;
         if (room) {
-          setSeats(room.seats || [null, null, null, null, null]);
+          let cleanSeats = (room.seats || [null, null, null, null, null]).map((s: any) => 
+            (s && (s.id?.includes("bot") || s.name?.toLowerCase().includes("bot"))) ? null : s
+          );
+          setSeats(cleanSeats);
           setPot(room.pot || 0);
           setCommunityCards(room.community_cards || []);
           setPhase(room.phase || 'IDLE');
