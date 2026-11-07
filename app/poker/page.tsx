@@ -327,7 +327,6 @@ export default function PokerPage() {
     return next;
   };
 
-  // LUẬT XỬ LÝ NƯỚC ĐI TUYỆT ĐỐI CHUẨN VÒNG POKER
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
     const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
     if (myIndex !== currentTurn && phase !== 'IDLE') {
@@ -348,24 +347,20 @@ export default function PokerPage() {
     }
 
     const activePlayers = updatedSeats.filter(s => s && s.isReady && !s.folded);
+    const newPot = pot + (action === 'fold' ? 0 : addedBet);
 
     let nextPhase = phase;
     let nextCards = [...communityCards];
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
 
-    // Nếu chỉ còn 1 người duy nhất chưa úp bài -> Người đó thắng luôn Pot hiện tại
     if (activePlayers.length === 1) {
       nextPhase = 'SHOWDOWN';
       setDealerMsg(`Các người chơi khác đã úp bài. ${activePlayers[0]!.name} chiến thắng!`);
-      const newPot = pot + (action === 'fold' ? 0 : addedBet);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
       return;
     }
 
-    // Kiểm tra xem đã đi hết vòng của phase hiện tại chưa (nếu vòng quay lại người đầu tiên hoặc qua mốc)
-    // Để đơn giản và mượt mà cho 5 ghế: khi người chơi cuối cùng trong danh sách active đánh xong -> chuyển phase
     const lastActiveIndex = updatedSeats.map((s, idx) => (s && s.isReady && !s.folded) ? idx : -1).filter(idx => idx !== -1).pop();
-
     let isRoundComplete = (currentTurn === lastActiveIndex);
 
     if (isRoundComplete) {
@@ -397,14 +392,12 @@ export default function PokerPage() {
         setDealerMsg("Vòng cuối kết thúc! Mở bài đọ điểm (SHOWDOWN)!");
       }
 
-      // Reset turn về người chơi active đầu tiên trong bàn
       nextTurnIdx = updatedSeats.findIndex(s => s && s.isReady && !s.folded);
     }
 
-    const newPot = pot + (action === 'fold' ? 0 : addedBet);
-
     if (nextPhase === 'SHOWDOWN') {
-      await executeAwardWinner(activePlayers[Math.floor(Math.random() * activePlayers.length)], newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
+      const winner = activePlayers[Math.floor(Math.random() * activePlayers.length)]!;
+      await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
     } else {
       if (roomId) {
         await supabase.from("poker_rooms").update({
@@ -432,7 +425,6 @@ export default function PokerPage() {
       .update({ balance: newBalance })
       .eq("id", winner.id);
 
-    // Cập nhật lại chips cho winner trong mảng seats luôn
     const updatedSeatsWithChips = finalSeats.map(s => {
       if (s && s.id === winner.id) {
         return { ...s, chips: newBalance };
@@ -700,7 +692,7 @@ export default function PokerPage() {
                 <button 
                   onClick={() => handleAction('call')} 
                   disabled={!isMyTurn}
-                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-600/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
+                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
                 >
                   THEO
                 </button>
