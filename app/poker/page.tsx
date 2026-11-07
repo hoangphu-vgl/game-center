@@ -93,7 +93,7 @@ export default function PokerPage() {
     loadUser();
   }, []);
 
-  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB (DÙNG BEACON API CHỐNG RỚT GÓI)
+  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB
   useEffect(() => {
     const removePlayerFromRoom = async () => {
       if (!roomIdRef.current || !currentUserRef.current) return;
@@ -272,7 +272,8 @@ export default function PokerPage() {
     }
   };
 
-  const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
+  // Tạo bộ bài ngẫu nhiên mới
+  const generateDeck = (): Card[] => {
     const deck: Card[] = [];
     for (const suit of SUITS) {
       for (const rank of RANKS) {
@@ -283,6 +284,11 @@ export default function PokerPage() {
       const j = Math.floor(Math.random() * (i + 1));
       [deck[i], deck[j]] = [deck[j], deck[i]];
     }
+    return deck;
+  };
+
+  const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
+    const deck = generateDeck();
 
     let updatedSeats = currentSeatsList.map(seat => {
       if (!seat) return null;
@@ -335,7 +341,7 @@ export default function PokerPage() {
     return current;
   };
 
-  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN TỪ GHẾ 0 (BỎ QUA GHẾ NULL)
+  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN TỪ GHẾ 0
   const getFirstActiveSeat = (seatsList: (SeatPlayer | null)[]) => {
     for (let i = 0; i < 5; i++) {
       const p = seatsList[i];
@@ -400,30 +406,25 @@ export default function PokerPage() {
       updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0, actedInRound: false } : null);
       setHighestBet(0);
 
-      const deck: Card[] = [];
-      for (const suit of SUITS) {
-        for (const rank of RANKS) {
-          deck.push({ suit, rank, value: RANK_VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'text-red-600' : 'text-gray-900' });
-        }
-      }
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
+      const deck = generateDeck();
 
       if (phase === 'PREFLOP') {
+        // Lật 3 lá đầu tiên (FLOP)
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
         setDealerMsg("Whis: Lật 3 lá bài chung đầu tiên (FLOP). Mời cược vòng mới!");
       } else if (phase === 'FLOP') {
+        // Lật lá thứ 4 (TURN)
         nextCards.push(deck.pop()!);
         nextPhase = 'TURN';
         setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN). Mời các tay chơi cược!");
       } else if (phase === 'TURN') {
+        // Lật lá thứ 5 (RIVER)
         nextCards.push(deck.pop()!);
         nextPhase = 'RIVER';
         setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối cùng!");
       } else if (phase === 'RIVER') {
+        // Hết vòng cược RIVER -> Chuyển ngay sang SHOWDOWN để chấm điểm
         nextPhase = 'SHOWDOWN';
         setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
