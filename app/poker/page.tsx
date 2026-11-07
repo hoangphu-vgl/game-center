@@ -23,6 +23,7 @@ interface SeatPlayer {
   currentBet: number;
   folded: boolean;
   isReady: boolean;
+  actedInRound?: boolean;
 }
 
 type GamePhase = 'IDLE' | 'PREFLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
@@ -92,18 +93,24 @@ export default function PokerPage() {
     loadUser();
   }, []);
 
-  // TỰ ĐỘNG DỌN GHẾ KHI THOÁT TAB / F5
+  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB (DÙNG BEACON API CHỐNG RỚT GÓI)
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (roomIdRef.current && currentUserRef.current) {
-        const updatedSeats = seatsRef.current.map(s =>
-          (s && (String(s.id) === String(currentUserRef.current.id) || s.name === myName)) ? null : s
-        );
-        supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", roomIdRef.current);
-      }
+    const removePlayerFromRoom = async () => {
+      if (!roomIdRef.current || !currentUserRef.current) return;
+      const updatedSeats = seatsRef.current.map(s =>
+        (s && (String(s.id) === String(currentUserRef.current.id) || s.name === myName)) ? null : s
+      );
+      await supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", roomIdRef.current);
     };
+
+    const handleBeforeUnload = () => {
+      removePlayerFromRoom();
+    };
+
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, [myName]);
 
   const showToast = (msg: string) => {
@@ -214,7 +221,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // RESET VÁN KHI VỀ SHOWDOWN (DÀNH 10 GIÂY TỔNG KẾT VÁN)
+  // RESET VÁN KHI VỀ SHOWDOWN (DÀNH 10 GIÂY ĐỂ TỔNG KẾT VÁN VÀ NHẬN TIỀN)
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId) {
       setResetCountdown(10);
@@ -223,7 +230,7 @@ export default function PokerPage() {
       }, 1000);
 
       const timer = setTimeout(async () => {
-        const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0 } : null);
+        const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0, actedInRound: false } : null);
         await supabase.from("poker_rooms").update({
           seats: resetSeats,
           pot: 0,
@@ -288,7 +295,8 @@ export default function PokerPage() {
         currentBet: 100,
         chips: newChips,
         folded: false,
-        isReady: true
+        isReady: true,
+        actedInRound: false
       };
     });
 
@@ -296,7 +304,7 @@ export default function PokerPage() {
     if (participatingCount === 0) return;
 
     const initialPot = participatingCount * 100;
-    const firstTurn = updatedSeats.findIndex(s => s !== null && s.cards.length > 0);
+    const firstTurn = getFirstActiveSeat(updatedSeats);
 
     setHighestBet(100);
 
@@ -327,7 +335,7 @@ export default function PokerPage() {
     return current;
   };
 
-  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN TỪ GHẾ 0
+  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN TỪ GHẾ 0 (BỎ QUA GHẾ NULL)
   const getFirstActiveSeat = (seatsList: (SeatPlayer | null)[]) => {
     for (let i = 0; i < 5; i++) {
       const p = seatsList[i];
@@ -351,6 +359,7 @@ export default function PokerPage() {
 
     let addedBet = 0;
     let newHighest = highestBet;
+    me.actedInRound = true;
 
     if (action === 'fold') {
       me.folded = true;
@@ -366,6 +375,7 @@ export default function PokerPage() {
       me.currentBet = targetBet;
       if (targetBet > highestBet) {
         newHighest = targetBet;
+        updatedSeats = updatedSeats.map(s => s ? { ...s, actedInRound: String(s.id) === String(me.id) } : null);
       }
     }
 
@@ -374,7 +384,6 @@ export default function PokerPage() {
     const activePlayers = updatedSeats.filter(s => s && s.cards.length > 0 && !s.folded);
     const newPot = pot + addedBet;
 
-    // Nếu chỉ còn 1 người chưa úp ➔ Thắng ngay
     if (activePlayers.length === 1) {
       setDealerMsg(`Whis: ${activePlayers[0]!.name} chiến thắng do đối thủ đã úp bài!`);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, communityCards, 'SHOWDOWN', currentTurn);
@@ -382,16 +391,13 @@ export default function PokerPage() {
     }
 
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
-    
-    // ĐIỀU KIỆN HOÀN THÀNH VÒNG CƯỢC: TẤT CẢ NGƯỜI CHƠI ĐÃ THEO ĐỦ TIỀN VÀ MỌI NGƯỜI ĐÃ ĐƯỢC ĐẠT VÒNG CƯỢC
-    const isRoundComplete = activePlayers.every(p => p && p.currentBet === newHighest);
+    const isRoundComplete = activePlayers.every(p => p && p.currentBet === newHighest && p.actedInRound);
 
     let nextPhase = phase;
     let nextCards = [...communityCards];
 
     if (isRoundComplete) {
-      // Đặt cược vòng cũ về 0 chuẩn bị cho vòng cược bài chung mới
-      updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0 } : null);
+      updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0, actedInRound: false } : null);
       setHighestBet(0);
 
       const deck: Card[] = [];
@@ -408,7 +414,7 @@ export default function PokerPage() {
       if (phase === 'PREFLOP') {
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
-        setDealerMsg("Whis: Lật 3 lá bài chung đầu tiên (FLOP). Mới các tay chơi cược lượt mới!");
+        setDealerMsg("Whis: Lật 3 lá bài chung đầu tiên (FLOP). Mời cược vòng mới!");
       } else if (phase === 'FLOP') {
         nextCards.push(deck.pop()!);
         nextPhase = 'TURN';
@@ -416,13 +422,12 @@ export default function PokerPage() {
       } else if (phase === 'TURN') {
         nextCards.push(deck.pop()!);
         nextPhase = 'RIVER';
-        setDealerMsg("Whis: Lật lá bài chung thứ 5 cuối cùng (RIVER). Vòng cược chót!");
+        setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối cùng!");
       } else if (phase === 'RIVER') {
         nextPhase = 'SHOWDOWN';
-        setDealerMsg("Whis: Hết tất cả lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
+        setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
 
-      // TRẢ LẠI LƯỢT CHO NGƯỜI CHƠI HỢP LỆ ĐẦU TIÊN TRÊN BÀN CHO VÒNG CƯỢC MỚI
       nextTurnIdx = getFirstActiveSeat(updatedSeats);
     }
 
@@ -552,7 +557,7 @@ export default function PokerPage() {
             </div>
             <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase mt-0.5">TRỌNG TÀI WHIS</span>
             <p className="text-[9px] text-yellow-200 bg-black/60 px-2 rounded-full border border-yellow-500/30 mt-0.5 font-mono">
-              {resetCountdown !== null ? `⏳ Đang tổng kết ván kết thúc (Tự reset bàn sau ${resetCountdown}s)...` : dealerMsg}
+              {resetCountdown !== null ? `⏳ Tổng kết ván kết thúc (Tự reset bàn sau ${resetCountdown}s)...` : dealerMsg}
             </p>
           </div>
 
