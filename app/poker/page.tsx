@@ -23,7 +23,6 @@ interface SeatPlayer {
   currentBet: number;
   folded: boolean;
   isReady: boolean;
-  isBot?: boolean;
 }
 
 type GamePhase = 'IDLE' | 'PREFLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
@@ -55,7 +54,9 @@ export default function PokerPage() {
   const [raiseVal, setRaiseVal] = useState(100);
 
   const [turnTimer, setTurnTimer] = useState<number>(30);
+  const [readyCountdown, setReadyCountdown] = useState<number | null>(null);
   const turnTimerRef = useRef<any>(null);
+  const readyTimerRef = useRef<any>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -173,18 +174,43 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // Tự động xử lý nước đi của Bot nếu đến lượt Bot
   useEffect(() => {
-    if (phase !== 'IDLE' && phase !== 'SHOWDOWN') {
-      const currentSeat = seats[currentTurn];
-      if (currentSeat && currentSeat.isBot && currentSeat.id !== currentUser?.id) {
-        const botTimer = setTimeout(() => {
-          handleBotAction(currentTurn);
-        }, 1500);
-        return () => clearTimeout(botTimer);
-      }
+    if (phase !== 'IDLE') {
+      setReadyCountdown(null);
+      if (readyTimerRef.current) clearInterval(readyTimerRef.current);
+      return;
     }
-  }, [currentTurn, phase, seats]);
+
+    const activeSeats = seats.filter(s => s !== null);
+    const readySeats = activeSeats.filter(s => s && s.isReady);
+
+    if (activeSeats.length > 0 && readySeats.length === activeSeats.length) {
+      if (readyTimerRef.current) clearInterval(readyTimerRef.current);
+      setReadyCountdown(null);
+      startNewHand(seats);
+    } else if (readySeats.length > 0 && readySeats.length < activeSeats.length) {
+      if (!readyTimerRef.current) {
+        setReadyCountdown(15);
+        readyTimerRef.current = setInterval(() => {
+          setReadyCountdown(prev => {
+            if (prev !== null && prev <= 1) {
+              clearInterval(readyTimerRef.current);
+              readyTimerRef.current = null;
+              startNewHand(seats);
+              return null;
+            }
+            return prev !== null ? prev - 1 : 15;
+          });
+        }, 1000);
+      }
+    } else {
+      if (readyTimerRef.current) {
+        clearInterval(readyTimerRef.current);
+        readyTimerRef.current = null;
+      }
+      setReadyCountdown(null);
+    }
+  }, [seats, phase]);
 
   useEffect(() => {
     if (phase !== 'IDLE' && phase !== 'SHOWDOWN') {
@@ -232,42 +258,15 @@ export default function PokerPage() {
     const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
     if (myIndex === -1) return;
 
-    let newSeats = [...seats];
-    if (newSeats[myIndex]) {
-      newSeats[myIndex]!.isReady = !newSeats[myIndex]!.isReady;
+    const newSeats = [...seats];
+    const currentSeat = newSeats[myIndex];
+    if (currentSeat) {
+      currentSeat.isReady = !currentSeat.isReady;
     }
 
-    // Nếu chơi 1 mình, tự động add 1 Bot vào ghế bên cạnh để có đối thủ chơi cùng
-    const humanCount = newSeats.filter(s => s !== null && !s.isBot).length;
-    const botCount = newSeats.filter(s => s !== null && s.isBot).length;
-    if (humanCount === 1 && botCount === 0) {
-      const emptyIdx = newSeats.findIndex((s, idx) => s === null && idx !== myIndex);
-      if (emptyIdx !== -1) {
-        newSeats[emptyIdx] = {
-          id: "bot_whis",
-          name: "Whis Bot",
-          avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=WhisBot",
-          chips: 5000,
-          cards: [],
-          currentBet: 0,
-          folded: false,
-          isReady: true,
-          isBot: true
-        };
-      }
-    }
-
-    const activeSeats = newSeats.filter(s => s !== null);
-    const readySeats = activeSeats.filter(s => s && s.isReady);
-
-    if (activeSeats.length > 0 && readySeats.length === activeSeats.length) {
-      await startNewHand(newSeats);
-    } else {
-      setSeats(newSeats);
-      if (roomId) {
-        await supabase.from("poker_rooms").update({ seats: newSeats }).eq("id", roomId);
-      }
-      showToast(newSeats[myIndex]?.isReady ? "✅ Đã sẵn sàng! Chờ người chơi..." : "❌ Đã hủy sẵn sàng.");
+    setSeats(newSeats);
+    if (roomId) {
+      await supabase.from("poker_rooms").update({ seats: newSeats }).eq("id", roomId);
     }
   };
 
@@ -284,7 +283,7 @@ export default function PokerPage() {
     }
 
     let updatedSeats = currentSeatsList.map(seat => {
-      if (!seat) return null;
+      if (!seat || !seat.isReady) return seat;
       const c1 = deck.pop()!;
       const c2 = deck.pop()!;
       const newChips = Math.max(0, seat.chips - 100);
@@ -293,14 +292,13 @@ export default function PokerPage() {
         cards: [c1, c2],
         currentBet: 100,
         chips: newChips,
-        folded: false,
-        isReady: true
+        folded: false
       };
     });
 
-    const activeCount = updatedSeats.filter(s => s !== null).length;
+    const activeCount = updatedSeats.filter(s => s && s.isReady).length;
     const initialPot = activeCount * 100;
-    const firstTurn = updatedSeats.findIndex(s => s !== null);
+    const firstTurn = updatedSeats.findIndex(s => s && s.isReady);
 
     if (roomId) {
       await supabase.from("poker_rooms").update({
@@ -316,83 +314,21 @@ export default function PokerPage() {
       setPhase("PREFLOP");
       setCurrentTurn(firstTurn);
     }
-    setDealerMsg("Nhà cái Whis đã chia bài! Bắt đầu vòng PREFLOP");
+    setDealerMsg("Nhà cái Whis đã chia bài ván mới! Vòng PREFLOP");
   };
 
   const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
     let next = (current + 1) % 5;
     let count = 0;
-    while ((!seatsList[next] || seatsList[next]?.folded) && count < 5) {
+    // Nếu chơi 1 mình thì giữ nguyên turn hoặc quét qua lại mượt mà
+    const activeSeatsCount = seatsList.filter(s => s && s.isReady && !s.folded).length;
+    if (activeSeatsCount <= 1) return current;
+
+    while ((!seatsList[next] || !seatsList[next]?.isReady || seatsList[next]?.folded) && count < 5) {
       next = (next + 1) % 5;
       count++;
     }
     return next;
-  };
-
-  const handleBotAction = async (botIndex: number) => {
-    let updatedSeats = [...seats];
-    if (!updatedSeats[botIndex] || updatedSeats[botIndex]!.folded) return;
-
-    // Bot random hành động: Call hoặc Check
-    const newPot = pot + 100;
-    const nextTurnIdx = getNextActiveSeat(botIndex, updatedSeats);
-    const activeIndices = updatedSeats.map((s, idx) => (s && !s.folded) ? idx : -1).filter(idx => idx !== -1);
-    const isEndOfRound = (botIndex === activeIndices[activeIndices.length - 1]);
-
-    let nextPhase = phase;
-    let nextCards = [...communityCards];
-
-    if (isEndOfRound) {
-      const deck: Card[] = [];
-      for (const suit of SUITS) {
-        for (const rank of RANKS) {
-          deck.push({ suit, rank, value: RANK_VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'text-red-600' : 'text-gray-900' });
-        }
-      }
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
-
-      if (phase === 'PREFLOP') {
-        nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
-        nextPhase = 'FLOP';
-        setDealerMsg("Whis Bot theo bài! Lật FLOP.");
-      } else if (phase === 'FLOP') {
-        nextCards.push(deck.pop()!);
-        nextPhase = 'TURN';
-        setDealerMsg("Whis Bot theo bài! Lật TURN.");
-      } else if (phase === 'TURN') {
-        nextCards.push(deck.pop()!);
-        nextPhase = 'RIVER';
-        setDealerMsg("Whis Bot theo bài! Lật RIVER.");
-      } else if (phase === 'RIVER') {
-        nextPhase = 'SHOWDOWN';
-        setDealerMsg("Hết vòng RIVER! Mở bài Showdown.");
-      }
-    }
-
-    if (nextPhase === 'SHOWDOWN') {
-      const activePlayers = updatedSeats.filter(s => s && !s.folded);
-      const winner = activePlayers[Math.floor(Math.random() * activePlayers.length)]!;
-      await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
-    } else {
-      if (roomId) {
-        await supabase.from("poker_rooms").update({
-          seats: updatedSeats,
-          community_cards: nextCards,
-          phase: nextPhase,
-          pot: newPot,
-          current_turn: nextTurnIdx
-        }).eq("id", roomId);
-      } else {
-        setSeats(updatedSeats);
-        setCommunityCards(nextCards);
-        setPhase(nextPhase);
-        setPot(newPot);
-        setCurrentTurn(nextTurnIdx);
-      }
-    }
   };
 
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
@@ -414,7 +350,7 @@ export default function PokerPage() {
       updatedSeats[myIndex]!.chips = Math.max(0, updatedSeats[myIndex]!.chips - addedBet);
     }
 
-    const activePlayers = updatedSeats.filter(s => s && !s.folded);
+    const activePlayers = updatedSeats.filter(s => s && s.isReady && !s.folded);
     const newPot = pot + (action === 'fold' ? 0 : addedBet);
 
     let nextPhase = phase;
@@ -423,44 +359,39 @@ export default function PokerPage() {
 
     if (activePlayers.length === 1) {
       nextPhase = 'SHOWDOWN';
-      setDealerMsg(`${activePlayers[0]!.name} chiến thắng do đối thủ úp bài!`);
-      await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
+      setDealerMsg(`Các người chơi khác đã úp bài. ${activePlayers[0]!.name} chiến thắng!`);
+      const winner = activePlayers[0]!;
+      await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
       return;
     }
 
-    const activeIndices = updatedSeats.map((s, idx) => (s && !s.folded) ? idx : -1).filter(idx => idx !== -1);
-    const isEndOfRound = (currentTurn === activeIndices[activeIndices.length - 1]);
-
-    if (isEndOfRound) {
-      const deck: Card[] = [];
-      for (const suit of SUITS) {
-        for (const rank of RANKS) {
-          deck.push({ suit, rank, value: RANK_VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'text-red-600' : 'text-gray-900' });
-        }
+    // Logic chuyển pha chậm rãi chuẩn qua các vòng FLOP -> TURN -> RIVER -> SHOWDOWN
+    const deck: Card[] = [];
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        deck.push({ suit, rank, value: RANK_VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'text-red-600' : 'text-gray-900' });
       }
-      for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
-      }
+    }
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
 
-      if (phase === 'PREFLOP') {
-        nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
-        nextPhase = 'FLOP';
-        setDealerMsg("Nhà cái Whis lật 3 lá bài chung (FLOP)!");
-      } else if (phase === 'FLOP') {
-        nextCards.push(deck.pop()!);
-        nextPhase = 'TURN';
-        setDealerMsg("Nhà cái Whis lật lá bài thứ 4 (TURN)!");
-      } else if (phase === 'TURN') {
-        nextCards.push(deck.pop()!);
-        nextPhase = 'RIVER';
-        setDealerMsg("Nhà cái Whis lật lá bài cuối cùng (RIVER)!");
-      } else if (phase === 'RIVER') {
-        nextPhase = 'SHOWDOWN';
-        setDealerMsg("Hết vòng RIVER! Mở bài đọ điểm (SHOWDOWN)!");
-      }
-
-      nextTurnIdx = updatedSeats.findIndex(s => s && !s.folded);
+    if (phase === 'PREFLOP') {
+      nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
+      nextPhase = 'FLOP';
+      setDealerMsg("Nhà cái Whis lật 3 lá bài chung (FLOP)!");
+    } else if (phase === 'FLOP') {
+      nextCards.push(deck.pop()!);
+      nextPhase = 'TURN';
+      setDealerMsg("Nhà cái Whis lật lá bài thứ 4 (TURN)!");
+    } else if (phase === 'TURN') {
+      nextCards.push(deck.pop()!);
+      nextPhase = 'RIVER';
+      setDealerMsg("Nhà cái Whis lật lá bài cuối cùng (RIVER)!");
+    } else if (phase === 'RIVER') {
+      nextPhase = 'SHOWDOWN';
+      setDealerMsg("Vòng cuối kết thúc! Mở bài đọ điểm (SHOWDOWN)!");
     }
 
     if (nextPhase === 'SHOWDOWN') {
@@ -617,7 +548,7 @@ export default function PokerPage() {
             </div>
             <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase">NHÀ CÁI WHIS</span>
             <p className="text-[9px] text-yellow-200 bg-black/60 px-2 rounded-full border border-yellow-500/30 mt-0.5 font-mono">
-              {dealerMsg}
+              {readyCountdown !== null ? `⏳ Tự động chia bài sau ${readyCountdown}s...` : dealerMsg}
             </p>
           </div>
 
@@ -630,7 +561,9 @@ export default function PokerPage() {
 
             <div className="flex gap-1 bg-black/40 p-1.5 rounded-lg border border-white/10 min-h-[45px] items-center">
               {communityCards.length === 0 ? (
-                <span className="text-[9px] text-emerald-200/60 font-mono italic px-2">Bấm Sẵn Sàng để tham gia chiến đấu!</span>
+                <span className="text-[9px] text-emerald-200/60 font-mono italic px-2">
+                  {readyCountdown !== null ? `Đang đếm ngược (${readyCountdown}s)...` : "Đợi các tay chơi sẵn sàng..."}
+                </span>
               ) : (
                 communityCards.map((card, idx) => (
                   <div key={idx} className="w-7 h-10 sm:w-8 sm:h-12 bg-white rounded flex flex-col justify-between p-0.5 font-black shadow text-gray-900">
@@ -675,7 +608,7 @@ export default function PokerPage() {
                 {seat.folded && <span className="text-[7px] bg-red-950 text-red-400 px-1 rounded mb-0.5">ĐÃ ÚP BÀI</span>}
 
                 <div className="flex -space-x-2 mb-0.5">
-                  {index === 0 || phase === 'SHOWDOWN' || seat.isBot ? (
+                  {index === 0 || phase === 'SHOWDOWN' ? (
                     seat.cards.map((c, i) => (
                       <div key={i} className="w-6 h-9 bg-white rounded flex flex-col justify-between p-0.5 text-gray-900 text-[8px] font-bold shadow">
                         <span className={`leading-none ${c.color}`}>{c.rank}{c.suit}</span>
@@ -700,7 +633,7 @@ export default function PokerPage() {
         </div>
       </main>
 
-      {/* FOOTER ĐẶT CƯỢC & NÚT SẴN SÀNG */}
+      {/* FOOTER ĐẶT CƯỢC */}
       <footer className="bg-gray-900 border-t border-gray-800 p-1.5 px-3 z-30">
         <div className="max-w-3xl mx-auto flex flex-col gap-1">
           
@@ -714,7 +647,7 @@ export default function PokerPage() {
                     : "bg-emerald-600 hover:bg-emerald-500 text-white"
                 }`}
               >
-                {mySeat?.isReady ? "❌ HỦY SẮN SÀNG" : "🟢 SẴN SÀNG THAM GIA"}
+                {mySeat?.isReady ? "❌ HỦY SẮN SÀNG" : "🟢 SẴN SÀNG"}
               </button>
             </div>
           ) : phase === 'SHOWDOWN' ? (
@@ -723,7 +656,7 @@ export default function PokerPage() {
                 onClick={handleResetForNewHand}
                 className="flex-1 py-2 bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-950 font-black rounded-lg shadow hover:brightness-110 active:scale-95 transition text-xs uppercase"
               >
-                ▶️ TIẾP TỤC VÁN MỚI 🔄
+                ▶️ VÀO MÀN SẴN SÀNG VÁN MỚI 🔄
               </button>
             </div>
           ) : (
@@ -758,7 +691,7 @@ export default function PokerPage() {
                 <button 
                   onClick={() => handleAction('call')} 
                   disabled={!isMyTurn}
-                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-600/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
+                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
                 >
                   THEO
                 </button>
