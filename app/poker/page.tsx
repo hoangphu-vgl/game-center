@@ -174,7 +174,6 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // LOGIC ĐẾM NGƯỢC SẴN SÀNG & TỰ ĐỘNG CHIA BÀI
   useEffect(() => {
     if (phase !== 'IDLE') {
       setReadyCountdown(null);
@@ -271,9 +270,7 @@ export default function PokerPage() {
     }
   };
 
-  // HÀM CHIA BÀI CHUẨN XÁC ĐẨY THẲNG LÊN SUPABASE
   const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
-    // Chỉ cho phép chạy nếu đang ở phase IDLE để tránh gọi lặp
     const deck: Card[] = [];
     for (const suit of SUITS) {
       for (const rank of RANKS) {
@@ -329,6 +326,7 @@ export default function PokerPage() {
     return next;
   };
 
+  // LUẬT TIẾN HÀNH VÒNG CƯỢC CHUẨN XÁC
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
     const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
     if (myIndex !== currentTurn && phase !== 'IDLE') {
@@ -367,21 +365,22 @@ export default function PokerPage() {
       nextPhase = 'SHOWDOWN';
       await handleAwardWinner(activePlayers[0]!);
     } else if (nextTurnIdx <= currentTurn) {
+      // Hết vòng cược, tiến hành lật bài chung theo chuẩn Poker
       if (phase === 'PREFLOP') {
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
-        setDealerMsg("Lật 3 lá FLOP!");
+        setDealerMsg("Nhà cái Whis lật 3 lá FLOP!");
       } else if (phase === 'FLOP') {
         nextCards.push(deck.pop()!);
         nextPhase = 'TURN';
-        setDealerMsg("Lật lá TURN!");
+        setDealerMsg("Nhà cái Whis lật lá TURN!");
       } else if (phase === 'TURN') {
         nextCards.push(deck.pop()!);
         nextPhase = 'RIVER';
-        setDealerMsg("Lật lá RIVER!");
+        setDealerMsg("Nhà cái Whis lật lá RIVER!");
       } else if (phase === 'RIVER') {
         nextPhase = 'SHOWDOWN';
-        setDealerMsg("Mở bài đọ điểm!");
+        setDealerMsg("Mở bài đọ điểm SHOWDOWN!");
         await handleAwardWinner();
       }
     }
