@@ -382,7 +382,7 @@ export default function PokerPage() {
     return 0;
   };
 
-  // 🛠️ FIX LOGIC LƯỢT CHƠI & HOÀN THÀNH VÒNG CƯỢC CHUẨN XÁC
+  // 🛠️ FIX LOGIC LƯỢT CHƠI TUYỆT ĐỐI KHÔNG BỊ MẤT LƯỢT Ở TURN 2 TRỞ ĐI
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
     const myIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
     if (myIndex !== currentTurn && phase !== 'IDLE') {
@@ -420,20 +420,20 @@ export default function PokerPage() {
     const newPot = pot + addedBet;
 
     if (activePlayers.length === 1) {
-      setDealerMsg(`Whis: ${activePlayers[0]!.name} hốt trọn ổ vì đối thủ úp bài!`);
+      setDealerMsg(`Whis: ${activePlayers[0]!.name} hốt trọn ổ vì đối thủ hèn nhát úp bài!`);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, communityCards, 'SHOWDOWN', currentTurn);
       return;
     }
 
-    // Kiểm tra xem tất cả người chơi chưa úp bài đã cược bằng highestBet chưa
+    // ĐIỀU KIỆN HOÀN THÀNH VÒNG: Phải đảm bảo TẤT CẢ người chơi chưa úp bài đều đã hành động và có currentBet bằng highestBet
     const allMatched = activePlayers.every(p => p && p.currentBet === newHighest);
-    
+
     let nextTurnIdx = currentTurn;
     let nextPhase = phase;
     let nextCards = [...communityCards];
 
     if (allMatched) {
-      // Vòng cược đã kết thúc hoàn toàn, chuẩn bị chuyển sang phase tiếp theo
+      // Đã xong vòng cược, reset cược từng người về 0 và highestBet về 0 để mở vòng mới đúng chuẩn turn 1
       updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0 } : null);
       setHighestBet(0);
 
@@ -442,7 +442,7 @@ export default function PokerPage() {
       if (phase === 'PREFLOP') {
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
-        setDealerMsg("Whis: Lật 3 lá FLOP! Vòng cược tiếp theo bắt đầu!");
+        setDealerMsg("Whis: Lật 3 lá FLOP! Mời các tay chơi cược vòng mới!");
       } else if (phase === 'FLOP') {
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'TURN';
@@ -458,7 +458,7 @@ export default function PokerPage() {
 
       nextTurnIdx = getFirstActiveSeat(updatedSeats);
     } else {
-      // Vòng cược chưa xong, chuyển lượt sang người chơi kế tiếp chưa úp bài
+      // Vòng cược chưa xong, chuyển sang người chơi chưa úp bài tiếp theo
       nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
     }
 
@@ -708,7 +708,7 @@ export default function PokerPage() {
                     : "bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-gray-950"
                 }`}
               >
-                {mySeat?.isReady ? "❌ HỦY SẮN SÀNG" : "🟢 SẴN SÀNG NHẬP CUỘC"}
+                {mySeat?.isReady ? "❌ HỦY SẴN SÀNG" : "🟢 SẴN SÀNG NHẬP CUỘC"}
               </button>
             </div>
           ) : phase === 'SHOWDOWN' ? (
