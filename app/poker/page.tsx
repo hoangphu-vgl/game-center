@@ -93,7 +93,7 @@ export default function PokerPage() {
     loadUser();
   }, []);
 
-  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB (DÙNG BEACON API CHỐNG RỚT GÓI)
+  // TỰ ĐỘNG XÓA GHẾ KHI RỜI TRÌNH DUYỆT / F5 / ĐÓNG TAB
   useEffect(() => {
     const removePlayerFromRoom = async () => {
       if (!roomIdRef.current || !currentUserRef.current) return;
@@ -221,7 +221,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // RESET VÁN KHI VỀ SHOWDOWN (DÀNH 10 GIÂY ĐỂ TỔNG KẾT VÁN VÀ NHẬN TIỀN)
+  // RESET VÁN KHI VỀ SHOWDOWN (DÀNH 10 GIÂY TỔNG KẾT VÁN VÀ NHẬN TIỀN)
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId) {
       setResetCountdown(10);
@@ -325,7 +325,6 @@ export default function PokerPage() {
     setDealerMsg("Whis: Đã chia 2 lá bài tẩy! Vòng PREFLOP bắt đầu.");
   };
 
-  // TÌM GHẾ KẾ TIẾP CÓ NGƯỜI CHƠI VÀ CHƯA ÚP BÀI
   const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
     let next = (current + 1) % 5;
     let count = 0;
@@ -340,7 +339,6 @@ export default function PokerPage() {
     return current;
   };
 
-  // TÌM NGƯỜI CHƠI ĐẦU TIÊN CÒN SỐNG TRÊN BÀN TỪ GHẾ 0 (BỎ QUA GHẾ NULL)
   const getFirstActiveSeat = (seatsList: (SeatPlayer | null)[]) => {
     for (let i = 0; i < 5; i++) {
       const p = seatsList[i];
@@ -407,19 +405,24 @@ export default function PokerPage() {
 
       const deck = generateDeck();
 
+      // ĐOẠN XỬ LÝ LẬT BÀI CHUNG TỪNG VÒNG MƯỢT MÀ
       if (phase === 'PREFLOP') {
+        // Lật 3 lá FLOP đầu tiên
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
         setDealerMsg("Whis: Lật 3 lá bài chung đầu tiên (FLOP). Mời cược vòng mới!");
       } else if (phase === 'FLOP') {
+        // Lật thêm lá thứ 4 (TURN)
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'TURN';
         setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN). Mời các tay chơi cược!");
       } else if (phase === 'TURN') {
+        // Lật thêm lá thứ 5 (RIVER)
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'RIVER';
         setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối cùng!");
       } else if (phase === 'RIVER') {
+        // Hết vòng RIVER -> Chuyển sang Showdown tổng kết ván
         nextPhase = 'SHOWDOWN';
         setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
