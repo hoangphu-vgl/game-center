@@ -23,6 +23,7 @@ interface SeatPlayer {
   currentBet: number;
   folded: boolean;
   isReady: boolean;
+  acted: boolean; // 🛠️ FIX CỐT LÕI: Cờ đánh dấu người chơi ĐÃ HÀNH ĐỘNG trong vòng này
 }
 
 type GamePhase = 'IDLE' | 'PREFLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
@@ -180,7 +181,8 @@ export default function PokerPage() {
         cards: [],
         currentBet: 0,
         folded: false,
-        isReady: false
+        isReady: false,
+        acted: false
       };
 
       if (fixedRooms && fixedRooms.length > 0) {
@@ -264,7 +266,7 @@ export default function PokerPage() {
       }, 1000);
 
       const timer = setTimeout(async () => {
-        const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0 } : null);
+        const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0, acted: false } : null);
         await supabase.from("poker_rooms").update({
           seats: resetSeats,
           pot: 0,
@@ -334,7 +336,8 @@ export default function PokerPage() {
         currentBet: 100,
         chips: newChips,
         folded: false,
-        isReady: true
+        isReady: true,
+        acted: false // 🛠️ Reset cờ hành động khi bắt đầu ván mới
       };
     });
 
@@ -382,7 +385,6 @@ export default function PokerPage() {
     return 0;
   };
 
-  // 🛠️ FIX LOGIC LƯỢT CHƠI TUYỆT ĐỐI KHÔNG BỊ MẤT LƯỢT Ở TURN 2 TRỞ ĐI
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
     const myIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
     if (myIndex !== currentTurn && phase !== 'IDLE') {
@@ -393,6 +395,9 @@ export default function PokerPage() {
     let updatedSeats = [...seats];
     const me = updatedSeats[myIndex];
     if (!me) return;
+
+    // 🛠️ FIX CỐT LÕI: Đánh dấu NGAY LẬP TỨC là người này ĐÃ hành động
+    me.acted = true; 
 
     let addedBet = 0;
     let newHighest = highestBet;
@@ -411,6 +416,13 @@ export default function PokerPage() {
       me.currentBet = targetBet;
       if (targetBet > highestBet) {
         newHighest = targetBet;
+        
+        // 🛠️ QUAN TRỌNG: Nếu có người TỐ, mọi người khác phải BỊ BẮT BUỘC HÀNH ĐỘNG LẠI (để theo cược mới)
+        updatedSeats.forEach(s => {
+          if (s && s.id !== me.id && !s.folded) {
+            s.acted = false; 
+          }
+        });
       }
     }
 
@@ -425,16 +437,17 @@ export default function PokerPage() {
       return;
     }
 
-    // ĐIỀU KIỆN HOÀN THÀNH VÒNG: Phải đảm bảo TẤT CẢ người chơi chưa úp bài đều đã hành động và có currentBet bằng highestBet
-    const allMatched = activePlayers.every(p => p && p.currentBet === newHighest);
+    // 🛠️ ĐIỀU KIỆN HOÀN THÀNH VÒNG SIÊU CHUẨN XÁC:
+    // TẤT CẢ người chưa úp bài đều (1) phải ĐÃ hành động VÀ (2) có tiền cược ngang nhau
+    const allMatched = activePlayers.every(p => p && p.acted && p.currentBet === newHighest);
 
     let nextTurnIdx = currentTurn;
     let nextPhase = phase;
     let nextCards = [...communityCards];
 
     if (allMatched) {
-      // Đã xong vòng cược, reset cược từng người về 0 và highestBet về 0 để mở vòng mới đúng chuẩn turn 1
-      updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0 } : null);
+      // Đã xong vòng cược, reset cược và CỜ HÀNH ĐỘNG của từng người về false để mở vòng mới
+      updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0, acted: false } : null);
       setHighestBet(0);
 
       const deck = generateDeck();
@@ -458,7 +471,7 @@ export default function PokerPage() {
 
       nextTurnIdx = getFirstActiveSeat(updatedSeats);
     } else {
-      // Vòng cược chưa xong, chuyển sang người chơi chưa úp bài tiếp theo
+      // Vòng cược chưa xong, ĐẨY LƯỢT sang người chơi chưa úp bài TIẾP THEO
       nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
     }
 
