@@ -49,11 +49,9 @@ export default function PokerPage() {
   const [pot, setPot] = useState(0);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
   const [phase, setPhase] = useState<GamePhase>('IDLE');
-  const [dealerMsg, setDealerMsg] = useState("Nhà cái Whis đã sẵn sàng!");
+  const [dealerMsg, setDealerMsg] = useState("Nhà cái Whis chờ người chơi sẵn sàng!");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [raiseVal, setRaiseVal] = useState(100);
-  const [isReadyClicked, setIsReadyClicked] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -87,7 +85,7 @@ export default function PokerPage() {
     setTimeout(() => setToastMsg(null), 2500);
   };
 
-  // Ghép bàn tự động vào ROOM_1 hoặc ROOM_2
+  // Ghép bàn tự động
   const handleAutoMatch = async () => {
     if (!currentUser) return;
     setMatching(true);
@@ -148,7 +146,7 @@ export default function PokerPage() {
     }
   };
 
-  // Realtime Sub dữ liệu Supabase
+  // Realtime Sub
   useEffect(() => {
     if (!roomId) return;
     const fetchRoom = async () => {
@@ -177,7 +175,6 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // Rời bàn & tự động reset bàn nếu không còn ai
   const handleLeaveRoom = async () => {
     if (roomId && currentUser) {
       const updatedSeats = seats.map(s => s && s.id === currentUser.id ? null : s);
@@ -197,23 +194,10 @@ export default function PokerPage() {
     }
     setInRoom(false);
     setRoomId(null);
-    setIsReadyClicked(false);
   };
 
-  // Bấm Sẵn Sàng
-  const handleToggleReady = async () => {
-    setIsReadyClicked(true);
-    const updatedSeats = seats.map(s => s && s.id === currentUser?.id ? { ...s, isReady: true } : s);
-    if (roomId) {
-      await supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", roomId);
-    } else {
-      setSeats(updatedSeats);
-    }
-    showToast("Đã sẵn sàng chiến đấu!");
-  };
-
-  // Bắt đầu chia bài ván mới
-  const startNewHand = async () => {
+  // BẤM SẴN SÀNG -> TỰ ĐỘNG KHỞI ĐỘNG VÁN MỚI LUÔN
+  const handleReadyAndStart = async () => {
     const deck: Card[] = [];
     for (const suit of SUITS) {
       for (const rank of RANKS) {
@@ -227,27 +211,29 @@ export default function PokerPage() {
 
     let deductedMyKi = myKi;
     const updatedSeats = seats.map(seat => {
-      if (!seat || !seat.isReady) return seat;
-      const c1 = deck.pop()!;
-      const c2 = deck.pop()!;
-      const newChips = Math.max(0, seat.chips - 100);
+      if (!seat) return null;
       if (seat.id === currentUser?.id) {
+        const c1 = deck.pop()!;
+        const c2 = deck.pop()!;
+        const newChips = Math.max(0, seat.chips - 100);
         deductedMyKi = newChips;
+        return {
+          ...seat,
+          cards: [c1, c2],
+          currentBet: 100,
+          chips: newChips,
+          folded: false,
+          isReady: true,
+          isObserving: false
+        };
       }
-      return {
-        ...seat,
-        cards: [c1, c2],
-        currentBet: 100,
-        chips: newChips,
-        folded: false,
-        isObserving: false
-      };
+      return seat;
     });
 
     setMyKi(deductedMyKi);
     await supabase.from("profiles").update({ balance: deductedMyKi }).eq("id", currentUser.id);
 
-    const activePlayersCount = updatedSeats.filter(s => s && !s.isObserving && s.isReady).length;
+    const activePlayersCount = updatedSeats.filter(s => s && !s.isObserving).length;
     const initialPot = activePlayersCount * 100;
 
     if (roomId) {
@@ -262,7 +248,7 @@ export default function PokerPage() {
       setPot(initialPot);
       setPhase("PREFLOP");
     }
-    setDealerMsg("Nhà cái Whis chia bài ván mới!");
+    showToast("Đã sẵn sàng! Nhà cái Whis bắt đầu chia bài!");
   };
 
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
@@ -298,7 +284,6 @@ export default function PokerPage() {
       nextPhase = 'SHOWDOWN';
       setDealerMsg("Mở bài! Trao thưởng Pot!");
       await handleAwardWinner();
-      startCountdown();
     }
 
     const newPot = pot + (action === 'fold' ? 0 : addedBet);
@@ -339,30 +324,18 @@ export default function PokerPage() {
     }
   };
 
-  // ĐÃ SỬA CHUẨN: BỎ ASYNC TRONG SETCOUNTDOWN ĐỂ KHÔNG BỊ BÁO LỖI VÀ CHẠY NGUYÊN BẢN
-  const startCountdown = () => {
-    setCountdown(10);
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev !== null && prev > 1) return prev - 1;
-        clearInterval(timer);
-        
-        // Reset sạch bàn đấu trên Supabase
-        if (roomId) {
-          supabase.from("poker_rooms").update({
-            pot: 0,
-            community_cards: [],
-            phase: 'IDLE'
-          }).eq("id", roomId);
-        }
-
-        setPhase('IDLE');
-        setIsReadyClicked(false);
-        setPot(0);
-        setCommunityCards([]);
-        return null;
-      });
-    }, 1000);
+  // Nút chơi ván mới thủ công sau khi Showdown
+  const handleResetForNewHand = async () => {
+    if (roomId) {
+      await supabase.from("poker_rooms").update({
+        pot: 0,
+        community_cards: [],
+        phase: 'IDLE'
+      }).eq("id", roomId);
+    }
+    setPhase('IDLE');
+    setPot(0);
+    setCommunityCards([]);
   };
 
   if (!inRoom) {
@@ -423,7 +396,7 @@ export default function PokerPage() {
         </div>
       </header>
 
-      {/* BÀN BÀI OVAL GỌN GÀNG TỰ KHÍT */}
+      {/* BÀN BÀI OVAL */}
       <main className="flex-1 flex items-center justify-center p-1 relative overflow-hidden">
         
         <div 
@@ -446,7 +419,7 @@ export default function PokerPage() {
             </div>
             <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase">NHÀ CÁI WHIS</span>
             <p className="text-[9px] text-yellow-200 bg-black/60 px-2 rounded-full border border-yellow-500/30 mt-0.5 font-mono">
-              {dealerMsg} {countdown !== null && `(${countdown}s)`}
+              {dealerMsg}
             </p>
           </div>
 
@@ -533,7 +506,7 @@ export default function PokerPage() {
         </div>
       </main>
 
-      {/* FOOTER ĐẶT CƯỢC */}
+      {/* FOOTER ĐẶT CƯỢC & SẴN SÀNG */}
       <footer className="bg-gray-900 border-t border-gray-800 p-1.5 px-3 z-30">
         <div className="max-w-3xl mx-auto flex flex-col gap-1">
           
@@ -543,24 +516,20 @@ export default function PokerPage() {
             </div>
           ) : phase === 'IDLE' ? (
             <div className="flex gap-2 w-full">
-              {!isReadyClicked ? (
-                <button
-                  onClick={handleToggleReady}
-                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-lg shadow active:scale-95 transition text-xs uppercase"
-                >
-                  🟢 SẴN SÀNG
-                </button>
-              ) : (
-                <div className="flex-1 py-1.5 bg-emerald-950 text-emerald-300 border border-emerald-600/40 font-bold rounded-lg text-[10px] text-center flex items-center justify-center">
-                  ✅ ĐÃ SẴN SÀNG - ĐỜI PHÁT BÀI
-                </div>
-              )}
-
               <button
-                onClick={startNewHand}
-                className="py-2 px-5 bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-950 font-black rounded-lg shadow hover:brightness-110 active:scale-95 transition text-xs uppercase"
+                onClick={handleReadyAndStart}
+                className="flex-1 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-white font-black rounded-lg shadow active:scale-95 transition text-xs uppercase"
               >
-                ▶️ CHIA BÀI
+                🟢 SẴN SÀNG & CHIA BÀI NGAY 🃏
+              </button>
+            </div>
+          ) : phase === 'SHOWDOWN' ? (
+            <div className="flex gap-2 w-full">
+              <button
+                onClick={handleResetForNewHand}
+                className="flex-1 py-2 bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-950 font-black rounded-lg shadow hover:brightness-110 active:scale-95 transition text-xs uppercase"
+              >
+                ▶️ BẮT ĐẦU VÁN MỚI 🔄
               </button>
             </div>
           ) : (
