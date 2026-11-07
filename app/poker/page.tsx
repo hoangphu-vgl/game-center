@@ -56,8 +56,11 @@ export default function PokerPage() {
 
   const [turnTimer, setTurnTimer] = useState<number>(30);
   const [readyCountdown, setReadyCountdown] = useState<number | null>(null);
+  const [resetCountdown, setResetCountdown] = useState<number | null>(null);
+
   const turnTimerRef = useRef<any>(null);
   const readyTimerRef = useRef<any>(null);
+  const isResettingRef = useRef<boolean>(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -185,30 +188,45 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // CƠ CHẾ AUTO-RESET TỰ ĐỘNG XÓA TRẮNG BÀI/POT SAU VÁN ĐẤU (4 GIÂY)
+  // LUỒNG TỰ ĐỘNG RESET BÀN TRONG 4S SAU KHI SHOWDOWN
   useEffect(() => {
-    if (phase === 'SHOWDOWN' && roomId && currentUser) {
-      const activeSeats = seats.filter(s => s !== null);
-      const isFirstPlayer = activeSeats[0]?.id === currentUser.id;
+    if (phase === 'SHOWDOWN' && !isResettingRef.current) {
+      isResettingRef.current = true;
+      setResetCountdown(4);
 
-      const resetTimer = setTimeout(async () => {
-        if (isFirstPlayer) {
-          const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [] } : null);
-          await supabase.from("poker_rooms").update({
-            seats: resetSeats,
-            pot: 0,
-            community_cards: [],
-            dealer_cards: [],
-            phase: 'IDLE'
-          }).eq("id", roomId);
-        }
-      }, 4000);
+      const interval = setInterval(() => {
+        setResetCountdown((prev) => {
+          if (prev !== null && prev <= 1) {
+            clearInterval(interval);
+            triggerAutoReset();
+            return null;
+          }
+          return prev !== null ? prev - 1 : 4;
+        });
+      }, 1000);
 
-      return () => clearTimeout(resetTimer);
+      return () => clearInterval(interval);
+    } else if (phase === 'IDLE') {
+      isResettingRef.current = false;
+      setResetCountdown(null);
     }
-  }, [phase, roomId, currentUser, seats]);
+  }, [phase]);
 
-  // Đếm ngược khởi tạo ván đấu khi có người ready
+  const triggerAutoReset = async () => {
+    if (!roomId) return;
+    const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [] } : null);
+    await supabase.from("poker_rooms").update({
+      seats: resetSeats,
+      pot: 0,
+      community_cards: [],
+      dealer_cards: [],
+      phase: 'IDLE',
+      current_turn: 0
+    }).eq("id", roomId);
+    setDealerMsg("Nhà cái Whis chờ người chơi sẵn sàng!");
+  };
+
+  // Đếm ngược thời gian sẵn sàng
   useEffect(() => {
     if (phase !== 'IDLE') {
       setReadyCountdown(null);
@@ -247,7 +265,7 @@ export default function PokerPage() {
     }
   }, [seats, phase]);
 
-  // Đếm ngược thời gian suy nghĩ của lượt chơi
+  // Đếm ngược lượt suy nghĩ
   useEffect(() => {
     if (phase !== 'IDLE' && phase !== 'SHOWDOWN') {
       setTurnTimer(30);
@@ -270,26 +288,16 @@ export default function PokerPage() {
     return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
   }, [currentTurn, phase]);
 
-  // RỜI BÀN: XÓA SẠCH DỮ LIỆU CỦA NGƯỜI CHƠI ĐÓ TRÊN DB SUPABASE LẬP TỨC
+  // RỜI BÀN: XÓA SẠCH DỮ LIỆU CÁ NHÂN NGAY LẬP TỨC
   const handleLeaveRoom = async () => {
     if (roomId && currentUser) {
       const updatedSeats = seats.map(s => s && s.id === currentUser.id ? null : s);
       const isRoomEmpty = updatedSeats.every(s => s === null);
 
-      if (isRoomEmpty) {
-        await supabase.from("poker_rooms").update({
-          seats: [null, null, null, null, null],
-          pot: 0,
-          community_cards: [],
-          dealer_cards: [],
-          phase: "IDLE"
-        }).eq("id", roomId);
-      } else {
-        await supabase.from("poker_rooms").update({ 
-          seats: updatedSeats,
-          ...(phase !== 'IDLE' && updatedSeats.filter(s => s !== null).length === 0 ? { pot: 0, phase: 'IDLE', community_cards: [], dealer_cards: [] } : {})
-        }).eq("id", roomId);
-      }
+      await supabase.from("poker_rooms").update({
+        seats: updatedSeats,
+        ...(isRoomEmpty ? { pot: 0, community_cards: [], dealer_cards: [], phase: "IDLE" } : {})
+      }).eq("id", roomId);
     }
     setInRoom(false);
     setRoomId(null);
@@ -506,9 +514,9 @@ export default function PokerPage() {
 
     const updatedSeatsWithChips = finalSeats.map(s => {
       if (s && s.id === winner.id) {
-        return { ...s, chips: newBalance, isReady: false };
+        return { ...s, chips: newBalance };
       }
-      return s ? { ...s, isReady: false } : null;
+      return s;
     });
 
     if (winner.id === currentUser?.id) {
@@ -526,35 +534,21 @@ export default function PokerPage() {
         phase: finalPhase,
         current_turn: finalTurn
       }).eq("id", roomId);
-    } else {
-      setSeats(updatedSeatsWithChips);
-      setPot(finalPot);
-      setCommunityCards(finalCards);
-      setPhase(finalPhase);
-      setCurrentTurn(finalTurn);
     }
   };
 
   const executeAwardDealer = async (finalPot: number, finalSeats: (SeatPlayer | null)[], finalCards: Card[], dCards: Card[], finalPhase: GamePhase, finalTurn: number) => {
-    const updatedSeatsCleared = finalSeats.map(s => s ? { ...s, isReady: false } : null);
     showToast(`🤖 Nhà cái Whis thắng Pot $${finalPot.toLocaleString()} Ki!`);
 
     if (roomId) {
       await supabase.from("poker_rooms").update({
-        seats: updatedSeatsCleared,
+        seats: finalSeats,
         pot: finalPot,
         community_cards: finalCards,
         dealer_cards: dCards,
         phase: finalPhase,
         current_turn: finalTurn
       }).eq("id", roomId);
-    } else {
-      setSeats(updatedSeatsCleared);
-      setPot(finalPot);
-      setCommunityCards(finalCards);
-      setDealerCards(dCards);
-      setPhase(finalPhase);
-      setCurrentTurn(finalTurn);
     }
   };
 
@@ -651,7 +645,7 @@ export default function PokerPage() {
             </div>
             <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase mt-0.5">NHÀ CÁI WHIS</span>
             <p className="text-[9px] text-yellow-200 bg-black/60 px-2 rounded-full border border-yellow-500/30 mt-0.5 font-mono">
-              {readyCountdown !== null ? `⏳ Tự động bắt đầu sau ${readyCountdown}s...` : dealerMsg}
+              {resetCountdown !== null ? `⏳ Tự động reset bàn sau ${resetCountdown}s...` : readyCountdown !== null ? `⏳ Tự động bắt đầu sau ${readyCountdown}s...` : dealerMsg}
             </p>
           </div>
 
@@ -755,7 +749,7 @@ export default function PokerPage() {
             </div>
           ) : phase === 'SHOWDOWN' ? (
             <div className="flex gap-2 w-full text-center justify-center items-center text-xs text-yellow-400 font-bold py-1 font-mono">
-              ⏳ Ván đấu kết thúc. Tự động reset bàn chơi sau 4s...
+              ⏳ Ván đấu kết thúc. Tự động reset bàn sau {resetCountdown ?? 4}s...
             </div>
           ) : (
             <div className="flex flex-col gap-1">
