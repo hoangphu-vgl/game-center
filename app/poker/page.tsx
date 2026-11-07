@@ -23,7 +23,6 @@ interface SeatPlayer {
   currentBet: number;
   folded: boolean;
   isReady: boolean;
-  actedInRound?: boolean;
 }
 
 type GamePhase = 'IDLE' | 'PREFLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
@@ -230,7 +229,7 @@ export default function PokerPage() {
       }, 1000);
 
       const timer = setTimeout(async () => {
-        const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0, actedInRound: false } : null);
+        const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0 } : null);
         await supabase.from("poker_rooms").update({
           seats: resetSeats,
           pot: 0,
@@ -300,8 +299,7 @@ export default function PokerPage() {
         currentBet: 100,
         chips: newChips,
         folded: false,
-        isReady: true,
-        actedInRound: false
+        isReady: true
       };
     });
 
@@ -362,7 +360,6 @@ export default function PokerPage() {
 
     let addedBet = 0;
     let newHighest = highestBet;
-    me.actedInRound = true;
 
     if (action === 'fold') {
       me.folded = true;
@@ -378,7 +375,6 @@ export default function PokerPage() {
       me.currentBet = targetBet;
       if (targetBet > highestBet) {
         newHighest = targetBet;
-        updatedSeats = updatedSeats.map(s => s ? { ...s, actedInRound: String(s.id) === String(me.id) } : null);
       }
     }
 
@@ -394,35 +390,36 @@ export default function PokerPage() {
     }
 
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
-    const isRoundComplete = activePlayers.every(p => p && p.currentBet === newHighest && p.actedInRound);
+    
+    // ĐIỀU KIỆN HOÀN THÀNH VÒNG: Tất cả người chơi còn lại có tiền cược ngang nhau bằng highestBet
+    const isRoundComplete = activePlayers.every(p => p && p.currentBet === newHighest);
 
     let nextPhase = phase;
     let nextCards = [...communityCards];
 
     if (isRoundComplete) {
-      updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0, actedInRound: false } : null);
+      updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0 } : null);
       setHighestBet(0);
 
       const deck = generateDeck();
 
-      // CƠ CHẾ LẬT BÀI CHUẨN XÁC QUA TỪNG VÒNG
       if (phase === 'PREFLOP') {
-        // Đảm bảo luôn lật đủ 3 lá bài đầu tiên cho vòng FLOP
+        // Chuyển sang FLOP: Lật 3 lá bài chung đầu tiên
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
         setDealerMsg("Whis: Lật 3 lá bài chung (FLOP). Mời cược vòng mới!");
       } else if (phase === 'FLOP') {
-        // Cộng dồn chuẩn xác lá thứ 4 cho vòng TURN
+        // Chuyển sang TURN: Thêm lá thứ 4
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'TURN';
-        setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN). Mời các tay chơi cược!");
+        setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN). Mời cược!");
       } else if (phase === 'TURN') {
-        // Cộng dồn chuẩn xác lá thứ 5 cho vòng RIVER
+        // Chuyển sang RIVER: Thêm lá thứ 5
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'RIVER';
         setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối!");
       } else if (phase === 'RIVER') {
-        // Hết RIVER chuyển sang Showdown tổng kết
+        // Kết thúc vòng RIVER -> SHOWDOWN
         nextPhase = 'SHOWDOWN';
         setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
@@ -693,33 +690,4 @@ export default function PokerPage() {
                   ÚP BÀI
                 </button>
                 <button 
-                  onClick={() => handleAction('call')} 
-                  disabled={!isMyTurn}
-                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
-                >
-                  THEO
-                </button>
-                <button 
-                  onClick={() => handleAction('raise')} 
-                  disabled={!isMyTurn}
-                  className="flex-1 bg-yellow-500 text-gray-950 font-black py-1.5 rounded-lg text-[11px] shadow disabled:opacity-30"
-                >
-                  TỐ (${raiseVal})
-                </button>
-                <button 
-                  onClick={() => handleAction('allin')} 
-                  disabled={!isMyTurn}
-                  className="bg-purple-600 text-white font-black px-3 py-1.5 rounded-lg text-[11px] shadow disabled:opacity-30"
-                >
-                  ALL-IN 🔥
-                </button>
-              </div>
-            </div>
-          )}
-
-        </div>
-      </footer>
-
-    </div>
-  );
-}
+                  onClick={() => handle
