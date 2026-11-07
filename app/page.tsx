@@ -308,6 +308,7 @@ export default function Home() {
     setUser(null);
   };
 
+  // SỬA: BỎ BALANCE KHỎI CÂU LỆNH UPDATE ĐỂ KHÔNG BỊ RESET ĐIỂM VỀ 0
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -318,7 +319,11 @@ export default function Home() {
     try {
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ full_name: newCleanName, avatar_url: avatarUrl })
+        .update({ 
+          full_name: newCleanName, 
+          avatar_url: avatarUrl 
+          // Không truyền balance ở đây để bảo toàn điểm số tích lũy của người chơi!
+        })
         .eq("id", user.id);
 
       if (profileError) throw profileError;
@@ -327,7 +332,7 @@ export default function Home() {
         data: { full_name: newCleanName, avatar_url: avatarUrl }
       });
 
-      alert("✨ Cập nhật thông tin chiến binh thành công!");
+      alert("✨ Cập nhật thông tin chiến binh thành công! Điểm số được bảo toàn.");
       setProfileModalOpen(false);
     } catch (err: any) {
       alert("Lỗi cập nhật: " + err.message);
