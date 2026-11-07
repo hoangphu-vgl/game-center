@@ -128,7 +128,7 @@ export default function PokerPage() {
         let currentSeats: (SeatPlayer | null)[] = targetRoom.seats || [null, null, null, null, null];
         currentSeats = currentSeats.map(s => (s && (s.id?.includes("bot") || s.name?.toLowerCase().includes("bot"))) ? null : s);
 
-        const existingIdx = currentSeats.findIndex(s => s && s.id === currentUser.id);
+        const existingIdx = currentSeats.findIndex(s => s && String(s.id) === String(currentUser.id));
 
         if (existingIdx !== -1) {
           currentSeats[existingIdx] = myData;
@@ -191,7 +191,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // TỰ ĐỘNG RESET BÀN SAU SHOWDOWN (4S)
+  // AUTO RESET SAU KHI KẾT THÚC VÁN (4S)
   useEffect(() => {
     if (phase === 'SHOWDOWN' && !isResettingRef.current) {
       isResettingRef.current = true;
@@ -278,7 +278,7 @@ export default function PokerPage() {
         setTurnTimer((prev) => {
           if (prev <= 1) {
             clearInterval(turnTimerRef.current);
-            const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
+            const myIndex = seats.findIndex(s => s && String(s.id) === String(currentUser?.id));
             if (myIndex === currentTurn) {
               handleAction('fold');
             }
@@ -293,7 +293,7 @@ export default function PokerPage() {
 
   const handleLeaveRoom = async () => {
     if (roomId && currentUser) {
-      const updatedSeats = seats.map(s => s && s.id === currentUser.id ? null : s);
+      const updatedSeats = seats.map(s => s && String(s.id) === String(currentUser.id) ? null : s);
       const isRoomEmpty = updatedSeats.every(s => s === null);
 
       await supabase.from("poker_rooms").update({
@@ -306,7 +306,7 @@ export default function PokerPage() {
   };
 
   const handleToggleReady = async () => {
-    const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
+    const myIndex = seats.findIndex(s => s && String(s.id) === String(currentUser?.id));
     if (myIndex === -1) return;
 
     let newSeats = [...seats];
@@ -330,6 +330,7 @@ export default function PokerPage() {
     }
   };
 
+  // CHIA 2 LÁ BÀI RIÊNG CHO MỖI NGƯỜI CHƠI
   const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
     const deck: Card[] = [];
     for (const suit of SUITS) {
@@ -343,9 +344,8 @@ export default function PokerPage() {
     }
 
     let updatedSeats = currentSeatsList.map(seat => {
-      const activeSeatsCount = currentSeatsList.filter(s => s !== null).length;
-      if (!seat || (activeSeatsCount > 1 && !seat.isReady)) return seat ? { ...seat, isReady: false } : null;
-
+      if (!seat) return null;
+      // Chia đúng 2 lá bài tẩy cho từng người chơi tham gia
       const c1 = deck.pop()!;
       const c2 = deck.pop()!;
       const newChips = Math.max(0, seat.chips - 100);
@@ -403,9 +403,8 @@ export default function PokerPage() {
     return next;
   };
 
-  // LOGIC ĐẶT CƯỢC THEO LUẬT POKER CHUẨN
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
-    const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
+    const myIndex = seats.findIndex(s => s && String(s.id) === String(currentUser?.id));
     if (myIndex !== currentTurn && phase !== 'IDLE') {
       showToast("Chưa tới lượt của bạn!");
       return;
@@ -444,14 +443,12 @@ export default function PokerPage() {
     const newPot = pot + addedBet;
     const totalPlayersInRoom = seats.filter(s => s !== null).length;
 
-    // Trường hợp 1 mình chơi bấm úp bài
     if (totalPlayersInRoom === 1 && action === 'fold') {
       setDealerMsg("Bạn đã úp bài! Nhà cái Whis chiến thắng và lật bài tẩy.");
       await executeAwardDealer(newPot, updatedSeats, communityCards, dealerCards, 'SHOWDOWN', currentTurn);
       return;
     }
 
-    // Trường hợp đối thủ úp hết chỉ còn 1 người thắng
     if (activePlayers.length === 1 && totalPlayersInRoom > 1) {
       setDealerMsg(`${activePlayers[0]!.name} chiến thắng do đối thủ úp bài!`);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, communityCards, 'SHOWDOWN', currentTurn);
@@ -460,7 +457,6 @@ export default function PokerPage() {
 
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
 
-    // KIỂM TRA ĐẦY ĐỦ CÁC NGƯỜI CHƠI ĐÃ THEO BẰNG CƯỢC CHƯA MỚI CHUYỂN VÒNG BÀI CHUNG
     const isRoundComplete = (totalPlayersInRoom === 1) ? true : (
       nextTurnIdx === newLastRaiseIdx || 
       activePlayers.every(p => p && p.currentBet === newHighest)
@@ -470,7 +466,6 @@ export default function PokerPage() {
     let nextCards = [...communityCards];
 
     if (isRoundComplete) {
-      // Reset cược vòng hiện tại về 0 cho vòng cược mới
       updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0 } : null);
       setHighestBet(0);
 
@@ -548,13 +543,13 @@ export default function PokerPage() {
       .eq("id", winner.id);
 
     const updatedSeatsWithChips = finalSeats.map(s => {
-      if (s && s.id === winner.id) {
+      if (s && String(s.id) === String(winner.id)) {
         return { ...s, chips: newBalance };
       }
       return s;
     });
 
-    if (winner.id === currentUser?.id) {
+    if (String(winner.id) === String(currentUser?.id)) {
       setMyKi(newBalance);
       showToast(`🎉 Bạn thắng Pot $${finalPot.toLocaleString()} Ki!`);
     } else {
@@ -609,7 +604,7 @@ export default function PokerPage() {
     );
   }
 
-  const mySeatIndex = seats.findIndex(s => s && s.id === currentUser?.id);
+  const mySeatIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
   const isMyTurn = mySeatIndex === currentTurn && phase !== 'IDLE' && phase !== 'SHOWDOWN';
   const mySeat = mySeatIndex !== -1 ? seats[mySeatIndex] : null;
   const totalPlayersInRoom = seats.filter(s => s !== null).length;
@@ -721,8 +716,8 @@ export default function PokerPage() {
             }
 
             const isTurn = index === currentTurn && phase !== 'IDLE' && phase !== 'SHOWDOWN';
-            // CHỈ MÁY CỦA CHÍNH MÌNH HOẶC KHI SHOWDOWN MỚI MỞ BÀI
-            const isMySeat = seat.id === currentUser?.id;
+            // KIỂM TRA CHÍNH XÁC MÁY NÀO LÀ CỦA CHÍNH NGƯỜI CHƠI ĐÓ
+            const isMySeat = String(seat.id) === String(currentUser?.id) || seat.name === myName;
 
             return (
               <div key={index} className={`absolute flex flex-col items-center transition-all ${
