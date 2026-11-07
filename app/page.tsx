@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -122,7 +122,6 @@ export default function Home() {
         let lastCheck = profile?.last_check_in ?? "";
 
         if (lastCheckedWeek !== currentWeek) {
-          // Sang tuần mới: Reset Sức Mạnh (balance) về 0 (hoặc giữ nguyên nếu muốn, ở đây theo ý ní reset về 0)
           currentBalance = 0;
           await supabase
             .from("profiles")
@@ -156,11 +155,9 @@ export default function Home() {
           setAvatarUrl(profile.avatar_url || defaultAvatar);
         }
 
-        // Lấy số lượng ngọc rồng của user từ localStorage (hoặc mở rộng lưu supabase nếu thích)
         const savedBalls = localStorage.getItem(`dragon_balls_${currentUser.id}`);
         setDragonBallsCount(savedBalls ? parseInt(savedBalls) : 0);
 
-        // Kiểm tra xem hôm nay user đã tắt thông báo quy lệ chưa
         const todayStr = getTodayString();
         const hideNoticeDate = localStorage.getItem(`hide_notice_${currentUser.id}`);
         if (hideNoticeDate !== todayStr) {
@@ -194,7 +191,7 @@ export default function Home() {
     setShowNoticeModal(false);
   };
 
-  // LẤY BẢNG XẾP HẠNG TOP 5
+  // LẤY BẢNG XẾP HẠNG TOP 5 & OPTIMIZE REALTIME CLEANUP
   useEffect(() => {
     async function fetchLeaderboard() {
       const { data } = await supabase
@@ -220,7 +217,6 @@ export default function Home() {
     };
   }, []);
 
-  // Xử lý quy đổi Ngọc Rồng lấy tiền mặt / VNĐ
   const handleExchangeBalls = (type: 'single' | 'all') => {
     if (!user) return;
     if (type === 'single') {
@@ -444,7 +440,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
       
-      {/* ================= POPUP THÔNG BÁO / LUẬT CHƠI & SƯU TẬP NGỌC RỒNG ================= */}
+      {/* POPUP THÔNG BÁO / LUẬT CHƠI & SƯU TẬP NGỌC RỒNG */}
       {showNoticeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
           <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-5 sm:p-6 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-4 relative max-h-[90vh] overflow-y-auto">
@@ -459,8 +455,6 @@ export default function Home() {
             </div>
 
             <div className="space-y-3 text-xs text-slate-300">
-              
-              {/* Luật chơi */}
               <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
                 <h3 className="font-bold text-amber-400 flex items-center gap-1.5">
                   📜 Luật Chơi Võ Đạo Vũ Trụ:
@@ -470,7 +464,6 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* SỰ KIỆN: ĐUA TOP TUẦN SĂN NGỌC RỒNG ĐỔI THƯỞNG */}
               <div className="bg-gradient-to-r from-amber-950/40 via-yellow-950/30 to-amber-950/40 p-3.5 rounded-2xl border border-amber-500/50 space-y-1.5 shadow-md">
                 <h3 className="font-bold text-yellow-400 flex items-center gap-1.5 text-sm">
                   🔮 SĂN 7 VIÊN NGỌC RỒNG - ĐỔI 100K VNĐ!
@@ -483,17 +476,15 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Giới thiệu Shop */}
               <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
                 <h3 className="font-bold text-emerald-400 flex items-center gap-1.5">
                   🛒 Cửa Hàng Đổi Lượt & Siêu Gói Flex:
                 </h3>
                 <p className="text-slate-400 leading-relaxed">
-                  Đổi Ki lấy lượt quay qua các gói từ <b className="text-amber-300">1 Lượt (100k Ki)</b> đến <b className="text-amber-300">50 Lượt Rồng Thần</b>. Có <b className="text-yellow-400">Siêu Gói Flex 1 Củ (5.000 VNĐ / 1.000.000 Ki)</b> giới hạn kho tổng <b className="text-amber-300">20 gói/tuần</b>, cá nhân <b className="text-amber-300">5 lần/tuần</b> để flex danh dự!
+                  Đổi Ki lấy lượt quay qua các gói từ <b className="text-amber-300">1 Lượt (100k Ki)</b> đến <b className="text-amber-300">50 Lượt Rồng Thần</b>. Có <b className="text-yellow-400">Siêu Gói Flex 1 Củ (5.000 VNĐ / 1.000.000 Ki)</b> giới hạn kho tổng <b className="text-amber-300">20 gói/tuần</b> để flex danh dự!
                 </p>
               </div>
 
-              {/* Giới thiệu Vòng quay may mắn */}
               <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
                 <h3 className="font-bold text-purple-400 flex items-center gap-1.5">
                   🎡 Kho Quà Vòng Quay Rồng Thần:
@@ -502,7 +493,6 @@ export default function Home() {
                   Húp ngay các mốc khủng: <b className="text-emerald-400">+5.000 Ki</b>, <b className="text-amber-400">+100k / +200k Ki</b>, Lượt quay thêm, vật phẩm <b className="text-pink-400">1 chai nước</b>, và chí tôn <b className="text-yellow-400">JACKPOT 1.000K Ki</b>!
                 </p>
               </div>
-
             </div>
 
             <div className="pt-2">
@@ -513,7 +503,6 @@ export default function Home() {
                 ĐÃ RÕ, HÔM NAY KHÔNG HIỆN LẠI 🚀
               </button>
             </div>
-
           </div>
         </div>
       )}
@@ -546,14 +535,12 @@ export default function Home() {
           </div>
 
           <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
-            {/* Điểm Sức Mạnh (Ki) */}
             <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2.5 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
               <span>⚡</span>
               <span className="font-black text-amber-400 truncate">{points.toLocaleString()}</span>
               <span className="text-[10px] text-amber-300/70">Ki</span>
             </div>
 
-            {/* Lượt Quay */}
             <div className="flex-1 sm:flex-none flex items-center justify-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2.5 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
               <span>🎟️</span>
               <span className="font-black text-purple-300 truncate">{luckySpins}</span>
@@ -638,11 +625,30 @@ export default function Home() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
             <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase">
-              🔥 Sảnh Nổi Bật
+              🔥 Sảnh Nổi Bật & Game Bài
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            
+          
+          {/* LƯỚI GAME 4 Ô (CÓ GAME BÀI POKER MỚI) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            {/* GAME BÀI POKER MULTIPLAYER (MỚI BỔ SUNG) */}
+            <Link
+              href="/poker"
+              className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-emerald-950/40 relative overflow-hidden hover:border-emerald-400 hover:shadow-emerald-500/20"
+            >
+              <div className="absolute -right-3 -bottom-3 text-6xl opacity-15">🃏</div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">♠️</span>
+                <h3 className="text-base font-black text-emerald-400">🃏 Poker Texas Hold'em</h3>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Hot</span>
+              </div>
+              <p className="text-slate-300 text-xs mt-1.5">Sát phạt Poker Multiplayer 6 ghế, nhà cái Whis chia bài tự động!</p>
+              <div className="mt-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-emerald-500/20 group-hover:brightness-110">
+                VÀO SÒNG POKER ♠️
+              </div>
+            </Link>
+
             <Link
               href="/jackpot"
               className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
@@ -662,19 +668,19 @@ export default function Home() {
               <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🎡</div>
               <h3 className="text-base font-bold text-purple-400">🎡 Vòng Quay May Mắn</h3>
               <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp thêm Điểm Sức Mạnh!</p>
-              <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-xs shadow-md">
+              <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                 Quay Ngay 🎟️
               </div>
             </Link>
 
             <Link
               href="/shop"
-              className="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
+              className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"
             >
               <div className="absolute -right-3 -bottom-3 text-5xl opacity-10">🛒</div>
-              <h3 className="text-base font-bold text-emerald-400">🛒 Shop Võ Đạo</h3>
+              <h3 className="text-base font-bold text-yellow-400">🛒 Shop Võ Đạo</h3>
               <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh quy đổi Lượt Quay & Flex!</p>
-              <div className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
+              <div className="mt-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
                 Vào Shop 💎
               </div>
             </Link>
@@ -764,7 +770,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* --- GIAO DIỆN SƯU TẬP 7 VIÊN NGỌC RỒNG --- */}
+            {/* KHO SƯU TẬP 7 VIÊN NGỌC RỒNG */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/40 space-y-3">
               <div className="flex justify-between items-center">
                 <h4 className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
@@ -775,7 +781,6 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* 7 Viên Ngọc Rồng Hiển Thị (Sáng / Tối) */}
               <div className="grid grid-cols-7 gap-1.5 sm:gap-2 py-2">
                 {[1, 2, 3, 4, 5, 6, 7].map((starNum) => {
                   const isUnlocked = starNum <= dragonBallsCount;
@@ -798,7 +803,6 @@ export default function Home() {
                 })}
               </div>
 
-              {/* Nút quy đổi thưởng ngọc rồng */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 <button
                   type="button"
