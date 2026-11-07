@@ -186,7 +186,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // AUTO RESET KHI HOÀN THÀNH VÁN (SHOWDOWN)
+  // AUTO RESET SAU KHI VÁN ĐẤU KẾT THÚC
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId) {
       setResetCountdown(4);
@@ -246,7 +246,7 @@ export default function PokerPage() {
     }
   }, [seats, phase]);
 
-  // Đếm ngược suy nghĩ
+  // Đếm ngược thời gian suy nghĩ
   useEffect(() => {
     if (phase !== 'IDLE' && phase !== 'SHOWDOWN') {
       setTurnTimer(30);
@@ -339,6 +339,8 @@ export default function PokerPage() {
     if (participatingCount === 0) return;
 
     const initialPot = participatingCount * 100;
+    
+    // Ghế đầu tiên bắt đầu lượt cược
     const firstTurn = updatedSeats.findIndex(s => s !== null && s.cards.length > 0);
 
     setHighestBet(100);
@@ -355,14 +357,19 @@ export default function PokerPage() {
     setDealerMsg("Whis: Đã chia 2 lá bài tẩy! Vòng PREFLOP bắt đầu.");
   };
 
+  // HÀM CHUYỂN LƯỢT XOAY VÒNG CHUẨN XÁC GIỮA CÁC GHẾ CÓ NGƯỜI
   const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
     let next = (current + 1) % 5;
     let count = 0;
-    while ((!seatsList[next] || seatsList[next]?.cards.length === 0 || seatsList[next]?.folded) && count < 5) {
+    while (count < 5) {
+      const p = seatsList[next];
+      if (p && p.cards && p.cards.length > 0 && !p.folded) {
+        return next;
+      }
       next = (next + 1) % 5;
       count++;
     }
-    return next;
+    return current;
   };
 
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
@@ -407,8 +414,10 @@ export default function PokerPage() {
       return;
     }
 
+    // Lấy chỉ số người chơi tiếp theo
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
 
+    // Kiểm tra xem tất cả người chơi còn sống đã đặt cược bằng nhau chưa
     const isRoundComplete = activePlayers.every(p => p && p.currentBet === newHighest);
 
     let nextPhase = phase;
