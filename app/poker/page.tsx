@@ -690,4 +690,33 @@ export default function PokerPage() {
                   ÚP BÀI
                 </button>
                 <button 
-                  onClick={() => handle
+                  onClick={() => handleAction('call')} 
+                  disabled={!isMyTurn}
+                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
+                >
+                  THEO
+                </button>
+                <button 
+                  onClick={() => handleAction('raise')} 
+                  disabled={!isMyTurn}
+                  className="flex-1 bg-yellow-500 text-gray-950 font-black py-1.5 rounded-lg text-[11px] shadow disabled:opacity-30"
+                >
+                  TỐ (${raiseVal})
+                </button>
+                <button 
+                  onClick={() => handleAction('allin')} 
+                  disabled={!isMyTurn}
+                  className="bg-purple-600 text-white font-black px-3 py-1.5 rounded-lg text-[11px] shadow disabled:opacity-30"
+                >
+                  ALL-IN 🔥
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </footer>
+
+    </div>
+  );
+}
