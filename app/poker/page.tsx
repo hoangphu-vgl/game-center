@@ -47,13 +47,12 @@ export default function PokerPage() {
   const [seats, setSeats] = useState<(SeatPlayer | null)[]>([null, null, null, null, null]);
   const [pot, setPot] = useState(0);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
-  const [dealerCards, setDealerCards] = useState<Card[]>([]);
   const [phase, setPhase] = useState<GamePhase>('IDLE');
   const [currentTurn, setCurrentTurn] = useState<number>(0);
   const [highestBet, setHighestBet] = useState<number>(100);
   const [lastRaiseIndex, setLastRaiseIndex] = useState<number>(0);
   
-  const [dealerMsg, setDealerMsg] = useState("Nhà cái Whis chờ người chơi sẵn sàng!");
+  const [dealerMsg, setDealerMsg] = useState("Whis: Đang chờ các tay chơi sẵn sàng!");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [raiseVal, setRaiseVal] = useState(100);
 
@@ -99,7 +98,7 @@ export default function PokerPage() {
   const handleAutoMatch = async () => {
     if (!currentUser) return;
     setMatching(true);
-    showToast("Đang tìm ghế trống...");
+    showToast("Đang tìm bàn trống...");
 
     try {
       const { data: fixedRooms } = await supabase
@@ -142,7 +141,7 @@ export default function PokerPage() {
         setRoomId(targetRoom.id);
         setRoomCode(targetRoom.code);
         setInRoom(true);
-        showToast(`Đã vào sòng #${targetRoom.code}`);
+        showToast(`Đã tham gia #${targetRoom.code}`);
       }
     } catch (e) {
       setInRoom(true);
@@ -163,7 +162,6 @@ export default function PokerPage() {
         setSeats(cleanSeats);
         setPot(data.pot || 0);
         setCommunityCards(data.community_cards || []);
-        setDealerCards(data.dealer_cards || []);
         setPhase(data.phase || 'IDLE');
         if (data.current_turn !== undefined) setCurrentTurn(data.current_turn);
       }
@@ -180,7 +178,6 @@ export default function PokerPage() {
           setSeats(cleanSeats);
           setPot(room.pot || 0);
           setCommunityCards(room.community_cards || []);
-          setDealerCards(room.dealer_cards || []);
           setPhase(room.phase || 'IDLE');
           if (room.current_turn !== undefined) setCurrentTurn(room.current_turn);
         }
@@ -190,7 +187,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // CƠ CHẾ AUTO RESET KHI PHASE LÀ SHOWDOWN
+  // CƠ CHẾ AUTO RESET BÀN SAU SHOWDOWN (4S)
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId && currentUser) {
       const activeSeats = seats.filter(s => s !== null);
@@ -204,7 +201,6 @@ export default function PokerPage() {
             seats: resetSeats,
             pot: 0,
             community_cards: [],
-            dealer_cards: [],
             phase: 'IDLE',
             current_turn: 0
           }).eq("id", roomId);
@@ -228,7 +224,7 @@ export default function PokerPage() {
     const activeSeats = seats.filter(s => s !== null);
     const readySeats = activeSeats.filter(s => s && s.isReady);
 
-    if (activeSeats.length > 0 && readySeats.length === activeSeats.length) {
+    if (activeSeats.length >= 2 && readySeats.length === activeSeats.length) {
       if (readyTimerRef.current) clearInterval(readyTimerRef.current);
       setReadyCountdown(null);
       startNewHand(seats);
@@ -286,7 +282,7 @@ export default function PokerPage() {
 
       await supabase.from("poker_rooms").update({
         seats: updatedSeats,
-        ...(isRoomEmpty ? { pot: 0, community_cards: [], dealer_cards: [], phase: "IDLE" } : {})
+        ...(isRoomEmpty ? { pot: 0, community_cards: [], phase: "IDLE" } : {})
       }).eq("id", roomId);
     }
     setInRoom(false);
@@ -305,7 +301,7 @@ export default function PokerPage() {
     const activeSeats = newSeats.filter(s => s !== null);
     const readySeats = activeSeats.filter(s => s && s.isReady);
 
-    if (activeSeats.length === 1 && readySeats.length === 1) {
+    if (activeSeats.length >= 2 && readySeats.length === activeSeats.length) {
       if (readyTimerRef.current) clearInterval(readyTimerRef.current);
       setReadyCountdown(null);
       await startNewHand(newSeats);
@@ -318,6 +314,7 @@ export default function PokerPage() {
     }
   };
 
+  // CHIA BÀI CHUẨN - CHỈ CHIA BÀI TẨY CHO NGƯỜI CHƠI
   const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
     const deck: Card[] = [];
     for (const suit of SUITS) {
@@ -345,12 +342,6 @@ export default function PokerPage() {
       };
     });
 
-    const activeSeatsCount = updatedSeats.filter(s => s !== null).length;
-    let newDealerCards: Card[] = [];
-    if (activeSeatsCount === 1) {
-      newDealerCards = [deck.pop()!, deck.pop()!];
-    }
-
     const participatingCount = updatedSeats.filter(s => s && s.cards.length > 0).length;
     if (participatingCount === 0) return;
 
@@ -365,18 +356,16 @@ export default function PokerPage() {
         seats: updatedSeats,
         pot: initialPot,
         community_cards: [],
-        dealer_cards: newDealerCards,
         phase: "PREFLOP",
         current_turn: firstTurn
       }).eq("id", roomId);
     } else {
       setSeats(updatedSeats);
       setPot(initialPot);
-      setDealerCards(newDealerCards);
       setPhase("PREFLOP");
       setCurrentTurn(firstTurn);
     }
-    setDealerMsg("Nhà cái Whis đã chia bài! Bắt đầu vòng PREFLOP");
+    setDealerMsg("Whis: Đã chia 2 lá bài tẩy! Vòng PREFLOP bắt đầu.");
   };
 
   const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
@@ -427,23 +416,18 @@ export default function PokerPage() {
 
     const activePlayers = updatedSeats.filter(s => s && s.cards.length > 0 && !s.folded);
     const newPot = pot + addedBet;
-    const totalPlayersInRoom = seats.filter(s => s !== null).length;
 
-    if (totalPlayersInRoom === 1 && action === 'fold') {
-      setDealerMsg("Bạn đã úp bài! Nhà cái Whis chiến thắng và lật bài tẩy.");
-      await executeAwardDealer(newPot, updatedSeats, communityCards, dealerCards, 'SHOWDOWN', currentTurn);
-      return;
-    }
-
-    if (activePlayers.length === 1 && totalPlayersInRoom > 1) {
-      setDealerMsg(`${activePlayers[0]!.name} chiến thắng do đối thủ úp bài!`);
+    // Nếu đối thủ úp bài hết chỉ còn 1 người sống ➔ Thắng lập tức
+    if (activePlayers.length === 1) {
+      setDealerMsg(`Whis: ${activePlayers[0]!.name} chiến thắng do đối thủ đã úp bài!`);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, communityCards, 'SHOWDOWN', currentTurn);
       return;
     }
 
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
 
-    const isRoundComplete = (totalPlayersInRoom === 1) ? true : (
+    // VÒNG CƯỢC KẾT THÚC KHI TẤT CẢ ĐÃ THEO BẰNG CƯỢC LỚN NHẤT
+    const isRoundComplete = (
       nextTurnIdx === newLastRaiseIdx || 
       activePlayers.every(p => p && p.currentBet === newHighest)
     );
@@ -469,18 +453,18 @@ export default function PokerPage() {
       if (phase === 'PREFLOP') {
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
-        setDealerMsg("Mọi người đã theo cược! Nhà cái Whis lật 3 lá bài (FLOP)!");
+        setDealerMsg("Whis: Theo cược hoàn tất! Lật 3 lá bài chung (FLOP).");
       } else if (phase === 'FLOP') {
         nextCards.push(deck.pop()!);
         nextPhase = 'TURN';
-        setDealerMsg("Nhà cái Whis lật lá bài thứ 4 (TURN)!");
+        setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN).");
       } else if (phase === 'TURN') {
         nextCards.push(deck.pop()!);
         nextPhase = 'RIVER';
-        setDealerMsg("Nhà cái Whis lật lá bài cuối cùng (RIVER)!");
+        setDealerMsg("Whis: Lật lá bài chung cuối cùng (RIVER).");
       } else if (phase === 'RIVER') {
         nextPhase = 'SHOWDOWN';
-        setDealerMsg("Hết vòng RIVER! Mở bài đọ điểm (SHOWDOWN)!");
+        setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
 
       nextTurnIdx = updatedSeats.findIndex(s => s && s.cards.length > 0 && !s.folded);
@@ -488,19 +472,8 @@ export default function PokerPage() {
     }
 
     if (nextPhase === 'SHOWDOWN') {
-      if (totalPlayersInRoom === 1) {
-        const playerWon = Math.random() >= 0.5;
-        if (playerWon) {
-          setDealerMsg("🎉 Bạn có tay bài mạnh hơn Nhà cái Whis! Bạn thắng Pot!");
-          await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
-        } else {
-          setDealerMsg("🤖 Nhà cái Whis có bài mạnh hơn! Nhà cái ăn Pot.");
-          await executeAwardDealer(newPot, updatedSeats, nextCards, dealerCards, nextPhase, nextTurnIdx);
-        }
-      } else {
-        const winner = activePlayers[Math.floor(Math.random() * activePlayers.length)]!;
-        await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
-      }
+      const winner = activePlayers[Math.floor(Math.random() * activePlayers.length)]!;
+      await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
     } else {
       if (roomId) {
         await supabase.from("poker_rooms").update({
@@ -553,28 +526,13 @@ export default function PokerPage() {
     }
   };
 
-  const executeAwardDealer = async (finalPot: number, finalSeats: (SeatPlayer | null)[], finalCards: Card[], dCards: Card[], finalPhase: GamePhase, finalTurn: number) => {
-    showToast(`🤖 Nhà cái Whis thắng Pot $${finalPot.toLocaleString()} Ki!`);
-
-    if (roomId) {
-      await supabase.from("poker_rooms").update({
-        seats: finalSeats,
-        pot: finalPot,
-        community_cards: finalCards,
-        dealer_cards: dCards,
-        phase: finalPhase,
-        current_turn: finalTurn
-      }).eq("id", roomId);
-    }
-  };
-
   if (!inRoom) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
         <div className="relative z-10 w-full max-w-sm bg-gray-900/90 border-2 border-yellow-500/50 rounded-3xl p-5 shadow-2xl space-y-5 text-center">
           <span className="text-3xl animate-bounce">👑</span>
           <h1 className="text-xl font-black text-yellow-400 uppercase font-mono">TEXAS HOLD'EM POKER</h1>
-          <p className="text-slate-400 text-[11px]">Sòng 5 Ghế Realtime Supabase</p>
+          <p className="text-slate-400 text-[11px]">Đấu Bài 5 Ghế Realtime Supabase</p>
           <button
             onClick={handleAutoMatch}
             disabled={matching}
@@ -593,7 +551,6 @@ export default function PokerPage() {
   const mySeatIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
   const isMyTurn = mySeatIndex === currentTurn && phase !== 'IDLE' && phase !== 'SHOWDOWN';
   const mySeat = mySeatIndex !== -1 ? seats[mySeatIndex] : null;
-  const totalPlayersInRoom = seats.filter(s => s !== null).length;
 
   return (
     <div className="bg-gray-950 text-white min-h-screen flex flex-col justify-between select-none overflow-hidden font-sans">
@@ -639,27 +596,12 @@ export default function PokerPage() {
             </span>
           </div>
 
-          {/* NHÀ CÁI WHIS */}
+          {/* NHÀ CÁI WHIS (CHỈ CHIA BÀI) */}
           <div className="absolute top-1.5 flex flex-col items-center z-20">
-            <div className="flex items-center gap-1.5">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-400 overflow-hidden bg-indigo-950 shadow-md">
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
-              </div>
-              {totalPlayersInRoom === 1 && dealerCards.length > 0 && (
-                <div className="flex -space-x-1">
-                  {phase === 'SHOWDOWN' ? (
-                    dealerCards.map((c, i) => (
-                      <div key={i} className="w-5 h-7 bg-white rounded flex flex-col justify-between p-0.5 text-gray-900 text-[7px] font-bold shadow border border-yellow-500">
-                        <span className={`leading-none ${c.color}`}>{c.rank}{c.suit}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="w-5 h-7 bg-indigo-900 border border-white/40 rounded flex items-center justify-center text-[6px] font-mono">🎴🎴</div>
-                  )}
-                </div>
-              )}
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-400 overflow-hidden bg-indigo-950 shadow-md">
+              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
             </div>
-            <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase mt-0.5">NHÀ CÁI WHIS</span>
+            <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase mt-0.5">TRỌNG TÀI WHIS</span>
             <p className="text-[9px] text-yellow-200 bg-black/60 px-2 rounded-full border border-yellow-500/30 mt-0.5 font-mono">
               {resetCountdown !== null ? `⏳ Tự động reset bàn sau ${resetCountdown}s...` : readyCountdown !== null ? `⏳ Tự động bắt đầu sau ${readyCountdown}s...` : dealerMsg}
             </p>
@@ -675,7 +617,7 @@ export default function PokerPage() {
             <div className="flex gap-1 bg-black/40 p-1.5 rounded-lg border border-white/10 min-h-[45px] items-center">
               {communityCards.length === 0 ? (
                 <span className="text-[9px] text-emerald-200/60 font-mono italic px-2">
-                  {readyCountdown !== null ? `Đang đếm ngược (${readyCountdown}s)...` : "Bấm Sẵn Sàng để tham gia chiến đấu!"}
+                  {readyCountdown !== null ? `Đang đếm ngược (${readyCountdown}s)...` : "Cần ít nhất 2 người chơi Ready để chiến đấu!"}
                 </span>
               ) : (
                 communityCards.map((card, idx) => (
@@ -689,7 +631,7 @@ export default function PokerPage() {
             </div>
           </div>
 
-          {/* 5 GHẾ NGỒI */}
+          {/* 5 GHẾ NGỒI POKER */}
           {seats.map((seat, index) => {
             if (!seat) {
               return (
@@ -747,7 +689,7 @@ export default function PokerPage() {
         </div>
       </main>
 
-      {/* FOOTER ĐẶT CƯỢC & NÚT SẴN SÀNG */}
+      {/* FOOTER ĐẶT CƯỢC */}
       <footer className="bg-gray-900 border-t border-gray-800 p-1.5 px-3 z-30">
         <div className="max-w-3xl mx-auto flex flex-col gap-1">
           
