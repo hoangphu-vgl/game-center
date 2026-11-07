@@ -314,19 +314,20 @@ export default function PokerPage() {
       setPhase("PREFLOP");
       setCurrentTurn(firstTurn);
     }
-    setDealerMsg("Nhà cái Whis đã chia bài ván mới!");
+    setDealerMsg("Nhà cái Whis đã chia bài ván mới! Vòng PREFLOP");
   };
 
-  const getNextTurn = (current: number, seatsList: (SeatPlayer | null)[]) => {
+  const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
     let next = (current + 1) % 5;
-    while (!seatsList[next] || !seatsList[next]?.isReady || seatsList[next]?.folded) {
+    let count = 0;
+    while ((!seatsList[next] || !seatsList[next]?.isReady || seatsList[next]?.folded) && count < 5) {
       next = (next + 1) % 5;
-      if (next === current) break;
+      count++;
     }
     return next;
   };
 
-  // LUẬT TIẾN HÀNH VÒNG CƯỢC CHUẨN XÁC
+  // LUẬT XỬ LÝ NƯỚC ĐI TUYỆT ĐỐI CHUẨN VÒNG POKER
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
     const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
     if (myIndex !== currentTurn && phase !== 'IDLE') {
@@ -334,20 +335,11 @@ export default function PokerPage() {
       return;
     }
 
-    const deck: Card[] = [];
-    for (const suit of SUITS) {
-      for (const rank of RANKS) {
-        deck.push({ suit, rank, value: RANK_VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'text-red-600' : 'text-gray-900' });
-      }
-    }
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
     let updatedSeats = [...seats];
     let addedBet = customBet || raiseVal;
-    if (action === 'allin') addedBet = myKi;
+    if (action === 'allin' && updatedSeats[myIndex]) {
+      addedBet = updatedSeats[myIndex]!.chips;
+    }
 
     if (action === 'fold' && updatedSeats[myIndex]) {
       updatedSeats[myIndex]!.folded = true;
@@ -355,74 +347,120 @@ export default function PokerPage() {
       updatedSeats[myIndex]!.chips = Math.max(0, updatedSeats[myIndex]!.chips - addedBet);
     }
 
-    const nextTurnIdx = getNextTurn(currentTurn, updatedSeats);
     const activePlayers = updatedSeats.filter(s => s && s.isReady && !s.folded);
 
     let nextPhase = phase;
     let nextCards = [...communityCards];
+    let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
 
+    // Nếu chỉ còn 1 người duy nhất chưa úp bài -> Người đó thắng luôn Pot hiện tại
     if (activePlayers.length === 1) {
       nextPhase = 'SHOWDOWN';
-      await handleAwardWinner(activePlayers[0]!);
-    } else if (nextTurnIdx <= currentTurn) {
-      // Hết vòng cược, tiến hành lật bài chung theo chuẩn Poker
+      setDealerMsg(`Các người chơi khác đã úp bài. ${activePlayers[0]!.name} chiến thắng!`);
+      const newPot = pot + (action === 'fold' ? 0 : addedBet);
+      await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
+      return;
+    }
+
+    // Kiểm tra xem đã đi hết vòng của phase hiện tại chưa (nếu vòng quay lại người đầu tiên hoặc qua mốc)
+    // Để đơn giản và mượt mà cho 5 ghế: khi người chơi cuối cùng trong danh sách active đánh xong -> chuyển phase
+    const lastActiveIndex = updatedSeats.map((s, idx) => (s && s.isReady && !s.folded) ? idx : -1).filter(idx => idx !== -1).pop();
+
+    let isRoundComplete = (currentTurn === lastActiveIndex);
+
+    if (isRoundComplete) {
+      const deck: Card[] = [];
+      for (const suit of SUITS) {
+        for (const rank of RANKS) {
+          deck.push({ suit, rank, value: RANK_VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'text-red-600' : 'text-gray-900' });
+        }
+      }
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+
       if (phase === 'PREFLOP') {
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
-        setDealerMsg("Nhà cái Whis lật 3 lá FLOP!");
+        setDealerMsg("Nhà cái Whis lật 3 lá bài chung (FLOP)!");
       } else if (phase === 'FLOP') {
         nextCards.push(deck.pop()!);
         nextPhase = 'TURN';
-        setDealerMsg("Nhà cái Whis lật lá TURN!");
+        setDealerMsg("Nhà cái Whis lật lá bài thứ 4 (TURN)!");
       } else if (phase === 'TURN') {
         nextCards.push(deck.pop()!);
         nextPhase = 'RIVER';
-        setDealerMsg("Nhà cái Whis lật lá RIVER!");
+        setDealerMsg("Nhà cái Whis lật lá bài cuối cùng (RIVER)!");
       } else if (phase === 'RIVER') {
         nextPhase = 'SHOWDOWN';
-        setDealerMsg("Mở bài đọ điểm SHOWDOWN!");
-        await handleAwardWinner();
+        setDealerMsg("Vòng cuối kết thúc! Mở bài đọ điểm (SHOWDOWN)!");
       }
+
+      // Reset turn về người chơi active đầu tiên trong bàn
+      nextTurnIdx = updatedSeats.findIndex(s => s && s.isReady && !s.folded);
     }
 
     const newPot = pot + (action === 'fold' ? 0 : addedBet);
 
-    if (roomId) {
-      await supabase.from("poker_rooms").update({
-        seats: updatedSeats,
-        community_cards: nextCards,
-        phase: nextPhase,
-        pot: newPot,
-        current_turn: nextTurnIdx
-      }).eq("id", roomId);
+    if (nextPhase === 'SHOWDOWN') {
+      await executeAwardWinner(activePlayers[Math.floor(Math.random() * activePlayers.length)], newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
     } else {
-      setSeats(updatedSeats);
-      setCommunityCards(nextCards);
-      setPhase(nextPhase);
-      setPot(newPot);
-      setCurrentTurn(nextTurnIdx);
+      if (roomId) {
+        await supabase.from("poker_rooms").update({
+          seats: updatedSeats,
+          community_cards: nextCards,
+          phase: nextPhase,
+          pot: newPot,
+          current_turn: nextTurnIdx
+        }).eq("id", roomId);
+      } else {
+        setSeats(updatedSeats);
+        setCommunityCards(nextCards);
+        setPhase(nextPhase);
+        setPot(newPot);
+        setCurrentTurn(nextTurnIdx);
+      }
     }
   };
 
-  const handleAwardWinner = async (singleWinner?: SeatPlayer) => {
-    const activePlayers = seats.filter(s => s && s.isReady && !s.folded);
-    const winner = singleWinner || activePlayers[Math.floor(Math.random() * activePlayers.length)];
+  const executeAwardWinner = async (winner: SeatPlayer, finalPot: number, finalSeats: (SeatPlayer | null)[], finalCards: Card[], finalPhase: GamePhase, finalTurn: number) => {
+    const newBalance = winner.chips + finalPot;
 
-    if (winner) {
-      const rewardPot = pot;
-      const newBalance = winner.chips + rewardPot;
+    await supabase
+      .from("profiles")
+      .update({ balance: newBalance })
+      .eq("id", winner.id);
 
-      await supabase
-        .from("profiles")
-        .update({ balance: newBalance })
-        .eq("id", winner.id);
-
-      if (winner.id === currentUser?.id) {
-        setMyKi(newBalance);
-        showToast(`🎉 Bạn thắng Pot $${rewardPot.toLocaleString()} Ki!`);
-      } else {
-        showToast(`🏆 ${winner.name} thắng Pot $${rewardPot.toLocaleString()} Ki!`);
+    // Cập nhật lại chips cho winner trong mảng seats luôn
+    const updatedSeatsWithChips = finalSeats.map(s => {
+      if (s && s.id === winner.id) {
+        return { ...s, chips: newBalance };
       }
+      return s;
+    });
+
+    if (winner.id === currentUser?.id) {
+      setMyKi(newBalance);
+      showToast(`🎉 Bạn thắng Pot $${finalPot.toLocaleString()} Ki!`);
+    } else {
+      showToast(`🏆 ${winner.name} thắng Pot $${finalPot.toLocaleString()} Ki!`);
+    }
+
+    if (roomId) {
+      await supabase.from("poker_rooms").update({
+        seats: updatedSeatsWithChips,
+        pot: finalPot,
+        community_cards: finalCards,
+        phase: finalPhase,
+        current_turn: finalTurn
+      }).eq("id", roomId);
+    } else {
+      setSeats(updatedSeatsWithChips);
+      setPot(finalPot);
+      setCommunityCards(finalCards);
+      setPhase(finalPhase);
+      setCurrentTurn(finalTurn);
     }
   };
 
@@ -662,7 +700,7 @@ export default function PokerPage() {
                 <button 
                   onClick={() => handleAction('call')} 
                   disabled={!isMyTurn}
-                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
+                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-600/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
                 >
                   THEO
                 </button>
