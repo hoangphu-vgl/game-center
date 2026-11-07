@@ -38,15 +38,13 @@ export default function PokerPage() {
   const [inRoom, setInRoom] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState<string>("");
-  const [inputRoomCode, setInputRoomCode] = useState("");
   const [matching, setMatching] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [myKi, setMyKi] = useState(10000);
+  const [myKi, setMyKi] = useState(5000);
   const [myName, setMyName] = useState("Chiến Binh");
   const [myAvatar, setMyAvatar] = useState("");
 
-  // 5 Ghế ngồi phân bổ gọn gàng
   const [seats, setSeats] = useState<(SeatPlayer | null)[]>([null, null, null, null, null]);
   const [pot, setPot] = useState(0);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
@@ -89,7 +87,7 @@ export default function PokerPage() {
     setTimeout(() => setToastMsg(null), 2500);
   };
 
-  // GHÉP BÀN TỰ ĐỘNG (ROOM_1 HOẶC ROOM_2)
+  // Ghép bàn tự động vào ROOM_1 hoặc ROOM_2
   const handleAutoMatch = async () => {
     if (!currentUser) return;
     setMatching(true);
@@ -150,7 +148,7 @@ export default function PokerPage() {
     }
   };
 
-  // Realtime Sub dữ liệu
+  // Realtime Sub dữ liệu Supabase
   useEffect(() => {
     if (!roomId) return;
     const fetchRoom = async () => {
@@ -168,10 +166,10 @@ export default function PokerPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "poker_rooms", filter: `id=eq.${roomId}` }, (payload: any) => {
         const room = payload.new;
         if (room) {
-          setSeats(room.seats);
-          setPot(room.pot);
+          setSeats(room.seats || [null, null, null, null, null]);
+          setPot(room.pot || 0);
           setCommunityCards(room.community_cards || []);
-          setPhase(room.phase);
+          setPhase(room.phase || 'IDLE');
         }
       })
       .subscribe();
@@ -179,14 +177,13 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // RỜI BÀN & CƠ CHẾ RESET BÀN TRỐNG KHI KHÔNG CÒN AI
+  // Rời bàn & tự động reset bàn nếu không còn ai
   const handleLeaveRoom = async () => {
     if (roomId && currentUser) {
       const updatedSeats = seats.map(s => s && s.id === currentUser.id ? null : s);
       const isRoomEmpty = updatedSeats.every(s => s === null);
 
       if (isRoomEmpty) {
-        // Reset sạch bàn khi không còn ai chơi
         await supabase.from("poker_rooms").update({
           seats: [null, null, null, null, null],
           pot: 0,
@@ -212,7 +209,7 @@ export default function PokerPage() {
     } else {
       setSeats(updatedSeats);
     }
-    showToast("Đã sẵn sàng!");
+    showToast("Đã sẵn sàng chiến đấu!");
   };
 
   // Bắt đầu chia bài ván mới
@@ -228,22 +225,29 @@ export default function PokerPage() {
       [deck[i], deck[j]] = [deck[j], deck[i]];
     }
 
+    let deductedMyKi = myKi;
     const updatedSeats = seats.map(seat => {
-      if (!seat) return null;
+      if (!seat || !seat.isReady) return seat;
       const c1 = deck.pop()!;
       const c2 = deck.pop()!;
+      const newChips = Math.max(0, seat.chips - 100);
+      if (seat.id === currentUser?.id) {
+        deductedMyKi = newChips;
+      }
       return {
         ...seat,
         cards: [c1, c2],
         currentBet: 100,
-        chips: Math.max(0, seat.chips - 100),
+        chips: newChips,
         folded: false,
-        isObserving: false,
-        isReady: true
+        isObserving: false
       };
     });
 
-    const activePlayersCount = updatedSeats.filter(s => s && !s.isObserving).length;
+    setMyKi(deductedMyKi);
+    await supabase.from("profiles").update({ balance: deductedMyKi }).eq("id", currentUser.id);
+
+    const activePlayersCount = updatedSeats.filter(s => s && !s.isObserving && s.isReady).length;
     const initialPot = activePlayersCount * 100;
 
     if (roomId) {
@@ -261,7 +265,6 @@ export default function PokerPage() {
     setDealerMsg("Nhà cái Whis chia bài ván mới!");
   };
 
-  // Xử lý các vòng cược và cộng/trừ điểm Ki khi SHOWDOWN
   const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
     const deck: Card[] = [];
     for (const suit of SUITS) {
@@ -293,10 +296,8 @@ export default function PokerPage() {
       setDealerMsg("Nhà cái Whis lật RIVER!");
     } else if (phase === 'RIVER') {
       nextPhase = 'SHOWDOWN';
-      setDealerMsg("Mở bài! Nhà cái Whis trao thưởng Pot!");
-      
-      // TÍNH ĐIỂM VÀ CỘNG THƯỞNG CHO NGƯỜI THẮNG
-      handleAwardWinner();
+      setDealerMsg("Mở bài! Trao thưởng Pot!");
+      await handleAwardWinner();
       startCountdown();
     }
 
@@ -315,7 +316,6 @@ export default function PokerPage() {
     }
   };
 
-  // Hàm tính thưởng & cập nhật điểm balance lên Supabase
   const handleAwardWinner = async () => {
     const activePlayers = seats.filter(s => s && !s.folded && !s.isObserving);
     if (activePlayers.length > 0) {
@@ -324,7 +324,6 @@ export default function PokerPage() {
         const rewardPot = pot;
         const newBalance = winner.chips + rewardPot;
 
-        // Cập nhật điểm balance lên Supabase cho winner
         await supabase
           .from("profiles")
           .update({ balance: newBalance })
@@ -332,7 +331,7 @@ export default function PokerPage() {
 
         if (winner.id === currentUser?.id) {
           setMyKi(newBalance);
-          showToast(`🎉 Bạn đã thắng Pot $${rewardPot.toLocaleString()} Ki!`);
+          showToast(`🎉 Bạn thắng Pot $${rewardPot.toLocaleString()} Ki!`);
         } else {
           showToast(`🏆 ${winner.name} thắng Pot $${rewardPot.toLocaleString()} Ki!`);
         }
@@ -340,13 +339,23 @@ export default function PokerPage() {
     }
   };
 
-  // Đếm ngược 10s tự động sang ván mới
+  // ĐÃ SỬA CHUẨN: BỎ ASYNC TRONG SETCOUNTDOWN ĐỂ KHÔNG BỊ BÁO LỖI VÀ CHẠY NGUYÊN BẢN
   const startCountdown = () => {
     setCountdown(10);
     const timer = setInterval(() => {
-      setCountdown(prev => {
+      setCountdown((prev) => {
         if (prev !== null && prev > 1) return prev - 1;
         clearInterval(timer);
+        
+        // Reset sạch bàn đấu trên Supabase
+        if (roomId) {
+          supabase.from("poker_rooms").update({
+            pot: 0,
+            community_cards: [],
+            phase: 'IDLE'
+          }).eq("id", roomId);
+        }
+
         setPhase('IDLE');
         setIsReadyClicked(false);
         setPot(0);
@@ -395,7 +404,7 @@ export default function PokerPage() {
         </div>
       )}
 
-      {/* Header thu gọn */}
+      {/* Header */}
       <header className="bg-gray-900/90 border-b border-yellow-600/30 px-3 py-1 flex justify-between items-center z-30">
         <div className="flex items-center gap-2">
           <span className="text-sm">👑</span>
@@ -414,7 +423,7 @@ export default function PokerPage() {
         </div>
       </header>
 
-      {/* BÀN BÀI OVAL GỌN GÀNG TỰ KHÍT Safari NẰM NGANG */}
+      {/* BÀN BÀI OVAL GỌN GÀNG TỰ KHÍT */}
       <main className="flex-1 flex items-center justify-center p-1 relative overflow-hidden">
         
         <div 
@@ -424,14 +433,13 @@ export default function PokerPage() {
             boxShadow: "inset 0 0 60px rgba(0,0,0,0.8), 0 0 0 8px #4a2810, 0 15px 30px rgba(0,0,0,0.9)"
           }}
         >
-          {/* Watermark Logo */}
           <div className="absolute inset-4 rounded-[120px] border border-emerald-400/10 pointer-events-none flex items-center justify-center">
             <span className="text-emerald-500/10 font-black text-2xl sm:text-4xl tracking-[0.2em] font-mono uppercase select-none">
               POKER ROYALE
             </span>
           </div>
 
-          {/* NHÀ CÁI WHIS (GÓC TRÊN TRUNG TÂM) */}
+          {/* NHÀ CÁI WHIS */}
           <div className="absolute top-1.5 flex flex-col items-center z-20">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-400 overflow-hidden bg-indigo-950 shadow-md">
               <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
@@ -442,7 +450,7 @@ export default function PokerPage() {
             </p>
           </div>
 
-          {/* BÀI CHUNG VÀ POT TRUNG TÂM */}
+          {/* BÀI CHUNG VÀ POT */}
           <div className="absolute flex flex-col items-center gap-0.5 z-10">
             <div className="bg-gray-950/80 px-2.5 py-0.5 rounded-full border border-yellow-500/50 text-yellow-400 text-[10px] font-black flex items-center gap-1 shadow-lg">
               <span>🪙 POT:</span>
@@ -464,8 +472,7 @@ export default function PokerPage() {
             </div>
           </div>
 
-          {/* 5 GHẾ NGỒI THU GỌN VẬN HÀNH MƯỢT MÀ */}
-          {/* Ghế 0: Dưới (Vị trí Bạn) */}
+          {/* 5 GHẾ NGỒI */}
           <div className="absolute bottom-1 flex flex-col items-center z-20">
             {seats[0] ? (
               <div className="flex flex-col items-center">
@@ -480,14 +487,13 @@ export default function PokerPage() {
                   <img src={seats[0]?.avatar} className="w-5 h-5 rounded-full bg-gray-800" />
                   <div className="text-left">
                     <p className="text-[8px] font-black text-yellow-400 leading-none">{seats[0]?.name} (Bạn)</p>
-                    <p className="text-[9px] font-mono font-bold leading-none">${seats[0]?.chips.toLocaleString()}</p>
+                    <p className="text-[9px] font-mono font-bold leading-none">${myKi.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
             ) : <div className="w-7 h-7 rounded-full border border-dashed border-white/30 bg-black/30 text-[7px] flex items-center justify-center text-white/40">Ghế 1</div>}
           </div>
 
-          {/* Ghế 1: Dưới Trái */}
           <div className="absolute bottom-4 left-[6%] flex flex-col items-center z-10">
             {seats[1] ? (
               <div className="flex flex-col items-center">
@@ -497,7 +503,6 @@ export default function PokerPage() {
             ) : <div className="w-7 h-7 rounded-full border border-dashed border-white/20 bg-black/20 text-[7px] flex items-center justify-center text-white/40">Ghế 2</div>}
           </div>
 
-          {/* Ghế 2: Trên Trái */}
           <div className="absolute top-6 left-[6%] flex flex-col items-center z-10">
             {seats[2] ? (
               <div className="flex flex-col items-center">
@@ -507,7 +512,6 @@ export default function PokerPage() {
             ) : <div className="w-7 h-7 rounded-full border border-dashed border-white/20 bg-black/20 text-[7px] flex items-center justify-center text-white/40">Ghế 3</div>}
           </div>
 
-          {/* Ghế 3: Trên Phải */}
           <div className="absolute top-6 right-[6%] flex flex-col items-center z-10">
             {seats[3] ? (
               <div className="flex flex-col items-center">
@@ -517,7 +521,6 @@ export default function PokerPage() {
             ) : <div className="w-7 h-7 rounded-full border border-dashed border-white/20 bg-black/20 text-[7px] flex items-center justify-center text-white/40">Ghế 4</div>}
           </div>
 
-          {/* Ghế 4: Dưới Phải */}
           <div className="absolute bottom-4 right-[6%] flex flex-col items-center z-10">
             {seats[4] ? (
               <div className="flex flex-col items-center">
@@ -530,7 +533,7 @@ export default function PokerPage() {
         </div>
       </main>
 
-      {/* FOOTER ĐẶT CƯỢC THU GỌN */}
+      {/* FOOTER ĐẶT CƯỢC */}
       <footer className="bg-gray-900 border-t border-gray-800 p-1.5 px-3 z-30">
         <div className="max-w-3xl mx-auto flex flex-col gap-1">
           
@@ -562,8 +565,6 @@ export default function PokerPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-1">
-              
-              {/* THANH CHỌN CHIP CƯỢC NHANH */}
               <div className="flex items-center justify-between gap-1.5 bg-gray-950/80 p-1 px-2.5 rounded-lg border border-gray-800">
                 <span className="text-[9px] text-yellow-400 font-mono font-bold shrink-0">Cược: ${raiseVal}</span>
                 <input
@@ -582,14 +583,12 @@ export default function PokerPage() {
                 </div>
               </div>
 
-              {/* NÚT THAO TÁC CƯỢC */}
               <div className="flex items-center gap-1.5 w-full">
                 <button onClick={() => handleAction('fold')} className="flex-1 bg-red-600/30 text-red-400 border border-red-500/40 py-1.5 rounded-lg font-bold text-[11px]">ÚP BÀI</button>
                 <button onClick={() => handleAction('call')} className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px]">THEO</button>
                 <button onClick={() => handleAction('raise')} className="flex-1 bg-yellow-500 text-gray-950 font-black py-1.5 rounded-lg text-[11px] shadow">TỐ (${raiseVal})</button>
                 <button onClick={() => handleAction('allin')} className="bg-purple-600 text-white font-black px-3 py-1.5 rounded-lg text-[11px] shadow">ALL-IN 🔥</button>
               </div>
-
             </div>
           )}
 
