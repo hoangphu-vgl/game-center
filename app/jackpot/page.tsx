@@ -13,37 +13,38 @@ const AUTO_OPTIONS = [
   { label: "Vô Cực", value: 99999 },
 ];
 
+// 🌟 ĐÃ THAY THẾ TOÀN BỘ EMOJI BẰNG HÌNH ẢNH ASSET PNG THẬT KHỚP VỚI THƯ MỤC CỦA NÍ
 const DRAGON_SYMBOLS = [
-  { id: "scatter", icon: "🌟", name: "Dragon Ball", type: "scatter", basePoints: 200, multiplier: 20 },
-  { id: "long", icon: "🐉", name: "Thanh Long", type: "strong", basePoints: 100, multiplier: 10 },
-  { id: "lan", icon: "🦄", name: "Kỳ Lân", type: "strong", basePoints: 120, multiplier: 12 },
-  { id: "phung", icon: "🦅", name: "Phượng Hoàng", type: "strong", basePoints: 100, multiplier: 10 },
-  { id: "quy", icon: "🐢", name: "Thần Quy", type: "strong", basePoints: 100, multiplier: 10 },
-  { id: "linh", icon: "🦖", name: "Linh thú", type: "strong", basePoints: 120, multiplier: 12 },
-  { id: "shenron", icon: "🐲", name: "Rồng Thần", type: "mid", basePoints: 150, multiplier: 15 },
-  { id: "goku", icon: "⭐", name: "Goku SSJ", type: "mid", basePoints: 60, multiplier: 6 },
-  { id: "ball7", icon: "🔮", name: "Ngọc 7 Sao", type: "mid", basePoints: 50, multiplier: 5 },
-  { id: "ball6", icon: "🔮", name: "Ngọc 6 Sao", type: "mid", basePoints: 40, multiplier: 4 },
-  { id: "ball5", icon: "🔮", name: "Ngọc 5 Sao", type: "weak", basePoints: 30, multiplier: 3 },
-  { id: "ball4", icon: "🔮", name: "Ngọc 4 Sao", type: "weak", basePoints: 25, multiplier: 2.5 },
-  { id: "ball3", icon: "🔮", name: "Ngọc 3 Sao", type: "weak", basePoints: 20, multiplier: 2 },
-  { id: "ball2", icon: "🔮", name: "Ngọc 2 Sao", type: "weak", basePoints: 15, multiplier: 1.5 },
-  { id: "ball1", icon: "🔮", name: "Ngọc 1 Sao", type: "weak", basePoints: 10, multiplier: 1 },
-  { id: "senzu", icon: "🫘", name: "Đậu Senzu", type: "weak", basePoints: 5, multiplier: 0.5 },
-  { id: "capsule", icon: "💊", name: "Capsule", type: "weak", basePoints: 5, multiplier: 0.5 },
+  { id: "scatter", icon: "/assets/jackpot/dragonball.png", name: "Dragon Ball", type: "scatter", basePoints: 200, multiplier: 20 },
+  { id: "cell", icon: "/assets/jackpot/cell.png", name: "Cell", type: "strong", basePoints: 100, multiplier: 10 },
+  { id: "kidbuu", icon: "/assets/jackpot/kidbuu.png", name: "Kid Bưu", type: "strong", basePoints: 120, multiplier: 12 },
+  { id: "buubeo", icon: "/assets/jackpot/buubeo.png", name: "Bưu Béo", type: "strong", basePoints: 100, multiplier: 10 },
+  { id: "frieza", icon: "/assets/jackpot/frieza.png", name: "Frieza đại đế", type: "strong", basePoints: 100, multiplier: 10 },
+  { id: "gohan", icon: "/assets/jackpot/gohan.png", name: "Gohan", type: "strong", basePoints: 120, multiplier: 12 },
+  { id: "shenron", icon: "/assets/jackpot/shenron.png", name: "Rồng Thần", type: "mid", basePoints: 150, multiplier: 15 },
+  { id: "krillin", icon: "/assets/jackpot/krillin.png", name: "Krillin", type: "mid", basePoints: 60, multiplier: 6 },
+  { id: "ball7", icon: "/assets/jackpot/dragon-ball-7.png", name: "7 sao", type: "mid", basePoints: 50, multiplier: 5 },
+  { id: "ball6", icon: "/assets/jackpot/dragon-ball-6.png", name: "6 sao", type: "mid", basePoints: 40, multiplier: 4 },
+  { id: "ball5", icon: "/assets/jackpot/dragon-ball-5.png", name: "5 sao", type: "weak", basePoints: 30, multiplier: 3 },
+  { id: "ball4", icon: "/assets/jackpot/dragon-ball-4.png", name: "4 sao", type: "weak", basePoints: 25, multiplier: 2.5 },
+  { id: "ball3", icon: "/assets/jackpot/dragon-ball-3.png", name: "3 sao", type: "weak", basePoints: 20, multiplier: 2 },
+  { id: "ball2", icon: "/assets/jackpot/dragon-ball-2.png", name: "2 sao", type: "weak", basePoints: 15, multiplier: 1.5 },
+  { id: "ball1", icon: "/assets/jackpot/dragon-ball-1.png", name: "1 sao", type: "weak", basePoints: 10, multiplier: 1 },
+  { id: "senzu", icon: "/assets/jackpot/dausenzu.png", name: "Đậu Senzu", type: "weak", basePoints: 5, multiplier: 0.5 },
+  { id: "capsule", icon: "/assets/jackpot/capsule.png", name: "Capsule", type: "weak", basePoints: 5, multiplier: 0.5 },
 ];
 
 const AURA_QUICK_REWARDS = [
-  { id: "ki_white", name: "⚪ Ki Trắng", mult: 2.0, weight: 450, icon: "✨" },
-  { id: "kaioken", name: "🔴 Kaioken", mult: 3.0, weight: 350, icon: "🔥" },
-  { id: "ssj1", name: "🟡 SSJ", mult: 5.0, weight: 200, icon: "⚡" },
-  { id: "ssj2", name: "⚡ SSJ 2", mult: 6.0, weight: 150, icon: "🌩️" },
-  { id: "ssj3", name: "💥 SSJ 3", mult: 7.0, weight: 100, icon: "🌀" },
-  { id: "ssj_blue", name: "🔵 SSJ Blue", mult: 8.0, weight: 50, icon: "💠" },
-  { id: "ssj_god", name: "🔴 SSJ God", mult: 10.0, weight: 10, icon: "☀️" },
-  { id: "android", name: "🤖 Đám Android", mult: 15.0, weight: 5, icon: "⚡" },
-  { id: "ultra", name: "⚪ Ultra Instinct", mult: 20.0, weight: 3, icon: "🌌" },
-  { id: "hakai", name: "🟣 Hakai Hủy Diệt", mult: 25.0, weight: 2, icon: "💀" },
+  { id: "ki_white", name: "Ki Trắng", mult: 2.0, weight: 700, icon: "/assets/jackpot/kiwhite.png" },
+  { id: "kaioken", name: "Kaioken", mult: 3.0, weight: 600, icon: "/assets/jackpot/kaioken.png" },
+  { id: "ssj1", name: "SSJ", mult: 5.0, weight: 500, icon: "/assets/jackpot/ssj1.png" },
+  { id: "ssj2", name: "SSJ 2", mult: 6.0, weight: 300, icon: "/assets/jackpot/ssj2.png" },
+  { id: "ssj3", name: "SSJ 3", mult: 7.0, weight: 200, icon: "/assets/jackpot/ssj3.png" },
+  { id: "ssj_blue", name: "SSJ Blue", mult: 8.0, weight: 150, icon: "/assets/jackpot/ssj_blue.png" },
+  { id: "ssj_god", name: "SSJ God", mult: 10.0, weight: 100, icon: "/assets/jackpot/ssj_god.png" },
+  { id: "android", name: "Android", mult: 15.0, weight: 50, icon: "/assets/jackpot/android.png" },
+  { id: "ultra", name: "Ultra", mult: 20.0, weight: 15, icon: "/assets/jackpot/ultra.png" },
+  { id: "hakai", name: "Hakai", mult: 25.0, weight: 10, icon: "/assets/jackpot/hakai.png" },
 ];
 
 const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
@@ -74,7 +75,7 @@ interface HistoryItem {
   isWin: boolean;
 }
 
-export default function JackpotPage() {
+export default function JackpotTestPage() {
   const [user, setUser] = useState<any>(null);
   const [points, setPoints] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(100);
@@ -147,7 +148,7 @@ export default function JackpotPage() {
     fetchGlobalJackpot();
 
     const channel = supabase
-      .channel("system_jackpot_realtime")
+      .channel("system_jackpot_test_realtime")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "system_jackpot", filter: "id=eq.global" },
@@ -224,7 +225,7 @@ export default function JackpotPage() {
         let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
         if (rand > 0.5) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
         if (rand > 0.70) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
-        if (rand > 0.88) pool = DRAGON_SYMBOLS.filter((s) => s.type === "scatter"); // 12% mỗi ô
+        if (rand > 0.88) pool = DRAGON_SYMBOLS.filter((s) => s.id === "scatter");
 
         let selected = pool[Math.floor(Math.random() * pool.length)];
         if (selected.id === prevId && selected.type !== "scatter" && Math.random() < 0.65) {
@@ -302,8 +303,8 @@ export default function JackpotPage() {
       }
 
       const updatedJackpots = {
-        minor: jackpotsRef.current.minor + Math.floor(bet * 0.75),
-        major: jackpotsRef.current.major + Math.floor(bet * 0.45),
+        minor: jackpotsRef.current.minor + Math.floor(bet * 0.80),
+        major: jackpotsRef.current.major + Math.floor(bet * 0.50),
         grand: jackpotsRef.current.grand + Math.floor(bet * 0.30),
       };
       await updateGlobalJackpotInDB(updatedJackpots);
@@ -356,7 +357,6 @@ export default function JackpotPage() {
       }
     }
 
-    // KHI TRÚNG NGỌC ƯỚC (SCATTER) HOẶC RETRIGGER: CHO DỪNG CHẬM & HIỂN THỊ KHUNG LÂU HƠN BÌNH THƯỜNG
     if (hasScatterInAllCols) {
       setFreeSpinsLeft(prev => prev + 20);
       setWinningCoords(scatterIndices);
@@ -369,7 +369,6 @@ export default function JackpotPage() {
       triggerBroadcast(`📢 HUYỀN THOẠI NGỌC ƯỚC: Chiến binh [${playerName}] vừa sưu tập đủ 6 cột Ngọc Ước, nhận thêm 20 Free Spins cực khủng! 🌟🔥`);
       addHistory(freeSpinMsg, true);
 
-      // Tăng độ trễ hiển thị khung trúng Scatter chậm hơn bình thường (khoảng giữa x1 và x2: ~1600ms) trước khi cho phép chạy tiếp lượt tiếp theo
       const cinematicPause = autoSpeed === 2 ? 1000 : 1600;
       setTimeout(() => {
         continueAutoIfNeeded(remainingAuto);
@@ -377,12 +376,12 @@ export default function JackpotPage() {
       return;
     }
 
-    let winChance = isFreeSpinActive ? 0.45 : 0.20;
+    let winChance = isFreeSpinActive ? 0.50 : 0.35;
     if (!isFreeSpinActive) {
-      if (bet <= 50) winChance = 0.25;
-      else if (bet <= 500) winChance = 0.15;
-      else if (bet <= 2000) winChance = 0.10;
-      else winChance = 0.05;
+      if (bet <= 50) winChance = 0.30;
+      else if (bet <= 500) winChance = 0.25;
+      else if (bet <= 2000) winChance = 0.15;
+      else winChance = 0.10;
     }
 
     const isTriggerWin = Math.random() < winChance;
@@ -482,7 +481,7 @@ export default function JackpotPage() {
           const chosenAura = getRandomAura();
           baseWinAmount = Math.floor(bet * chosenAura.mult * (isFreeSpinActive ? 1.5 : 1));
           matchedIndices = [Math.floor(Math.random() * 6), Math.floor(Math.random() * 6) + 6];
-          resultText = `${chosenAura.icon} BỘC PHÁT ${chosenAura.name.toUpperCase()}! Thưởng nhanh x${chosenAura.mult} = +${baseWinAmount.toLocaleString()} PTS`;
+          resultText = `✨ BỘC PHÁT SỨC MẠNH! Thưởng nhanh x${chosenAura.mult} = +${baseWinAmount.toLocaleString()} PTS`;
           isStreakWin = false;
           triggerExplosion();
         }
@@ -614,7 +613,7 @@ export default function JackpotPage() {
       {/* Main Container */}
       <div className={`w-full max-w-md sm:max-w-4xl bg-slate-900/98 border-2 border-amber-500/50 rounded-2xl p-2 sm:p-4 shadow-2xl flex flex-col gap-2 transition-all duration-500 ${jackpotSideGlow ? "ring-8 ring-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.8)]" : ""}`}>
         
-        {/* THANH THÔNG BÁO TOÀN THỂ GIỮ 10 GIÂY */}
+        {/* THANH THÔNG BÁO TOÀN THỂ */}
         {broadcastMsg && (
           <div className="bg-gradient-to-r from-amber-600 via-yellow-500 to-red-600 border-2 border-yellow-200 text-slate-950 font-black px-3 py-1.5 rounded-xl text-center text-xs sm:text-sm shadow-[0_0_20px_rgba(250,204,21,0.8)] animate-bounce flex items-center justify-center gap-2">
             <span>⚡</span>
@@ -623,25 +622,22 @@ export default function JackpotPage() {
           </div>
         )}
 
-        {/* 3 HŨ JACKPOT: GRAND Ở GIỮA, MINOR & MAJOR Ở 2 BÊN */}
+        {/* 3 HŨ JACKPOT */}
         <div className="grid grid-cols-3 gap-1.5 relative">
           {jackpotSideGlow && (
             <div className="absolute -inset-2 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur-md opacity-75 animate-pulse -z-10"></div>
           )}
 
-          {/* 1. Hũ Minor (Bên Trái) */}
           <div className="bg-gradient-to-b from-amber-600 to-amber-900 border border-amber-300 rounded-xl p-1.5 text-center shadow">
             <div className="text-[8px] sm:text-[11px] font-black text-amber-200 uppercase tracking-wider">🔥 MINOR HŨ</div>
             <div className="text-[10px] sm:text-base font-black text-white font-mono">{jackpots.minor.toLocaleString()}</div>
           </div>
 
-          {/* 2. Hũ Grand (Ở Giữa - Hoành tráng nhất) */}
           <div className="bg-gradient-to-b from-red-600 via-orange-600 to-amber-600 border-2 border-yellow-300 rounded-xl p-1.5 text-center shadow-lg animate-pulse scale-105 z-10">
             <div className="text-[9px] sm:text-[12px] font-black text-yellow-200 uppercase tracking-wider">👑 GRAND HŨ</div>
             <div className="text-[11px] sm:text-lg font-black text-yellow-300 font-mono">{jackpots.grand.toLocaleString()}</div>
           </div>
 
-          {/* 3. Hũ Major (Bên Phải) */}
           <div className="bg-gradient-to-b from-purple-700 via-indigo-700 to-slate-900 border border-purple-300 rounded-xl p-1.5 text-center shadow">
             <div className="text-[8px] sm:text-[11px] font-black text-purple-200 uppercase tracking-wider">💎 MAJOR HŨ</div>
             <div className="text-[10px] sm:text-base font-black text-purple-300 font-mono">{jackpots.major.toLocaleString()}</div>
@@ -652,7 +648,7 @@ export default function JackpotPage() {
         <div className="bg-slate-950/80 border border-amber-500/30 p-1 rounded-xl flex items-center justify-between gap-1 overflow-x-auto text-[9px] sm:text-xs">
           {AURA_QUICK_REWARDS.map((aura) => (
             <div key={aura.id} className="bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded-lg shrink-0 flex items-center gap-1 font-bold">
-              <span>{aura.icon}</span>
+              <img src={aura.icon} alt={aura.name} className="w-4 h-4 object-contain" />
               <span className="text-amber-300">{aura.name.split(" ")[1]}</span>
               <span className="text-orange-400 font-mono">x{aura.mult}</span>
             </div>
@@ -700,7 +696,7 @@ export default function JackpotPage() {
           )}
         </div>
 
-        {/* LƯỚI 5 HÀNG X 6 CỘT */}
+        {/* LƯỚI 5 HÀNG X 6 CỘT - HIỂN THỊ HÌNH ẢNH PNG THAY CHO EMOJI */}
         <div className="bg-slate-950 p-1.5 sm:p-2 rounded-xl border border-amber-500/30 shadow-inner">
           <div className="grid grid-cols-6 grid-rows-5 gap-1">
             {grid.map((sym, idx) => {
@@ -711,7 +707,7 @@ export default function JackpotPage() {
               return (
                 <div
                   key={idx}
-                  className={`flex flex-col items-center justify-center rounded-lg aspect-square p-0.5 transition-all duration-300 ${
+                  className={`flex flex-col items-center justify-center rounded-lg aspect-square p-1 transition-all duration-300 ${
                     spinning
                       ? "animate-pulse scale-95 bg-slate-800"
                       : isWinning
@@ -723,8 +719,14 @@ export default function JackpotPage() {
                       : "bg-gradient-to-b from-slate-800 to-slate-900 border border-amber-500/20 hover:border-amber-400"
                   }`}
                 >
-                  <span className="text-xl sm:text-2xl">{sym.icon}</span>
-                  <span className={`text-[6px] sm:text-[8px] font-bold truncate w-full text-center mt-0.5 ${isWinning || isScatter ? "text-slate-950 font-black" : "text-amber-300/80"}`}>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center">
+                    <img 
+                      src={sym.icon} 
+                      alt={sym.name} 
+                      className="w-full h-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                    />
+                  </div>
+                  <span className={`text-[6px] sm:text-[7px] font-bold truncate w-full text-center mt-0.5 ${isWinning || isScatter ? "text-slate-950 font-black" : "text-amber-300/80"}`}>
                     {sym.name}
                   </span>
                 </div>
