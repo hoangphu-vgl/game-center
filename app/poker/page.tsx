@@ -48,7 +48,7 @@ export default function PokerPage() {
   const [pot, setPot] = useState(0);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
   const [phase, setPhase] = useState<GamePhase>('IDLE');
-  const [currentTurn, setCurrentTurn] = useState<number>(0);
+  const [currentTurn, setCurrentTurn] = useState<number>(-1);
   const [highestBet, setHighestBet] = useState<number>(100);
   const [lastRaiseIndex, setLastRaiseIndex] = useState<number>(0);
   
@@ -187,7 +187,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // CƠ CHẾ AUTO RESET BÀN SAU SHOWDOWN (4S)
+  // AUTO RESET SAU KHI VÁN ĐẤU KẾT THÚC
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId && currentUser) {
       const activeSeats = seats.filter(s => s !== null);
@@ -202,7 +202,7 @@ export default function PokerPage() {
             pot: 0,
             community_cards: [],
             phase: 'IDLE',
-            current_turn: 0
+            current_turn: -1
           }).eq("id", roomId);
         }
       }, 4000);
@@ -213,7 +213,7 @@ export default function PokerPage() {
     }
   }, [phase, roomId, currentUser, seats]);
 
-  // Đếm ngược Ready
+  // Đếm ngược Sẵn sàng
   useEffect(() => {
     if (phase !== 'IDLE') {
       setReadyCountdown(null);
@@ -252,7 +252,7 @@ export default function PokerPage() {
     }
   }, [seats, phase]);
 
-  // Đếm ngược suy nghĩ
+  // Đếm ngược thời gian suy nghĩ từng lượt
   useEffect(() => {
     if (phase !== 'IDLE' && phase !== 'SHOWDOWN') {
       setTurnTimer(30);
@@ -282,7 +282,7 @@ export default function PokerPage() {
 
       await supabase.from("poker_rooms").update({
         seats: updatedSeats,
-        ...(isRoomEmpty ? { pot: 0, community_cards: [], phase: "IDLE" } : {})
+        ...(isRoomEmpty ? { pot: 0, community_cards: [], phase: "IDLE", current_turn: -1 } : {})
       }).eq("id", roomId);
     }
     setInRoom(false);
@@ -295,7 +295,7 @@ export default function PokerPage() {
 
     let newSeats = [...seats];
     if (newSeats[myIndex]) {
-      newSeats[myIndex]!.isReady = !newSeats[myIndex]!.isReady;
+      newSeats[newSeats.findIndex(s => s && s.id === newSeats[myIndex]?.id)]!.isReady = !newSeats[myIndex]!.isReady;
     }
 
     const activeSeats = newSeats.filter(s => s !== null);
@@ -314,7 +314,7 @@ export default function PokerPage() {
     }
   };
 
-  // CHIA BÀI CHUẨN - CHỈ CHIA BÀI TẨY CHO NGƯỜI CHƠI
+  // CHIA BÀI VÀ XÁC ĐỊNH CHÍNH XÁC GHẾ BẮT ĐẦU VÁN ĐẤU
   const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
     const deck: Card[] = [];
     for (const suit of SUITS) {
@@ -346,7 +346,9 @@ export default function PokerPage() {
     if (participatingCount === 0) return;
 
     const initialPot = participatingCount * 100;
-    const firstTurn = updatedSeats.findIndex(s => s && s.cards.length > 0);
+    
+    // TÌM GHẾ ĐẦU TIÊN CÓ NGƯỜI CHƠI ĐỂ GÁN LƯỢT LƯỢT ĐẦU TIÊN
+    const firstTurn = updatedSeats.findIndex(s => s !== null && s.cards.length > 0);
 
     setHighestBet(100);
     setLastRaiseIndex(firstTurn);
@@ -417,7 +419,6 @@ export default function PokerPage() {
     const activePlayers = updatedSeats.filter(s => s && s.cards.length > 0 && !s.folded);
     const newPot = pot + addedBet;
 
-    // Nếu đối thủ úp bài hết chỉ còn 1 người sống ➔ Thắng lập tức
     if (activePlayers.length === 1) {
       setDealerMsg(`Whis: ${activePlayers[0]!.name} chiến thắng do đối thủ đã úp bài!`);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, communityCards, 'SHOWDOWN', currentTurn);
@@ -426,7 +427,6 @@ export default function PokerPage() {
 
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
 
-    // VÒNG CƯỢC KẾT THÚC KHI TẤT CẢ ĐÃ THEO BẰNG CƯỢC LỚN NHẤT
     const isRoundComplete = (
       nextTurnIdx === newLastRaiseIdx || 
       activePlayers.every(p => p && p.currentBet === newHighest)
@@ -617,7 +617,7 @@ export default function PokerPage() {
             <div className="flex gap-1 bg-black/40 p-1.5 rounded-lg border border-white/10 min-h-[45px] items-center">
               {communityCards.length === 0 ? (
                 <span className="text-[9px] text-emerald-200/60 font-mono italic px-2">
-                  {readyCountdown !== null ? `Đang đếm ngược (${readyCountdown}s)...` : "Cần ít nhất 2 người chơi Ready để chiến đấu!"}
+                  {readyCountdown !== null ? `Đang đếm ngược (${readyCountdown}s)...` : "Cần tất cả người chơi Ready để bắt đầu!"}
                 </span>
               ) : (
                 communityCards.map((card, idx) => (
