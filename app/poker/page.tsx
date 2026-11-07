@@ -47,6 +47,7 @@ export default function PokerPage() {
   const [seats, setSeats] = useState<(SeatPlayer | null)[]>([null, null, null, null, null]);
   const [pot, setPot] = useState(0);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
+  const [dealerCards, setDealerCards] = useState<Card[]>([]); // Bài tẩy của Nhà cái Whis khi chơi 1 mình
   const [phase, setPhase] = useState<GamePhase>('IDLE');
   const [currentTurn, setCurrentTurn] = useState<number>(0);
   const [dealerMsg, setDealerMsg] = useState("Nhà cái Whis chờ người chơi sẵn sàng!");
@@ -119,9 +120,7 @@ export default function PokerPage() {
         }) || fixedRooms[0];
 
         let currentSeats: (SeatPlayer | null)[] = targetRoom.seats || [null, null, null, null, null];
-        
-        // LỌC BỎ HOÀN TOÀN BẤT KỲ BOT NÀO CÒN SÓT LẠI TRÊN SUPABASE
-        currentSeats = currentSeats.map(s => (s && (s.id.includes("bot") || s.name.toLowerCase().includes("bot"))) ? null : s);
+        currentSeats = currentSeats.map(s => (s && (s.id?.includes("bot") || s.name?.toLowerCase().includes("bot"))) ? null : s);
 
         const existingIdx = currentSeats.findIndex(s => s && s.id === currentUser.id);
 
@@ -159,6 +158,7 @@ export default function PokerPage() {
         setSeats(cleanSeats);
         setPot(data.pot || 0);
         setCommunityCards(data.community_cards || []);
+        setDealerCards(data.dealer_cards || []);
         setPhase(data.phase || 'IDLE');
         if (data.current_turn !== undefined) setCurrentTurn(data.current_turn);
       }
@@ -175,6 +175,7 @@ export default function PokerPage() {
           setSeats(cleanSeats);
           setPot(room.pot || 0);
           setCommunityCards(room.community_cards || []);
+          setDealerCards(room.dealer_cards || []);
           setPhase(room.phase || 'IDLE');
           if (room.current_turn !== undefined) setCurrentTurn(room.current_turn);
         }
@@ -254,6 +255,7 @@ export default function PokerPage() {
           seats: [null, null, null, null, null],
           pot: 0,
           community_cards: [],
+          dealer_cards: [],
           phase: "IDLE"
         }).eq("id", roomId);
       } else {
@@ -318,6 +320,13 @@ export default function PokerPage() {
       };
     });
 
+    // Chia bài tẩy riêng cho Nhà cái Whis nếu chơi 1 mình (Solo với Nhà cái)
+    const activeSeatsCount = updatedSeats.filter(s => s !== null).length;
+    let newDealerCards: Card[] = [];
+    if (activeSeatsCount === 1) {
+      newDealerCards = [deck.pop()!, deck.pop()!];
+    }
+
     const participatingCount = updatedSeats.filter(s => s && s.cards.length > 0).length;
     if (participatingCount === 0) return;
 
@@ -329,12 +338,14 @@ export default function PokerPage() {
         seats: updatedSeats,
         pot: initialPot,
         community_cards: [],
+        dealer_cards: newDealerCards,
         phase: "PREFLOP",
         current_turn: firstTurn
       }).eq("id", roomId);
     } else {
       setSeats(updatedSeats);
       setPot(initialPot);
+      setDealerCards(newDealerCards);
       setPhase("PREFLOP");
       setCurrentTurn(firstTurn);
     }
@@ -380,7 +391,16 @@ export default function PokerPage() {
     let nextCards = [...communityCards];
     let nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
 
-    if (activePlayers.length === 1) {
+    // NẾU CHƠI 1 MÌNH VÀ BẤM ÚP BÀI (FOLD): Xử lý thua ngay lập tức và Nhà cái công khai bài tẩy
+    const totalPlayersInRoom = seats.filter(s => s !== null).length;
+    if (totalPlayersInRoom === 1 && action === 'fold') {
+      nextPhase = 'SHOWDOWN';
+      setDealerMsg("Bạn đã úp bài! Nhà cái Whis chiến thắng và lật bài tẩy công khai.");
+      await executeAwardDealer(newPot, updatedSeats, nextCards, dealerCards, nextPhase, nextTurnIdx);
+      return;
+    }
+
+    if (activePlayers.length === 1 && totalPlayersInRoom > 1) {
       nextPhase = 'SHOWDOWN';
       setDealerMsg(`${activePlayers[0]!.name} chiến thắng do đối thủ úp bài!`);
       await executeAwardWinner(activePlayers[0]!, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
@@ -412,12 +432,25 @@ export default function PokerPage() {
       setDealerMsg("Nhà cái Whis lật lá bài cuối cùng (RIVER)!");
     } else if (phase === 'RIVER') {
       nextPhase = 'SHOWDOWN';
-      setDealerMsg("Hết vòng RIVER! Mở bài đọ điểm (SHOWDOWN)!");
+      setDealerMsg("Hết vòng RIVER! Mở bài đọ điểm với Nhà cái Whis (SHOWDOWN)!");
     }
 
     if (nextPhase === 'SHOWDOWN') {
-      const winner = activePlayers[Math.floor(Math.random() * activePlayers.length)]!;
-      await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
+      if (totalPlayersInRoom === 1) {
+        // Chơi 1 mình: So điểm ngẫu nhiên công bằng giữa Người chơi và Nhà cái Whis
+        const playerWon = Math.random() >= 0.5;
+        if (playerWon) {
+          setDealerMsg("🎉 Bạn có tay bài mạnh hơn Nhà cái Whis! Bạn thắng Pot!");
+          const winner = activePlayers[0]!;
+          await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
+        } else {
+          setDealerMsg("🤖 Nhà cái Whis có bài mạnh hơn! Nhà cái ăn Pot.");
+          await executeAwardDealer(newPot, updatedSeats, nextCards, dealerCards, nextPhase, nextTurnIdx);
+        }
+      } else {
+        const winner = activePlayers[Math.floor(Math.random() * activePlayers.length)]!;
+        await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
+      }
     } else {
       if (roomId) {
         await supabase.from("poker_rooms").update({
@@ -476,6 +509,30 @@ export default function PokerPage() {
     }
   };
 
+  const executeAwardDealer = async (finalPot: number, finalSeats: (SeatPlayer | null)[], finalCards: Card[], dCards: Card[], finalPhase: GamePhase, finalTurn: number) => {
+    // Nhà cái ăn pot, tiền của người chơi đã bị trừ lúc cược đầu
+    const updatedSeatsCleared = finalSeats.map(s => s ? { ...s, cards: [] } : null);
+    showToast(`🤖 Nhà cái Whis thắng Pot $${finalPot.toLocaleString()} Ki!`);
+
+    if (roomId) {
+      await supabase.from("poker_rooms").update({
+        seats: updatedSeatsCleared,
+        pot: finalPot,
+        community_cards: finalCards,
+        dealer_cards: dCards,
+        phase: finalPhase,
+        current_turn: finalTurn
+      }).eq("id", roomId);
+    } else {
+      setSeats(updatedSeatsCleared);
+      setPot(finalPot);
+      setCommunityCards(finalCards);
+      setDealerCards(dCards);
+      setPhase(finalPhase);
+      setCurrentTurn(finalTurn);
+    }
+  };
+
   const handleResetForNewHand = async () => {
     const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [] } : null);
     if (roomId) {
@@ -483,6 +540,7 @@ export default function PokerPage() {
         seats: resetSeats,
         pot: 0,
         community_cards: [],
+        dealer_cards: [],
         phase: 'IDLE'
       }).eq("id", roomId);
     }
@@ -490,6 +548,7 @@ export default function PokerPage() {
     setPhase('IDLE');
     setPot(0);
     setCommunityCards([]);
+    setDealerCards([]);
   };
 
   if (!inRoom) {
@@ -517,6 +576,7 @@ export default function PokerPage() {
   const mySeatIndex = seats.findIndex(s => s && s.id === currentUser?.id);
   const isMyTurn = mySeatIndex === currentTurn && phase !== 'IDLE' && phase !== 'SHOWDOWN';
   const mySeat = mySeatIndex !== -1 ? seats[mySeatIndex] : null;
+  const totalPlayersInRoom = seats.filter(s => s !== null).length;
 
   return (
     <div className="bg-gray-950 text-white min-h-screen flex flex-col justify-between select-none overflow-hidden font-sans">
@@ -562,12 +622,27 @@ export default function PokerPage() {
             </span>
           </div>
 
-          {/* NHÀ CÁI WHIS */}
+          {/* NHÀ CÁI WHIS (KÈM BÀI TẨY KHI SHOWDOWN NẾU CHƠI 1 MÌNH) */}
           <div className="absolute top-1.5 flex flex-col items-center z-20">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-400 overflow-hidden bg-indigo-950 shadow-md">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-400 overflow-hidden bg-indigo-950 shadow-md">
+                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
+              </div>
+              {totalPlayersInRoom === 1 && dealerCards.length > 0 && (
+                <div className="flex -space-x-1">
+                  {phase === 'SHOWDOWN' ? (
+                    dealerCards.map((c, i) => (
+                      <div key={i} className="w-5 h-7 bg-white rounded flex flex-col justify-between p-0.5 text-gray-900 text-[7px] font-bold shadow border border-yellow-500">
+                        <span className={`leading-none ${c.color}`}>{c.rank}{c.suit}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="w-5 h-7 bg-indigo-900 border border-white/40 rounded flex items-center justify-center text-[6px] font-mono">🎴🎴</div>
+                  )}
+                </div>
+              )}
             </div>
-            <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase">NHÀ CÁI WHIS</span>
+            <span className="text-[7px] bg-yellow-500 text-black px-1.5 rounded-full font-black uppercase mt-0.5">NHÀ CÁI WHIS</span>
             <p className="text-[9px] text-yellow-200 bg-black/60 px-2 rounded-full border border-yellow-500/30 mt-0.5 font-mono">
               {readyCountdown !== null ? `⏳ Tự động bắt đầu sau ${readyCountdown}s...` : dealerMsg}
             </p>
