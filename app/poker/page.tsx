@@ -221,7 +221,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // RESET VÁN KHI VỀ SHOWDOWN (DÀNH 10 GIÂY TỔNG KẾT VÁN VÀ NHẬN TIỀN)
+  // RESET VÁN KHI VỀ SHOWDOWN (10S TỔNG KẾT)
   useEffect(() => {
     if (phase === 'SHOWDOWN' && roomId) {
       setResetCountdown(10);
@@ -405,24 +405,24 @@ export default function PokerPage() {
 
       const deck = generateDeck();
 
-      // ĐOẠN XỬ LÝ LẬT BÀI CHUNG TỪNG VÒNG MƯỢT MÀ
+      // CƠ CHẾ LẬT BÀI CHUẨN XÁC QUA TỪNG VÒNG
       if (phase === 'PREFLOP') {
-        // Lật 3 lá FLOP đầu tiên
+        // Đảm bảo luôn lật đủ 3 lá bài đầu tiên cho vòng FLOP
         nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
         nextPhase = 'FLOP';
-        setDealerMsg("Whis: Lật 3 lá bài chung đầu tiên (FLOP). Mời cược vòng mới!");
+        setDealerMsg("Whis: Lật 3 lá bài chung (FLOP). Mời cược vòng mới!");
       } else if (phase === 'FLOP') {
-        // Lật thêm lá thứ 4 (TURN)
+        // Cộng dồn chuẩn xác lá thứ 4 cho vòng TURN
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'TURN';
         setDealerMsg("Whis: Lật lá bài chung thứ 4 (TURN). Mời các tay chơi cược!");
       } else if (phase === 'TURN') {
-        // Lật thêm lá thứ 5 (RIVER)
+        // Cộng dồn chuẩn xác lá thứ 5 cho vòng RIVER
         nextCards = [...communityCards, deck.pop()!];
         nextPhase = 'RIVER';
-        setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối cùng!");
+        setDealerMsg("Whis: Lật lá bài chung thứ 5 (RIVER). Vòng cược cuối!");
       } else if (phase === 'RIVER') {
-        // Hết vòng RIVER -> Chuyển sang Showdown tổng kết ván
+        // Hết RIVER chuyển sang Showdown tổng kết
         nextPhase = 'SHOWDOWN';
         setDealerMsg("Whis: Hết lượt cược! Mở bài phân định thắng thua (SHOWDOWN).");
       }
@@ -695,7 +695,7 @@ export default function PokerPage() {
                 <button 
                   onClick={() => handleAction('call')} 
                   disabled={!isMyTurn}
-                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-600/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
+                  className="flex-1 bg-blue-600/30 text-blue-400 border border-blue-500/40 py-1.5 rounded-lg font-bold text-[11px] disabled:opacity-30"
                 >
                   THEO
                 </button>
