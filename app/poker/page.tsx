@@ -58,7 +58,6 @@ export default function PokerPage() {
   const [readyCountdown, setReadyCountdown] = useState<number | null>(null);
   const turnTimerRef = useRef<any>(null);
   const readyTimerRef = useRef<any>(null);
-  const autoResetTimerRef = useRef<any>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -186,19 +185,30 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // TỰ ĐỘNG RESET SAU KHI KẾT THÚC VÁN ĐẤU (SHOWDOWN) 5 GIÂY
+  // CƠ CHẾ AUTO-RESET TỰ ĐỘNG XÓA TRẮNG BÀI/POT SAU VÁN ĐẤU (4 GIÂY)
   useEffect(() => {
-    if (phase === 'SHOWDOWN') {
-      if (autoResetTimerRef.current) clearTimeout(autoResetTimerRef.current);
-      autoResetTimerRef.current = setTimeout(() => {
-        handleResetForNewHand();
-      }, 5000);
-    }
-    return () => {
-      if (autoResetTimerRef.current) clearTimeout(autoResetTimerRef.current);
-    };
-  }, [phase]);
+    if (phase === 'SHOWDOWN' && roomId && currentUser) {
+      const activeSeats = seats.filter(s => s !== null);
+      const isFirstPlayer = activeSeats[0]?.id === currentUser.id;
 
+      const resetTimer = setTimeout(async () => {
+        if (isFirstPlayer) {
+          const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [] } : null);
+          await supabase.from("poker_rooms").update({
+            seats: resetSeats,
+            pot: 0,
+            community_cards: [],
+            dealer_cards: [],
+            phase: 'IDLE'
+          }).eq("id", roomId);
+        }
+      }, 4000);
+
+      return () => clearTimeout(resetTimer);
+    }
+  }, [phase, roomId, currentUser, seats]);
+
+  // Đếm ngược khởi tạo ván đấu khi có người ready
   useEffect(() => {
     if (phase !== 'IDLE') {
       setReadyCountdown(null);
@@ -237,6 +247,7 @@ export default function PokerPage() {
     }
   }, [seats, phase]);
 
+  // Đếm ngược thời gian suy nghĩ của lượt chơi
   useEffect(() => {
     if (phase !== 'IDLE' && phase !== 'SHOWDOWN') {
       setTurnTimer(30);
@@ -259,6 +270,7 @@ export default function PokerPage() {
     return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
   }, [currentTurn, phase]);
 
+  // RỜI BÀN: XÓA SẠCH DỮ LIỆU CỦA NGƯỜI CHƠI ĐÓ TRÊN DB SUPABASE LẬP TỨC
   const handleLeaveRoom = async () => {
     if (roomId && currentUser) {
       const updatedSeats = seats.map(s => s && s.id === currentUser.id ? null : s);
@@ -273,7 +285,10 @@ export default function PokerPage() {
           phase: "IDLE"
         }).eq("id", roomId);
       } else {
-        await supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", roomId);
+        await supabase.from("poker_rooms").update({ 
+          seats: updatedSeats,
+          ...(phase !== 'IDLE' && updatedSeats.filter(s => s !== null).length === 0 ? { pot: 0, phase: 'IDLE', community_cards: [], dealer_cards: [] } : {})
+        }).eq("id", roomId);
       }
     }
     setInRoom(false);
@@ -543,25 +558,6 @@ export default function PokerPage() {
     }
   };
 
-  const handleResetForNewHand = async () => {
-    const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [] } : null);
-    if (roomId) {
-      await supabase.from("poker_rooms").update({
-        seats: resetSeats,
-        pot: 0,
-        community_cards: [],
-        dealer_cards: [],
-        phase: 'IDLE'
-      }).eq("id", roomId);
-    }
-    setSeats(resetSeats);
-    setPhase('IDLE');
-    setPot(0);
-    setCommunityCards([]);
-    setDealerCards([]);
-    setDealerMsg("Nhà cái Whis chờ người chơi sẵn sàng!");
-  };
-
   if (!inRoom) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
@@ -613,7 +609,6 @@ export default function PokerPage() {
             <p className="text-[8px] text-gray-400 font-bold uppercase leading-none">Tổng Pot</p>
             <p className="text-xs font-black text-yellow-400 font-mono leading-tight">${pot.toLocaleString()}</p>
           </div>
-          <button onClick={handleResetForNewHand} className="bg-amber-600/40 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold hover:bg-amber-600/60">🧹 Reset</button>
           <button onClick={handleLeaveRoom} className="bg-gray-800 text-rose-400 px-2 py-0.5 rounded text-[10px] font-bold hover:bg-gray-700">Rời Bàn 🚪</button>
         </div>
       </header>
@@ -759,8 +754,8 @@ export default function PokerPage() {
               </button>
             </div>
           ) : phase === 'SHOWDOWN' ? (
-            <div className="flex gap-2 w-full text-center text-xs text-yellow-400 font-bold py-1">
-              ⏳ Ván đấu kết thúc. Tự động chuyển sang ván mới sau vài giây...
+            <div className="flex gap-2 w-full text-center justify-center items-center text-xs text-yellow-400 font-bold py-1 font-mono">
+              ⏳ Ván đấu kết thúc. Tự động reset bàn chơi sau 4s...
             </div>
           ) : (
             <div className="flex flex-col gap-1">
