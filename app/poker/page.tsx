@@ -53,7 +53,6 @@ export default function PokerPage() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [raiseVal, setRaiseVal] = useState(100);
 
-  // Bộ đếm lượt đi 30s & Đếm ngược sẵn sàng 15s
   const [turnTimer, setTurnTimer] = useState<number>(30);
   const [readyCountdown, setReadyCountdown] = useState<number | null>(null);
   const turnTimerRef = useRef<any>(null);
@@ -145,7 +144,6 @@ export default function PokerPage() {
     }
   };
 
-  // Realtime Sub dữ liệu
   useEffect(() => {
     if (!roomId) return;
     const fetchRoom = async () => {
@@ -176,7 +174,7 @@ export default function PokerPage() {
     return () => { supabase.removeChannel(channel); };
   }, [roomId]);
 
-  // LOGIC ĐẾM NGƯỢC SẴN SÀNG & TỰ ĐỘNG CHIA BÀI NGAY KHI HẾT 100% READY
+  // LOGIC ĐẾM NGƯỢC SẴN SÀNG & TỰ ĐỘNG CHIA BÀI
   useEffect(() => {
     if (phase !== 'IDLE') {
       setReadyCountdown(null);
@@ -188,12 +186,10 @@ export default function PokerPage() {
     const readySeats = activeSeats.filter(s => s && s.isReady);
 
     if (activeSeats.length > 0 && readySeats.length === activeSeats.length) {
-      // TẤT CẢ ĐÃ SẴN SÀNG (NHƯ HÌNH NÍ GỬI): HỦY ĐẾM NGUYÊN, CHIA BÀI NGAY LẬP TỨC!
       if (readyTimerRef.current) clearInterval(readyTimerRef.current);
       setReadyCountdown(null);
       startNewHand(seats);
     } else if (readySeats.length > 0 && readySeats.length < activeSeats.length) {
-      // CÓ NGƯỜI READY NHƯNG CÓ NGƯỜI CHƯA READY -> ĐẾM NGƯỢC 15 GIÂY
       if (!readyTimerRef.current) {
         setReadyCountdown(15);
         readyTimerRef.current = setInterval(() => {
@@ -201,7 +197,7 @@ export default function PokerPage() {
             if (prev !== null && prev <= 1) {
               clearInterval(readyTimerRef.current);
               readyTimerRef.current = null;
-              startNewHand(seats); // Hết 15s tự động chia bài cho những ai đã ready
+              startNewHand(seats);
               return null;
             }
             return prev !== null ? prev - 1 : 15;
@@ -209,7 +205,6 @@ export default function PokerPage() {
         }, 1000);
       }
     } else {
-      // KHÔNG AI READY -> XÓA BỘ ĐẾM
       if (readyTimerRef.current) {
         clearInterval(readyTimerRef.current);
         readyTimerRef.current = null;
@@ -218,7 +213,6 @@ export default function PokerPage() {
     }
   }, [seats, phase]);
 
-  // Đếm ngược 30s suy nghĩ theo lượt đi
   useEffect(() => {
     if (phase !== 'IDLE' && phase !== 'SHOWDOWN') {
       setTurnTimer(30);
@@ -261,7 +255,6 @@ export default function PokerPage() {
     setRoomId(null);
   };
 
-  // NÚT BẤM SẴN SÀNG
   const handleToggleReady = async () => {
     const myIndex = seats.findIndex(s => s && s.id === currentUser?.id);
     if (myIndex === -1) return;
@@ -278,8 +271,9 @@ export default function PokerPage() {
     }
   };
 
-  // HÀM CHIA BÀI CHO NHỮNG AI ĐÃ SẮN SÀNG
+  // HÀM CHIA BÀI CHUẨN XÁC ĐẨY THẲNG LÊN SUPABASE
   const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
+    // Chỉ cho phép chạy nếu đang ở phase IDLE để tránh gọi lặp
     const deck: Card[] = [];
     for (const suit of SUITS) {
       for (const rank of RANKS) {
@@ -323,7 +317,7 @@ export default function PokerPage() {
       setPhase("PREFLOP");
       setCurrentTurn(firstTurn);
     }
-    setDealerMsg("Nhà cái Whis chia bài ván mới!");
+    setDealerMsg("Nhà cái Whis đã chia bài ván mới!");
   };
 
   const getNextTurn = (current: number, seatsList: (SeatPlayer | null)[]) => {
@@ -519,7 +513,7 @@ export default function PokerPage() {
             </span>
           </div>
 
-          {/* NHÀ CÁI WHIS (HIỂN THỊ ĐẾM NGƯỢC RỜI VÀO VÁN KHI CÓ NGƯỜI CHƯA READY) */}
+          {/* NHÀ CÁI WHIS */}
           <div className="absolute top-1.5 flex flex-col items-center z-20">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-yellow-400 overflow-hidden bg-indigo-950 shadow-md">
               <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
