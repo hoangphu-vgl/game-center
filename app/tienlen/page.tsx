@@ -21,11 +21,11 @@ const BET_OPTIONS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000
 
 // KỸ NĂNG TIẾN LÊN (13 ẤN KÝ)
 const TIENLEN_SKILL_ITEMS = [
-  { id: "tl_1", name: "🌀 Biến Hóa Bài", desc: "Đổi 1 lá bài rác thành lá bài ngẫu nhiên không trùng với bài đối thủ đang giữ.", price: 25000, icon: "🌀", addCount: 1 },
-  { id: "tl_2", name: "👁️ Thấu Thị Thiên Hãn", desc: "Xem chính xác số lượng bài còn lại của các đối thủ trên lôi đài.", price: 20000, icon: "👁️", addCount: 1 },
-  { id: "tl_3", name: "⚡ Chặt Chém Thần Tốc", desc: "Dùng đôi thông hoặc tứ quý nhỏ chặt Heo (2) không cần vòng.", price: 40000, icon: "⚡", addCount: 1 },
-  { id: "tl_4", name: "🛡️ Giáp Sắt Saiyan", desc: "Giảm 50% điểm phạt khi có người chơi khác đánh Thắng Trắng (+5 lượt/mua).", price: 15000, icon: "🛡️", addCount: 5 },
-  { id: "tl_5", name: "👑 Uy Lực Bá Chủ", desc: "Giành quyền đánh trước ở ván đấu tiếp theo không cần dựa vào 3 bích.", price: 30000, icon: "👑", addCount: 1 },
+  { id: "tl_1", name: "🌀 Biến Hóa Bài", desc: "Đổi 1 lá bài rác thành lá bài ngẫu nhiên không trùng với bài đối thủ đang giữ.", price: 150000, icon: "🌀", addCount: 1 },
+  { id: "tl_2", name: "👁️ Thấu Thị Thiên Hãn", desc: "Xem chính xác số lượng bài còn lại của các đối thủ trên lôi đài.", price: 50000, icon: "👁️", addCount: 1 },
+  { id: "tl_3", name: "⚡ Chặt Chém Thần Tốc", desc: "Dùng đôi thông hoặc tứ quý nhỏ chặt Heo (2) không cần vòng.", price: 100000, icon: "⚡", addCount: 1 },
+  { id: "tl_4", name: "🛡️ Giáp Sắt Saiyan", desc: "Giảm 50% điểm phạt khi có người chơi khác đánh Thắng Trắng (+5 lượt/mua).", price: 50000, icon: "🛡️", addCount: 5 },
+  { id: "tl_5", name: "👑 Uy Lực Bá Chủ", desc: "Giành quyền đánh trước ở ván đấu tiếp theo không cần dựa vào 3 bích.", price: 300000, icon: "👑", addCount: 1 },
 ];
 
 const ANIME_QUOTES = {

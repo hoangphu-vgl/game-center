@@ -36,11 +36,11 @@ const RANK_VALUES: Record<Rank, number> = {
 
 // --- KỸ NĂNG POKER ---
 const POKER_SKILL_ITEMS = [
-  { id: "pk_1", name: "⚡ Uy Lực Thần Hủy Diệt", desc: "Tăng 50% độ uy hiếp khi Tố hoặc All-In.", price: 35000, icon: "⚡", addCount: 1, quote: "⚡ 'Cảm nhận sức mạnh của Thần Hủy Diệt đi! Tất cả phải quy phục!'" },
-  { id: "pk_2", name: "🔮 Thấu Thị Dư Âm", desc: "Dùng trước khi lật bài Turn/River: Nhìn thấu lá bài tiếp theo của Whis trong 1 giây.", price: 30000, icon: "🔮", addCount: 1, quote: "🔮 'Con mắt thiên nhãn thấu suốt tương lai! Lật bài cho ta thấy!'" },
-  { id: "pk_3", name: "🔥 Bùng Nổ Tiềm Năng", desc: "Đổi ngẫu nhiên 1 lá bài trên tay lấy một lá bài mới từ nọc.", price: 50000, icon: "🔥", addCount: 1, quote: "🔥 'Ki bùng nổ! Tái cấu trúc hoàn toàn tay bài của ta!'" },
-  { id: "pk_4", name: "🛡️ Tấm Khiên Hư Không", desc: "Khi thua ở vòng Showdown, được hoàn trả 25% tiền cược (+5 lượt/mua).", price: 25000, icon: "🛡️", addCount: 5, quote: "🛡️ 'Hư không thuẫn mở ra! Sát thương này không thể chạm tới ta!'" },
-  { id: "pk_5", name: "🌀 Dịch Chuyển Tức Thời", desc: "Chuyển trạng thái sang Xem Bài (Check) hoặc né lượt rủi ro.", price: 20000, icon: "🌀", addCount: 1, quote: "🌀 'Không gian dịch chuyển! Ngươi đã đánh vào hư vô!'" },
+  { id: "pk_1", name: "⚡ Uy Lực Thần Hủy Diệt", desc: "Tăng 50% độ uy hiếp khi Tố hoặc All-In.", price: 500000, icon: "⚡", addCount: 1, quote: "⚡ 'Cảm nhận sức mạnh của Thần Hủy Diệt đi! Tất cả phải quy phục!'" },
+  { id: "pk_2", name: "🔮 Thấu Thị Dư Âm", desc: "Dùng trước khi lật bài Turn/River: Nhìn thấu lá bài tiếp theo của Whis trong 1 giây.", price: 150000, icon: "🔮", addCount: 1, quote: "🔮 'Con mắt thiên nhãn thấu suốt tương lai! Lật bài cho ta thấy!'" },
+  { id: "pk_3", name: "🔥 Bùng Nổ Tiềm Năng", desc: "Đổi ngẫu nhiên 1 lá bài trên tay lấy một lá bài mới từ nọc.", price: 100000, icon: "🔥", addCount: 1, quote: "🔥 'Ki bùng nổ! Tái cấu trúc hoàn toàn tay bài của ta!'" },
+  { id: "pk_4", name: "🛡️ Tấm Khiên Hư Không", desc: "Khi thua ở vòng Showdown, được hoàn trả 25% tiền cược (+5 lượt/mua).", price: 100000, icon: "🛡️", addCount: 5, quote: "🛡️ 'Hư không thuẫn mở ra! Sát thương này không thể chạm tới ta!'" },
+  { id: "pk_5", name: "🌀 Dịch Chuyển Tức Thời", desc: "Chuyển trạng thái sang Xem Bài (Check) hoặc né lượt rủi ro.", price: 50000, icon: "🌀", addCount: 1, quote: "🌀 'Không gian dịch chuyển! Ngươi đã đánh vào hư vô!'" },
 ];
 
 const WHIS_QUOTES = [

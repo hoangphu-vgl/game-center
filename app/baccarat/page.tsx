@@ -24,11 +24,11 @@ const CHIP_LIST = [
 ];
 
 const BACCARAT_SKILL_ITEMS = [
-  { id: "bc_1", name: "🌀 Nhãn Quan Whis", desc: "Xem trước 1 lá bài tiếp theo chuẩn bị được chia từ Nọc (Dùng trước trận).", price: 20000, icon: "🌀", addCount: 1 },
-  { id: "bc_2", name: "🛡️ Hộ Thân Ki", desc: "Tự động giảm 50% số Ki bị trừ khi thua cược (+5 lượt/mua).", price: 15000, icon: "🛡️", addCount: 5 },
-  { id: "bc_3", name: "⚡ Bản Năng Vô Cực", desc: "Ép lá bài rút thêm thứ 3 của Player thành lá tối ưu nhất 7, 8, 9 (Dùng trước trận).", price: 35000, icon: "⚡", addCount: 1 },
-  { id: "bc_4", name: "👑 Quyền Năng Hủy Diệt", desc: "Nhân đôi (x2) lợi nhuận nếu ván cược đó bạn giành chiến thắng (Dùng trước trận).", price: 50000, icon: "👑", addCount: 1 },
-  { id: "bc_5", name: "🐉 Long Thần Hộ Mệnh", desc: "Tự động hoàn trả 30% tổng Ki đặt cược nếu bị thua (+5 lượt/mua).", price: 25000, icon: "🐉", addCount: 5 },
+  { id: "bc_1", name: "🌀 Nhãn Quan Whis", desc: "Xem trước 1 lá bài tiếp theo chuẩn bị được chia từ Nọc (Dùng trước trận).", price: 150000, icon: "🌀", addCount: 1 },
+  { id: "bc_2", name: "🛡️ Hộ Thân Ki", desc: "Tự động giảm 50% số Ki bị trừ khi thua cược (+5 lượt/mua).", price: 50000, icon: "🛡️", addCount: 5 },
+  { id: "bc_3", name: "⚡ Bản Năng Vô Cực", desc: "Ép lá bài rút thêm thứ 3 của Player thành lá tối ưu nhất 7, 8, 9 (Dùng trước trận).", price: 100000, icon: "⚡", addCount: 1 },
+  { id: "bc_4", name: "👑 Quyền Năng Hủy Diệt", desc: "Nhân đôi (x2) lợi nhuận nếu ván cược đó bạn giành chiến thắng (Dùng trước trận).", price: 100000, icon: "👑", addCount: 1 },
+  { id: "bc_5", name: "🐉 Long Thần Hộ Mệnh", desc: "Tự động hoàn trả 30% tổng Ki đặt cược nếu bị thua (+5 lượt/mua).", price: 50000, icon: "🐉", addCount: 5 },
 ];
 
 const DBZ_AURAS = {
