@@ -34,6 +34,15 @@ const RANK_VALUES: Record<Rank, number> = {
   '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
 };
 
+// --- KỸ NĂNG POKER ---
+const POKER_SKILL_ITEMS = [
+  { id: "pk_1", name: "⚡ Uy Lực Thần Hủy Diệt", desc: "Tăng 50% độ uy hiếp khi Tố hoặc All-In.", price: 35000, icon: "⚡", addCount: 1, quote: "⚡ 'Cảm nhận sức mạnh của Thần Hủy Diệt đi! Tất cả phải quy phục!'" },
+  { id: "pk_2", name: "🔮 Thấu Thị Dư Âm", desc: "Dùng trước khi lật bài Turn/River: Nhìn thấu lá bài tiếp theo của Whis trong 1 giây.", price: 30000, icon: "🔮", addCount: 1, quote: "🔮 'Con mắt thiên nhãn thấu suốt tương lai! Lật bài cho ta thấy!'" },
+  { id: "pk_3", name: "🔥 Bùng Nổ Tiềm Năng", desc: "Đổi ngẫu nhiên 1 lá bài trên tay lấy một lá bài mới từ nọc.", price: 50000, icon: "🔥", addCount: 1, quote: "🔥 'Ki bùng nổ! Tái cấu trúc hoàn toàn tay bài của ta!'" },
+  { id: "pk_4", name: "🛡️ Tấm Khiên Hư Không", desc: "Khi thua ở vòng Showdown, được hoàn trả 25% tiền cược (+5 lượt/mua).", price: 25000, icon: "🛡️", addCount: 5, quote: "🛡️ 'Hư không thuẫn mở ra! Sát thương này không thể chạm tới ta!'" },
+  { id: "pk_5", name: "🌀 Dịch Chuyển Tức Thời", desc: "Chuyển trạng thái sang Xem Bài (Check) hoặc né lượt rủi ro.", price: 20000, icon: "🌀", addCount: 1, quote: "🌀 'Không gian dịch chuyển! Ngươi đã đánh vào hư vô!'" },
+];
+
 const WHIS_QUOTES = [
   "Whis: Khí áp thế này mà nhà cái không khóc mới lạ! Chuẩn bị bán muối đi cưng!",
   "Whis: Trơ trẽn thật đấy, bài thì rác mà tố cứ như tỷ phú Đa Cấp thế à?",
@@ -68,17 +77,27 @@ export default function PokerPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showSkillModal, setShowSkillModal] = useState(false);
+  const [inventory, setInventory] = useState<{ [key: string]: number }>({});
+  const [hasUsedSkillThisMatch, setHasUsedSkillThisMatch] = useState<boolean>(false);
   const [turnTimeLeft, setTurnTimeLeft] = useState<number>(30);
+
+  const [clairvoyanceCard, setClairvoyanceCard] = useState<Card | null>(null);
+  const nextCardRef = useRef<Card | null>(null);
 
   const seatsRef = useRef(seats);
   const roomIdRef = useRef(roomId);
   const currentUserRef = useRef(currentUser);
   const currentTurnRef = useRef(currentTurn);
+  const phaseRef = useRef(phase);
+  const potRef = useRef(pot);
 
   seatsRef.current = seats;
   roomIdRef.current = roomId;
   currentUserRef.current = currentUser;
   currentTurnRef.current = currentTurn;
+  phaseRef.current = phase;
+  potRef.current = pot;
 
   useEffect(() => {
     async function loadUser() {
@@ -86,6 +105,7 @@ export default function PokerPage() {
       let name = "";
       let avatar = "";
       let balance = 5000;
+      let userInv = {};
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -93,7 +113,7 @@ export default function PokerPage() {
         setCurrentUser(session.user);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("balance, full_name, avatar_url")
+          .select("balance, full_name, avatar_url, inventory")
           .eq("id", uid)
           .single();
 
@@ -101,6 +121,7 @@ export default function PokerPage() {
           name = profile.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.username || "";
           avatar = profile.avatar_url || "";
           balance = profile.balance ?? 5000;
+          userInv = profile.inventory ?? {};
         }
       }
 
@@ -124,18 +145,119 @@ export default function PokerPage() {
       setMyKi(balance);
       setMyName(name);
       setMyAvatar(avatar);
+      setInventory(userInv);
     }
     loadUser();
   }, []);
 
+  const updateSupabaseInventoryAndBalance = async (newBal: number, newInv: any) => {
+    setMyKi(newBal);
+    setInventory(newInv);
+    if (currentUser?.id) {
+      await supabase.from("profiles").update({ balance: newBal, inventory: newInv }).eq("id", currentUser.id);
+    }
+  };
+
+  const handleBuySkillDirectly = async (skill: any) => {
+    if (!currentUser?.id) { alert("Vui lòng đăng nhập để mua kỹ năng!"); return; }
+    if (myKi < skill.price) { alert("⚡ Điểm Ki không đủ để mua kỹ năng này!"); return; }
+
+    if (confirm(`Xác nhận dùng ${skill.price.toLocaleString()} Ki để mua thêm +${skill.addCount} lượt [${skill.name}]?`)) {
+      const newBal = myKi - skill.price;
+      const currentCount = inventory[skill.id] || 0;
+      const newInv = { ...inventory, [skill.id]: currentCount + skill.addCount };
+      
+      await updateSupabaseInventoryAndBalance(newBal, newInv);
+      alert(`🎉 Mua thành công +${skill.addCount} lượt [${skill.name}]!`);
+    }
+  };
+
+  const handleActivateSkill = async (skillId: string, skillName: string, quoteText: string) => {
+    if (phase === 'IDLE' || phase === 'SHOWDOWN') {
+      alert("⚠️ Chỉ có thể sử dụng kỹ năng khi ván đấu Poker đang diễn ra trên bàn!");
+      return;
+    }
+
+    const mySeatIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
+    if (mySeatIndex !== currentTurn) {
+      alert("⏳ Chưa tới lượt của bạn! Kỹ năng bắt buộc phải dùng trong lượt đi của mình.");
+      return;
+    }
+
+    if (hasUsedSkillThisMatch) {
+      alert("⚠️ Bạn đã sử dụng kỹ năng trong trận đấu này rồi! Chỉ được phép dùng tối đa 1 kỹ năng mỗi ván.");
+      return;
+    }
+
+    if (skillId === 'pk_2' && phase !== 'FLOP' && phase !== 'TURN') {
+      alert("⚠️ Kỹ năng [Thấu Thị Dư Âm] chỉ được phép sử dụng ở cuối vòng Flop (trước khi lật lá Turn) hoặc cuối vòng Turn (trước khi lật lá River)!");
+      return;
+    }
+
+    const currentCount = inventory[skillId] || 0;
+    if (currentCount > 0) {
+      if (skillId === 'pk_4') {
+        alert(`🛡️ [${skillName}] là khiên tự động bảo vệ khi thua ở vòng Showdown.`);
+        setShowSkillModal(false);
+        return;
+      }
+
+      const newInv = { ...inventory, [skillId]: currentCount - 1 };
+      await updateSupabaseInventoryAndBalance(myKi, newInv);
+      setHasUsedSkillThisMatch(true);
+      setShowSkillModal(false);
+
+      if (skillId === 'pk_2' && nextCardRef.current) {
+        setClairvoyanceCard(nextCardRef.current);
+        setTimeout(() => {
+          setClairvoyanceCard(null);
+        }, 1000);
+      }
+
+      const fullAnnouncement = `${myName} đã thi triển kỹ năng [${skillName}]!\n${quoteText}`;
+      setDealerMsg(fullAnnouncement);
+      showToast(`⚔️ KỸ NĂNG KÍCH HOẠT: ${skillName}`);
+    } else {
+      alert(`⚠️ Bạn đã hết lượt kỹ năng [${skillName}]! Hãy bấm nút mua thêm.`);
+    }
+  };
+
+  // --- XỬ LÝ KHI RỜI BÀN HOẶC THOÁT NGANG GIỮA TRẬN ---
   const processLeaveOrUnload = async (currentRoomId: string, currentSeats: (SeatPlayer | null)[], currentUserId: string, currentName: string) => {
     if (!currentRoomId) return;
-    const updatedSeats = currentSeats.map(s =>
+
+    const leavingPlayer = currentSeats.find(s => s && (String(s.id) === String(currentUserId) || s.name === currentName));
+    const isPlayingMatch = phaseRef.current !== 'IDLE' && phaseRef.current !== 'SHOWDOWN' && leavingPlayer && leavingPlayer.cards.length > 0;
+
+    let updatedSeats = currentSeats.map(s =>
       (s && (String(s.id) === String(currentUserId) || s.name === currentName)) ? null : s
     );
 
-    const activeCount = updatedSeats.filter(s => s !== null).length;
+    // Nếu đang chơi mà bỏ ngang -> mất điểm cược (không hoàn tiền, đã trừ chip từ đầu ván)
+    if (isPlayingMatch) {
+      const remainingActive = updatedSeats.filter(s => s !== null && s.cards.length > 0 && !s.folded);
+      // Nếu bàn còn đúng 1 người chơi duy nhất -> người đó hốt trọn Pot
+      if (remainingActive.length === 1) {
+        const winner = remainingActive[0]!;
+        const totalPot = potRef.current;
+        const newWinnerChips = winner.chips + totalPot;
 
+        await supabase.from("profiles").update({ balance: newWinnerChips }).eq("id", winner.id);
+
+        updatedSeats = updatedSeats.map(s => (s && s.id === winner.id) ? { ...s, chips: newWinnerChips } : s);
+
+        await supabase.from("poker_rooms").update({
+          seats: updatedSeats,
+          pot: 0,
+          community_cards: [],
+          phase: 'IDLE',
+          current_turn: 0
+        }).eq("id", currentRoomId);
+        return;
+      }
+    }
+
+    const activeCount = updatedSeats.filter(s => s !== null).length;
     if (activeCount === 0) {
       await supabase.from("poker_rooms").update({
         seats: [null, null, null, null, null],
@@ -332,6 +454,9 @@ export default function PokerPage() {
 
       const timer = setTimeout(async () => {
         const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0, acted: false } : null);
+        setHasUsedSkillThisMatch(false);
+        setClairvoyanceCard(null);
+        nextCardRef.current = null;
         await supabase.from("poker_rooms").update({
           seats: resetSeats,
           pot: 0,
@@ -389,6 +514,13 @@ export default function PokerPage() {
 
   const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
     const deck = generateDeck();
+    setHasUsedSkillThisMatch(false);
+    setClairvoyanceCard(null);
+
+    const tCard = deck.pop()!;
+    const rCard = deck.pop()!;
+    (window as any)._preppedTurnCard = tCard;
+    (window as any)._preppedRiverCard = rCard;
 
     let updatedSeats = currentSeatsList.map(seat => {
       if (!seat) return null;
@@ -510,15 +642,28 @@ export default function PokerPage() {
       const deck = generateDeck();
 
       if (phase === 'PREFLOP') {
-        nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
+        const c1 = deck.pop()!;
+        const c2 = deck.pop()!;
+        const c3 = deck.pop()!;
+        nextCards = [c1, c2, c3];
         nextPhase = 'FLOP';
+
+        const preppedTurn = (window as any)._preppedTurnCard || deck.pop()!;
+        nextCardRef.current = preppedTurn;
+
         setDealerMsg("Whis: Lật 3 lá FLOP! Mời các tay chơi cược vòng mới!");
       } else if (phase === 'FLOP') {
-        nextCards = [...communityCards, deck.pop()!];
+        const turnCard = (window as any)._preppedTurnCard || deck.pop()!;
+        nextCards = [...communityCards, turnCard];
         nextPhase = 'TURN';
+
+        const preppedRiver = (window as any)._preppedRiverCard || deck.pop()!;
+        nextCardRef.current = preppedRiver;
+
         setDealerMsg("Whis: Lá TURN thứ 4 xuất hiện! Tiếp tục chiến đấu!");
       } else if (phase === 'TURN') {
-        nextCards = [...communityCards, deck.pop()!];
+        const riverCard = (window as any)._preppedRiverCard || deck.pop()!;
+        nextCards = [...communityCards, riverCard];
         nextPhase = 'RIVER';
         setDealerMsg("Whis: Lá RIVER cuối cùng! Cân não chưa nào!");
       } else if (phase === 'RIVER') {
@@ -593,7 +738,13 @@ export default function PokerPage() {
   if (!inRoom) {
     return (
       <div className="min-h-screen bg-slate-950 p-4 flex flex-col items-center justify-center select-none relative">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button
+            onClick={() => setShowSkillModal(true)}
+            className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white border border-cyan-400/40 px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:brightness-110 transition active:scale-95 flex items-center gap-1 cursor-pointer"
+          >
+            ⚡ Kho Skill
+          </button>
           <button
             onClick={() => setShowRulesModal(true)}
             className="bg-slate-900 text-yellow-400 border border-yellow-500/40 px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-slate-800 transition active:scale-95 flex items-center gap-1 cursor-pointer"
@@ -642,6 +793,52 @@ export default function PokerPage() {
             </button>
           </div>
         </div>
+
+        {/* POPUP KHO SKILL */}
+        {showSkillModal && (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-3 pointer-events-auto">
+            <div className="bg-slate-900 border-2 border-cyan-500/70 rounded-3xl max-w-xl w-full p-5 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative space-y-4 font-sans text-white">
+              <div className="flex justify-between items-center border-b border-cyan-500/40 pb-3">
+                <h3 className="text-sm md:text-base font-black text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                  ⚔️ KHO KỸ NĂNG POKER THẦN THÁNH
+                </h3>
+                <button onClick={() => setShowSkillModal(false)} className="bg-rose-600 hover:bg-rose-500 text-white w-8 h-8 rounded-full font-bold text-sm flex items-center justify-center cursor-pointer shadow">✕</button>
+              </div>
+
+              <div className="space-y-3">
+                {POKER_SKILL_ITEMS.map((skill) => {
+                  const count = inventory[skill.id] || 0;
+                  return (
+                    <div key={skill.id} className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-3xl shrink-0">{skill.icon}</span>
+                        <div className="min-w-0 space-y-1">
+                          <div className="text-sm font-bold text-amber-300 flex items-center gap-2 truncate">
+                            <span className="truncate">{skill.name}</span>
+                            <span className="bg-cyan-950 text-cyan-300 border border-cyan-500/50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">{count} Lượt</span>
+                          </div>
+                          <div className="text-[11px] text-slate-300 leading-snug">{skill.desc}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-900">
+                        {count > 0 ? (
+                          <button onClick={() => handleActivateSkill(skill.id, skill.name, skill.quote)} className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:brightness-110 px-5 py-2 rounded-xl text-[11px] font-black tracking-wider uppercase transition shadow cursor-pointer w-full sm:w-auto">
+                            Dùng ⚡
+                          </button>
+                        ) : (
+                          <button onClick={() => handleBuySkillDirectly(skill)} className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 hover:brightness-110 px-4 py-2 rounded-xl text-[11px] font-black tracking-wider uppercase transition shadow cursor-pointer whitespace-nowrap w-full sm:w-auto">
+                            Mua ({skill.price.toLocaleString()} Ki) 🛒
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {showRulesModal && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -722,7 +919,7 @@ export default function PokerPage() {
         </div>
       )}
 
-      {/* HEADER ĐÃ GỌN GÀNG, KHÔNG CÒN NÚT CHAT THỪA */}
+      {/* HEADER */}
       <header className="bg-slate-900/95 border-b border-yellow-500/40 px-3 py-1.5 flex justify-between items-center z-30 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-2">
           <div>
@@ -736,6 +933,13 @@ export default function PokerPage() {
             <p className="text-[7px] text-gray-400 font-bold uppercase leading-none">Tổng Pot</p>
             <p className="text-[11px] font-black text-yellow-400 font-mono leading-tight">${pot.toLocaleString()}</p>
           </div>
+
+          <button
+            onClick={() => setShowSkillModal(true)}
+            className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white border border-cyan-300/40 px-2.5 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95 cursor-pointer"
+          >
+            ⚡ Skill
+          </button>
 
           <button
             onClick={() => setShowRulesModal(true)}
@@ -766,7 +970,7 @@ export default function PokerPage() {
         </div>
       </header>
 
-      {/* SÀN ĐẤU OVAL CĂNG TRÀN BỀ NGANG */}
+      {/* SÀN ĐẤU OVAL */}
       <main className="flex-1 flex items-center justify-center p-1 sm:p-2 relative overflow-hidden">
         <div className="w-[98%] max-w-[1100px] h-[72vh] sm:h-[78vh] transition-all duration-300 rounded-[140px] sm:rounded-[200px] border-4 sm:border-6 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)]"
           style={{ 
@@ -780,12 +984,31 @@ export default function PokerPage() {
             </span>
           </div>
 
-          <div className="absolute top-2 flex flex-col items-center z-20 px-2 max-w-[280px]">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-yellow-400 overflow-hidden bg-indigo-950 shadow-lg animate-pulse">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
+          {/* KHU VỰC TRỌNG TÀI WHIS & BỘ BÀI ÚP */}
+          <div className="absolute top-2 flex flex-col items-center z-20 px-2 max-w-[320px]">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-yellow-400 overflow-hidden bg-indigo-950 shadow-lg animate-pulse">
+                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
+              </div>
+
+              {/* BỘ BÀI ÚP / HIỆN LÁ BÀI THẤU THỊ TRONG 1S */}
+              <div className="relative flex items-center justify-center">
+                {clairvoyanceCard ? (
+                  <div className="w-7 h-10 sm:w-9 sm:h-13 bg-white rounded-lg flex flex-col justify-between p-1 font-black shadow-[0_0_20px_rgba(234,179,8,1)] text-gray-900 animate-bounce">
+                    <span className={`text-[9px] leading-none ${clairvoyanceCard.color}`}>{clairvoyanceCard.rank}</span>
+                    <span className={`text-xs self-center leading-none ${clairvoyanceCard.color}`}>{clairvoyanceCard.suit}</span>
+                    <span className={`text-[9px] self-end leading-none ${clairvoyanceCard.color}`}>{clairvoyanceCard.rank}</span>
+                  </div>
+                ) : (
+                  <div className="w-7 h-10 sm:w-9 sm:h-13 bg-blue-900 border-2 border-amber-400/80 rounded-lg shadow-xl flex items-center justify-center text-[10px] text-amber-300 font-mono font-bold tracking-tighter">
+                    🎴
+                  </div>
+                )}
+              </div>
             </div>
-            <span className="text-[6px] bg-yellow-400 text-gray-950 px-2 rounded-full font-black uppercase mt-0.5 shadow">TRỌNG TÀI WHIS</span>
-            <p className="text-[7px] sm:text-[8px] text-yellow-200 bg-black/75 px-3 py-0.5 rounded-full border border-yellow-500/40 mt-0.5 font-mono text-center shadow-lg leading-tight">
+
+            <span className="text-[6px] bg-yellow-400 text-gray-950 px-2 rounded-full font-black uppercase mt-1 shadow">TRỌNG TÀI WHIS / THÔNG BÁO</span>
+            <p className="text-[7px] sm:text-[8px] text-yellow-200 bg-black/85 px-3 py-1 rounded-xl border border-yellow-500/50 mt-0.5 font-mono text-center shadow-lg leading-tight whitespace-pre-wrap">
               {resetCountdown !== null ? `⏳ Tổng kết ván (Tự reset sau ${resetCountdown}s)...` : dealerMsg}
             </p>
           </div>
@@ -885,7 +1108,7 @@ export default function PokerPage() {
         </div>
       </main>
 
-      {/* FOOTER ĐIỀU KHIỂN TỐI ƯU MOBILE */}
+      {/* FOOTER */}
       <footer className="bg-slate-900/95 border-t border-yellow-500/40 p-2 px-3 z-30 backdrop-blur-md shrink-0">
         <div className="max-w-xl mx-auto flex flex-col gap-1.5">
           {phase === 'IDLE' ? (
@@ -960,6 +1183,52 @@ export default function PokerPage() {
           )}
         </div>
       </footer>
+
+      {/* POPUP KHO SKILL */}
+      {showSkillModal && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-3 pointer-events-auto">
+          <div className="bg-slate-900 border-2 border-cyan-500/70 rounded-3xl max-w-xl w-full p-5 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative space-y-4 font-sans text-white">
+            <div className="flex justify-between items-center border-b border-cyan-500/40 pb-3">
+              <h3 className="text-sm md:text-base font-black text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                ⚔️ KHO KỸ NĂNG POKER THẦN THÁNH
+              </h3>
+              <button onClick={() => setShowSkillModal(false)} className="bg-rose-600 hover:bg-rose-500 text-white w-8 h-8 rounded-full font-bold text-sm flex items-center justify-center cursor-pointer shadow">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              {POKER_SKILL_ITEMS.map((skill) => {
+                const count = inventory[skill.id] || 0;
+                return (
+                  <div key={skill.id} className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-3xl shrink-0">{skill.icon}</span>
+                      <div className="min-w-0 space-y-1">
+                        <div className="text-sm font-bold text-amber-300 flex items-center gap-2 truncate">
+                          <span className="truncate">{skill.name}</span>
+                          <span className="bg-cyan-950 text-cyan-300 border border-cyan-500/50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">{count} Lượt</span>
+                        </div>
+                        <div className="text-[11px] text-slate-300 leading-snug">{skill.desc}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-900">
+                      {count > 0 ? (
+                        <button onClick={() => handleActivateSkill(skill.id, skill.name, skill.quote)} className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:brightness-110 px-5 py-2 rounded-xl text-[11px] font-black tracking-wider uppercase transition shadow cursor-pointer w-full sm:w-auto">
+                          Dùng ⚡
+                        </button>
+                      ) : (
+                        <button onClick={() => handleBuySkillDirectly(skill)} className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 hover:brightness-110 px-4 py-2 rounded-xl text-[11px] font-black tracking-wider uppercase transition shadow cursor-pointer whitespace-nowrap w-full sm:w-auto">
+                          Mua ({skill.price.toLocaleString()} Ki) 🛒
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showRulesModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">

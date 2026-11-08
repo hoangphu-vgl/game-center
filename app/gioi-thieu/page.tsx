@@ -1,255 +1,189 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-interface LeaderboardUser {
-  id: string;
-  full_name: string;
-  balance: number;
-  avatar_url: string;
-}
-
-const DEFAULT_AVATARS = Array.from({ length: 30 }, (_, index) => ({
-  name: `Chiến Binh ${index + 1}`,
-  url: `/assets/avatar/xtra${index + 1}.ico`,
-}));
-
-const AURA_QUOTES = [
-  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn tại Đại Hội Võ Thuật!' - Son Goku",
-  "⚡ 'Sức mạnh 13 Ấn Ký đến từ ý chí kiên định, không phải từ mong muốn.' - Vegeta",
-  "🐉 'Khi bạn từ bỏ hy vọng trên lôi đài, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi",
-  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan tham chiến!' - Vegeta",
-  "🌟 'Hãy dồn toàn bộ Ki và 13 Ấn Ký vào cú đánh quyết định!' - Gogeta",
-  "🌀 'Nỗi sợ hãi khi đối đầu không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku",
-  "🥋 'Võ thuật lôi đài không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
-  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là Bá Chủ Đại Hội Võ Thuật!' - Broly",
-  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước lôi đài số phận!' - Vegeta",
-  "🐉 'Bản Năng Vô Thượng... trạng thái khi 13 Ấn Ký tự động phản ứng!' - Whis",
+const BET_OPTIONS = [20, 50, 100, 200, 500, 1000, 2000, 5000];
+const AUTO_OPTIONS = [
+  { label: "Thủ Công", value: 0 },
+  { label: "10 Lượt", value: 10 },
+  { label: "20 Lượt", value: 20 },
+  { label: "50 Lượt", value: 50 },
+  { label: "Vô Cực", value: 99999 },
 ];
 
-const getSaiyanLevel = (power: number) => {
-  if (power >= 1000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
-  if (power >= 500000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
-  if (power >= 250000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
-  if (power >= 100000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
-  if (power >= 50000000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
-  if (power >= 10000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
-  if (power >= 5000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
-  if (power >= 1000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/50 bg-yellow-950/30" };
-  if (power >= 500000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
-  return { name: "🌍 Lv.1 - Người Trái Đất", color: "text-slate-300 border-slate-700 bg-slate-900/50" };
-};
+const DRAGON_SYMBOLS = [
+  { id: "scatter", icon: "/assets/jackpot/shenron.png", name: "Rồng Thần", type: "scatter", basePoints: 120, multiplier: 12 },
+  { id: "cell", icon: "/assets/jackpot/cell.png", name: "Cell", type: "strong", basePoints: 80, multiplier: 8 },
+  { id: "kidbuu", icon: "/assets/jackpot/kidbuu.png", name: "Kid Bưu", type: "strong", basePoints: 80, multiplier: 8 },
+  { id: "buubeo", icon: "/assets/jackpot/buubeo.png", name: "Bưu Béo", type: "strong", basePoints: 80, multiplier: 8 },
+  { id: "frieza", icon: "/assets/jackpot/frieza.png", name: "Frieza đại đế", type: "strong", basePoints: 80, multiplier: 8 },
+  { id: "gohan", icon: "/assets/jackpot/gohan.png", name: "Gohan", type: "strong", basePoints: 70, multiplier: 5 },
+  { id: "jiren", icon: "/assets/jackpot/jiren.png", name: "Jiren", type: "strong", basePoints: 100, multiplier: 10 },
+  { id: "krillin", icon: "/assets/jackpot/krillin.png", name: "Krillin", type: "mid", basePoints: 50, multiplier: 4.5 },
+  { id: "ball7", icon: "/assets/jackpot/dragon-ball-7.png", name: "7 sao", type: "mid", basePoints: 45, multiplier: 4 },
+  { id: "ball6", icon: "/assets/jackpot/dragon-ball-6.png", name: "6 sao", type: "mid", basePoints: 40, multiplier: 3.5 },
+  { id: "ball5", icon: "/assets/jackpot/dragon-ball-5.png", name: "5 sao", type: "mid", basePoints: 30, multiplier: 3 },
+  { id: "ball4", icon: "/assets/jackpot/dragon-ball-4.png", name: "4 sao", type: "mid", basePoints: 25, multiplier: 2.5 },
+  { id: "ball3", icon: "/assets/jackpot/dragon-ball-3.png", name: "3 sao", type: "weak", basePoints: 20, multiplier: 2 },
+  { id: "ball2", icon: "/assets/jackpot/dragon-ball-2.png", name: "2 sao", type: "weak", basePoints: 15, multiplier: 1.5 },
+  { id: "ball1", icon: "/assets/jackpot/dragon-ball-1.png", name: "1 sao", type: "weak", basePoints: 10, multiplier: 1 },
+  { id: "senzu", icon: "/assets/jackpot/dausenzu.png", name: "Đậu Senzu", type: "weak", basePoints: 5, multiplier: 0.5 },
+  { id: "yamcha", icon: "/assets/jackpot/yamcha.png", name: "yamcha", type: "weak", basePoints: 1, multiplier: 0.5 },
+];
 
-export default function Home() {
+const AURA_QUICK_REWARDS = [
+  { id: "ki_white", name: "Ki Trắng", mult: 2.0, weight: 800, icon: "/assets/jackpot/kiwhite.png", quote: "Goku nhếch mép: 'Bắt đầu khởi động cơ thể thôi!'" },
+  { id: "kaioken", name: "Kaioken", mult: 3.0, weight: 600, icon: "/assets/jackpot/kaioken.png", quote: "Goku gầm lên: 'Gấp đôi sức mạnh, Kaioken hoàn thành!'" },
+  { id: "ssj1", name: "SSJ", mult: 4.0, weight: 500, icon: "/assets/jackpot/ssj1.png", quote: "Goku Super Saiyan: 'Ta đã nổi giận thực sự rồi đấy Frieza!'" },
+  { id: "ssj2", name: "SSJ 2", mult: 4.0, weight: 400, icon: "/assets/jackpot/ssj2.png", quote: "Gohan SSJ2: 'Ta sẽ không tha cho ngươi đâu...'" },
+  { id: "ssj3", name: "SSJ 3", mult: 8.0, weight: 300, icon: "/assets/jackpot/ssj3.png", quote: "Goku SSJ3: 'Hãy xem đây, sức mạnh vượt qua cả Super Saiyan 2!'" },
+  { id: "ssj_blue", name: "SSJ Blue", mult: 10.0, weight: 200, icon: "/assets/jackpot/ssj_blue.png", quote: "Goku Blue: 'Sức mạnh của cảnh giới thần linh!'" },
+  { id: "ssj_god", name: "SSJ God", mult: 15.0, weight: 100, icon: "/assets/jackpot/ssj_god.png", quote: "Goku God: 'Ánh sáng đỏ rực của thần thánh vũ trụ!'" },
+  { id: "android", name: "Android", mult: 20.0, weight: 50, icon: "/assets/jackpot/android.png", quote: "Đám Android: 'Năng lượng vô tận, các ngươi tuổi gì đấu lại!'" },
+  { id: "ultra", name: "Ultra", mult: 25.0, weight: 30, icon: "/assets/jackpot/ultra.png", quote: "Bản Năng Vô Cực: 'Thân thể tự động né tránh mọi đòn tấn công!'" },
+  { id: "hakai", name: "Hakai", mult: 30.0, weight: 15, icon: "/assets/jackpot/hakai.png", quote: "Hakai Hủy Diệt: 'Tan biến vào hư vô theo lệnh của thần hủy diệt!'" },
+];
+
+const STREAK_STEPS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+
+const LOSE_TAUNTS = [
+  "Vegeta cười khẩy: 'Cược lớn mà đánh kiểu này à? Về nhà bú sữa đi!'",
+  "Yamcha nằm đất vẫy tay chào tạm biệt số điểm Ki vừa bay màu!",
+  "Beerus đại nhân đang ngủ gật bỗng tỉnh giấc vì cú lọ quá tệ!",
+  "Frieza nhếch mép: 'Ngươi chỉ có chừng đó công lực thôi sao?'",
+];
+
+const STREAK_BROKEN_TAUNTS = [
+  "💔 ĐỨT CHUỖI CỰC MẠNH! Cơn thịnh nộ tan thành mây khói, rớt về vạch xuất phát!",
+  "⚡ BÙM! Mạch liên hoàn đứt đoạn, mồ hôi dầm dề nhưng Ki đã cạn!",
+  "💥 ĐỨT XÍCH! Sai một ly đi một dặm, chuỗi nhân dồn sụp đổ hoàn toàn!",
+];
+
+const WIN_PRAISES = [
+  "Bùng nổ sức mạnh tiềm ẩn! Cú đánh chấn động cả thiên hà!",
+  "Kamehamehaaaaa! Nền trời rung chuyển vì phần thưởng quá khủng!",
+  "Rồng thần ban phúc! Tài sản tăng vọt vượt mọi giới hạn vũ trụ!",
+];
+
+// Danh sách định nghĩa các kỹ năng Jackpot từ Thần Điện Skill Shop
+const JACKPOT_SKILL_ITEMS = [
+  { id: "jp_1", name: "Triệu Hồi Thần Long", icon: "🐉", desc: "Cộng ngay +10 Lượt Lọ Miễn Phí khi kích hoạt!" },
+  { id: "jp_2", name: "Hào Quang Saiyan Blue", icon: "🌀", desc: "Tăng mạnh tỷ lệ trúng thưởng Aura x10 cho lượt quay kế tiếp." },
+  { id: "jp_3", name: "Phẫn Nộ SSJ3", icon: "⚡", desc: "Nhân đôi điểm thưởng khi nổ chuỗi liên hoàn." },
+  { id: "jp_4", name: "Kamehameha Hủy Diệt", icon: "💥", desc: "Bùng nổ quét sạch rủi ro, bảo lưu chuỗi liên hoàn khi thua." },
+  { id: "jp_5", name: "Khiên Giáp Thần Thánh", icon: "🛡️", desc: "Bảo vệ tự động hoàn trả 50% tiền cược khi thua lượt quay." },
+];
+
+interface HistoryItem {
+  id: string;
+  text: string;
+  time: string;
+  isWin: boolean;
+}
+
+export default function JackpotTestPage() {
+  const [mounted, setMounted] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
-  const [points, setPoints] = useState<number>(5000);
-  const [luckySpins, setLuckySpins] = useState<number>(3);
-  const [lastCheckIn, setLastCheckIn] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [points, setPoints] = useState<number>(0);
+  const [currentBet, setCurrentBet] = useState<number>(100);
+  const [spinning, setSpinning] = useState<boolean>(false);
+  const [explosiveEffect, setExplosiveEffect] = useState<boolean>(false);
+  const [jackpotSideGlow, setJackpotSideGlow] = useState<boolean>(false);
+  const [showRulesModal, setShowRulesModal] = useState<boolean>(false);
+  
+  // State mở Modal Kho Kỹ Năng
+  const [showSkillModal, setShowSkillModal] = useState<boolean>(false);
 
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [usernameInput, setUsernameInput] = useState("");
-  const [passwordInput, setPasswordInput] = useState("");
-  const [authLoading, setAuthLoading] = useState<boolean>(false);
-  const [rememberMe, setRememberMe] = useState<boolean>(true);
+  // Kho kỹ năng từ Supabase inventory
+  const [inventory, setInventory] = useState<{ [key: string]: number }>({});
 
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [displayName, setDisplayName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [winningCoords, setWinningCoords] = useState<number[]>([]);
+  const [autoCount, setAutoCount] = useState<number>(0);
+  const [autoSpeed, setAutoSpeed] = useState<number>(1);
+  
+  const [freeSpinsLeft, setFreeSpinsLeft] = useState<number>(0);
+  const freeSpinsRef = useRef<number>(0);
 
-  const [dragonBallsCount, setDragonBallsCount] = useState<number>(0);
-  const [showNoticeModal, setShowNoticeModal] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
-  const [dailyQuote, setDailyQuote] = useState("");
+  const pointsRef = useRef<number>(0);
+  const autoSpinRef = useRef<number>(0);
+  const currentBetRef = useRef<number>(100);
 
-  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
+  const streakRef = useRef<number>(-1);
+  const [streakIndex, setStreakIndex] = useState<number>(-1);
+
+  const [lastWonAura, setLastWonAura] = useState<any>(null);
+
+  const [broadcastMsg, setBroadcastMsg] = useState<string | null>(null);
+  const broadcastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [grid, setGrid] = useState<typeof DRAGON_SYMBOLS>(
+    Array(30).fill(DRAGON_SYMBOLS[0])
+  );
+
+  const [jackpots, setJackpots] = useState({
+    minor: 15000,
+    major: 45000,
+    grand: 100000,
+  });
+  const jackpotsRef = useRef(jackpots);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    jackpotsRef.current = jackpots;
+  }, [jackpots]);
+
+  useEffect(() => {
+    freeSpinsRef.current = freeSpinsLeft;
+  }, [freeSpinsLeft]);
+
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  
+  const [messageBox, setMessageBox] = useState<{ text: string; type: "win" | "lose" | "break" | "normal" }>({
+    text: "Rồng Thần: Sưu tập đủ 6 Rồng Thần trên 6 cột để kích hoạt 10 Free Lọ!",
+    type: "normal",
   });
 
-  const getTodayString = () => new Date().toISOString().split("T")[0];
-
-  const getWeekKey = () => {
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const week = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
-    return `${now.getFullYear()}-W${week}`;
-  };
-
-  const getTodayCheckInReward = () => {
-    const dayOfWeek = new Date().getDay();
-    const dayMap: { [key: number]: { dayName: string; ki: number } } = {
-      1: { dayName: "Thứ 2", ki: 10000 },
-      2: { dayName: "Thứ 3", ki: 20000 },
-      3: { dayName: "Thứ 4", ki: 30000 },
-      4: { dayName: "Thứ 5", ki: 40000 },
-      5: { dayName: "Thứ 6", ki: 50000 },
-      6: { dayName: "Thứ 7", ki: 60000 },
-      0: { dayName: "Chủ Nhật", ki: 100000 },
-    };
-    return dayMap[dayOfWeek] || { dayName: "Hôm nay", ki: 10000 };
-  };
+  useEffect(() => {
+    autoSpinRef.current = autoCount;
+  }, [autoCount]);
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      const currentDay = now.getDay();
-      const daysUntilMonday = currentDay === 1 ? 7 : (8 - currentDay) % 7;
-      
-      const targetMonday = new Date(now);
-      targetMonday.setDate(now.getDate() + daysUntilMonday);
-      targetMonday.setHours(0, 0, 0, 0);
-
-      const diff = targetMonday.getTime() - now.getTime();
-
-      if (diff > 0) {
-        const totalHours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        setTimeLeft({ hours: totalHours, minutes, seconds });
-      } else {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-      }
-    };
-
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    currentBetRef.current = currentBet;
+  }, [currentBet]);
 
   useEffect(() => {
-    setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
-  }, []);
-
-  useEffect(() => {
-    async function loadUserProfile(currentUser: any) {
-      if (!currentUser) {
-        setUser(null);
-        setPoints(5000);
-        setLuckySpins(3);
-        setLastCheckIn("");
-        setDragonBallsCount(0);
-        setLoading(false);
-        return;
-      }
-
-      setUser(currentUser);
-
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", currentUser.id)
-          .single();
-
-        const defaultName = currentUser.user_metadata?.username || currentUser.user_metadata?.full_name || "Chiến Binh Saiyan";
-        const defaultAvatar = currentUser.user_metadata?.avatar_url || DEFAULT_AVATARS[0].url;
-
-        const currentWeek = getWeekKey();
-        const lastCheckedWeek = localStorage.getItem(`last_reset_week_${currentUser.id}`);
-
-        let currentBalance = profile?.balance ?? 5000;
-        let currentSpins = profile?.lucky_spins ?? 3;
-        let lastCheck = profile?.last_check_in ?? "";
-
-        if (!lastCheckedWeek) {
-          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
-        } else if (lastCheckedWeek !== currentWeek) {
-          currentBalance = 0;
-          await supabase
-            .from("profiles")
-            .update({ balance: 0 })
-            .eq("id", currentUser.id);
-          
-          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
-        }
-
-        if (!profile) {
-          const initialData = {
-            id: currentUser.id,
-            email: currentUser.email || "",
-            full_name: defaultName,
-            avatar_url: defaultAvatar,
-            balance: 5000,
-            lucky_spins: 3,
-            last_check_in: "",
-          };
-          await supabase.from("profiles").insert([initialData]);
-          setPoints(5000);
-          setLuckySpins(3);
-          setLastCheckIn("");
-          setDisplayName(defaultName);
-          setAvatarUrl(defaultAvatar);
-        } else {
-          setPoints(currentBalance);
-          setLuckySpins(currentSpins);
-          setLastCheckIn(lastCheck);
-          const activeName = profile.full_name || defaultName;
-          const activeAvatar = profile.avatar_url || defaultAvatar;
-          
-          setDisplayName(activeName);
-          setAvatarUrl(activeAvatar);
-        }
-
-        const savedBalls = localStorage.getItem(`dragon_balls_${currentUser.id}`);
-        setDragonBallsCount(savedBalls ? parseInt(savedBalls) : 0);
-
-        const todayStr = getTodayString();
-        const hideNoticeDate = localStorage.getItem(`hide_notice_${currentUser.id}`);
-        if (hideNoticeDate !== todayStr) {
-          setShowNoticeModal(true);
-        }
-
-      } catch (err) {
-        console.error("Lỗi tải profile game:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      loadUserProfile(session?.user || null);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      loadUserProfile(session?.user || null);
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleCloseNoticeForToday = () => {
-    if (!user) return;
-    const todayStr = getTodayString();
-    localStorage.setItem(`hide_notice_${user.id}`, todayStr);
-    setShowNoticeModal(false);
-  };
-
-  useEffect(() => {
-    async function fetchLeaderboard() {
+    async function fetchGlobalJackpot() {
       const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name, balance, avatar_url")
-        .order("balance", { ascending: false })
-        .limit(5);
+        .from("system_jackpot")
+        .select("minor, major, grand")
+        .eq("id", "global")
+        .single();
       if (data) {
-        setLeaderboard(data);
+        setJackpots({ minor: data.minor, major: data.major, grand: data.grand });
       }
     }
-    fetchLeaderboard();
+    fetchGlobalJackpot();
 
     const channel = supabase
-      .channel("public:profiles")
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
-        fetchLeaderboard();
-      })
+      .channel("system_jackpot_test_realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "system_jackpot", filter: "id=eq.global" },
+        (payload) => {
+          if (payload.new) {
+            setJackpots({
+              minor: payload.new.minor,
+              major: payload.new.major,
+              grand: payload.new.grand,
+            });
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -257,640 +191,935 @@ export default function Home() {
     };
   }, []);
 
-  const handleExchangeBalls = (type: 'single' | 'all') => {
-    if (!user) return;
-    if (type === 'single') {
-      if (dragonBallsCount < 1) {
-        alert("🛡️ Bạn chưa có viên Ngọc Rồng nào để đổi!");
-        return;
-      }
-      if (confirm("Xác nhận quy đổi 1 Viên Ngọc Rồng lấy 10.000 VNĐ tiền mặt?")) {
-        const newCount = dragonBallsCount - 1;
-        setDragonBallsCount(newCount);
-        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
-        alert("🎉 Quy đổi thành công! Nhận ngay 10.000 VNĐ (Liên hệ Admin để nhận thưởng nhé)!");
-      }
-    } else if (type === 'all') {
-      if (dragonBallsCount < 7) {
-        alert("🐉 Bạn cần sưu tập đủ đúng 7 Viên Ngọc Rồng để thực hiện Điều Ước Rồng Thần nhận 100k VNĐ!");
-        return;
-      }
-      if (confirm("🌟 THỰC HIỆN ĐIỀU ƯỚC RỒNG THẦN! Dùng đủ 7 Viên Ngọc Rồng để nhận ngay 100.000 VNĐ?")) {
-        const newCount = dragonBallsCount - 7;
-        setDragonBallsCount(newCount);
-        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
-        alert("🐲 ĐIỀU ƯỚC ĐÃ THỰC HIỆN! Chúc mừng bạn húp trọn 100.000 VNĐ từ Rồng Thần!");
+  // Lấy dữ liệu user & kho đồ inventory từ Supabase
+  useEffect(() => {
+    async function fetchUserData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("balance, inventory")
+          .eq("id", user.id)
+          .single();
+        
+        if (profile) {
+          setPoints(profile.balance ?? 0);
+          pointsRef.current = profile.balance ?? 0;
+
+          if (profile.inventory) {
+            setInventory(profile.inventory);
+          }
+        }
       }
     }
-  };
+    fetchUserData();
+  }, []);
 
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanUsername = usernameInput.trim().toLowerCase();
-    if (!cleanUsername || !passwordInput) {
-      alert("Vui lòng điền đầy đủ Tên đăng nhập và Mật khẩu!");
-      return;
-    }
+  // Hàm dùng kỹ năng và trừ lượt trên Supabase
+  const useSkillFromSupabase = async (skillId: string) => {
+    if (!user) return false;
+    const currentCount = inventory[skillId] || 0;
+    if (currentCount > 0) {
+      const updatedInv = { ...inventory, [skillId]: currentCount - 1 };
+      setInventory(updatedInv);
 
-    const internalEmail = `${cleanUsername}@gamecenter.com`;
-    setAuthLoading(true);
-
-    if (isSignUp) {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: internalEmail,
-        password: passwordInput,
-        options: {
-          data: {
-            username: cleanUsername,
-            full_name: cleanUsername,
-            avatar_url: DEFAULT_AVATARS[0].url,
-          },
-        },
-      });
-
-      if (signUpError) {
-        setAuthLoading(false);
-        alert("Lỗi đăng ký: " + signUpError.message);
-        return;
-      }
-
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: internalEmail,
-        password: passwordInput,
-      });
-
-      setAuthLoading(false);
-
-      if (signInError) {
-        alert("Tạo tài khoản thành công! Vui lòng đăng nhập.");
-        setIsSignUp(false);
-      } else if (signInData.session?.user) {
-        setUser(signInData.session.user);
-      }
-    } else {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: internalEmail,
-        password: passwordInput,
-      });
-
-      setAuthLoading(false);
-
-      if (error) {
-        alert("Sai tên đăng nhập hoặc mật khẩu!");
-      } else if (data.session?.user) {
-        setUser(data.session.user);
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setUpdatingProfile(true);
-
-    const newCleanName = displayName.trim() || "Chiến Binh";
-
-    try {
-      const { error: profileError } = await supabase
+      await supabase
         .from("profiles")
-        .update({ 
-          full_name: newCleanName, 
-          avatar_url: avatarUrl 
-        })
+        .update({ inventory: updatedInv })
         .eq("id", user.id);
 
-      if (profileError) throw profileError;
+      return true;
+    }
+    return false;
+  };
 
-      await supabase.auth.updateUser({
-        data: { full_name: newCleanName, avatar_url: avatarUrl }
-      });
-
-      alert("✨ Cập nhật thông tin chiến binh thành công! Đã đồng bộ vào toàn bộ sòng game.");
-      setProfileModalOpen(false);
-    } catch (err: any) {
-      alert("Lỗi cập nhật: " + err.message);
-    } finally {
-      setUpdatingProfile(false);
+  // Nút kích hoạt kỹ năng trực tiếp từ Kho Kỹ Năng Modal
+  const handleActivateSkill = async (skillId: string, skillName: string) => {
+    const success = await useSkillFromSupabase(skillId);
+    if (success) {
+      if (skillId === "jp_1") {
+        setFreeSpinsLeft(prev => prev + 10);
+        alert(`🌟 Kích hoạt [${skillName}] thành công! Nhận ngay +10 Vòng Quay Miễn Phí!`);
+      } else if (skillId === "jp_5") {
+        alert(`🛡️ [${skillName}] đã được kích hoạt sẵn sàng bảo vệ lượt quay tiếp theo!`);
+      } else {
+        alert(`⚡ Kích hoạt thành công [${skillName}]! Sức mạnh đã được buff cho ván này.`);
+      }
+      setShowSkillModal(false);
+    } else {
+      alert(`⚠️ Bạn đã hết lượt hoặc chưa lĩnh ngộ kỹ năng [${skillName}] từ Thần Điện Kỹ Năng!`);
     }
   };
 
-  const handleCheckIn = async () => {
+  useEffect(() => {
+    generateValidGrid();
+  }, []);
+
+  const triggerBroadcast = (text: string) => {
+    if (broadcastTimerRef.current) {
+      clearTimeout(broadcastTimerRef.current);
+    }
+    setBroadcastMsg(text);
+    broadcastTimerRef.current = setTimeout(() => {
+      setBroadcastMsg(null);
+    }, 10000);
+  };
+
+  const getRandomAura = () => {
+    const totalWeight = AURA_QUICK_REWARDS.reduce((sum, aura) => sum + aura.weight, 0);
+    let randomNum = Math.random() * totalWeight;
+    
+    for (const aura of AURA_QUICK_REWARDS) {
+      if (randomNum < aura.weight) {
+        return aura;
+      }
+      randomNum -= aura.weight;
+    }
+    return AURA_QUICK_REWARDS[0];
+  };
+
+  const generateValidGrid = () => {
+    const newGrid: typeof DRAGON_SYMBOLS = [];
+    for (let r = 0; r < 5; r++) {
+      let prevId = "";
+      for (let c = 0; c < 6; c++) {
+        const rand = Math.random();
+        let pool = DRAGON_SYMBOLS.filter((s) => s.type === "weak");
+        if (rand > 0.5) pool = DRAGON_SYMBOLS.filter((s) => s.type === "mid");
+        if (rand > 0.70) pool = DRAGON_SYMBOLS.filter((s) => s.type === "strong");
+        if (rand > 0.88) pool = DRAGON_SYMBOLS.filter((s) => s.id === "scatter");
+
+        let selected = pool[Math.floor(Math.random() * pool.length)];
+        if (selected.id === prevId && selected.type !== "scatter" && Math.random() < 0.75) {
+          const altPool = pool.filter((s) => s.id !== prevId);
+          if (altPool.length > 0) selected = altPool[Math.floor(Math.random() * altPool.length)];
+        }
+        prevId = selected.id;
+        newGrid.push(selected);
+      }
+    }
+    setGrid(newGrid);
+    return newGrid;
+  };
+
+  const updatePointsInDB = async (newPts: number) => {
+    setPoints(newPts);
+    pointsRef.current = newPts;
     if (!user) return;
-    const today = getTodayString();
-    if (lastCheckIn === today) {
-      alert("Hôm nay chiến binh đã tụ Ki nhận thưởng rồi!");
+    try {
+      await supabase
+        .from("profiles")
+        .update({ balance: newPts })
+        .eq("id", user.id);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const updateGlobalJackpotInDB = async (newPool: { minor: number; major: number; grand: number }) => {
+    setJackpots(newPool);
+    try {
+      await supabase
+        .from("system_jackpot")
+        .update(newPool)
+        .eq("id", "global");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => console.log(err));
+    } else {
+      document.exitFullscreen?.();
+    }
+  };
+
+  const handleSpinClick = (targetAuto: number) => {
+    if (spinning && autoSpinRef.current > 0) return;
+    setAutoCount(targetAuto);
+    autoSpinRef.current = targetAuto;
+    if (!spinning) {
+      executeSpin(targetAuto);
+    }
+  };
+
+  const stopAuto = () => {
+    setAutoCount(0);
+    autoSpinRef.current = 0;
+    setMessageBox({ text: "⏹ Đã dừng Auto theo yêu cầu của chiến binh.", type: "normal" });
+  };
+
+  const executeSpin = async (remainingAuto: number) => {
+    const bet = currentBetRef.current;
+    const currentPts = pointsRef.current;
+    const isFreeSpinActive = freeSpinsRef.current > 0;
+
+    if (!isFreeSpinActive) {
+      if (currentPts < bet) {
+        alert("Ní không đủ điểm Ki để tiếp tục lọ!");
+        stopAuto();
+        setSpinning(false);
+        return;
+      }
+
+      let addMinor = 0;
+      let addMajor = 0;
+      let addGrand = Math.floor(bet * 0.30);
+
+      if (bet <= 200) {
+        addMinor = Math.floor(bet * 0.70);
+      } else {
+        addMajor = Math.floor(bet * 0.70);
+      }
+
+      const updatedJackpots = {
+        minor: jackpotsRef.current.minor + addMinor,
+        major: jackpotsRef.current.major + addMajor,
+        grand: jackpotsRef.current.grand + addGrand,
+      };
+      await updateGlobalJackpotInDB(updatedJackpots);
+
+      const newPointsAfterBet = currentPts - bet;
+      await updatePointsInDB(newPointsAfterBet);
+    } else {
+      setFreeSpinsLeft(prev => prev - 1);
+    }
+
+    setSpinning(true);
+    setWinningCoords([]);
+    setLastWonAura(null);
+
+    let counter = 0;
+    const speedDelay = autoSpeed === 2 ? 30 : 90; 
+    const maxSteps = autoSpeed === 2 ? 6 : 12;
+
+    const interval = setInterval(() => {
+      generateValidGrid();
+      counter++;
+      if (counter > maxSteps) {
+        clearInterval(interval);
+        const finalGrid = generateValidGrid();
+        evaluateGameLogic(finalGrid, pointsRef.current, remainingAuto);
+        setSpinning(false);
+      }
+    }, speedDelay);
+  };
+
+  const evaluateGameLogic = async (finalGrid: typeof DRAGON_SYMBOLS, currentPts: number, remainingAuto: number) => {
+    const bet = currentBetRef.current;
+    const playerName = user?.email ? user.email.split("@")[0] : "Chiến binh ẩn danh";
+    const isFreeSpinActive = freeSpinsRef.current > 0;
+
+    let scatterIndices: number[] = [];
+    let hasScatterInAllCols = true;
+
+    for (let c = 0; c < 6; c++) {
+      let foundScatterInCol = false;
+      for (let r = 0; r < 5; r++) {
+        const idx = r * 6 + c;
+        if (finalGrid[idx].id === "scatter") {
+          foundScatterInCol = true;
+          scatterIndices.push(idx);
+        }
+      }
+      if (!foundScatterInCol) {
+        hasScatterInAllCols = false;
+        break;
+      }
+    }
+
+    if (hasScatterInAllCols) {
+      setFreeSpinsLeft(prev => prev + 10);
+      setWinningCoords(scatterIndices);
+      setLastWonAura(null);
+      triggerJackpotSideGlow();
+      const freeSpinMsg = isFreeSpinActive 
+        ? `🌟 CỘNG DỒN THÀNH CÔNG! Thêm +10 VÒNG LỌ MIỄN PHÍ sảnh ${bet} PTS! 🚀`
+        : `🌟 KÍCH HOẠT THÀNH CÔNG RỒNG THẦN! Nhận ngay 10 VÒNG LỌ MIỄN PHÍ sảnh ${bet} PTS! 🚀`;
+      
+      setMessageBox({ text: freeSpinMsg, type: "win" });
+      triggerBroadcast(`📢 HUYỀN THOẠI RỒNG THẦN: Chiến binh [${playerName}] vừa sưu tập đủ 6 cột RỒNG THẦN, nhận thêm 20 Free Lọ cực khủng! 🌟🔥`);
+      addHistory(freeSpinMsg, true);
+
+      const cinematicPause = autoSpeed === 2 ? 1000 : 1600;
+      setTimeout(() => {
+        continueAutoIfNeeded(remainingAuto);
+      }, cinematicPause);
       return;
     }
 
-    const reward = getTodayCheckInReward();
-    const newPoints = points + reward.ki;
-    const newSpins = luckySpins + 1;
+    let winChance = isFreeSpinActive ? 0.65 : 0.60;
+    if (!isFreeSpinActive) {
+      if (bet <= 50) winChance = 0.50;
+      else if (bet <= 500) winChance = 0.40;
+      else if (bet <= 2000) winChance = 0.30;
+      else winChance = 0.20;
+    }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ balance: newPoints, lucky_spins: newSpins, last_check_in: today })
-      .eq("id", user.id);
+    const isTriggerWin = Math.random() < winChance;
+    
+    const grandHit = Math.random() < 0.00002;
+    const majorHit = !grandHit && bet >= 500 && Math.random() < 0.0001;
+    const minorHit = !grandHit && !majorHit && bet <= 200 && Math.random() < 0.0004;
 
-    if (!error) {
-      setPoints(newPoints);
-      setLuckySpins(newSpins);
-      setLastCheckIn(today);
-      alert(`🔥 TỤ KI THÀNH CÔNG (${reward.dayName})!\n+${reward.ki.toLocaleString()} Ki & +1 Lượt Quay Free!`);
+    let baseWinAmount = 0;
+    let matchedIndices: number[] = [];
+    let resultText = "";
+    let isStreakWin = false;
+    let hitJackpotType = "";
+
+    if (grandHit) {
+      hitJackpotType = "grand";
+      baseWinAmount = jackpotsRef.current.grand;
+      matchedIndices = [0, 1, 2, 3, 4, 5];
+      resultText = `👑 NỔ HŨ NGỌC RỒNG SIÊU CẤP! Húp trọn +${baseWinAmount.toLocaleString()} PTS`;
+      isStreakWin = true;
+      setLastWonAura(null);
+      triggerJackpotSideGlow();
+      triggerBroadcast(`📢 KHO TÀNG CHẤN ĐỘNG: Chiến binh [${playerName}] vừa HÚP TRỌN NGỌC RỒNG SIÊU CẤP khủng khiếp +${baseWinAmount.toLocaleString()} PTS! 👑🔥`);
+      await updateGlobalJackpotInDB({ ...jackpotsRef.current, grand: 100000 });
+    } else if (majorHit) {
+      hitJackpotType = "major";
+      baseWinAmount = jackpotsRef.current.major;
+      matchedIndices = [0, 1, 2, 3, 4];
+      resultText = `💎 NỔ HŨ NGỌC RỒNG NAMEK! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
+      isStreakWin = true;
+      setLastWonAura(null);
+      triggerJackpotSideGlow();
+      triggerBroadcast(`📢 TIN VUI SẢNH CAO: Chiến binh [${playerName}] vừa nổ tung NGỌC RỒNG NAMEK nhận +${baseWinAmount.toLocaleString()} PTS! 💎⚡`);
+      await updateGlobalJackpotInDB({ ...jackpotsRef.current, major: 45000 });
+    } else if (minorHit) {
+      hitJackpotType = "minor";
+      baseWinAmount = jackpotsRef.current.minor;
+      matchedIndices = [0, 1, 2, 3];
+      resultText = `🔥 NỔ HŨ NGỌC RỒNG TRÁI ĐẤT! Nhận ngay +${baseWinAmount.toLocaleString()} PTS`;
+      isStreakWin = true;
+      setLastWonAura(null);
+      triggerJackpotSideGlow();
+      triggerBroadcast(`📢 CHÚ MỪNG: Chiến binh [${playerName}] vừa giật hũ NGỌC RỒNG TRÁI ĐẤT +${baseWinAmount.toLocaleString()} PTS! 🔥`);
+      await updateGlobalJackpotInDB({ ...jackpotsRef.current, minor: 15000 });
+    } else if (isTriggerWin) {
+      const gridColumns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
+      for (let c = 0; c < 6; c++) {
+        const colItems = [];
+        for (let r = 0; r < 5; r++) {
+          const idx = r * 6 + c;
+          colItems.push({ symbol: finalGrid[idx], index: idx });
+        }
+        gridColumns.push(colItems);
+      }
+
+      let totalStreakWin = 0;
+      let streakWinningSet = new Set<number>();
+      const firstColSymbols = gridColumns[0].map(item => item.symbol.id);
+      const uniqueSymbolsToCheck = Array.from(new Set(firstColSymbols));
+
+      uniqueSymbolsToCheck.forEach((symId) => {
+        if (symId === "scatter") return;
+        let consecutiveColsCount = 0;
+        let tempMatchedIndices: number[] = [];
+
+        for (let c = 0; c < 6; c++) {
+          const foundInCol = gridColumns[c].filter(item => item.symbol.id === symId);
+          if (foundInCol.length > 0) {
+            consecutiveColsCount++;
+            foundInCol.forEach(item => tempMatchedIndices.push(item.index));
+          } else {
+            break;
+          }
+        }
+
+        const mustExistInCol1 = gridColumns[0].some(item => item.symbol.id === symId);
+        if (mustExistInCol1 && consecutiveColsCount >= 3) {
+          const symObj = DRAGON_SYMBOLS.find((s) => s.id === symId);
+          if (symObj) {
+            const baseScore = symObj.basePoints + (bet * 0.05);
+            let symbolWin = baseScore * symObj.multiplier * consecutiveColsCount;
+            const columnBonus = 
+              consecutiveColsCount >= 6 ? 2.5 : 
+              consecutiveColsCount === 5 ? 1.8 : 
+              consecutiveColsCount === 4 ? 1.2 : 1.0;
+            
+            totalStreakWin += Math.floor(symbolWin * columnBonus);
+            tempMatchedIndices.forEach(idx => streakWinningSet.add(idx));
+          }
+        }
+      });
+
+      if (streakWinningSet.size > 0 && totalStreakWin > 0) {
+        baseWinAmount = totalStreakWin;
+        matchedIndices = Array.from(streakWinningSet);
+        isStreakWin = true;
+        setLastWonAura(null);
+        const randomPraise = WIN_PRAISES[Math.floor(Math.random() * WIN_PRAISES.length)];
+        resultText = `✨ ${randomPraise} +${baseWinAmount.toLocaleString()} PTS`;
+        triggerExplosion();
+      } else {
+        if (streakRef.current >= 0) {
+          baseWinAmount = 0;
+        } else {
+          const chosenAura = getRandomAura();
+          setLastWonAura(chosenAura);
+          setWinningCoords([]);
+
+          baseWinAmount = Math.floor(bet * chosenAura.mult * (isFreeSpinActive ? 1.5 : 1));
+          
+          resultText = `${chosenAura.quote} (${chosenAura.name} x${chosenAura.mult}) = +${baseWinAmount.toLocaleString()} PTS`;
+          isStreakWin = false;
+          triggerExplosion();
+        }
+      }
+    }
+
+    let finalTotalWin = 0;
+
+    if (baseWinAmount > 0) {
+      if (isStreakWin) {
+        const currentIdx = streakRef.current;
+        const nextIdx = currentIdx < 0 ? 0 : Math.min(currentIdx + 1, STREAK_STEPS.length - 1);
+        streakRef.current = nextIdx;
+        setStreakIndex(nextIdx);
+
+        const activeMultiplier = hitJackpotType ? 1 : STREAK_STEPS[nextIdx];
+        finalTotalWin = hitJackpotType ? baseWinAmount : baseWinAmount * activeMultiplier;
+        resultText = hitJackpotType 
+          ? resultText
+          : `🔥 CHUỖI NHÂN x${activeMultiplier}! (${baseWinAmount.toLocaleString()} x ${activeMultiplier}) = +${finalTotalWin.toLocaleString()} PTS`;
+      } else {
+        finalTotalWin = baseWinAmount;
+      }
+
+      const finalPts = currentPts + finalTotalWin;
+      await updatePointsInDB(finalPts);
+      
+      if (isStreakWin || hitJackpotType) {
+        setWinningCoords(matchedIndices);
+      } else {
+        setWinningCoords([]);
+      }
+
+      setMessageBox({ text: isFreeSpinActive ? `[FREE SPIN] ${resultText}` : resultText, type: "win" });
+      addHistory(resultText, true);
+    } else {
+      setWinningCoords([]);
+      setLastWonAura(null);
+
+      // Tự động dùng Khiên bảo vệ (jp_5) nếu có trong kho
+      const hasShield = await useSkillFromSupabase("jp_5");
+
+      if (hasShield) {
+        resultText = `🛡️ KHIÊN THẦN THÁNH KÍCH HOẠT! Hoàn trả 50% tiền cược do thua lượt này!`;
+        const refundAmt = Math.floor(bet * 0.50);
+        const refundedPts = currentPts + refundAmt;
+        await updatePointsInDB(refundedPts);
+        setMessageBox({ text: resultText, type: "win" });
+      } else {
+        if (streakRef.current >= 0) {
+          streakRef.current = -1;
+          setStreakIndex(-1);
+          const breakTaunt = STREAK_BROKEN_TAUNTS[Math.floor(Math.random() * STREAK_BROKEN_TAUNTS.length)];
+          resultText = `${breakTaunt} (-${isFreeSpinActive ? 0 : bet} PTS)`;
+          setMessageBox({ text: resultText, type: "break" });
+        } else {
+          const randomTaunt = LOSE_TAUNTS[Math.floor(Math.random() * LOSE_TAUNTS.length)];
+          resultText = `💥 Thua (-${isFreeSpinActive ? 0 : bet} PTS) | ${randomTaunt}`;
+          setMessageBox({ text: resultText, type: "lose" });
+        }
+      }
+
+      addHistory(resultText, false);
+      continueAutoIfNeeded(remainingAuto);
+      return;
+    }
+
+    continueAutoIfNeeded(remainingAuto);
+  };
+
+  const triggerExplosion = () => {
+    setExplosiveEffect(true);
+    setTimeout(() => setExplosiveEffect(false), 700);
+  };
+
+  const triggerJackpotSideGlow = () => {
+    setJackpotSideGlow(true);
+    setExplosiveEffect(true);
+    setTimeout(() => {
+      setJackpotSideGlow(false);
+      setExplosiveEffect(false);
+    }, 1500);
+  };
+
+  const continueAutoIfNeeded = (remainingAuto: number) => {
+    const currentAutoSetting = autoSpinRef.current;
+    if (currentAutoSetting === 0 && freeSpinsRef.current === 0) return;
+
+    const delayTime = autoSpeed === 2 ? 150 : 350;
+
+    if (freeSpinsRef.current > 0) {
+      setTimeout(() => executeSpin(remainingAuto), delayTime);
+      return;
+    }
+
+    if (remainingAuto === 99999) {
+      setTimeout(() => executeSpin(99999), delayTime);
+    } else if (remainingAuto > 1) {
+      setAutoCount(remainingAuto - 1);
+      setTimeout(() => executeSpin(remainingAuto - 1), delayTime);
+    } else {
+      setAutoCount(0);
+      autoSpinRef.current = 0;
+      setMessageBox({ text: "✨ Đã hoàn thành toàn bộ lượt Auto!", type: "normal" });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 text-amber-400 font-black tracking-widest animate-pulse px-4 text-center">
-        <img src="/assets/home/shenron.png" alt="Shenron" className="w-20 h-20 object-contain mb-4 animate-bounce drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]" />
-        ĐANG KẾT NỐI LONG MẠCH DRAGON ARCADE...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="h-screen w-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 fixed inset-0 overflow-hidden select-none"
-        style={{ backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')", backgroundSize: "cover", backgroundPosition: "center" }}
-      >
-        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-0"></div>
-
-        <div className="relative z-10 w-full max-w-md bg-slate-900/90 border-2 border-amber-500/50 rounded-3xl p-5 sm:p-8 shadow-[0_0_50px_rgba(245,158,11,0.3)] backdrop-blur-xl space-y-4 sm:space-y-6 max-h-[95vh] overflow-y-auto">
-          <div className="text-center space-y-1 sm:space-y-2">
-            <div className="flex justify-center">
-              <img src="/assets/home/shenron.png" alt="Dragon" className="w-12 h-12 sm:w-16 sm:h-16 object-contain animate-bounce drop-shadow" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 drop-shadow">
-              DRAGON ARCADE
-            </h1>
-            <p className="text-slate-300 text-xs sm:text-sm font-medium">
-              {isSignUp ? "✨ Khởi tạo tài khoản tham gia đua top Sức Mạnh tuần" : "⚡ Đăng nhập bước vào không gian võ đạo"}
-            </p>
-          </div>
-
-          <form onSubmit={handleAuthSubmit} className="space-y-3 sm:space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-amber-400 ml-1">Tên Đăng Nhập</label>
-              <input
-                type="text"
-                placeholder="Ví dụ: kennylor298"
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500 transition lowercase"
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-amber-400 ml-1">Mật Khẩu</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500 transition"
-                required
-              />
-            </div>
-
-            <div className="flex items-center gap-2 mt-1 px-1">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="accent-amber-500 w-4 h-4 rounded cursor-pointer"
-              />
-              <label htmlFor="remember" className="text-xs font-semibold text-slate-300 cursor-pointer">
-                Lưu thông tin đăng nhập
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-slate-950 font-black text-xs sm:text-sm py-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg shadow-amber-500/20 disabled:opacity-50"
-            >
-              {authLoading ? "Đang Vận Ki..." : isSignUp ? "ĐĂNG KÝ NGAY 🚀" : "VÀO SẢNH GAME ⚡"}
-            </button>
-          </form>
-
-          <div className="text-center pt-2 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer transition"
-            >
-              {isSignUp ? "Đã có tài khoản? Đăng nhập ➔" : "Chưa có tài khoản? Đăng ký mới ➔"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const isCheckedInToday = lastCheckIn === getTodayString();
-  const currentLevel = getSaiyanLevel(points);
-  const todayReward = getTodayCheckInReward();
+  const addHistory = (text: string, isWin: boolean) => {
+    const newEntry: HistoryItem = {
+      id: Date.now().toString(),
+      text,
+      time: new Date().toLocaleTimeString(),
+      isWin,
+    };
+    setHistory((prev) => [newEntry, ...prev.slice(0, 15)]);
+  };
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
+    <div 
+      className={`fixed inset-0 h-[100dvh] overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between ${
+        explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""
+      }`} 
+      style={{ touchAction: 'manipulation' }}
+    >
       
-      <div className="bg-slate-900/95 border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-bold shrink-0 backdrop-blur-md z-30">
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-amber-400">⚡ Chuyển Sảnh:</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition text-[11px]">
-            🏠 Trang Chủ
+      {/* 🚀 HEADER TOP BAR CÓ NÚT "⚔️ KHO SKILL" ĐỂ DÙNG KỸ NĂNG */}
+      <header className="bg-slate-900/95 border-b border-amber-500/40 px-3 py-1.5 flex justify-between items-center z-30 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-2">
+          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 px-2.5 py-1 rounded-lg text-[10px] font-black shadow transition active:scale-95">
+            🏠 Cổng Game
           </Link>
-          <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            🎲 Baccarat Thần Thánh
-          </Link>
-          <Link href="/tienlen" className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            ⚔️ Võ Thuật 13 Ấn Ký
-          </Link>
-          <Link href="/poker" className="bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            ♠️ Sòng Poker Whis
-          </Link>
-          <Link href="/jackpot" className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            🔮 Jackpot Rồng Thần
-          </Link>
-          <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            🎟️ Vòng Quay
-          </Link>
-        </div>
-      </div>
-
-      {showNoticeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-3 relative max-h-[88vh] overflow-y-auto">
-            
-            <div className="text-center space-y-1 border-b border-slate-800 pb-2">
-              <div className="flex justify-center">
-                <img src="/assets/home/dragonball.png" alt="Dragon Ball" className="w-10 h-10 object-contain animate-spin-slow" />
-              </div>
-              <span className="text-[9px] bg-amber-500/20 text-amber-400 font-black px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-widest">
-                ⚡ Sắc Lệnh Từ Thần Hủy Diệt ⚡
-              </span>
-              <h2 className="text-base sm:text-lg font-black text-yellow-300 mt-1">
-                LUẬT CHƠI VÀ SĂN NGỌC RỒNG VŨ TRỤ
-              </h2>
+          {freeSpinsLeft > 0 && (
+            <div className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-2 py-0.5 rounded-lg text-[10px] font-black animate-pulse shadow">
+              🌟 FREE: {freeSpinsLeft}
             </div>
-
-            <div className="bg-gradient-to-r from-red-950/60 via-amber-950/80 to-red-950/60 p-2.5 rounded-xl border border-red-500/50 text-center space-y-1 shadow-lg">
-              <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">⏳ Thời Gian Đến Lúc Reset Tuần (00:00 Thứ 2)</span>
-              <div className="flex justify-center gap-2 text-amber-400 font-mono font-black text-base">
-                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.hours.toString().padStart(2, '0')}h</span> :
-                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.minutes.toString().padStart(2, '0')}m</span> :
-                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.seconds.toString().padStart(2, '0')}s</span>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-[11px] text-slate-300">
-              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
-                <h3 className="font-bold text-amber-400 flex items-center gap-1">
-                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-3.5 h-3.5 object-contain" /> Chuỗi Thưởng Tụ Ki Theo Ngày:
-                </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  • Thứ 2 ➔ T7: Tăng dần từ 10k đến 60k Ki<br/>
-                  🔥 <b className="text-yellow-400">Chủ Nhật: +100k Ki khủng!</b>
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-1">
-              <button
-                onClick={handleCloseNoticeForToday}
-                className="w-full bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-black text-xs py-2 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg transition"
-              >
-                ĐÃ RÕ, HÔM NAY KHÔNG HIỆN LẠI 🚀
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <header className="bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 sm:px-5 py-2 shadow-md shrink-0 z-20 overflow-x-auto">
-        <div className="w-full min-w-max flex justify-between items-center gap-4">
-          <div className="flex items-center gap-2 shrink-0">
-            <img src="/assets/home/shenron.png" alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain animate-bounce" />
-            <span className="font-black text-lg sm:text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500">
-              DRAGON ARCADE
+          )}
+          {/* NÚT MỞ KHO SKILL (KỸ NĂNG ĐÃ MUA) */}
+          <button
+            onClick={() => setShowSkillModal(true)}
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:brightness-110 text-white border border-emerald-400/60 px-2.5 py-1 rounded-lg text-[10px] font-black shadow transition active:scale-95 cursor-pointer flex items-center gap-1"
+          >
+            <span>⚔️ Kho Skill</span>
+            <span className="bg-black/50 px-1.5 py-0.2 rounded text-[9px] text-amber-300">
+              {Object.values(inventory).reduce((a, b) => a + b, 0)}
             </span>
-          </div>
+          </button>
+        </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-amber-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
-              <img src="/assets/home/dausenzu.png" alt="Ki" className="w-4 h-4 object-contain" />
-              <span className="font-black text-amber-400">{points.toLocaleString()}</span>
-              <span className="text-[10px] text-amber-300/70">Ki</span>
-            </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowRulesModal(true)}
+            className="bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-[10px] font-black shadow transition active:scale-95 cursor-pointer flex items-center gap-1"
+          >
+            📜 Luật
+          </button>
 
-            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-purple-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
-              <img src="/assets/home/capsule.png" alt="Ticket" className="w-4 h-4 object-contain" />
-              <span className="font-black text-purple-300">{luckySpins}</span>
-            </div>
+          <button
+            onClick={toggleFullScreen}
+            className="bg-slate-800 text-amber-400 border border-amber-500/40 px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer"
+          >
+            ⛶
+          </button>
 
-            <button
-              onClick={handleCheckIn}
-              disabled={isCheckedInToday}
-              className={`text-xs font-black py-1.5 px-3 rounded-xl transition-all shadow active:scale-95 cursor-pointer whitespace-nowrap ${
-                isCheckedInToday
-                  ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
-                  : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950"
-              }`}
-            >
-              {isCheckedInToday ? "✅ Đã Tụ Ki" : `🔥 Tụ Ki (+${(todayReward.ki / 1000).toFixed(0)}k)`}
-            </button>
-
-            <button
-              onClick={() => setProfileModalOpen(true)}
-              className="w-8 h-8 rounded-full overflow-hidden border-2 border-amber-400 active:scale-95 transition cursor-pointer shadow-md shrink-0"
-            >
-              <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="text-xs text-slate-400 hover:text-rose-400 font-bold px-2.5 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700 cursor-pointer transition shrink-0"
-            >
-              Thoát 🚪
-            </button>
+          <div className="flex items-center gap-1 bg-black/50 border border-amber-500/50 px-2.5 py-1 rounded-lg shadow">
+            <span className="text-[11px]">🪙</span>
+            <span className="font-extrabold text-amber-400 font-mono text-xs">{points.toLocaleString()}</span>
+            <span className="text-[9px] text-amber-300/70 font-semibold">PTS</span>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5">
+      {/* THÂN GAME */}
+      <main className="flex-1 flex flex-col justify-between p-1.5 space-y-1 overflow-hidden">
         
-        <section
-          className="relative flex flex-col items-center justify-center min-h-[180px] sm:min-h-[240px] bg-cover bg-center text-center p-4 sm:p-6 rounded-3xl border-2 border-amber-500/40 overflow-hidden shadow-2xl"
-          style={{ backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')" }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/85 to-slate-950"></div>
-          <div className="relative z-10 w-full max-w-4xl space-y-2.5 flex flex-col items-center">
-            
-            <div className="flex flex-wrap justify-center items-center gap-2">
-              <span className="px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-xs font-bold text-amber-300 uppercase tracking-widest backdrop-blur-md">
-                ✨ Chiến Binh: <span className="text-white font-black">{displayName}</span>
-              </span>
-              <span className={`px-3 py-1 border rounded-full text-xs font-black backdrop-blur-md shadow ${currentLevel.color}`}>
-                {currentLevel.name}
-              </span>
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-xl tracking-wide uppercase break-words leading-tight w-full px-2">
-              DRAGON GAMING ARENA
-            </h1>
-
-            <div className="inline-flex items-center gap-1.5 bg-slate-900/90 border border-amber-500/50 px-3 py-1 rounded-full text-xs font-bold text-amber-300 shadow-md backdrop-blur-md">
-              <span>⏳ Reset Tuần Sau:</span>
-              <span className="font-mono font-black text-yellow-400">
-                {timeLeft.hours.toString().padStart(2, '0')}h {timeLeft.minutes.toString().padStart(2, '0')}m {timeLeft.seconds.toString().padStart(2, '0')}s
-              </span>
-            </div>
-
-            <p className="text-amber-200/90 text-xs sm:text-sm italic font-medium max-w-2xl mx-auto px-3 py-2 bg-slate-900/60 rounded-xl border border-amber-500/30 whitespace-normal leading-relaxed shadow-inner">
-              {dailyQuote}
-            </p>
+        {broadcastMsg && (
+          <div className="bg-gradient-to-r from-amber-600 via-yellow-500 to-red-600 border border-yellow-200 text-slate-950 font-black px-2 py-0.5 rounded-lg text-center text-[9px] shadow animate-bounce flex items-center justify-center gap-1 shrink-0">
+            <span>⚡</span>
+            <span className="truncate">{broadcastMsg}</span>
+            <span>⚡</span>
           </div>
-        </section>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          
-          <div className="lg:col-span-2 space-y-5">
-            
-            {/* SẢNH NỔI BẬT: JACKPOT ĐẶT TRƯỚC, RỒI TỚI BACCARAT THẦN THÁNH */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
-                <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
-                  <img src="/assets/home/candauvan.png" alt="Fire" className="w-5 h-5 object-contain" /> Sảnh Nổi Bật Vũ Trụ
-                </h2>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* 1. JACKPOT RỒNG THẦN (NỔI BẬT TRƯỚC) */}
-                <Link
-                  href="/jackpot"
-                  className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
-                >
-                  <div className="absolute right-2 -bottom-2 opacity-15">
-                    <img src="/assets/home/dragonball.png" alt="Ball" className="w-20 h-20 object-contain" />
-                  </div>
-                  <h3 className="text-sm sm:text-base font-black text-amber-400 flex items-center gap-2">
-                    <img src="/assets/home/dragon-ball-4.png" alt="Jackpot" className="w-6 h-6 object-contain" /> Jackpot Rồng Thần
-                  </h3>
-                  <p className="text-slate-300 text-xs mt-1 italic font-medium">✨ 'Vận Ki quay hũ tích lũy Điểm Sức Mạnh nổ hũ Chí Tôn!'</p>
-                  <div className="mt-3 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO NỔ HŨ 🔮
-                  </div>
-                </Link>
+        <div className="grid grid-cols-3 gap-1 relative shrink-0">
+          {jackpotSideGlow && (
+            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500 via-red-500 to-amber-500 rounded-xl blur opacity-75 animate-pulse -z-10"></div>
+          )}
 
-                {/* 2. BACCARAT THẦN THÁNH (ĐẶT NGAY SAU JACKPOT VỚI DRAGON BALL AURA) */}
-                <Link
-                  href="/baccarat"
-                  className="bg-slate-900/90 border-2 border-cyan-400/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-300"
-                >
-                  <div className="absolute right-2 -bottom-2 opacity-15">
-                    <img src="/assets/baccarat/champa.png" alt="Champa" className="w-20 h-20 object-contain" />
-                  </div>
-                  <h3 className="text-sm sm:text-base font-black text-cyan-400 flex items-center gap-2">
-                    <img src="/assets/baccarat/dragon-ball-7.png" alt="Baccarat" className="w-6 h-6 object-contain" /> Baccarat Thần Thánh
-                  </h3>
-                  <p className="text-slate-300 text-xs mt-1 italic font-medium">⚡ 'Whis phẩy gậy định đoạt, lật bài baccarat phân định cao thấp, húp trọn Pot!'</p>
-                  <div className="mt-3 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO SÀNH BACCARAT 🎲
-                  </div>
-                </Link>
-
-                <Link
-                  href="/wheel"
-                  className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
-                >
-                  <h3 className="text-sm sm:text-base font-bold text-purple-400 flex items-center gap-2">
-                    <img src="/assets/home/capsule.png" alt="Wheel" className="w-6 h-6 object-contain" /> Vòng Quay Capsule
-                  </h3>
-                  <p className="text-slate-400 text-xs mt-1">Dùng Lượt Quay Capsule mở rộng tiềm năng Ki chiến đấu!</p>
-                  <div className="mt-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    QUAY NGAY 🎟️
-                  </div>
-                </Link>
-
-                <Link
-                  href="/shop"
-                  className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"
-                >
-                  <h3 className="text-sm sm:text-base font-bold text-yellow-400 flex items-center gap-2">
-                    <img src="/assets/home/dausenzu.png" alt="Shop" className="w-6 h-6 object-contain" /> Shop Võ Đạo Saiyan
-                  </h3>
-                  <p className="text-slate-400 text-xs mt-1">Dùng Điểm Ki quy đổi Lượt Quay & Đậu Senzu Phôi Hồi!</p>
-                  <div className="mt-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO SHOP 💎
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
-                <h2 className="text-base sm:text-lg font-black text-emerald-400 tracking-wider uppercase flex items-center gap-2">
-                  <img src="/assets/home/shenron.png" alt="Game" className="w-5 h-5 object-contain" /> Lôi Đài Võ Đạo Sát Phạt
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Link
-                  href="/tienlen"
-                  className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
-                >
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-black text-emerald-400">Đại Hội 13 Ấn Ký</h3>
-                  </div>
-                  <p className="text-slate-300 text-xs mt-2 italic font-medium leading-relaxed bg-black/40 p-2 rounded-xl border border-emerald-500/20">
-                    🌀 "Dồn 13 Ấn Ký vào tay bài, giải phóng Ki bùng nổ, chặt heo đoạt mệnh đối thủ!"
-                  </p>
-                  <div className="mt-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow">
-                    BƯỚC VÀO LÔI ĐÀI ⚔️
-                  </div>
-                </Link>
-
-                <Link
-                  href="/poker"
-                  className="bg-slate-900/90 border-2 border-blue-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-blue-400"
-                >
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-black text-blue-400">Sòng Poker Whis</h3>
-                  </div>
-                  <p className="text-slate-300 text-xs mt-2 italic font-medium leading-relaxed bg-black/40 p-2 rounded-xl border border-blue-500/20">
-                    ⚡ "Whis lật bài phân định cao thấp, All-In vận Ki áp đảo Thần Hủy Diệt húp trọn Pot!"
-                  </p>
-                  <div className="mt-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO SÒNG POKER ♠️
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit">
-            <div className="flex items-center justify-between border-l-4 border-orange-500 pl-3">
-              <h2 className="text-sm sm:text-base font-black text-orange-400 tracking-wider uppercase">
-                🏆 Top 5 Võ Đạo Vũ Trụ
-              </h2>
-            </div>
-            <div className="space-y-2.5">
-              {leaderboard.length === 0 ? (
-                <div className="text-xs text-slate-500 text-center py-6">Đang cập nhật...</div>
-              ) : (
-                leaderboard.map((item, index) => {
-                  const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
-                  const isMe = item.id === user?.id;
-                  const userLvl = getSaiyanLevel(item.balance);
-                  const userAvatar = item.avatar_url || DEFAULT_AVATARS[0].url;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={`flex items-center justify-between p-2.5 rounded-xl border ${
-                        isMe ? "bg-amber-500/15 border-amber-500/60 font-bold" : "bg-slate-950/60 border-slate-800"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm shrink-0">{medals[index]}</span>
-                        <div className="w-7 h-7 rounded-full overflow-hidden border border-amber-400/60 shrink-0">
-                          <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs text-slate-200 truncate max-w-[90px]">
-                            {item.full_name} {isMe && "(Tôi)"}
-                          </span>
-                          <span className="text-[9px] text-amber-300 font-semibold">{userLvl.name.split(" - ")[1]}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 text-xs text-amber-400 font-black shrink-0">
-                        <img src="/assets/home/dausenzu.png" alt="Ki" className="w-3.5 h-3.5 object-contain" />
-                        <span>{item.balance?.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+          <div className="bg-gradient-to-b from-amber-600 to-amber-950 border border-amber-300/80 rounded-xl p-0.5 text-center shadow">
+            <div className="text-[7px] font-black text-amber-200 uppercase truncate">🔥 TRÁI ĐẤT</div>
+            <div className="text-[9px] font-black text-white font-mono leading-tight">
+              {mounted ? (jackpots?.minor || 0).toLocaleString() : "15,000"}
             </div>
           </div>
 
+          <div className="bg-gradient-to-b from-red-600 via-orange-600 to-amber-600 border border-yellow-300 rounded-xl p-0.5 text-center shadow-lg animate-pulse scale-105 z-10">
+            <div className="text-[7px] font-black text-yellow-200 uppercase truncate">👑 SIÊU CẤP</div>
+            <div className="text-[10px] font-black text-yellow-300 font-mono leading-tight">
+              {mounted ? (jackpots?.grand || 0).toLocaleString() : "100,000"}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-b from-purple-700 via-indigo-700 to-slate-900 border border-purple-300/80 rounded-xl p-0.5 text-center shadow">
+            <div className="text-[7px] font-black text-purple-200 uppercase truncate">💎 NAMEK</div>
+            <div className="text-[9px] font-black text-purple-300 font-mono leading-tight">
+              {mounted ? (jackpots?.major || 0).toLocaleString() : "45,000"}
+            </div>
+          </div>
         </div>
 
-      </div>
-
-      {profileModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-              <h3 className="text-xs sm:text-sm font-black text-amber-400">HỒ SƠ CHIẾN BINH</h3>
-              <button onClick={() => setProfileModalOpen(false)} className="text-slate-400 hover:text-white font-bold text-xs px-2 py-0.5 cursor-pointer">✖</button>
-            </div>
-
-            <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 shadow shrink-0">
-                <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
+        <div className="bg-slate-950/90 border border-amber-500/40 p-0.5 rounded-xl grid grid-cols-5 gap-0.5 shadow-inner shrink-0">
+          {AURA_QUICK_REWARDS.map((aura) => {
+            const isSelected = lastWonAura?.id === aura.id;
+            return (
+              <div 
+                key={aura.id} 
+                className={`flex flex-col items-center justify-center py-0.5 px-0.5 rounded border transition-all ${
+                  isSelected 
+                    ? "bg-gradient-to-b from-amber-400 to-orange-500 text-slate-950 border-yellow-200 scale-105 shadow z-10 animate-bounce" 
+                    : "bg-slate-900/90 border-slate-800 text-slate-300"
+                }`}
+              >
+                <img src={aura.icon} alt={aura.name} className="w-3.5 h-3.5 object-contain drop-shadow" />
+                <span className={`text-[6.5px] font-black truncate w-full text-center ${isSelected ? "text-slate-950" : "text-amber-300"}`}>
+                  x{aura.mult}
+                </span>
               </div>
-              <div className="space-y-0.5">
-                <h4 className="font-extrabold text-xs text-white truncate">{displayName}</h4>
-                <div className={`inline-block text-[9px] font-black px-1.5 py-0.2 rounded border ${currentLevel.color}`}>
-                  {currentLevel.name}
+            );
+          })}
+        </div>
+
+        <div className="bg-slate-950/90 border border-amber-500/40 rounded-xl p-0.5 space-y-0.5 shadow-inner shrink-0">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[8px] font-black text-amber-400 uppercase tracking-wider">
+              ⚡ CHUỖI LIÊN HOÀN:
+            </span>
+          </div>
+          <div className="grid grid-cols-5 sm:grid-cols-10 gap-0.5 pt-0.5">
+            {STREAK_STEPS.map((step, idx) => {
+              const isActive = streakIndex >= idx;
+              return (
+                <div
+                  key={step}
+                  className={`flex items-center justify-center py-0.5 rounded border text-[7.5px] font-black transition-all ${
+                    isActive
+                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 border-yellow-200 shadow scale-105"
+                      : "bg-slate-900/80 border-slate-800 text-slate-500 opacity-60"
+                  }`}
+                >
+                  x{step}
                 </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center bg-slate-950/90 border border-amber-500/30 px-2 py-0.5 rounded-lg text-[9.5px] font-bold gap-2 shrink-0">
+          <div className="flex items-center gap-1 truncate">
+            {lastWonAura && (
+              <img src={lastWonAura.icon} alt={lastWonAura.name} className="w-3.5 h-3.5 object-contain animate-bounce shrink-0" />
+            )}
+            <span className={`truncate ${messageBox.type === "break" ? "text-rose-400 font-black" : messageBox.type === "lose" ? "text-rose-400" : "text-amber-300"}`}>
+              💬 {messageBox.text}
+            </span>
+          </div>
+          {autoCount > 0 && (
+            <button
+              onClick={stopAuto}
+              className="bg-rose-600 text-white font-black px-1.5 py-0.5 rounded text-[8px] cursor-pointer shrink-0"
+            >
+              ⏹ Dừng
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 bg-slate-950 p-1 rounded-xl border border-amber-500/30 shadow-inner flex flex-col justify-center overflow-hidden">
+          <div className="grid grid-cols-6 grid-rows-5 gap-0.5 h-full w-full">
+            {grid.map((sym, idx) => {
+              const isWinning = winningCoords.includes(idx);
+              const hasResult = winningCoords.length > 0;
+              const isScatter = sym.id === "scatter";
+
+              return (
+                <div
+                  key={idx}
+                  className={`flex flex-col items-center justify-center rounded-lg p-0.5 transition-all duration-300 ${
+                    spinning
+                      ? "animate-pulse scale-95 bg-slate-800"
+                      : isWinning
+                      ? "bg-gradient-to-b from-amber-500 to-orange-600 border border-yellow-300 scale-105 shadow z-10 animate-bounce"
+                      : isScatter
+                      ? "bg-gradient-to-b from-yellow-600 to-amber-800 border border-yellow-300 animate-pulse shadow"
+                      : hasResult
+                      ? "bg-slate-950/90 border border-slate-900 opacity-30 scale-95 grayscale"
+                      : "bg-gradient-to-b from-slate-800 to-slate-900 border border-amber-500/20"
+                  }`}
+                >
+                  <div className="w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center">
+                    <img 
+                      src={sym.icon} 
+                      alt={sym.name} 
+                      className="w-full h-full object-contain drop-shadow"
+                    />
+                  </div>
+                  <span className={`text-[5.5px] sm:text-[6.5px] font-bold truncate w-full text-center mt-0.5 ${isWinning || isScatter ? "text-slate-950 font-black" : "text-amber-300/80"}`}>
+                    {sym.name}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-2 py-1 max-h-[52px] overflow-y-auto text-[9px] shrink-0 scrollbar-thin">
+          <div className="font-bold text-slate-400 text-[8px] mb-0.5 flex justify-between items-center border-b border-slate-800/80 pb-0.5">
+            <span>📜 Lịch sử chiến đấu:</span>
+            <span className="text-[7.5px] text-slate-500">(Vuốt để xem thêm)</span>
+          </div>
+          {history.length === 0 ? (
+            <div className="text-slate-600 italic text-[8.5px]">Chưa có lượt quay nào trong phiên này.</div>
+          ) : (
+            history.map((item) => (
+              <div key={item.id} className="flex justify-between py-0.5 border-b border-slate-900/60 leading-tight">
+                <span className={`truncate max-w-[80%] ${item.isWin ? "text-amber-400 font-bold" : "text-rose-400"}`}>
+                  {item.text}
+                </span>
+                <span className="text-slate-500 font-mono text-[8px] shrink-0">{item.time}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+      </main>
+
+      <footer className="bg-slate-900/95 border-t border-amber-500/40 p-2 px-3 z-30 backdrop-blur-md shrink-0">
+        <div className="max-w-xl mx-auto flex flex-col gap-1.5">
+          
+          <div className="flex items-center justify-between gap-1 overflow-x-auto text-[10px]">
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="font-bold text-amber-300">CƯỢC:</span>
+              <div className="flex gap-1 overflow-x-auto max-w-[170px] sm:max-w-none">
+                {BET_OPTIONS.map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => setCurrentBet(amt)}
+                    disabled={spinning || freeSpinsLeft > 0}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-black border transition cursor-pointer shrink-0 ${
+                      currentBet === amt
+                        ? "bg-amber-400 text-slate-950 border-amber-300 shadow"
+                        : "bg-slate-800 text-slate-300 border-slate-700"
+                    }`}
+                  >
+                    {amt}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <form onSubmit={handleUpdateProfile} className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-amber-400 ml-1">Tên Hiển Thị</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 text-xs text-white px-3 py-2 rounded-lg focus:outline-none focus:border-amber-500"
-                  required
-                />
-              </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setAutoSpeed(autoSpeed === 1 ? 2 : 1)}
+                className="bg-slate-800 border border-amber-500/50 text-amber-300 px-2 py-0.5 rounded text-[9px] font-black cursor-pointer shadow"
+              >
+                ⚡ {autoSpeed === 1 ? "x1" : "🚀 x2"}
+              </button>
+            </div>
+          </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-amber-400 ml-1">Chọn Avatar Dragon Ball (30 Mẫu)</label>
-                <div className="grid grid-cols-6 gap-1.5 pt-1 max-h-36 overflow-y-auto bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
-                  {DEFAULT_AVATARS.map((av, idx) => (
+          <div className="flex items-center justify-between gap-1 text-[10px]">
+            <span className="font-bold text-orange-400 shrink-0">AUTO:</span>
+            <div className="flex items-center gap-1 w-full overflow-x-auto">
+              {AUTO_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleSpinClick(opt.value)}
+                  disabled={spinning && autoCount === 0}
+                  className={`flex-1 py-1 rounded text-[9px] font-black border transition cursor-pointer text-center whitespace-nowrap ${
+                    autoCount === opt.value
+                      ? "bg-orange-500 text-slate-950 border-orange-300 shadow"
+                      : "bg-slate-800 text-slate-300 border-slate-700"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => handleSpinClick(0)}
+            disabled={spinning}
+            className={`w-full py-2.5 rounded-xl font-black text-xs sm:text-sm tracking-wider transition shadow-lg active:scale-95 cursor-pointer uppercase ${
+              spinning
+                ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                : freeSpinsLeft > 0
+                ? "bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 text-slate-950 animate-pulse"
+                : "bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 hover:brightness-110 text-slate-950 shadow-amber-500/20"
+            }`}
+          >
+            {spinning ? (autoCount > 0 ? `ĐANG AUTO LỌ (${autoCount})...` : "ĐANG LỌ...") : freeSpinsLeft > 0 ? `🌟 LỌ MIỄN PHÍ CÒN (${freeSpinsLeft})` : "🔥 LỌ NGAY"}
+          </button>
+        </div>
+      </footer>
+
+      {/* ⚔️ POPUP KHO KỸ NĂNG (SKILL INVENTORY MODAL) */}
+      {showSkillModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-emerald-500/70 rounded-2xl max-w-md w-full p-4 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative space-y-3">
+            
+            <div className="flex justify-between items-center border-b border-emerald-500/40 pb-2">
+              <h3 className="text-xs sm:text-sm font-black text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+                ⚔️ KHO KỸ NĂNG THẦN ĐIỆN VŨ TRỤ
+              </h3>
+              <button 
+                onClick={() => setShowSkillModal(false)}
+                className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center cursor-pointer shadow"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-[10px] text-slate-300 italic">
+              Bấm vào nút <b className="text-emerald-400">"Sử Dụng"</b> bên dưới để kích hoạt trực tiếp kỹ năng từ kho đồ của bạn (đồng bộ Supabase):
+            </p>
+
+            <div className="space-y-2">
+              {JACKPOT_SKILL_ITEMS.map((skill) => {
+                const count = inventory[skill.id] || 0;
+                return (
+                  <div key={skill.id} className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2 shadow">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl">{skill.icon}</span>
+                      <div>
+                        <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                          <span>{skill.name}</span>
+                          <span className="bg-emerald-950 text-emerald-300 border border-emerald-500/50 px-1.5 py-0.2 rounded text-[9px] font-black">
+                            {count} Lượt
+                          </span>
+                        </div>
+                        <div className="text-[9px] text-slate-400">{skill.desc}</div>
+                      </div>
+                    </div>
+
                     <button
-                      type="button"
-                      key={idx}
-                      onClick={() => setAvatarUrl(av.url)}
-                      className={`w-9 h-9 rounded-lg overflow-hidden border-2 cursor-pointer transition shrink-0 ${
-                        avatarUrl === av.url ? "border-amber-400 scale-105 shadow" : "border-slate-700 opacity-60 hover:opacity-100"
+                      onClick={() => handleActivateSkill(skill.id, skill.name)}
+                      disabled={count <= 0}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition shadow shrink-0 cursor-pointer ${
+                        count > 0 
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 hover:brightness-110 active:scale-95" 
+                          : "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
                       }`}
                     >
-                      <img src={av.url} alt={av.name} className="w-full h-full object-cover" />
+                      {count > 0 ? "Dùng ⚡" : "Hết Lượt"}
                     </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 text-center border-t border-slate-800">
+              <Link 
+                href="/shopskill" 
+                className="text-[11px] text-amber-400 hover:text-amber-300 font-bold underline transition"
+              >
+                🔮 Ghé thăm Thần Điện Kỹ Năng để lĩnh ngộ thêm ➔
+              </Link>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 📜 POPUP MODAL LUẬT CHƠI */}
+      {showRulesModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-amber-500/70 rounded-2xl max-w-lg w-full p-4 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative space-y-3">
+            
+            <div className="flex justify-between items-center border-b border-amber-500/40 pb-2">
+              <h3 className="text-xs sm:text-sm font-black text-yellow-300 uppercase tracking-wide flex items-center gap-1.5">
+                📜 MẬT SÁCH LUẬT CHƠI JACKPOT RỒNG THẦN
+              </h3>
+              <button 
+                onClick={() => setShowRulesModal(false)}
+                className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center cursor-pointer shadow"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-[11px] text-slate-300 leading-relaxed font-sans">
+              
+              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                <h4 className="text-amber-400 font-bold flex items-center gap-1">
+                  🐉 "Beerus đại nhân: 'Vận Ki lọ hũ, liên hoàn 3 cột trở lên sẽ kích hoạt nổ thưởng!'"
+                </h4>
+                <p className="text-slate-400 leading-normal text-[10.5px]">
+                  • Các biểu tượng nối nhau liên tiếp từ **cột 1 sang phải (ít nhất 3 cột)** sẽ tự động bùng nổ điểm Ki.<br/>
+                  • Thu thập đủ **6 biểu tượng Rồng Thần** xuất hiện trên 6 cột sẽ được ban cho **10 Lượt Lọ Miễn Phí**!
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-r from-red-950/80 via-amber-950/90 to-red-950/80 p-3 rounded-xl border-2 border-amber-400/80 space-y-1.5 shadow-lg">
+                <h4 className="text-yellow-300 font-black text-xs uppercase tracking-wider flex items-center gap-1">
+                  👑 QUY TẮC GIẬT HŨ BÁ CHỦ VŨ TRỤ (NỔ HŨ)
+                </h4>
+                <div className="space-y-1 text-[10.5px] text-amber-100">
+                  <div className="flex justify-between border-b border-amber-500/30 pb-0.5">
+                    <span className="font-bold text-amber-300">🔥 NGỌC RỒNG TRÁI ĐẤT:</span>
+                    <span className="text-white font-semibold">Cược từ 20 đến 200 PTS</span>
+                  </div>
+                  <div className="flex justify-between border-b border-amber-500/30 pb-0.5">
+                    <span className="font-bold text-purple-300">💎 NGỌC RỒNG NAMEK:</span>
+                    <span className="text-white font-semibold">Cược từ 500 đến 5.000 PTS</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-yellow-300 animate-pulse">👑 NGỌC RỒNG SIÊU CẤP:</span>
+                    <span className="text-yellow-400 font-bold">Mọi mức cược đều có cơ hội Nổ Hũ!</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-amber-400 font-bold text-xs">
+                  📊 ĐIỂM NĂNG LƯỢNG GỐC (BASE POINTS) CỦA BIỂU TƯỢNG:
+                </h4>
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-950/90 p-2 rounded-xl border border-slate-800 max-h-48 overflow-y-auto">
+                  {DRAGON_SYMBOLS.map((sym) => (
+                    <div key={sym.id} className="flex items-center justify-between bg-slate-900/80 px-2 py-1 rounded border border-slate-800 text-[10px]">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <img src={sym.icon} alt={sym.name} className="w-4 h-4 object-contain shrink-0" />
+                        <span className="font-medium text-slate-200 truncate">{sym.name}</span>
+                      </div>
+                      <span className="font-mono font-black text-amber-400 shrink-0">+{sym.basePoints} PTS</span>
+                    </div>
                   ))}
                 </div>
               </div>
 
+            </div>
+
+            <div className="pt-1 text-center">
               <button
-                type="submit"
-                disabled={updatingProfile}
-                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs py-2.5 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow disabled:opacity-50"
+                onClick={() => setShowRulesModal(false)}
+                className="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-xs py-2 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg shadow-amber-500/30 transition"
               >
-                {updatingProfile ? "Đang lưu..." : "LƯU THAY ĐỔI 💾"}
+                ĐÃ RÕ MẬT SÁCH, VẬN KI LỌ NGAY! 🚀
               </button>
-            </form>
+            </div>
+
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -19,6 +19,15 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 
 const BET_OPTIONS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
 
+// KỸ NĂNG TIẾN LÊN (13 ẤN KÝ)
+const TIENLEN_SKILL_ITEMS = [
+  { id: "tl_1", name: "🌀 Biến Hóa Bài", desc: "Đổi 1 lá bài rác thành lá bài ngẫu nhiên không trùng với bài đối thủ đang giữ.", price: 25000, icon: "🌀", addCount: 1 },
+  { id: "tl_2", name: "👁️ Thấu Thị Thiên Hãn", desc: "Xem chính xác số lượng bài còn lại của các đối thủ trên lôi đài.", price: 20000, icon: "👁️", addCount: 1 },
+  { id: "tl_3", name: "⚡ Chặt Chém Thần Tốc", desc: "Dùng đôi thông hoặc tứ quý nhỏ chặt Heo (2) không cần vòng.", price: 40000, icon: "⚡", addCount: 1 },
+  { id: "tl_4", name: "🛡️ Giáp Sắt Saiyan", desc: "Giảm 50% điểm phạt khi có người chơi khác đánh Thắng Trắng (+5 lượt/mua).", price: 15000, icon: "🛡️", addCount: 5 },
+  { id: "tl_5", name: "👑 Uy Lực Bá Chủ", desc: "Giành quyền đánh trước ở ván đấu tiếp theo không cần dựa vào 3 bích.", price: 30000, icon: "👑", addCount: 1 },
+];
+
 const ANIME_QUOTES = {
   START: ["Khí áp này... Trận chiến bắt đầu!", "Thế giới này sẽ biết đến nỗi đau!", "Lĩnh Vực Mở Rộng... Khai cuộc!"],
   PASS: ["Bản Vương nhường ngươi bước này!", "Sức mạnh đó... Ta tạm né tránh!", "Không tồi, ta bỏ lượt!"],
@@ -54,6 +63,8 @@ interface PlayerState {
   hasPassed: boolean;
   balance: number;
   quote?: string;
+  inventory?: { [key: string]: number };
+  usedSkillThisMatch?: boolean;
 }
 
 interface RoomState {
@@ -64,6 +75,7 @@ interface RoomState {
   players: PlayerState[];
   tableCards: Card[];
   currentTurnId: string | null;
+  turnDeadline?: number;
   lastWinnerId: string | null;
   winnerName?: string | null;
   chopMessage?: string | null;
@@ -166,6 +178,7 @@ export default function TienLenOnlineVip() {
   const [myAvatar, setMyAvatar] = useState<string>(DEFAULT_AVATARS[0]);
   const [myRealBalance, setMyRealBalance] = useState<number>(5000);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [turnTimeLeft, setTurnTimeLeft] = useState<number>(15);
 
   const [currentPhase, setCurrentPhase] = useState<"HOME" | "LOBBY" | "ROOM">("HOME");
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -173,6 +186,9 @@ export default function TienLenOnlineVip() {
   const [isJoining, setIsJoining] = useState<boolean>(false);
   
   const [showRuleModal, setShowRuleModal] = useState<boolean>(false);
+  const [showSkillModal, setShowSkillModal] = useState<boolean>(false);
+  const [inventory, setInventory] = useState<{ [key: string]: number }>({});
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -184,13 +200,14 @@ export default function TienLenOnlineVip() {
       let name = "";
       let avatar = "";
       let balance = 5000;
+      let userInv = {};
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         uid = session.user.id;
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, balance")
+          .select("full_name, avatar_url, balance, inventory")
           .eq("id", uid)
           .single();
 
@@ -198,6 +215,7 @@ export default function TienLenOnlineVip() {
           name = profile.full_name || session.user.user_metadata?.username || "";
           avatar = profile.avatar_url || "";
           balance = profile.balance ?? 5000;
+          userInv = profile.inventory ?? {};
         }
       }
 
@@ -221,6 +239,7 @@ export default function TienLenOnlineVip() {
       setMyName(name);
       setMyAvatar(avatar);
       setMyRealBalance(balance);
+      setInventory(userInv);
     };
 
     fetchUserProfile();
@@ -232,6 +251,110 @@ export default function TienLenOnlineVip() {
     stateRef.current.myId = myUserId;
     stateRef.current.roomId = roomId;
   }, [roomData, myUserId, roomId]);
+
+  const updateSupabaseInventoryAndBalance = async (newBal: number, newInv: any) => {
+    setMyRealBalance(newBal);
+    setInventory(newInv);
+    if (myUserId) {
+      await supabase.from("profiles").update({ balance: newBal, inventory: newInv }).eq("id", myUserId);
+    }
+  };
+
+  const handleBuySkillDirectly = async (skill: any) => {
+    if (!myUserId) { alert("Vui lòng đăng nhập để mua kỹ năng!"); return; }
+    if (myRealBalance < skill.price) { alert("⚡ Điểm Ki không đủ để mua kỹ năng này!"); return; }
+
+    if (confirm(`Xác nhận dùng ${skill.price.toLocaleString()} Ki để mua thêm +${skill.addCount} lượt [${skill.name}]?`)) {
+      const newBal = myRealBalance - skill.price;
+      const currentCount = inventory[skill.id] || 0;
+      const newInv = { ...inventory, [skill.id]: currentCount + skill.addCount };
+      
+      await updateSupabaseInventoryAndBalance(newBal, newInv);
+      alert(`🎉 Mua thành công +${skill.addCount} lượt [${skill.name}]!`);
+    }
+  };
+
+  const handleActivateSkill = async (skillId: string, skillName: string) => {
+    if (!roomData || roomData.status !== "PLAYING") {
+      alert("⚠️ Chỉ có thể sử dụng kỹ năng khi đang trong trận đấu!");
+      return;
+    }
+
+    if (roomData.currentTurnId !== myUserId) {
+      alert("⏳ Chưa tới lượt của bạn! Kỹ năng bắt buộc phải dùng trong lượt đi của mình.");
+      return;
+    }
+
+    const me = roomData.players.find(p => p.id === myUserId);
+    if (me?.usedSkillThisMatch) {
+      alert("⚠️ Bạn đã sử dụng kỹ năng trong trận chiến này rồi! Mỗi trận chỉ được dùng 1 lần duy nhất.");
+      return;
+    }
+
+    const currentCount = inventory[skillId] || 0;
+    if (currentCount > 0) {
+      if (skillId === 'tl_4') {
+        alert(`🛡️ [${skillName}] là khiên tự động bảo vệ khi có người thắng trắng.`);
+        setShowSkillModal(false);
+        return;
+      }
+
+      const newInv = { ...inventory, [skillId]: currentCount - 1 };
+      await updateSupabaseInventoryAndBalance(myRealBalance, newInv);
+
+      const newPlayers = [...roomData.players];
+      const myIdx = newPlayers.findIndex(p => p.id === myUserId);
+      if (myIdx !== -1) {
+        newPlayers[myIdx].usedSkillThisMatch = true;
+      }
+
+      let skillNotification = `✨ ${myName} đã thi triển kỹ năng [${skillName}]!`;
+
+      if (skillId === 'tl_1') {
+        if (me && me.hand.length > 0) {
+          let allDeck: Card[] = [];
+          for (let r = 0; r < RANKS.length; r++) {
+            for (let s = 0; s < SUITS.length; s++) {
+              allDeck.push({ id: `${RANKS[r]}_${SUITS[s]}`, rank: RANKS[r], suit: SUITS[s], rankValue: r + 3, suitValue: s });
+            }
+          }
+
+          const otherPlayerCardIds = new Set<string>();
+          newPlayers.forEach(p => {
+            if (!p.isSpectator && p.id !== myUserId) {
+              p.hand.forEach(c => otherPlayerCardIds.add(c.id));
+            }
+          });
+
+          const myHandIds = new Set(newPlayers[myIdx].hand.map(c => c.id));
+          const availablePool = allDeck.filter(c => !myHandIds.has(c.id) && !otherPlayerCardIds.has(c.id));
+
+          if (availablePool.length > 0) {
+            const randomCard = availablePool[Math.floor(Math.random() * availablePool.length)];
+            newPlayers[myIdx].hand[0] = { ...randomCard, selected: false };
+            newPlayers[myIdx].hand.sort((a, b) => compareCards(a, b));
+            skillNotification = `🌀 ${myName} dùng Biến Hóa Bài thành công!`;
+          }
+        }
+      } else if (skillId === 'tl_2') {
+        const opponents = roomData.players.filter(p => p.id !== myUserId && !p.isSpectator);
+        if (opponents.length > 0) {
+          const infoList = opponents.map(op => `• ${op.name}: còn ${op.hand.length} lá`).join(" | ");
+          skillNotification = `👁️ ${myName} thấu thị: ${infoList}`;
+        }
+      } else if (skillId === 'tl_3') {
+        skillNotification = `⚡ ${myName} kích hoạt Chặt Chém Thần Tốc! Chuẩn bị chặt Heo!`;
+      } else if (skillId === 'tl_5') {
+        skillNotification = `👑 ${myName} phát động Uy Lực Bá Chủ! Khí thế ngút trời!`;
+      }
+
+      setShowSkillModal(false);
+      await updateRoomState({ players: newPlayers, chopMessage: skillNotification });
+
+    } else {
+      alert(`⚠️ Bạn đã hết lượt kỹ năng [${skillName}]! Hãy bấm nút mua thêm.`);
+    }
+  };
 
   useEffect(() => {
     if (currentPhase !== "ROOM" || !roomId) return;
@@ -398,6 +521,73 @@ export default function TienLenOnlineVip() {
   }, [currentPhase, roomId]);
 
   useEffect(() => {
+    if (!roomData || roomData.status !== "PLAYING" || !roomData.currentTurnId) return;
+
+    setTurnTimeLeft(15);
+    const deadline = Date.now() + 15000;
+
+    const timer = setInterval(() => {
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setTurnTimeLeft(left);
+
+      if (left === 0 && roomData.currentTurnId === myUserId) {
+        clearInterval(timer);
+        handlePassTurnAuto();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [roomData?.currentTurnId, roomData?.status]);
+
+  const handlePassTurnAuto = async () => {
+    if (!roomData || roomData.currentTurnId !== myUserId) return;
+    if (roomData.tableCards.length === 0) {
+      const me = roomData.players.find(p => p.id === myUserId);
+      if (me && me.hand.length > 0) {
+        const newPlayers = [...roomData.players];
+        const myIdx = newPlayers.findIndex(p => p.id === myUserId);
+        const cardToPlay = [newPlayers[myIdx].hand[0]];
+        newPlayers[myIdx].hand.shift();
+        const nextId = getNextTurnPlayerId(newPlayers, myUserId);
+        await updateRoomState({
+          tableCards: cardToPlay,
+          players: newPlayers,
+          currentTurnId: nextId,
+          chopMessage: "⏰ Hết 15s suy nghĩ! Tự động xuất ấn ký nhỏ nhất."
+        });
+      }
+      return;
+    }
+
+    const activePlayers = roomData.players.filter(p => !p.isSpectator);
+    const newPlayers = [...roomData.players];
+    const myIdx = newPlayers.findIndex(p => p.id === myUserId);
+    newPlayers[myIdx].hasPassed = true;
+    newPlayers[myIdx].quote = "Hết giờ! Ta nhường bước!";
+
+    const passedPlayers = newPlayers.filter(p => !p.isSpectator && p.hasPassed);
+    if (passedPlayers.length >= activePlayers.length - 1) {
+      const nextLeaderId = getNextTurnPlayerId(newPlayers, myUserId);
+      const resetPlayers = newPlayers.map(p => ({ ...p, hasPassed: p.isSpectator ? true : false }));
+      await updateRoomState({
+        passCount: 0,
+        tableCards: [],
+        players: resetPlayers,
+        currentTurnId: nextLeaderId || myUserId,
+        chopMessage: "⏰ Quá 15s! Tự động né tránh (bỏ lượt)."
+      });
+    } else {
+      const nextId = getNextTurnPlayerId(newPlayers, myUserId);
+      await updateRoomState({
+        players: newPlayers,
+        passCount: roomData.passCount + 1,
+        currentTurnId: nextId,
+        chopMessage: "⏰ Quá 15s! Tự động né tránh (bỏ lượt)."
+      });
+    }
+  };
+
+  useEffect(() => {
     if (!roomData || roomData.status !== "COUNTDOWN" || roomData.players[0]?.id !== myUserId) return;
     
     if (roomData.countdown > 0) {
@@ -427,7 +617,7 @@ export default function TienLenOnlineVip() {
           tableCards: [],
           chopMessage: null,
           snatchActive: false,
-          players: roomData.players.map(p => ({ ...p, isReady: false, isSpectator: false, hand: [] })) 
+          players: roomData.players.map(p => ({ ...p, isReady: false, isSpectator: false, hand: [], usedSkillThisMatch: false })) 
         });
       }, 4000);
     }, 10000);
@@ -461,7 +651,9 @@ export default function TienLenOnlineVip() {
         hand: [],
         hasPassed: false,
         balance: myRealBalance,
-        quote: "Khí áp thật kinh người..."
+        quote: "Khí áp thật kinh người...",
+        inventory: inventory,
+        usedSkillThisMatch: false
       };
 
       const updatedPlayers = [...filteredPlayers, newPlayer];
@@ -502,7 +694,7 @@ export default function TienLenOnlineVip() {
 
   const handleToggleReady = async () => {
     if (!roomData) return;
-    const newPlayers = roomData.players.map(p => p.id === myUserId ? { ...p, isReady: !p.isReady } : p);
+    const newPlayers = roomData.players.map(p => p.id === myUserId ? { ...p, isReady: !p.isReady, inventory: inventory } : p);
     
     let newStatus = roomData.status;
     let newCountdown = roomData.countdown;
@@ -547,7 +739,8 @@ export default function TienLenOnlineVip() {
           isSpectator: false,
           hand: hand,
           hasPassed: false,
-          quote: ANIME_QUOTES.START[Math.floor(Math.random() * ANIME_QUOTES.START.length)]
+          quote: ANIME_QUOTES.START[Math.floor(Math.random() * ANIME_QUOTES.START.length)],
+          usedSkillThisMatch: false
         };
       } else {
         return {
@@ -555,7 +748,8 @@ export default function TienLenOnlineVip() {
           isSpectator: true,
           hand: [],
           hasPassed: true,
-          quote: "Ta tọa sơn quan hổ đấu!"
+          quote: "Ta tọa sơn quan hổ đấu!",
+          usedSkillThisMatch: false
         };
       }
     });
@@ -654,7 +848,14 @@ export default function TienLenOnlineVip() {
       newPlayers.forEach(p => {
         if (!p.isSpectator && p.id !== myUserId) {
           const cardCount = p.hand.length;
-          const losePenalty = cardCount * roomData.betAmount;
+          let losePenalty = cardCount * roomData.betAmount;
+
+          if (p.inventory && p.inventory['tl_4'] && p.inventory['tl_4'] > 0) {
+            p.inventory['tl_4'] -= 1;
+            losePenalty = Math.floor(losePenalty * 0.5);
+            chopText = `🛡️ Giáp Sắt Saiyan kích hoạt! Giảm 50% tiền phạt cho ${p.name}!`;
+          }
+
           p.balance -= losePenalty;
           newPlayers[myIdx].balance += losePenalty;
         }
@@ -682,7 +883,7 @@ export default function TienLenOnlineVip() {
             tableCards: [],
             chopMessage: null,
             snatchActive: false,
-            players: newPlayers.map(p => ({ ...p, isReady: false, isSpectator: false, hand: [] })) 
+            players: newPlayers.map(p => ({ ...p, isReady: false, isSpectator: false, hand: [], usedSkillThisMatch: false })) 
           });
         }, 6000);
       }
@@ -747,7 +948,7 @@ export default function TienLenOnlineVip() {
         tableCards: [],
         chopMessage: null,
         snatchActive: false,
-        players: newPlayers.map(p => ({ ...p, isReady: false, isSpectator: false, hand: [] })) 
+        players: newPlayers.map(p => ({ ...p, isReady: false, isSpectator: false, hand: [], usedSkillThisMatch: false })) 
       });
     }, 6000);
   };
@@ -797,7 +998,6 @@ export default function TienLenOnlineVip() {
     }
   };
 
-  // CANVAS RENDER: CHỐNG TRẢ NGƯỢC LÁ BÀI & CỐ ĐỊNH CHUẨN XÁC TỌA ĐỘ TOUCH TRÊN MOBILE
   useEffect(() => {
     if (currentPhase !== "ROOM") return;
 
@@ -916,7 +1116,6 @@ export default function TienLenOnlineVip() {
     };
     animationFrameId = requestAnimationFrame(render);
 
-    // XỬ LÝ CHỌN BÀI CHỈ BẰNG MỘT SỰ KIỆN DUY NHẤT (POINTERDOWN) ĐỂ TRÁNH LẶP VÀ TỰ TRẢ NGƯỢC
     const handleCardSelection = (e: PointerEvent) => {
       const { width: w, height: h, data, myId } = stateRef.current;
       if (!data || data.status !== "PLAYING") return;
@@ -933,7 +1132,6 @@ export default function TienLenOnlineVip() {
       const handY = h - cardH - 65;
       const hitBufferY = 35;
 
-      // Duyệt ngược từ phải qua trái để bắt đúng lá bài phía trên cùng
       for (let i = me.hand.length - 1; i >= 0; i--) {
         const card = me.hand[i];
         const cardX = handStartX + i * overlap;
@@ -952,7 +1150,6 @@ export default function TienLenOnlineVip() {
     };
     
     const canvasElement = canvasRef.current;
-    // Dùng pointerdown để gom chung chuột và cảm ứng trên iOS mượt mà, chống lặp sự kiện
     canvasElement?.addEventListener("pointerdown", handleCardSelection);
 
     return () => { 
@@ -986,7 +1183,6 @@ export default function TienLenOnlineVip() {
       return (
         <div key={slotIdx} className={`absolute flex ${posStyle} pointer-events-none transition-all duration-300 items-center`}>
           
-          {/* NÚT NÉ TRÁNH (BÊN TRÁI AVATAR CỦA TÔI) */}
           {isMe && (
             <div className="pointer-events-auto mr-2">
               <button 
@@ -1019,9 +1215,15 @@ export default function TienLenOnlineVip() {
               <div className="text-white font-black text-[8px] truncate max-w-[70px]">{player.name}</div>
               <div className="text-yellow-400 font-bold text-[7px]">⚡ {(player.balance || 100000).toLocaleString()}</div>
               
+              {roomData.status === "PLAYING" && isCurrentTurn && (
+                <div className="mt-0.5 bg-red-600 text-white font-black text-[7px] px-1.5 py-0.2 rounded-full animate-pulse">
+                  ⏳ {turnTimeLeft}s
+                </div>
+              )}
+
               {roomData.status === "PLAYING" ? (
                 <div className={`mt-0.5 text-[6px] font-black px-1 py-0.1 rounded-full ${player.isSpectator ? 'bg-slate-800 text-slate-400' : (player.hasPassed ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40')}`}>
-                  {player.isSpectator ? '👀' : (player.hasPassed ? '🛑 BỎ' : `🃏 ${player.hand.length}`)}
+                  {player.isSpectator ? '👀' : (player.hasPassed ? '🛑 BỎ' : `Chiến đấu`)}
                 </div>
               ) : (
                 <div className={`mt-0.5 text-[6px] font-bold px-1 py-0.1 rounded-full ${player.isReady ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
@@ -1035,7 +1237,6 @@ export default function TienLenOnlineVip() {
             </div>
           )}
 
-          {/* NÚT XUẤT CHIÊU (BÊN PHẢI AVATAR CỦA TÔI) */}
           {isMe && (
             <div className="pointer-events-auto ml-2">
               <button 
@@ -1143,6 +1344,12 @@ export default function TienLenOnlineVip() {
 
         <div className="flex gap-1.5 items-center">
           <button 
+            onClick={() => setShowSkillModal(true)} 
+            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black py-1.5 px-2.5 rounded-lg shadow text-[9px] cursor-pointer border border-cyan-300/40"
+          >
+            ⚡ KHO SKILL
+          </button>
+          <button 
             onClick={() => setShowRuleModal(true)} 
             className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-1.5 px-2.5 rounded-lg shadow text-[9px] cursor-pointer"
           >
@@ -1163,6 +1370,58 @@ export default function TienLenOnlineVip() {
         </div>
       </div>
 
+      {/* POPUP KHO KỸ NĂNG TIẾN LÊN */}
+      {showSkillModal && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-3 pointer-events-auto animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-cyan-500/70 rounded-3xl max-w-xl w-full p-5 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative space-y-4 font-sans text-white">
+            
+            <div className="flex justify-between items-center border-b border-cyan-500/40 pb-3">
+              <h3 className="text-sm md:text-base font-black text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                ⚔️ KHO KỸ NĂNG TIẾN LÊN THẦN THÁNH
+              </h3>
+              <button onClick={() => setShowSkillModal(false)} className="bg-rose-600 hover:bg-rose-500 text-white w-8 h-8 rounded-full font-bold text-sm flex items-center justify-center cursor-pointer shadow">✕</button>
+            </div>
+
+            <p className="text-[11px] text-slate-300 italic">
+              Bấm <b className="text-cyan-400">"Dùng"</b> trong lượt đi của mình để kích hoạt tuyệt kỹ. <span className="text-amber-400">(Mỗi trận chỉ được dùng 1 lần).</span>
+            </p>
+
+            <div className="space-y-3">
+              {TIENLEN_SKILL_ITEMS.map((skill) => {
+                const count = inventory[skill.id] || 0;
+                return (
+                  <div key={skill.id} className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-3xl shrink-0">{skill.icon}</span>
+                      <div className="min-w-0 space-y-1">
+                        <div className="text-sm font-bold text-amber-300 flex items-center gap-2 truncate">
+                          <span className="truncate">{skill.name}</span>
+                          <span className="bg-cyan-950 text-cyan-300 border border-cyan-500/50 px-2 py-0.5 rounded-full text-[10px] font-black shrink-0">{count} Lượt</span>
+                        </div>
+                        <div className="text-[11px] text-slate-300 leading-snug">{skill.desc}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-900">
+                      {count > 0 ? (
+                        <button onClick={() => handleActivateSkill(skill.id, skill.name)} className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:brightness-110 px-5 py-2 rounded-xl text-[11px] font-black tracking-wider uppercase transition shadow cursor-pointer w-full sm:w-auto">
+                          Dùng ⚡
+                        </button>
+                      ) : (
+                        <button onClick={() => handleBuySkillDirectly(skill)} className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 hover:brightness-110 px-4 py-2 rounded-xl text-[11px] font-black tracking-wider uppercase transition shadow cursor-pointer whitespace-nowrap w-full sm:w-auto">
+                          Mua ({skill.price.toLocaleString()} Ki) 🛒
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* POPUP LUẬT LỆ ĐẦY ĐỦ CHI TIẾT */}
       {showRuleModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 pointer-events-auto">
@@ -1180,8 +1439,8 @@ export default function TienLenOnlineVip() {
               </div>
 
               <div className="bg-slate-800/80 p-2.5 rounded-xl border border-yellow-500/30">
-                <div className="font-black text-yellow-400 mb-0.5">2. Thứ Tự Xuất Chiêu</div>
-                <p>Ván đầu tiên ai nắm giữ 3 Bích (♠ 3) được quyền đánh trước. Các ván sau người thống trị (thắng ván trước) đi đầu.</p>
+                <div className="font-black text-yellow-400 mb-0.5">2. Thứ Tự Xuất Chiêu (15s suy nghĩ)</div>
+                <p>Mỗi lượt đi có 15 giây. Quá thời gian tự động mất lượt. Ván đầu tiên ai nắm giữ 3 Bích (♠ 3) được đánh trước.</p>
               </div>
 
               <div className="bg-slate-800/80 p-2.5 rounded-xl border border-yellow-500/30">
@@ -1195,8 +1454,8 @@ export default function TienLenOnlineVip() {
               </div>
 
               <div className="bg-slate-800/80 p-2.5 rounded-xl border border-yellow-500/30">
-                <div className="font-black text-yellow-400 mb-0.5">5. Truy Sát Heo (Cuối trận)</div>
-                <p>Nếu còn 2 người và đối thủ ôm Heo thua trận, kích hoạt 10s Truy Sát để người thắng đoán chất Heo phạt nặng.</p>
+                <div className="font-black text-yellow-400 mb-0.5">5. Kỹ Năng Vũ Trụ</div>
+                <p>Mỗi người chơi chỉ được sử dụng 1 kỹ năng duy nhất trong 1 trận đấu để giữ sự cân bằng lôi đài.</p>
               </div>
             </div>
 

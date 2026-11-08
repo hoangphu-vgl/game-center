@@ -7,13 +7,13 @@ import { supabase } from "@/lib/supabase";
 // BẢNG PHẦN THƯỞNG MỚI THEO Ý NÍ (CÓ JACKPOT 1.000.000 KI)
 const WHEEL_REWARDS = [
   { label: "+5.000 Ki", type: "pts", val: 5000, weight: 30 },
-  { label: "+100.000 Ki", type: "pts", val: 100000, weight: 15 },
-  { label: "+200.000 Ki", type: "pts", val: 200000, weight: 10 },
+  { label: "+100.000 Ki", type: "pts", val: 100000, weight: 10 },
+  { label: "+200.000 Ki", type: "pts", val: 200000, weight: 5 },
   { label: "+1 Lượt Quay", type: "spins", val: 1, weight: 10 },
-  { label: "+2 Lượt Quay", type: "spins", val: 2, weight: 10 },
-  { label: "Mất Ki! (0 PTS)", type: "pts", val: 0, weight: 20 },
+  { label: "+2 Lượt Quay", type: "spins", val: 2, weight: 5 },
+  { label: "Mất Ki! (0 PTS)", type: "pts", val: 0, weight: 30 },
   { label: "1 chai nước", type: "spins", val: 1, weight: 1 },
-  { label: "JACKPOT 1000K Ki!", type: "pts", val: 1000000, weight: 1 },
+  { label: "JACKPOT 1000K Ki!", type: "pts", val: 1000000, weight: 2 },
 ];
 
 interface LocalHistory {

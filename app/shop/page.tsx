@@ -12,11 +12,11 @@ const SHOP_SPIN_PACKS = [
   { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 2500000, spins: 30, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
 ];
 
-// SIÊU GÓI 1 CỦ (FLEX TƯỢNG TRƯNG - CHỈ GHI LỊCH SỬ, KHÔNG CỘNG LƯỢT, KHÔNG TRỪ KI)
+// SIÊU GÓI 5 CỦ (FLEX TƯỢNG TRƯNG - CHỈ GHI LỊCH SỬ, KHÔNG CỘNG LƯỢT, KHÔNG TRỪ KI)
 const MEGA_VIP_PACK = {
   id: 99,
-  name: "👑 SIÊU GÓI 3.000.000 KI",
-  costText: "3.000.000 Ki / 5.000 VNĐ",
+  name: "👑 SIÊU GÓI 5.000.000 KI",
+  costText: "5.000.000 Ki / 5.000 VNĐ",
   desc: "Gói flex danh dự vũ trụ!",
   maxGlobalStock: 20, // Kho chung còn lại mỗi tuần
   maxUserLimit: 5,    // Giới hạn cá nhân mỗi user/tuần
@@ -135,7 +135,7 @@ export default function ShopPage() {
       return;
     }
 
-    if (confirm(`Xác nhận Flex Siêu Gói 1 Củ (5.000 VNĐ / 1.000.000 Ki) để lưu danh sử sách vũ trụ?`)) {
+    if (confirm(`Xác nhận Flex Siêu Gói 1 Củ (5.000 VNĐ / 5.000.000 Ki) để lưu danh sử sách vũ trụ?`)) {
       const newGlobal = globalStock - 1;
       const newUserCount = userBuyCount + 1;
       setGlobalStock(newGlobal);
@@ -145,7 +145,7 @@ export default function ShopPage() {
 
       const newItem: LocalHistory = {
         id: Date.now(),
-        text: `👑 Đã flex thành công [SIÊU GÓI 1 CỦ] - Đẳng cấp đại gia vô đối!`,
+        text: `👑 Đã flex thành công [SIÊU GÓI 5 CỦ] - Đẳng cấp đại gia vô đối!`,
         time: new Date().toLocaleTimeString(),
       };
 
@@ -153,7 +153,7 @@ export default function ShopPage() {
       setHistory(updatedHistory);
       localStorage.setItem(`shop_history_${user.id}`, JSON.stringify(updatedHistory));
 
-      alert(`👑 FLEX THÀNH CÔNG RỰC RỠ! Tên của bạn đã được khắc ghi vào sử sách với Siêu Gói 1 Củ! Đã flex ${newUserCount}/5 lần tuần này. Zeno-sama phải thán phục! 🔥`);
+      alert(`👑 FLEX THÀNH CÔNG RỰC RỠ! Tên của bạn đã được khắc ghi vào sử sách với Siêu Gói 5 Củ! Đã flex ${newUserCount}/5 lần tuần này. Zeno-sama phải thán phục! 🔥`);
     }
   };
 

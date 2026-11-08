@@ -25,7 +25,7 @@ const AURA_QUOTES = [
   "🌀 'Nỗi sợ hãi khi đối đầu không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku",
   "🥋 'Võ thuật lôi đài không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
   "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là Bá Chủ Đại Hội Võ Thuật!' - Broly",
-  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước lôi đài số phận!' - Vegeta",
+  "⚡ 'Một chiến binh thực sự không bao giờ cúi頭 trước lôi đài số phận!' - Vegeta",
   "🐉 'Bản Năng Vô Thượng... trạng thái khi 13 Ấn Ký tự động phản ứng!' - Whis",
 ];
 
@@ -44,10 +44,12 @@ const getSaiyanLevel = (power: number) => {
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
-  const [points, setPoints] = useState<number>(5000);
+  const [points, setPoints] = useState<number>(0);
   const [luckySpins, setLuckySpins] = useState<number>(3);
   const [lastCheckIn, setLastCheckIn] = useState<string>("");
   const [loading, setLoading] = useState(true);
+
+  const [inventory, setInventory] = useState<{ [key: string]: number }>({});
 
   const [isSignUp, setIsSignUp] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
@@ -72,13 +74,6 @@ export default function Home() {
   });
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
-
-  const getWeekKey = () => {
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const week = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
-    return `${now.getFullYear()}-W${week}`;
-  };
 
   const getTodayCheckInReward = () => {
     const dayOfWeek = new Date().getDay();
@@ -130,10 +125,11 @@ export default function Home() {
     async function loadUserProfile(currentUser: any) {
       if (!currentUser) {
         setUser(null);
-        setPoints(5000);
+        setPoints(0);
         setLuckySpins(3);
         setLastCheckIn("");
         setDragonBallsCount(0);
+        setInventory({});
         setLoading(false);
         return;
       }
@@ -150,56 +146,35 @@ export default function Home() {
         const defaultName = currentUser.user_metadata?.username || currentUser.user_metadata?.full_name || "Chiến Binh Saiyan";
         const defaultAvatar = currentUser.user_metadata?.avatar_url || DEFAULT_AVATARS[0].url;
 
-        const currentWeek = getWeekKey();
-        const lastCheckedWeek = localStorage.getItem(`last_reset_week_${currentUser.id}`);
-
-        let currentBalance = profile?.balance ?? 5000;
-        let currentSpins = profile?.lucky_spins ?? 3;
-        let lastCheck = profile?.last_check_in ?? "";
-
-        if (!lastCheckedWeek) {
-          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
-        } else if (lastCheckedWeek !== currentWeek) {
-          currentBalance = 0;
-          await supabase
-            .from("profiles")
-            .update({ balance: 0 })
-            .eq("id", currentUser.id);
-          
-          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
-        }
-
         if (!profile) {
           const initialData = {
             id: currentUser.id,
             email: currentUser.email || "",
             full_name: defaultName,
             avatar_url: defaultAvatar,
-            balance: 5000,
+            balance: 0,
             lucky_spins: 3,
             last_check_in: "",
+            inventory: {},
           };
           await supabase.from("profiles").insert([initialData]);
-          setPoints(5000);
+          setPoints(0);
           setLuckySpins(3);
           setLastCheckIn("");
+          setInventory({});
           setDisplayName(defaultName);
           setAvatarUrl(defaultAvatar);
-          
-          localStorage.setItem("tlmn_user_name", defaultName);
-          localStorage.setItem("tlmn_user_avatar", defaultAvatar);
         } else {
-          setPoints(currentBalance);
-          setLuckySpins(currentSpins);
-          setLastCheckIn(lastCheck);
+          setPoints(profile.balance ?? 0);
+          setLuckySpins(profile.lucky_spins ?? 3);
+          setLastCheckIn(profile.last_check_in ?? "");
+          setInventory(profile.inventory ?? {});
+          
           const activeName = profile.full_name || defaultName;
           const activeAvatar = profile.avatar_url || defaultAvatar;
           
           setDisplayName(activeName);
           setAvatarUrl(activeAvatar);
-
-          localStorage.setItem("tlmn_user_name", activeName);
-          localStorage.setItem("tlmn_user_avatar", activeAvatar);
         }
 
         const savedBalls = localStorage.getItem(`dragon_balls_${currentUser.id}`);
@@ -352,8 +327,6 @@ export default function Home() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem("tlmn_user_name");
-    localStorage.removeItem("tlmn_user_avatar");
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -377,9 +350,6 @@ export default function Home() {
       await supabase.auth.updateUser({
         data: { full_name: newCleanName, avatar_url: avatarUrl }
       });
-
-      localStorage.setItem("tlmn_user_name", newCleanName);
-      localStorage.setItem("tlmn_user_avatar", avatarUrl);
 
       alert("✨ Cập nhật thông tin chiến binh thành công! Đã đồng bộ vào toàn bộ sòng game.");
       setProfileModalOpen(false);
@@ -534,6 +504,9 @@ export default function Home() {
           </Link>
           <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎟️ Vòng Quay
+          </Link>
+          <Link href="/gacha" className="bg-pink-950 hover:bg-pink-900 text-pink-300 border border-pink-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            🎁 Gacha Thiên Sứ
           </Link>
         </div>
       </div>
@@ -697,6 +670,7 @@ export default function Home() {
           
           <div className="lg:col-span-2 space-y-5">
             
+            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỈ CHỨA CÁC GAME CHÍNH) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -706,7 +680,7 @@ export default function Home() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* 1. JACKPOT RỒNG THẦN (NỔI BẬT TRƯỚC) */}
+                {/* 1. JACKPOT RỒNG THẦN */}
                 <Link
                   href="/jackpot"
                   className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
@@ -723,7 +697,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 2. BACCARAT THẦN THÁNH (ĐẶT NGAY SAU JACKPOT VỚI DRAGON BALL AURA) */}
+                {/* 2. BACCARAT THẦN THÁNH */}
                 <Link
                   href="/baccarat"
                   className="bg-slate-900/90 border-2 border-cyan-400/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-300"
@@ -736,10 +710,24 @@ export default function Home() {
                   </h3>
                   <p className="text-slate-300 text-xs mt-1 italic font-medium">⚡ 'Whis phẩy gậy định đoạt, lật bài baccarat phân định cao thấp, húp trọn Pot!'</p>
                   <div className="mt-3 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO SÀNH BACCARAT 🎲
+                    VÀO SẢNH BACCARAT 🎲
                   </div>
                 </Link>
 
+              </div>
+            </div>
+
+            {/* MỤC MỚI: THẦN ĐIỆN & KHO BẢO (CHỨA SHOP, SHOPSKILL, VÒNG QUAY, GACHA) */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
+                <h2 className="text-base sm:text-lg font-black text-purple-400 tracking-wider uppercase flex items-center gap-2">
+                  🔮 Thần Điện & Kho Báu Võ Đạo
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* 1. VÒNG QUAY CAPSULE */}
                 <Link
                   href="/wheel"
                   className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
@@ -756,9 +744,44 @@ export default function Home() {
                   </div>
                 </Link>
 
+                {/* 2. THẦN ĐIỆN KỸ NĂNG (SHOP SKILL) */}
+                <Link
+                  href="/shopskill"
+                  className="bg-slate-900/90 border border-emerald-500/50 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/home/dragonball.png" alt="Skill" className="w-20 h-20 object-contain" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-emerald-400 flex items-center gap-2">
+                    <img src="/assets/home/dragonball.png" alt="Skill" className="w-6 h-6 object-contain" /> Thần Điện Kỹ Năng (Shop Skill)
+                  </h3>
+                  <p className="text-slate-300 text-xs mt-1 italic font-medium">🔮 'Lĩnh ngộ kỹ năng tối thượng hỗ trợ chiến đấu trong ván Bài Tiến Lên & Poker!'</p>
+                  <div className="mt-3 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    VÀO THẦN ĐIỆN SKILL ⚔️
+                  </div>
+                </Link>
+
+                {/* 3. GACHA THIÊN SỨ (/app/gacha/page.tsx) */}
+                <Link
+                  href="/gacha"
+                  className="bg-slate-900/90 border border-pink-500/50 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-pink-400"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/gacha/ruongvang.png" alt="Gacha" className="w-20 h-20 object-contain" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-pink-400 flex items-center gap-2">
+                    <span>🎁</span> Vận Mệnh của Thiên Sứ (Gacha)
+                  </h3>
+                  <p className="text-slate-300 text-xs mt-1 italic font-medium">✨ 'Mở Rương Bạc An Toàn hoặc Rương Vàng Anh Dũng nhận kỹ năng độc quyền!'</p>
+                  <div className="mt-3 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    MỞ RƯƠNG GACHA 🌟
+                  </div>
+                </Link>
+
+                {/* 4. SHOP VÕ ĐẠO SAIYAN */}
                 <Link
                   href="/shop"
-                  className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400 sm:col-span-2"
+                  className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"
                 >
                   <div className="absolute right-2 -bottom-2 opacity-15">
                     <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-20 h-20 object-contain" />
@@ -771,6 +794,7 @@ export default function Home() {
                     VÀO SHOP 💎
                   </div>
                 </Link>
+
               </div>
             </div>
 
