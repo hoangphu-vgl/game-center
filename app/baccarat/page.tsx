@@ -43,10 +43,10 @@ const DBZ_AURAS = {
   ]
 };
 
-export default function BaccaratPerfectPage() {
+export default function BaccaratFinalPage() {
   const [mounted, setMounted] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
-  const [userName, setUserName] = useState<string>("Test");
+  const [userName, setUserName] = useState<string>("Chiến Binh");
   const [userAvatar, setUserAvatar] = useState<string>("/assets/avatar/xtra30.ico");
   const [balance, setBalance] = useState<number>(543545);
   const [currentChip, setCurrentChip] = useState<number>(100);
@@ -81,11 +81,9 @@ export default function BaccaratPerfectPage() {
     quote: string;
   } | null>(null);
 
-  // Khởi tạo hũ từ DB trực tiếp tránh bị reset khi F5
   const [jackpots, setJackpots] = useState({ minor: 10000, major: 50000, grand: 200000 });
   const deckRef = useRef<Card[]>([]);
   const balanceRef = useRef<number>(543545);
-
   const handsRef = useRef<{ wHand: Card[]; cHand: Card[] }>({ wHand: [], cHand: [] });
 
   useEffect(() => {
@@ -97,9 +95,8 @@ export default function BaccaratPerfectPage() {
   }, [balance]);
 
   useEffect(() => {
-    async function initGameData() {
+    async function initEverything() {
       try {
-        // 1. Lấy thông tin user & balance
         const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user;
         setUser(currentUser);
@@ -112,10 +109,10 @@ export default function BaccaratPerfectPage() {
             .single();
           
           if (profile) {
-            const realBalance = profile.balance ?? 543545;
-            setBalance(realBalance);
-            balanceRef.current = realBalance;
-            setUserName(profile.full_name || profile.username || "Test");
+            const realBal = profile.balance ?? 543545;
+            setBalance(realBal);
+            balanceRef.current = realBal;
+            setUserName(profile.full_name || profile.username || "Chiến Binh");
             setUserAvatar(profile.avatar_url || profile.avatar || "/assets/avatar/xtra30.ico");
           }
         } else {
@@ -128,12 +125,12 @@ export default function BaccaratPerfectPage() {
             const p = allProfiles[0];
             setBalance(p.balance ?? 543545);
             balanceRef.current = p.balance ?? 543545;
-            setUserName(p.full_name || p.username || "Test");
+            setUserName(p.full_name || p.username || "Chiến Binh");
             setUserAvatar(p.avatar_url || p.avatar || "/assets/avatar/xtra30.ico");
           }
         }
 
-        // 2. Lấy hũ Jackpot chuẩn từ Supabase ngay khi load trang
+        // Lấy hũ Jackpot trực tiếp từ DB
         const { data: jackpotData } = await supabase
           .from("baccarat_jackpot")
           .select("minor, major, grand")
@@ -148,16 +145,15 @@ export default function BaccaratPerfectPage() {
           });
         }
       } catch (e) {
-        console.error("Lỗi khởi tạo dữ liệu:", e);
+        console.error("Lỗi tải thông tin:", e);
       }
     }
 
-    initGameData();
+    initEverything();
     createDeck();
 
-    // 3. Đăng ký Realtime lắng nghe hũ toàn server
     const channel = supabase
-      .channel("baccarat_jackpot_sync_v2")
+      .channel("baccarat_jackpot_sync_v3")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -675,11 +671,11 @@ export default function BaccaratPerfectPage() {
             {champaHand.map((card, idx) => (
               <div 
                 key={idx} 
-                className={`w-12 h-17 md:w-16 md:h-23 bg-white rounded-xl shadow-2xl flex flex-col justify-between p-1 font-bold text-[10px] md:text-xs ${card.color === 'red' ? 'text-rose-600' : 'text-slate-900'}`}
+                className={`w-12 h-17 md:w-16 md:h-23 bg-gradient-to-b from-slate-100 to-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.5)] border border-slate-300 flex flex-col justify-between p-1.5 font-black text-[10px] md:text-xs transform hover:scale-105 transition ${card.color === 'red' ? 'text-rose-600' : 'text-slate-900'}`}
               >
-                <div className="leading-none">{card.rank}<br/>{card.symbol}</div>
-                <div className="text-center text-lg md:text-2xl">{card.symbol}</div>
-                <div className="leading-none text-right rotate-180">{card.rank}<br/>{card.symbol}</div>
+                <div className="leading-none">{card.rank}<span className="text-[9px]">{card.symbol}</span></div>
+                <div className="text-center text-lg md:text-2xl drop-shadow">{card.symbol}</div>
+                <div className="leading-none text-right rotate-180">{card.rank}<span className="text-[9px]">{card.symbol}</span></div>
               </div>
             ))}
           </div>
@@ -836,11 +832,11 @@ export default function BaccaratPerfectPage() {
               {warriorHand.map((card, idx) => (
                 <div 
                   key={idx} 
-                  className={`w-12 h-17 md:w-16 md:h-23 bg-white rounded-xl shadow-2xl flex flex-col justify-between p-1 font-bold text-[10px] md:text-xs ${card.color === 'red' ? 'text-rose-600' : 'text-slate-900'}`}
+                  className={`w-12 h-17 md:w-16 md:h-23 bg-gradient-to-b from-slate-100 to-white rounded-xl shadow-[0_4px_15px_rgba(0,0,0,0.5)] border border-slate-300 flex flex-col justify-between p-1.5 font-black text-[10px] md:text-xs transform hover:scale-105 transition ${card.color === 'red' ? 'text-rose-600' : 'text-slate-900'}`}
                 >
-                  <div className="leading-none">{card.rank}<br/>{card.symbol}</div>
-                  <div className="text-center text-lg md:text-2xl">{card.symbol}</div>
-                  <div className="leading-none text-right rotate-180">{card.rank}<br/>{card.symbol}</div>
+                  <div className="leading-none">{card.rank}<span className="text-[9px]">{card.symbol}</span></div>
+                  <div className="text-center text-lg md:text-2xl drop-shadow">{card.symbol}</div>
+                  <div className="leading-none text-right rotate-180">{card.rank}<span className="text-[9px]">{card.symbol}</span></div>
                 </div>
               ))}
             </div>
@@ -870,14 +866,21 @@ export default function BaccaratPerfectPage() {
 
       </main>
 
-      {/* 🚀 FOOTER: ĐÃ ĐỔI CHỖ NÚT XÓA CƯỢC & NÚT TRIỆU HỒI BÀI HỢP LÝ */}
+      {/* 🚀 FOOTER: BỐ CỤC CHUẨN XÁC [XÓA CƯỢC] - [CHIP] - [TRIỆU HỒI BÀI] */}
       <footer className="w-full max-w-7xl mx-auto bg-slate-900/95 border border-cyan-500/40 rounded-3xl p-2 md:p-2.5 flex flex-col md:flex-row items-center justify-between gap-2 shadow-2xl shrink-0 backdrop-blur-md z-30">
+        
+        {/* NÚT XÓA CƯỢC BÊN TRÁI */}
         <div className="flex items-center gap-2">
-          <button onClick={clearBets} disabled={gameState !== "betting"} className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3.5 py-2 rounded-2xl shadow cursor-pointer disabled:opacity-50 transition active:scale-95">
+          <button 
+            onClick={clearBets} 
+            disabled={gameState !== "betting"} 
+            className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3.5 py-2 rounded-2xl shadow cursor-pointer disabled:opacity-50 transition active:scale-95"
+          >
             🗑 Xóa Cược
           </button>
         </div>
 
+        {/* THANH CHỌN CHIP Ở GIỮA */}
         <div className="flex gap-1.5 items-center overflow-x-auto py-0.5 px-1">
           {CHIP_LIST.map((chip) => {
             const isSelected = currentChip === chip.amount;
@@ -900,6 +903,7 @@ export default function BaccaratPerfectPage() {
           })}
         </div>
 
+        {/* NÚT TRIỆU HỒI BÀI BÊN PHẢI */}
         <div className="flex items-center gap-2">
           <button
             onClick={startGame}
