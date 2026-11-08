@@ -79,12 +79,14 @@ export default function BaccaratPage() {
     netProfit: number;
     winner: string;
     quote: string;
+    jackpotMsg?: string;
   } | null>(null);
 
   const [jackpots, setJackpots] = useState({ minor: 10000, major: 50000, grand: 200000 });
   const jackpotsRef = useRef(jackpots);
   const deckRef = useRef<Card[]>([]);
   const balanceRef = useRef<number>(543545);
+  const currentChipRef = useRef<number>(100);
   const handsRef = useRef<{ wHand: Card[]; cHand: Card[] }>({ wHand: [], cHand: [] });
 
   useEffect(() => {
@@ -94,6 +96,10 @@ export default function BaccaratPage() {
   useEffect(() => {
     balanceRef.current = balance;
   }, [balance]);
+
+  useEffect(() => {
+    currentChipRef.current = currentChip;
+  }, [currentChip]);
 
   useEffect(() => {
     jackpotsRef.current = jackpots;
@@ -135,8 +141,7 @@ export default function BaccaratPage() {
           }
         }
 
-        // Lấy dữ liệu hũ từ bảng baccarat_jackpot
-        const { data: jackpotData, error: jError } = await supabase
+        const { data: jackpotData } = await supabase
           .from("baccarat_jackpot")
           .select("minor, major, grand")
           .eq("id", "global")
@@ -148,8 +153,6 @@ export default function BaccaratPage() {
             major: jackpotData.major ?? 50000,
             grand: jackpotData.grand ?? 200000,
           });
-        } else if (jError) {
-          console.error("Lỗi đọc baccarat_jackpot:", jError.message);
         }
       } catch (e) {
         console.error("Lỗi tải thông tin:", e);
@@ -159,9 +162,8 @@ export default function BaccaratPage() {
     initEverything();
     createDeck();
 
-    // Lắng nghe real-time chính xác từ bảng baccarat_jackpot
     const channel = supabase
-      .channel("baccarat_jackpot_realtime_fixed")
+      .channel("baccarat_jackpot_sync_v4")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -202,48 +204,94 @@ export default function BaccaratPage() {
   const updateBaccaratJackpotInDB = async (newPool: { minor: number; major: number; grand: number }) => {
     setJackpots(newPool);
     try {
-      const { error } = await supabase
+      await supabase
         .from("baccarat_jackpot")
         .update(newPool)
         .eq("id", "global");
-      if (error) console.error("Lỗi update hũ:", error.message);
     } catch (e) {
       console.error(e);
     }
   };
 
-  const contributeToJackpot = async (totalBet: number) => {
-    try {
-      const { data: currentPool } = await supabase
-        .from("baccarat_jackpot")
-        .select("minor, major, grand")
-        .eq("id", "global")
-        .single();
+  /**
+   * 🌟 NUÔI HŨ TỐC ĐỘ CAO: Đóng góp 25% vào hũ Siêu Cấp và 60% vào hũ tương ứng theo mức chip.
+   */
+  const contributeToJackpotOnly = async (totalBet: number) => {
+    const currentPool = jackpotsRef.current;
+    let baseMinor = currentPool.minor;
+    let baseMajor = currentPool.major;
+    let baseGrand = currentPool.grand;
 
-      let baseMinor = currentPool?.minor ?? jackpotsRef.current.minor;
-      let baseMajor = currentPool?.major ?? jackpotsRef.current.major;
-      let baseGrand = currentPool?.grand ?? jackpotsRef.current.grand;
+    let addMinor = 0;
+    let addMajor = 0;
+    let addGrand = Math.floor(totalBet * 0.50);
 
-      let addMinor = 0;
-      let addMajor = 0;
-      let addGrand = Math.floor(totalBet * 0.15);
-
-      if (currentChip <= 5000) {
-        addMinor = Math.floor(totalBet * 0.40);
-      } else {
-        addMajor = Math.floor(totalBet * 0.40);
-      }
-
-      const newPool = {
-        minor: baseMinor + addMinor,
-        major: baseMajor + addMajor,
-        grand: baseGrand + addGrand,
-      };
-
-      await updateBaccaratJackpotInDB(newPool);
-    } catch (e) {
-      console.error(e);
+    const chipTier = currentChipRef.current;
+    if (chipTier <= 5000) {
+      addMinor = Math.floor(totalBet * 0.80);
+    } else {
+      addMajor = Math.floor(totalBet * 0.80);
     }
+
+    await updateBaccaratJackpotInDB({
+      minor: baseMinor + addMinor,
+      major: baseMajor + addMajor,
+      grand: baseGrand + addGrand,
+    });
+  };
+
+  /**
+   * 🌟 CƠ CHẾ NỔ HŨ THEO ĐÚNG MỨC CƯỢC KHI THẮNG:
+   * - Cược 100 - 5.000 Ki: Chỉ có cơ hội nổ Hũ Trái Đất hoặc Hũ Siêu Cấp.
+   * - Cược từ 10.000 Ki trở lên: Chỉ có cơ hội nổ Hũ Namek hoặc Hũ Siêu Cấp.
+   */
+  const checkJackpotWinOnWin = async () => {
+    const currentPool = jackpotsRef.current;
+    const chipTier = currentChipRef.current;
+
+    const grandHit = Math.random() < 0.008; // 0.8% nổ hũ Siêu Cấp (áp dụng mọi mức cược khi thắng)
+    
+    let majorHit = false;
+    let minorHit = false;
+
+    if (chipTier <= 5000) {
+      // Mức cược nhỏ: chỉ được nổ Hũ Trái Đất (Minor)
+      minorHit = !grandHit && Math.random() < 0.02; // 2% khi thắng
+    } else {
+      // Mức cược lớn: chỉ được nổ Hũ Namek (Major)
+      majorHit = !grandHit && Math.random() < 0.02; // 2% khi thắng
+    }
+
+    let jackpotWonAmount = 0;
+    let jackpotName = "";
+
+    let updatedMinor = currentPool.minor;
+    let updatedMajor = currentPool.major;
+    let updatedGrand = currentPool.grand;
+
+    if (grandHit) {
+      jackpotWonAmount = currentPool.grand;
+      jackpotName = "👑 SIÊU CẤP HŨ (GRAND)";
+      updatedGrand = 200000;
+    } else if (majorHit) {
+      jackpotWonAmount = currentPool.major;
+      jackpotName = "💎 HŨ NAMEK (MAJOR)";
+      updatedMajor = 50000;
+    } else if (minorHit) {
+      jackpotWonAmount = currentPool.minor;
+      jackpotName = "🔥 HŨ TRÁI ĐẤT (MINOR)";
+      updatedMinor = 10000;
+    }
+
+    if (jackpotWonAmount > 0) {
+      await updateBaccaratJackpotInDB({
+        minor: updatedMinor,
+        major: updatedMajor,
+        grand: updatedGrand,
+      });
+    }
+
+    return { jackpotWonAmount, jackpotName };
   };
 
   const toggleFullScreen = () => {
@@ -351,7 +399,7 @@ export default function BaccaratPage() {
     if (totalBet === 0) return;
 
     await updateBalanceInDB(balanceRef.current);
-    await contributeToJackpot(totalBet);
+    await contributeToJackpotOnly(totalBet);
 
     if (deckRef.current.length < 20) createDeck();
 
@@ -463,10 +511,12 @@ export default function BaccaratPage() {
     let totalWin = 0;
     let mainWinner = "";
     let quoteList = DBZ_AURAS.tie;
+    let isWarriorWonMain = false;
 
     if (wScore > cScore) {
       mainWinner = "Chiến Binh Thắng";
       quoteList = DBZ_AURAS.warriorWin;
+      isWarriorWonMain = true;
       if (bets.warrior.amount > 0) totalWin += bets.warrior.amount * 2;
     } else if (cScore > wScore) {
       mainWinner = "Thần Hủy Diệt Champa Thắng";
@@ -510,6 +560,18 @@ export default function BaccaratPage() {
       totalWin += bets.finishingMove.amount * 6;
     }
 
+    let jackpotWonAmount = 0;
+    let jackpotName = "";
+    if (isWarriorWonMain || totalWin > 0) {
+      const jpResult = await checkJackpotWinOnWin();
+      jackpotWonAmount = jpResult.jackpotWonAmount;
+      jackpotName = jpResult.jackpotName;
+    }
+
+    if (jackpotWonAmount > 0) {
+      totalWin += jackpotWonAmount;
+    }
+
     const finalBalance = balanceRef.current + totalWin;
     await updateBalanceInDB(finalBalance);
 
@@ -517,13 +579,19 @@ export default function BaccaratPage() {
     const netProfit = totalWin - totalBetAmount;
     const selectedQuote = quoteList[Math.floor(Math.random() * quoteList.length)];
 
-    setStatusMessage(selectedQuote);
+    let jpMsg = "";
+    if (jackpotWonAmount > 0) {
+      jpMsg = `👑 NỔ HŨ THÀNH CÔNG! Trúng ${jackpotName} nhận ngay +${jackpotWonAmount.toLocaleString()} Ki! 🔥`;
+    }
+
+    setStatusMessage(jpMsg ? jpMsg : selectedQuote);
     setResultData({
-      title: mainWinner,
+      title: jackpotWonAmount > 0 ? "🌟 NỔ HŨ RỒNG THẦN CỰC ĐỈNH!" : mainWinner,
       desc: `Chiến Binh (${wScore} Điểm) vs Champa (${cScore} Điểm) [Tổng: ${totalPointsSum}] - ${reason}`,
       netProfit,
       winner: mainWinner,
       quote: selectedQuote,
+      jackpotMsg: jpMsg,
     });
     setGameState("result");
   };
@@ -593,24 +661,24 @@ export default function BaccaratPage() {
         </div>
       </header>
 
-      {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING (ĐỒNG BỘ CHUẨN baccarat_jackpot) */}
+      {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING */}
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 md:gap-4 shrink-0 mt-1">
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-cyan-500/40 shadow">
-          <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất</div>
+          <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất (100-5K)</div>
           <div className="text-xs font-black text-cyan-200 font-mono">
             {mounted ? jackpots.minor.toLocaleString() : "10,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/95 px-4 py-1 rounded-xl border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)] animate-pulse scale-105">
-          <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Siêu Cấp Hũ</div>
+          <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Siêu Cấp Hũ (Mọi Cược)</div>
           <div className="text-sm font-black text-yellow-400 font-mono">
             {mounted ? jackpots.grand.toLocaleString() : "200,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-emerald-500/40 shadow">
-          <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek</div>
+          <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek (&ge;10K)</div>
           <div className="text-xs font-black text-emerald-200 font-mono">
             {mounted ? jackpots.major.toLocaleString() : "50,000"}
           </div>
@@ -624,26 +692,23 @@ export default function BaccaratPage() {
         </p>
       </div>
 
-      {/* 🎴 BÀN CHƠI BACCARAT (CÓ 2 HÌNH RỒNG `shenron.png` & `shenronnamek.png` 2 BÊN GÓC) */}
+      {/* 🎴 BÀN CHƠI BACCARAT */}
       <main className="relative w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between border-4 border-cyan-500/60 rounded-[30px] p-2 md:p-4 my-1 bg-[radial-gradient(circle_at_center,#1e3a8a_0%,#020617_100%)] shadow-[0_0_35px_rgba(6,182,212,0.4)] overflow-hidden">
         
         {/* 🐉 HÌNH RỒNG TRANG TRÍ 2 BÊN GÓC BÀN CHƠI */}
         <div className="absolute left-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenron.png')" }}></div>
         <div className="absolute right-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenronnamek.png')" }}></div>
 
-        {/* MODAL LUẬT CHƠI */}
+        {/* MODAL LUẬT CHƠI & NUÔI HŨ */}
         {showRules && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 animate-fadeIn rounded-[30px]">
             <div className="bg-slate-900 border border-cyan-500/60 p-5 rounded-3xl max-w-lg w-full shadow-2xl relative">
-              <h3 className="text-sm font-black text-cyan-400 mb-2 uppercase text-center">📜 Luật Chiến Đấu Siêu Cấp</h3>
+              <h3 className="text-sm font-black text-cyan-400 mb-2 uppercase text-center">📜 Luật Nuôi Hũ & Nổ Hũ</h3>
               <div className="text-xs text-slate-300 space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
-                <p>🔹 <b>Cơ chế:</b> Trận đấu giữa <b>{userName.toUpperCase()}</b> và <b>THẦN HỦY DIỆT CHAMPA</b>. Bên nào gần 9 điểm nhất thắng.</p>
-                <p>✨ <b>Cửa Cược Phụ Siêu Khủng:</b></p>
-                <p>• <b>Đôi Chiến Binh / Champa (1:11):</b> 2 lá đầu tiên trùng giá trị.</p>
-                <p>• <b>Rồng Thần Triệu Hồi (1:25):</b> Bài 3 lá đồng chất (cùng chất).</p>
-                <p>• <b>⚡ Sám Cô Hủy Diệt (1:45):</b> 3 lá bài có cùng cấp độ cực kỳ hiếm!</p>
-                <p>• <b>Tài (≥10) / Xỉu (≤9) (1:1.95):</b> Cược tổng điểm ván đấu.</p>
-                <p>• <b>Tuyệt Chiêu Kết Liễu (1:5):</b> Khoảng cách điểm biệt lập ≥ 5 điểm.</p>
+                <p>🔹 <b>Quy tắc Nổ Hũ theo Mức Cược khi Thắng:</b></p>
+                <p>• <b>Hũ Trái Đất (Minor):</b> Dành riêng cho mức cược chip từ <b>100 - 5.000 Ki</b>. Khi thắng trận sẽ có tỉ lệ nổ Hũ Trái Đất.</p>
+                <p>• <b>Hũ Namek (Major):</b> Dành riêng cho mức cược chip từ <b>10.000 - 1.000.000 Ki</b>. Khi thắng trận sẽ có tỉ lệ nổ Hũ Namek.</p>
+                <p>• <b>Siêu Cấp Hũ (Grand):</b> Áp dụng cho <b>mọi mức cược</b>. Khi thắng trận đều có cơ hội nổ Hũ Siêu Cấp cực lớn!</p>
               </div>
               <button 
                 onClick={() => setShowRules(false)}
@@ -658,6 +723,11 @@ export default function BaccaratPage() {
         {/* RESULT OVERLAY MODAL */}
         {gameState === "result" && resultData && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 text-center animate-fadeIn space-y-2 rounded-[30px]">
+            {resultData.jackpotMsg && (
+              <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs md:text-sm animate-bounce shadow-lg">
+                {resultData.jackpotMsg}
+              </div>
+            )}
             <h2 className={`text-2xl md:text-3xl font-black font-serif ${
               resultData.winner === 'Chiến Binh Thắng' ? 'text-cyan-400' : 
               resultData.winner === 'Thần Hủy Diệt Champa Thắng' ? 'text-rose-400' : 'text-emerald-400'
@@ -705,7 +775,6 @@ export default function BaccaratPage() {
         <div className="w-full max-w-5xl mx-auto flex flex-col gap-1.5 my-1 relative z-10 text-[10px] md:text-xs">
           
           <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
-            
             <div onClick={() => placeBet('champaPair')} className="border border-dashed border-rose-500/50 bg-slate-950/70 hover:bg-rose-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
               <span className="font-bold text-rose-400 text-[10px]">Đôi Champa</span>
               <span className="text-[8px] text-slate-400">1 : 11</span>
@@ -771,7 +840,6 @@ export default function BaccaratPage() {
                 </div>
               )}
             </div>
-
           </div>
 
           <div className="grid grid-cols-2 gap-1.5">
@@ -886,22 +954,22 @@ export default function BaccaratPage() {
 
       </main>
 
-      {/* 🚀 FOOTER: ĐÃ ĐỔI CHỖ NÚT XÓA CƯỢC BÊN TRÁI & NÚT TRIỆU HỒI BÀI BÊN PHẢI */}
-      <footer className="w-full max-w-7xl mx-auto bg-slate-900/95 border border-cyan-500/40 rounded-3xl p-2 md:p-2.5 flex flex-col md:flex-row items-center justify-between gap-2 shadow-2xl shrink-0 backdrop-blur-md z-30">
+      {/* 🚀 FOOTER: NÚT TRIỆU HỒI BÀI & XÓA CƯỢC */}
+      <footer className="w-full max-w-7xl mx-auto bg-slate-900/95 border border-cyan-500/40 rounded-3xl p-2 md:p-2.5 flex flex-col gap-2 shadow-2xl shrink-0 backdrop-blur-md z-30">
         
-        {/* NÚT XÓA CƯỢC BÊN TRÁI */}
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={clearBets} 
-            disabled={gameState !== "betting"} 
-            className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3.5 py-2 rounded-2xl shadow cursor-pointer disabled:opacity-50 transition active:scale-95"
+        {/* HÀNG 1: NÚT TRIỆU HỒI BÀI NẰM TRÊN THANH CHIP */}
+        <div className="w-full">
+          <button
+            onClick={startGame}
+            disabled={gameState !== "betting" || getTotalBet() === 0}
+            className="w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-slate-950 font-black text-xs md:text-sm py-2.5 rounded-2xl shadow-lg cursor-pointer hover:brightness-110 disabled:opacity-50 uppercase tracking-wider transition active:scale-95"
           >
-            🗑 Xóa Cược
+            {gameState === "dealing" ? "Đang Chia Bài..." : "Triệu Hồi Bài 🔥"}
           </button>
         </div>
 
-        {/* THANH CHỌN CHIP Ở GIỮA */}
-        <div className="flex gap-1.5 items-center overflow-x-auto py-0.5 px-1">
+        {/* HÀNG 2: THANH CHỌN CHIP Ở GIỮA */}
+        <div className="flex gap-1.5 items-center justify-center overflow-x-auto py-0.5 px-1">
           {CHIP_LIST.map((chip) => {
             const isSelected = currentChip === chip.amount;
             return (
@@ -923,16 +991,17 @@ export default function BaccaratPage() {
           })}
         </div>
 
-        {/* NÚT TRIỆU HỒI BÀI BÊN PHẢI */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={startGame}
-            disabled={gameState !== "betting" || getTotalBet() === 0}
-            className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-slate-950 font-black text-xs md:text-sm px-7 py-2.5 rounded-2xl shadow-lg cursor-pointer hover:brightness-110 disabled:opacity-50 uppercase tracking-wider transition active:scale-95"
+        {/* HÀNG 3: NÚT XÓA CƯỢC DƯỚI CÙNG */}
+        <div className="w-full flex justify-center pt-0.5">
+          <button 
+            onClick={clearBets} 
+            disabled={gameState !== "betting"} 
+            className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-2 rounded-2xl shadow cursor-pointer disabled:opacity-50 transition active:scale-95 uppercase tracking-wide"
           >
-            {gameState === "dealing" ? "Đang Chia Bài..." : "Triệu Hồi Bài 🔥"}
+            🗑 Xóa Cược
           </button>
         </div>
+
       </footer>
 
     </div>
