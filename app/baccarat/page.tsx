@@ -108,8 +108,8 @@ export default function BaccaratPage() {
   useEffect(() => {
     async function initEverything() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user;
+        // Lấy chính xác user đang đăng nhập hiện tại giống game Jackpot Dragon
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
 
         if (currentUser) {
@@ -123,21 +123,9 @@ export default function BaccaratPage() {
             const realBal = profile.balance ?? 543545;
             setBalance(realBal);
             balanceRef.current = realBal;
-            setUserName(profile.full_name || profile.username || "Chiến Binh");
+            const nameToUse = profile.full_name || profile.username || currentUser.email?.split("@")[0] || "Chiến Binh";
+            setUserName(nameToUse);
             setUserAvatar(profile.avatar_url || profile.avatar || "/assets/avatar/xtra30.ico");
-          }
-        } else {
-          const { data: allProfiles } = await supabase
-            .from("profiles")
-            .select("id, balance, username, full_name, avatar_url, avatar")
-            .limit(1);
-
-          if (allProfiles && allProfiles.length > 0) {
-            const p = allProfiles[0];
-            setBalance(p.balance ?? 543545);
-            balanceRef.current = p.balance ?? 543545;
-            setUserName(p.full_name || p.username || "Chiến Binh");
-            setUserAvatar(p.avatar_url || p.avatar || "/assets/avatar/xtra30.ico");
           }
         }
 
@@ -163,7 +151,7 @@ export default function BaccaratPage() {
     createDeck();
 
     const channel = supabase
-      .channel("baccarat_jackpot_sync_v8")
+      .channel("baccarat_jackpot_sync_v9")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -190,11 +178,6 @@ export default function BaccaratPage() {
     try {
       if (user) {
         await supabase.from("profiles").update({ balance: newBal }).eq("id", user.id);
-      } else {
-        const { data: allProfiles } = await supabase.from("profiles").select("id").limit(1);
-        if (allProfiles && allProfiles.length > 0) {
-          await supabase.from("profiles").update({ balance: newBal }).eq("id", allProfiles[0].id);
-        }
       }
     } catch (e) {
       console.error(e);
@@ -507,7 +490,7 @@ export default function BaccaratPage() {
     let isWarriorWonMain = false;
 
     if (wScore > cScore) {
-      mainWinner = "Chiến Binh Thắng";
+      mainWinner = `${userName} Thắng`;
       quoteList = DBZ_AURAS.warriorWin;
       isWarriorWonMain = true;
       if (bets.warrior.amount > 0) totalWin += bets.warrior.amount * 2;
@@ -580,7 +563,7 @@ export default function BaccaratPage() {
     setStatusMessage(jpMsg ? jpMsg : selectedQuote);
     setResultData({
       title: jackpotWonAmount > 0 ? "🌟 NỔ HŨ RỒNG THẦN CỰC ĐỈNH!" : mainWinner,
-      desc: `Chiến Binh (${wScore} Điểm) vs Champa (${cScore} Điểm) [Tổng: ${totalPointsSum}] - ${reason}`,
+      desc: `${userName} (${wScore} Điểm) vs Champa (${cScore} Điểm) [Tổng: ${totalPointsSum}] - ${reason}`,
       netProfit,
       winner: mainWinner,
       quote: selectedQuote,
@@ -774,7 +757,7 @@ export default function BaccaratPage() {
               </div>
             )}
             <h2 className={`text-2xl md:text-3xl font-black font-serif ${
-              resultData.winner === 'Chiến Binh Thắng' ? 'text-cyan-400' : 
+              resultData.winner.includes('Thắng') && resultData.winner !== 'Thần Hủy Diệt Champa Thắng' ? 'text-cyan-400' : 
               resultData.winner === 'Thần Hủy Diệt Champa Thắng' ? 'text-rose-400' : 'text-emerald-400'
             }`}>
               {resultData.title}
