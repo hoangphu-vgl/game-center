@@ -1,1030 +1,896 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-type Suit = '♠' | '♥' | '♦' | '♣';
-type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
-
-interface Card {
-  suit: Suit;
-  rank: Rank;
-  value: number;
-  color: string;
-}
-
-interface SeatPlayer {
+interface LeaderboardUser {
   id: string;
-  name: string;
-  avatar: string;
-  chips: number;
-  cards: Card[];
-  currentBet: number;
-  folded: boolean;
-  isReady: boolean;
-  acted: boolean;
+  full_name: string;
+  balance: number;
+  avatar_url: string;
 }
 
-type GamePhase = 'IDLE' | 'PREFLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN';
+const DEFAULT_AVATARS = Array.from({ length: 30 }, (_, index) => ({
+  name: `Chiến Binh ${index + 1}`,
+  url: `/assets/avatar/xtra${index + 1}.ico`,
+}));
 
-const SUITS: Suit[] = ['♠', '♥', '♦', '♣'];
-const RANKS: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-const RANK_VALUES: Record<Rank, number> = {
-  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
-};
-
-const WHIS_QUOTES = [
-  "Whis: Khí áp thế này mà nhà cái không khóc mới lạ! Chuẩn bị bán muối đi cưng!",
-  "Whis: Trơ trẽn thật đấy, bài thì rác mà tố cứ như tỷ phú Đa Cấp thế à?",
-  "Whis: Nhà cái dạo này đói kém hay sao mà nhìn mâm Pot thèm thuồng thế kia!",
-  "Whis: Ai da, nhà cái hốt Linh Thạch mỏi tay, cẩn thận sập lôi đài lúc nào không hay nha!",
-  "Whis: Oai phong lẫm liệt đấy, nhưng chuẩn bị tinh thần ôm hận đi chiến binh!",
-  "Whis: Đánh kiểu này thì đến Thần Hủy Diệt cũng phải chào thua độ lỳ của ngươi!"
+const AURA_QUOTES = [
+  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn tại Đại Hội Võ Thuật!' - Son Goku",
+  "⚡ 'Sức mạnh 13 Ấn Ký đến từ ý chí kiên định, không phải từ mong muốn.' - Vegeta",
+  "🐉 'Khi bạn từ bỏ hy vọng trên lôi đài, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi",
+  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan tham chiến!' - Vegeta",
+  "🌟 'Hãy dồn toàn bộ Ki và 13 Ấn Ký vào cú đánh quyết định!' - Gogeta",
+  "🌀 'Nỗi sợ hãi khi đối đầu không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku",
+  "🥋 'Võ thuật lôi đài không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
+  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là Bá Chủ Đại Hội Võ Thuật!' - Broly",
+  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước lôi đài số phận!' - Vegeta",
+  "🐉 'Bản Năng Vô Thượng... trạng thái khi 13 Ấn Ký tự động phản ứng!' - Whis",
 ];
 
-const DEFAULT_AVATARS = Array.from({ length: 30 }, (_, index) => `/assets/avatar/xtra${index + 1}.ico`);
+const getSaiyanLevel = (power: number) => {
+  if (power >= 1000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
+  if (power >= 500000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
+  if (power >= 250000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
+  if (power >= 100000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
+  if (power >= 50000000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
+  if (power >= 10000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
+  if (power >= 5000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
+  if (power >= 1000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/50 bg-yellow-950/30" };
+  if (power >= 500000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
+  return { name: "🌍 Lv.1 - Người Trái Đất", color: "text-slate-300 border-slate-700 bg-slate-900/50" };
+};
 
-export default function GioiThieuPokerPage() {
-  const [inRoom, setInRoom] = useState(false);
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [roomCode, setRoomCode] = useState<string>("");
+export default function Home() {
+  const [user, setUser] = useState<any>(null);
+  const [points, setPoints] = useState<number>(5000);
+  const [luckySpins, setLuckySpins] = useState<number>(3);
+  const [lastCheckIn, setLastCheckIn] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [myKi, setMyKi] = useState(5000);
-  const [myName, setMyName] = useState("Chiến Binh");
-  const [myAvatar, setMyAvatar] = useState(DEFAULT_AVATARS[0]);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [usernameInput, setUsernameInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(true);
 
-  const [seats, setSeats] = useState<(SeatPlayer | null)[]>([null, null, null, null, null]);
-  const [pot, setPot] = useState(0);
-  const [communityCards, setCommunityCards] = useState<Card[]>([]);
-  const [phase, setPhase] = useState<GamePhase>('IDLE');
-  const [currentTurn, setCurrentTurn] = useState<number>(0);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  const [dealerMsg, setDealerMsg] = useState("Whis: Đang ở trang Test! Xem luật chơi ở góc phải phía trên nhé!");
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [raiseVal, setRaiseVal] = useState(100);
-  const [resetCountdown, setResetCountdown] = useState<number | null>(null);
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [dragonBallsCount, setDragonBallsCount] = useState<number>(0);
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [dailyQuote, setDailyQuote] = useState("");
 
-  const [showRulesModal, setShowRulesModal] = useState(false);
-  const [turnTimeLeft, setTurnTimeLeft] = useState<number>(30);
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
-  const seatsRef = useRef(seats);
-  const roomIdRef = useRef(roomId);
-  const currentUserRef = useRef(currentUser);
-  const currentTurnRef = useRef(currentTurn);
+  const getTodayString = () => new Date().toISOString().split("T")[0];
 
-  seatsRef.current = seats;
-  roomIdRef.current = roomId;
-  currentUserRef.current = currentUser;
-  currentTurnRef.current = currentTurn;
+  const getWeekKey = () => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const week = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
+    return `${now.getFullYear()}-W${week}`;
+  };
+
+  const getTodayCheckInReward = () => {
+    const dayOfWeek = new Date().getDay();
+    const dayMap: { [key: number]: { dayName: string; ki: number } } = {
+      1: { dayName: "Thứ 2", ki: 10000 },
+      2: { dayName: "Thứ 3", ki: 20000 },
+      3: { dayName: "Thứ 4", ki: 30000 },
+      4: { dayName: "Thứ 5", ki: 40000 },
+      5: { dayName: "Thứ 6", ki: 50000 },
+      6: { dayName: "Thứ 7", ki: 60000 },
+      0: { dayName: "Chủ Nhật", ki: 100000 },
+    };
+    return dayMap[dayOfWeek] || { dayName: "Hôm nay", ki: 10000 };
+  };
 
   useEffect(() => {
-    async function loadUser() {
-      let uid = "";
-      let name = "";
-      let avatar = "";
-      let balance = 5000;
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const currentDay = now.getDay();
+      const daysUntilMonday = currentDay === 1 ? 7 : (8 - currentDay) % 7;
+      
+      const targetMonday = new Date(now);
+      targetMonday.setDate(now.getDate() + daysUntilMonday);
+      targetMonday.setHours(0, 0, 0, 0);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        uid = session.user.id;
-        setCurrentUser(session.user);
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("balance, full_name, avatar_url")
-          .eq("id", uid)
-          .single();
+      const diff = targetMonday.getTime() - now.getTime();
 
-        if (profile) {
-          name = profile.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.username || "";
-          avatar = profile.avatar_url || "";
-          balance = profile.balance ?? 5000;
-        }
+      if (diff > 0) {
+        const totalHours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setTimeLeft({ hours: totalHours, minutes, seconds });
+      } else {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
       }
+    };
 
-      if (!name) name = localStorage.getItem("tlmn_user_name") || "";
-      if (!avatar) avatar = localStorage.getItem("tlmn_user_avatar") || "";
-
-      if (!uid) {
-        const storedUid = localStorage.getItem("tlmn_user_id");
-        if (storedUid) {
-          uid = storedUid;
-        } else {
-          uid = "user_" + Math.random().toString(36).substring(2, 9);
-          localStorage.setItem("tlmn_user_id", uid);
-        }
-        setCurrentUser({ id: uid });
-      }
-
-      if (!name) name = "Chiến Binh " + uid.substring(uid.length - 4);
-      if (!avatar) avatar = DEFAULT_AVATARS[0];
-
-      setMyKi(balance);
-      setMyName(name);
-      setMyAvatar(avatar);
-    }
-    loadUser();
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const processLeaveOrUnload = async (currentRoomId: string, currentSeats: (SeatPlayer | null)[], currentUserId: string, currentName: string) => {
-    if (!currentRoomId) return;
-    const updatedSeats = currentSeats.map(s =>
-      (s && (String(s.id) === String(currentUserId) || s.name === currentName)) ? null : s
-    );
-
-    const activeCount = updatedSeats.filter(s => s !== null).length;
-
-    if (activeCount === 0) {
-      await supabase.from("poker_rooms").update({
-        seats: [null, null, null, null, null],
-        pot: 0,
-        community_cards: [],
-        phase: 'IDLE',
-        current_turn: 0
-      }).eq("id", currentRoomId);
-    } else {
-      await supabase.from("poker_rooms").update({ seats: updatedSeats }).eq("id", currentRoomId);
-    }
-  };
+  useEffect(() => {
+    setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
+  }, []);
 
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (roomIdRef.current && currentUserRef.current) {
-        processLeaveOrUnload(roomIdRef.current, seatsRef.current, currentUserRef.current.id, myName);
+    async function loadUserProfile(currentUser: any) {
+      if (!currentUser) {
+        setUser(null);
+        setPoints(5000);
+        setLuckySpins(3);
+        setLastCheckIn("");
+        setDragonBallsCount(0);
+        setLoading(false);
+        return;
       }
-    };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [myName]);
+      setUser(currentUser);
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 2500);
-  };
-
-  const handleForceResetRoom = async () => {
-    if (!roomId) return;
-    await supabase.from("poker_rooms").update({
-      seats: [null, null, null, null, null],
-      pot: 0,
-      community_cards: [],
-      phase: 'IDLE',
-      current_turn: 0
-    }).eq("id", roomId);
-    showToast("🧹 Đã dọn sạch lôi đài thành công!");
-  };
-
-  const handleLeaveRoom = async () => {
-    if (roomId && currentUser) {
-      await processLeaveOrUnload(roomId, seats, currentUser.id, myName);
-    }
-    setInRoom(false);
-    setRoomId(null);
-  };
-
-  const handleJoinRoomByCode = async (code: string) => {
-    if (!currentUser) return;
-    showToast(`Đang bước vào Lôi Đài #${code}...`);
-
-    try {
-      let { data: targetRoom } = await supabase
-        .from("poker_rooms")
-        .select("*")
-        .eq("code", code)
-        .single();
-
-      if (!targetRoom) {
-        const { data: newRoom, error: createErr } = await supabase
-          .from("poker_rooms")
-          .insert([{
-            code: code,
-            seats: [null, null, null, null, null],
-            pot: 0,
-            community_cards: [],
-            phase: 'IDLE',
-            current_turn: 0
-          }])
-          .select()
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", currentUser.id)
           .single();
 
-        if (createErr) {
-          alert("Lỗi tạo lôi đài: " + createErr.message);
-          return;
+        const defaultName = currentUser.user_metadata?.username || currentUser.user_metadata?.full_name || "Chiến Binh Saiyan";
+        const defaultAvatar = currentUser.user_metadata?.avatar_url || DEFAULT_AVATARS[0].url;
+
+        const currentWeek = getWeekKey();
+        const lastCheckedWeek = localStorage.getItem(`last_reset_week_${currentUser.id}`);
+
+        let currentBalance = profile?.balance ?? 5000;
+        let currentSpins = profile?.lucky_spins ?? 3;
+        let lastCheck = profile?.last_check_in ?? "";
+
+        if (!lastCheckedWeek) {
+          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
+        } else if (lastCheckedWeek !== currentWeek) {
+          currentBalance = 0;
+          await supabase
+            .from("profiles")
+            .update({ balance: 0 })
+            .eq("id", currentUser.id);
+          
+          localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
         }
-        targetRoom = newRoom;
-      }
 
-      const myData: SeatPlayer = {
-        id: currentUser.id,
-        name: myName,
-        avatar: myAvatar,
-        chips: myKi,
-        cards: [],
-        currentBet: 0,
-        folded: false,
-        isReady: false,
-        acted: false
-      };
-
-      let currentSeats: (SeatPlayer | null)[] = targetRoom.seats || [null, null, null, null, null];
-      currentSeats = currentSeats.map(s => (s && (s.id?.includes("bot") || s.name?.toLowerCase().includes("bot"))) ? null : s);
-
-      const existingIdx = currentSeats.findIndex(s => s && (String(s.id) === String(currentUser.id) || s.name === myName));
-
-      if (existingIdx !== -1) {
-        currentSeats[existingIdx] = myData;
-      } else {
-        const emptyIndex = currentSeats.findIndex(s => s === null);
-        if (emptyIndex === -1) {
-          alert("Lôi đài đã hội tụ đủ 5 Đại Cao Thủ!");
-          return;
+        if (!profile) {
+          const initialData = {
+            id: currentUser.id,
+            email: currentUser.email || "",
+            full_name: defaultName,
+            avatar_url: defaultAvatar,
+            balance: 5000,
+            lucky_spins: 3,
+            last_check_in: "",
+          };
+          await supabase.from("profiles").insert([initialData]);
+          setPoints(5000);
+          setLuckySpins(3);
+          setLastCheckIn("");
+          setDisplayName(defaultName);
+          setAvatarUrl(defaultAvatar);
+        } else {
+          setPoints(currentBalance);
+          setLuckySpins(currentSpins);
+          setLastCheckIn(lastCheck);
+          const activeName = profile.full_name || defaultName;
+          const activeAvatar = profile.avatar_url || defaultAvatar;
+          
+          setDisplayName(activeName);
+          setAvatarUrl(activeAvatar);
         }
-        currentSeats[emptyIndex] = myData;
-      }
 
-      await supabase.from("poker_rooms").update({ seats: currentSeats }).eq("id", targetRoom.id);
-      setRoomId(targetRoom.id);
-      setRoomCode(code);
-      setInRoom(true);
-      showToast(`Đã vào Lôi Đài #${code}`);
-    } catch (e: any) {
-      alert("Lỗi bước vào lôi đài: " + e.message);
+        const savedBalls = localStorage.getItem(`dragon_balls_${currentUser.id}`);
+        setDragonBallsCount(savedBalls ? parseInt(savedBalls) : 0);
+
+        const todayStr = getTodayString();
+        const hideNoticeDate = localStorage.getItem(`hide_notice_${currentUser.id}`);
+        if (hideNoticeDate !== todayStr) {
+          setShowNoticeModal(true);
+        }
+
+      } catch (err) {
+        console.error("Lỗi tải profile game:", err);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadUserProfile(session?.user || null);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadUserProfile(session?.user || null);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleCloseNoticeForToday = () => {
+    if (!user) return;
+    const todayStr = getTodayString();
+    localStorage.setItem(`hide_notice_${user.id}`, todayStr);
+    setShowNoticeModal(false);
   };
 
   useEffect(() => {
-    if (!roomId) return;
-    const fetchRoom = async () => {
-      const { data } = await supabase.from("poker_rooms").select("*").eq("id", roomId).single();
+    async function fetchLeaderboard() {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, balance, avatar_url")
+        .order("balance", { ascending: false })
+        .limit(5);
       if (data) {
-        let cleanSeats = (data.seats || [null, null, null, null, null]).map((s: any) =>
-          (s && (s.id?.includes("bot") || s.name?.toLowerCase().includes("bot"))) ? null : s
-        );
-        setSeats(cleanSeats);
-        setPot(data.pot || 0);
-        setCommunityCards(data.community_cards || []);
-        setPhase(data.phase || 'IDLE');
-        if (data.current_turn !== undefined) setCurrentTurn(data.current_turn);
+        setLeaderboard(data);
       }
-    };
-    fetchRoom();
+    }
+    fetchLeaderboard();
 
-    const channel = supabase.channel(`poker_room_${roomId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "poker_rooms", filter: `id=eq.${roomId}` }, (payload: any) => {
-        const room = payload.new;
-        if (room) {
-          let cleanSeats = (room.seats || [null, null, null, null, null]).map((s: any) =>
-            (s && (s.id?.includes("bot") || s.name?.toLowerCase().includes("bot"))) ? null : s
-          );
-          setSeats(cleanSeats);
-          setPot(room.pot || 0);
-          setCommunityCards(room.community_cards || []);
-          setPhase(room.phase || 'IDLE');
-          if (room.current_turn !== undefined) setCurrentTurn(room.current_turn);
-        }
+    const channel = supabase
+      .channel("public:profiles")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+        fetchLeaderboard();
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [roomId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
-  useEffect(() => {
-    if (phase === 'IDLE' || phase === 'SHOWDOWN') {
+  const handleExchangeBalls = (type: 'single' | 'all') => {
+    if (!user) return;
+    if (type === 'single') {
+      if (dragonBallsCount < 1) {
+        alert("🛡️ Bạn chưa có viên Ngọc Rồng nào để đổi!");
+        return;
+      }
+      if (confirm("Xác nhận quy đổi 1 Viên Ngọc Rồng lấy 10.000 VNĐ tiền mặt?")) {
+        const newCount = dragonBallsCount - 1;
+        setDragonBallsCount(newCount);
+        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
+        alert("🎉 Quy đổi thành công! Nhận ngay 10.000 VNĐ (Liên hệ Admin để nhận thưởng nhé)!");
+      }
+    } else if (type === 'all') {
+      if (dragonBallsCount < 7) {
+        alert("🐉 Bạn cần sưu tập đủ đúng 7 Viên Ngọc Rồng để thực hiện Điều Ước Rồng Thần nhận 100k VNĐ!");
+        return;
+      }
+      if (confirm("🌟 THỰC HIỆN ĐIỀU ƯỚC RỒNG THẦN! Dùng đủ 7 Viên Ngọc Rồng để nhận ngay 100.000 VNĐ?")) {
+        const newCount = dragonBallsCount - 7;
+        setDragonBallsCount(newCount);
+        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
+        alert("🐲 ĐIỀU ƯỚC ĐÃ THỰC HIỆN! Chúc mừng bạn húp trọn 100.000 VNĐ từ Rồng Thần!");
+      }
+    }
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUsername = usernameInput.trim().toLowerCase();
+    if (!cleanUsername || !passwordInput) {
+      alert("Vui lòng điền đầy đủ Tên đăng nhập và Mật khẩu!");
       return;
     }
 
-    setTurnTimeLeft(30);
+    const internalEmail = `${cleanUsername}@gamecenter.com`;
+    setAuthLoading(true);
 
-    const timer = setInterval(() => {
-      setTurnTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          const currentS = seatsRef.current;
-          const activeSIndex = currentTurnRef.current;
-          const currentP = currentS[activeSIndex];
-
-          if (currentP && currentUserRef.current && (String(currentP.id) === String(currentUserRef.current.id))) {
-            handleAction('fold');
-          }
-          return 0;
-        }
-        return prev - 1;
+    if (isSignUp) {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: internalEmail,
+        password: passwordInput,
+        options: {
+          data: {
+            username: cleanUsername,
+            full_name: cleanUsername,
+            avatar_url: DEFAULT_AVATARS[0].url,
+          },
+        },
       });
-    }, 1000);
 
-    return () => clearInterval(timer);
-  }, [currentTurn, phase]);
+      if (signUpError) {
+        setAuthLoading(false);
+        alert("Lỗi đăng ký: " + signUpError.message);
+        return;
+      }
 
-  useEffect(() => {
-    if (phase === 'SHOWDOWN' && roomId) {
-      setResetCountdown(10);
-      const randomQuote = WHIS_QUOTES[Math.floor(Math.random() * WHIS_QUOTES.length)];
-      setDealerMsg(randomQuote);
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: internalEmail,
+        password: passwordInput,
+      });
 
-      const interval = setInterval(() => {
-        setResetCountdown(prev => (prev !== null && prev > 1 ? prev - 1 : 0));
-      }, 1000);
+      setAuthLoading(false);
 
-      const timer = setTimeout(async () => {
-        const resetSeats = seats.map(s => s ? { ...s, isReady: false, folded: false, cards: [], currentBet: 0, acted: false } : null);
-        await supabase.from("poker_rooms").update({
-          seats: resetSeats,
-          pot: 0,
-          community_cards: [],
-          phase: 'IDLE',
-          current_turn: 0
-        }).eq("id", roomId);
-      }, 10000);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timer);
-      };
+      if (signInError) {
+        alert("Tạo tài khoản thành công! Vui lòng đăng nhập.");
+        setIsSignUp(false);
+      } else if (signInData.session?.user) {
+        setUser(signInData.session.user);
+      }
     } else {
-      setResetCountdown(null);
-    }
-  }, [phase, roomId]);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: internalEmail,
+        password: passwordInput,
+      });
 
-  const handleToggleReady = async () => {
-    const myIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
-    if (myIndex === -1) return;
+      setAuthLoading(false);
 
-    let newSeats = [...seats];
-    if (newSeats[myIndex]) {
-      newSeats[myIndex]!.isReady = !newSeats[myIndex]!.isReady;
-    }
-
-    const activeSeats = newSeats.filter(s => s !== null);
-    const readySeats = activeSeats.filter(s => s && s.isReady);
-
-    if (activeSeats.length >= 2 && readySeats.length === activeSeats.length) {
-      await startNewHand(newSeats);
-    } else {
-      setSeats(newSeats);
-      if (roomId) {
-        await supabase.from("poker_rooms").update({ seats: newSeats }).eq("id", roomId);
-      }
-      showToast(newSeats[myIndex]?.isReady ? "✨ Đã sẵn sàng xuất chiến!" : "❌ Đã hủy sẵn sàng.");
-    }
-  };
-
-  const generateDeck = (): Card[] => {
-    const deck: Card[] = [];
-    for (const suit of SUITS) {
-      for (const rank of RANKS) {
-        deck.push({ suit, rank, value: RANK_VALUES[rank], color: (suit === '♥' || suit === '♦') ? 'text-red-600' : 'text-gray-900' });
+      if (error) {
+        alert("Sai tên đăng nhập hoặc mật khẩu!");
+      } else if (data.session?.user) {
+        setUser(data.session.user);
       }
     }
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-    return deck;
   };
 
-  const startNewHand = async (currentSeatsList: (SeatPlayer | null)[]) => {
-    const deck = generateDeck();
-
-    let updatedSeats = currentSeatsList.map(seat => {
-      if (!seat) return null;
-      const c1 = deck.pop()!;
-      const c2 = deck.pop()!;
-      const newChips = Math.max(0, seat.chips - 100);
-      return {
-        ...seat,
-        cards: [c1, c2],
-        currentBet: 100,
-        chips: newChips,
-        folded: false,
-        isReady: true,
-        acted: false
-      };
-    });
-
-    const participatingCount = updatedSeats.filter(s => s && s.cards.length > 0).length;
-    if (participatingCount === 0) return;
-
-    const initialPot = participatingCount * 100;
-    const firstTurn = getFirstActiveSeat(updatedSeats);
-
-    if (roomId) {
-      await supabase.from("poker_rooms").update({
-        seats: updatedSeats,
-        pot: initialPot,
-        community_cards: [],
-        phase: "PREFLOP",
-        current_turn: firstTurn
-      }).eq("id", roomId);
-    }
-    setDealerMsg("Whis: Đã chia 2 bài tẩy! Cẩn thận cái ví của nhà cái đấy nhé!");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
-  const getNextActiveSeat = (current: number, seatsList: (SeatPlayer | null)[]) => {
-    let next = (current + 1) % 5;
-    let count = 0;
-    while (count < 5) {
-      const p = seatsList[next];
-      if (p && p.cards && p.cards.length > 0 && !p.folded) {
-        return next;
-      }
-      next = (next + 1) % 5;
-      count++;
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setUpdatingProfile(true);
+
+    const newCleanName = displayName.trim() || "Chiến Binh";
+
+    try {
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ 
+          full_name: newCleanName, 
+          avatar_url: avatarUrl 
+        })
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
+      await supabase.auth.updateUser({
+        data: { full_name: newCleanName, avatar_url: avatarUrl }
+      });
+
+      alert("✨ Cập nhật thông tin chiến binh thành công! Đã đồng bộ vào toàn bộ sòng game.");
+      setProfileModalOpen(false);
+    } catch (err: any) {
+      alert("Lỗi cập nhật: " + err.message);
+    } finally {
+      setUpdatingProfile(false);
     }
-    return current;
   };
 
-  const getFirstActiveSeat = (seatsList: (SeatPlayer | null)[]) => {
-    for (let i = 0; i < 5; i++) {
-      const p = seatsList[i];
-      if (p && p.cards && p.cards.length > 0 && !p.folded) {
-        return i;
-      }
-    }
-    return 0;
-  };
-
-  const handleAction = async (action: 'fold' | 'call' | 'raise' | 'allin', customBet?: number) => {
-    const myIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
-    if (myIndex !== currentTurn && phase !== 'IDLE') {
-      showToast("Chưa tới lượt của bạn!");
+  const handleCheckIn = async () => {
+    if (!user) return;
+    const today = getTodayString();
+    if (lastCheckIn === today) {
+      alert("Hôm nay chiến binh đã tụ Ki nhận thưởng rồi!");
       return;
     }
 
-    let updatedSeats = [...seats];
-    const me = updatedSeats[myIndex];
-    if (!me) return;
+    const reward = getTodayCheckInReward();
+    const newPoints = points + reward.ki;
+    const newSpins = luckySpins + 1;
 
-    me.acted = true; 
-
-    const activeBefore = updatedSeats.filter(s => s && s.cards.length > 0 && !s.folded);
-    const currentHighestBet = activeBefore.length > 0 ? Math.max(...activeBefore.map(s => s!.currentBet)) : 0;
-
-    let addedBet = 0;
-
-    if (action === 'fold') {
-      me.folded = true;
-    } else if (action === 'call') {
-      const callDiff = Math.max(0, currentHighestBet - me.currentBet);
-      addedBet = Math.min(me.chips, callDiff);
-      me.chips -= addedBet;
-      me.currentBet += addedBet;
-    } else if (action === 'raise' || action === 'allin') {
-      const targetBet = action === 'allin' ? me.currentBet + me.chips : me.currentBet + (customBet || raiseVal);
-      addedBet = Math.min(me.chips, targetBet - me.currentBet);
-      me.chips -= addedBet;
-      me.currentBet += addedBet;
-      
-      if (me.currentBet > currentHighestBet) {
-        updatedSeats.forEach(s => {
-          if (s && s.id !== me.id && !s.folded && s.cards.length > 0) {
-            s.acted = false; 
-          }
-        });
-      }
-    }
-
-    const activeAfter = updatedSeats.filter(s => s && s.cards.length > 0 && !s.folded);
-    const newHighest = activeAfter.length > 0 ? Math.max(...activeAfter.map(s => s!.currentBet)) : 0;
-    const newPot = pot + addedBet;
-
-    if (activeAfter.length === 1) {
-      setDealerMsg(`Whis: ${activeAfter[0]!.name} hốt trọn ổ vì đối thủ hèn nhát úp bài!`);
-      await executeAwardWinner(activeAfter[0]!, newPot, updatedSeats, communityCards, 'SHOWDOWN', currentTurn);
-      return;
-    }
-
-    const allMatched = activeAfter.every(p => p && p.acted && (p.currentBet === newHighest || p.chips === 0));
-
-    let nextTurnIdx = currentTurn;
-    let nextPhase = phase;
-    let nextCards = [...communityCards];
-
-    if (allMatched) {
-      updatedSeats = updatedSeats.map(s => s ? { ...s, currentBet: 0, acted: false } : null);
-
-      const deck = generateDeck();
-
-      if (phase === 'PREFLOP') {
-        nextCards = [deck.pop()!, deck.pop()!, deck.pop()!];
-        nextPhase = 'FLOP';
-        setDealerMsg("Whis: Lật 3 lá FLOP! Mời các tay chơi cược vòng mới!");
-      } else if (phase === 'FLOP') {
-        nextCards = [...communityCards, deck.pop()!];
-        nextPhase = 'TURN';
-        setDealerMsg("Whis: Lá TURN thứ 4 xuất hiện! Tiếp tục chiến đấu!");
-      } else if (phase === 'TURN') {
-        nextCards = [...communityCards, deck.pop()!];
-        nextPhase = 'RIVER';
-        setDealerMsg("Whis: Lá RIVER cuối cùng! Cân não chưa nào!");
-      } else if (phase === 'RIVER') {
-        nextPhase = 'SHOWDOWN';
-        setDealerMsg("Whis: Hết giờ lật bài! So tài cao thấp!");
-      }
-
-      nextTurnIdx = getFirstActiveSeat(updatedSeats);
-    } else {
-      nextTurnIdx = getNextActiveSeat(currentTurn, updatedSeats);
-    }
-
-    const remainingWithChips = activeAfter.filter(s => s && s.chips > 0);
-    if (remainingWithChips.length <= 1 && nextPhase !== 'SHOWDOWN') {
-      while (nextCards.length < 5) {
-        const extraDeck = generateDeck();
-        nextCards.push(extraDeck.pop()!);
-      }
-      nextPhase = 'SHOWDOWN';
-      setDealerMsg("Whis: Đã All-in toàn bộ! Tự động lật bài phân định thắng thua!");
-    }
-
-    if (nextPhase === 'SHOWDOWN') {
-      const winner = activeAfter[Math.floor(Math.random() * activeAfter.length)]!;
-      await executeAwardWinner(winner, newPot, updatedSeats, nextCards, nextPhase, nextTurnIdx);
-    } else {
-      if (roomId) {
-        await supabase.from("poker_rooms").update({
-          seats: updatedSeats,
-          community_cards: nextCards,
-          phase: nextPhase,
-          pot: newPot,
-          current_turn: nextTurnIdx
-        }).eq("id", roomId);
-      }
-    }
-  };
-
-  const executeAwardWinner = async (winner: SeatPlayer, finalPot: number, finalSeats: (SeatPlayer | null)[], finalCards: Card[], finalPhase: GamePhase, finalTurn: number) => {
-    const newBalance = winner.chips + finalPot;
-
-    await supabase
+    const { error } = await supabase
       .from("profiles")
-      .update({ balance: newBalance })
-      .eq("id", winner.id);
+      .update({ balance: newPoints, lucky_spins: newSpins, last_check_in: today })
+      .eq("id", user.id);
 
-    const updatedSeatsWithChips = finalSeats.map(s => {
-      if (s && (String(s.id) === String(winner.id) || s.name === winner.name)) {
-        return { ...s, chips: newBalance };
-      }
-      return s;
-    });
-
-    if (String(winner.id) === String(currentUser?.id) || winner.name === myName) {
-      setMyKi(newBalance);
-      showToast(`🎉 Bạn hốt trọn Pot $${finalPot.toLocaleString()} Ki! Đỉnh chóp!`);
-    } else {
-      showToast(`🏆 ${winner.name} lượm gọn $${finalPot.toLocaleString()} Ki! Quá khét!`);
-    }
-
-    if (roomId) {
-      await supabase.from("poker_rooms").update({
-        seats: updatedSeatsWithChips,
-        pot: finalPot,
-        community_cards: finalCards,
-        phase: finalPhase,
-        current_turn: finalTurn
-      }).eq("id", roomId);
+    if (!error) {
+      setPoints(newPoints);
+      setLuckySpins(newSpins);
+      setLastCheckIn(today);
+      alert(`🔥 TỤ KI THÀNH CÔNG (${reward.dayName})!\n+${reward.ki.toLocaleString()} Ki & +1 Lượt Quay Free!`);
     }
   };
 
-  if (!inRoom) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 p-4 flex flex-col items-center justify-center select-none relative">
-        <div className="absolute top-4 right-4">
-          <button
-            onClick={() => setShowRulesModal(true)}
-            className="bg-slate-900 text-yellow-400 border border-yellow-500/40 px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-slate-800 transition active:scale-95 flex items-center gap-1"
-          >
-            📜 Luật Chơi
-          </button>
-        </div>
-
-        <div className="w-full max-w-xl flex justify-between items-center mb-4">
-          <Link href="/" className="bg-slate-900 text-amber-400 border border-amber-500/40 px-3 py-1.5 rounded-lg text-xs font-bold">
-            ⬅️ Trang Chủ
-          </Link>
-          <div className="text-amber-400 font-black text-xs">⚡ Linh Thạch: {myKi.toLocaleString()}</div>
-        </div>
-        
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-1">⚡🐉</div>
-          <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-emerald-400 to-cyan-400">CHỌN LÔI ĐÀI POKER (TEST)</h1>
-          <p className="text-slate-400 text-[10px] tracking-widest uppercase mt-1">Sòng Bài Vũ Trụ • Chọn Lôi Đài Thủ Công</p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 w-full max-w-xl">
-          <div className="bg-slate-900/90 border border-emerald-500/30 p-4 rounded-xl flex justify-between items-center shadow-md">
-            <div>
-              <div className="text-sm font-black text-emerald-400">LÔI ĐÀI 1 (Hành Tinh Namek)</div>
-              <div className="text-slate-400 text-[10px] mt-0.5">Blinds $50 / $100 • Sân Đấu Cổ Đại</div>
-            </div>
-            <button 
-              onClick={() => handleJoinRoomByCode("ROOM_1")} 
-              className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 px-5 rounded-lg text-xs shadow"
-            >
-              VÀO BÀN 🚀
-            </button>
-          </div>
-
-          <div className="bg-slate-900/90 border border-emerald-500/30 p-4 rounded-xl flex justify-between items-center shadow-md">
-            <div>
-              <div className="text-sm font-black text-emerald-400">LÔI ĐÀI 2 (Đại Hội Sức Mạnh)</div>
-              <div className="text-slate-400 text-[10px] mt-0.5">Blinds $50 / $100 • Sân Đấu Thần Thánh</div>
-            </div>
-            <button 
-              onClick={() => handleJoinRoomByCode("ROOM_2")} 
-              className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 px-5 rounded-lg text-xs shadow"
-            >
-              VÀO BÀN 🚀
-            </button>
-          </div>
-        </div>
-
-        {showRulesModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-900 border-2 border-yellow-500/60 rounded-2xl max-w-lg w-full p-5 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative">
-              <div className="flex justify-between items-center mb-3 border-b border-yellow-500/30 pb-2">
-                <h3 className="text-sm font-black text-yellow-400 uppercase tracking-wide flex items-center gap-1.5">
-                  📜 TRỌN BỘ LUẬT POKER VŨ TRỤ
-                </h3>
-                <button 
-                  onClick={() => setShowRulesModal(false)}
-                  className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="space-y-3 text-[11px] text-slate-300 leading-relaxed font-sans">
-                <div>
-                  <h4 className="text-yellow-400 font-bold mb-1">1. Giới thiệu & Nhập cuộc:</h4>
-                  <p>Mỗi người chơi khi vào bàn sẽ mang theo lượng Linh Thạch (Ki) của mình. Bàn chơi tối đa 5 người, chọn bàn thủ công (Lôi Đài 1 hoặc 2) và bấm <strong className="text-emerald-400">Sẵn Sàng</strong> để bắt đầu ván đấu khi có từ 2 người trở lên.</p>
-                </div>
-
-                <div>
-                  <h4 className="text-yellow-400 font-bold mb-1">2. Các Vòng Cược (Betting Rounds):</h4>
-                  <ul className="list-disc pl-4 space-y-1">
-                    <li><strong>Pre-Flop:</strong> Mỗi người chơi được chia 2 lá bài tẩy riêng biệt. Tiền cược mù ban đầu mỗi người là $100.</li>
-                    <li><strong>Flop:</strong> Trọng tài Whis lật 3 lá bài chung đầu tiên giữa bàn.</li>
-                    <li><strong>Turn:</strong> Lật lá bài chung thứ 4.</li>
-                    <li><strong>River:</strong> Lật lá bài chung thứ 5 (lá cuối cùng).</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-yellow-400 font-bold mb-1">3. Các Hành Động Trong Lượt (⏱️ Giới hạn 30 giây):</h4>
-                  <p className="mb-1">Mỗi người có 30 giây suy nghĩ mỗi lượt. Quá thời gian hệ thống tự động úp bài.</p>
-                  <ul className="list-disc pl-4 space-y-1">
-                    <li><strong className="text-rose-400">Úp Bài (Fold):</strong> Bỏ bài nếu thấy bài yếu, chấp nhận mất tiền cược trước đó.</li>
-                    <li><strong className="text-cyan-400">Theo (Call):</strong> Bỏ ra số tiền cược ngang bằng với người tố trước đó để tiếp tục chơi.</li>
-                    <li><strong className="text-yellow-400">Tố (Raise):</strong> Tăng mức cược lên cao hơn để áp đảo đối thủ.</li>
-                    <li><strong className="text-purple-400">All-In:</strong> Cược toàn bộ số Linh Thạch còn lại của mình vào Pot. Khi đối thủ không đủ tiền, bàn chơi tự động mở hết bài (Showdown).</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="text-yellow-400 font-bold mb-1">4. Xếp Hạng Bài (Từ cao xuống thấp):</h4>
-                  <p>Thùng Phá Sảnh &gt; Tứ Quý &gt; Cù Lũ &gt; Thùng (Flush) &gt; Sảnh (Straight) &gt; Sám Chi (3 lá) &gt; Thú (2 đôi) &gt; Một Đôi &gt; Mậu Thầu (Bài cao).</p>
-                </div>
-              </div>
-
-              <div className="mt-5 text-center">
-                <button
-                  onClick={() => setShowRulesModal(false)}
-                  className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-6 py-2 rounded-xl text-xs uppercase shadow"
-                >
-                  Đã Hiểu, Chiến Thôi! 🚀
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 text-amber-400 font-black tracking-widest animate-pulse px-4 text-center">
+        <img src="/assets/home/shenron.png" alt="Shenron" className="w-20 h-20 object-contain mb-4 animate-bounce drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]" />
+        ĐANG KẾT NỐI LONG MẠCH DRAGON ARCADE...
       </div>
     );
   }
 
-  const mySeatIndex = seats.findIndex(s => s && (String(s.id) === String(currentUser?.id) || s.name === myName));
-  const isMyTurn = mySeatIndex === currentTurn && phase !== 'IDLE' && phase !== 'SHOWDOWN';
-  const mySeat = mySeatIndex !== -1 ? seats[mySeatIndex] : null;
+  if (!user) {
+    return (
+      <div className="h-screen w-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 fixed inset-0 overflow-hidden select-none"
+        style={{ backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')", backgroundSize: "cover", backgroundPosition: "center" }}
+      >
+        <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-0"></div>
 
-  return (
-    <div className="h-screen w-screen bg-slate-950 text-white flex flex-col justify-between select-none overflow-hidden font-sans relative">
-      
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(16,185,129,0.12),transparent_70%)] pointer-events-none" />
-      <div className="absolute inset-0 opacity-25 bg-[url('/assets/tienlen/backgroundroom1.png')] bg-cover bg-center pointer-events-none" />
-
-      {toastMsg && (
-        <div className="fixed top-12 left-1/2 -translate-x-1/2 bg-yellow-400 text-gray-950 px-5 py-2 rounded-full font-black text-xs z-50 shadow-2xl animate-bounce border-2 border-white/40">
-          🔔 {toastMsg}
-        </div>
-      )}
-
-      {/* HEADER */}
-      <header className="bg-slate-900/95 border-b border-yellow-500/40 px-3 py-1.5 flex justify-between items-center z-30 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm animate-pulse">👑</span>
-          <div>
-            <h1 className="text-[10px] font-black text-yellow-400 uppercase font-mono tracking-tight leading-none">Poker VIP Royale #{roomCode}</h1>
-            <p className="text-[8px] text-emerald-400 font-bold leading-tight">Blinds $50/$100</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <div className="text-right bg-black/40 px-2 py-0.5 rounded-lg border border-yellow-500/20">
-            <p className="text-[7px] text-gray-400 font-bold uppercase leading-none">Tổng Pot</p>
-            <p className="text-[11px] font-black text-yellow-400 font-mono leading-tight">${pot.toLocaleString()}</p>
-          </div>
-
-          <button
-            onClick={() => setShowRulesModal(true)}
-            className="bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95"
-            title="Xem luật chơi"
-          >
-            📜 Luật
-          </button>
-
-          <button
-            onClick={handleForceResetRoom}
-            className="bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95"
-            title="Dọn bàn khẩn cấp khi bị kẹt"
-          >
-            🧹 Reset
-          </button>
-
-          <button
-            onClick={() => setIsZoomed(!isZoomed)}
-            className="bg-gray-800 hover:bg-gray-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95"
-            title={isZoomed ? "Thu nhỏ bàn" : "Phóng to bàn"}
-          >
-            {isZoomed ? "🔍➖" : "🔍➕"}
-          </button>
-
-          <button onClick={handleLeaveRoom} className="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold shadow transition">
-            Rời 🚪
-          </button>
-        </div>
-      </header>
-
-      {/* SÀN ĐẤU OVAL */}
-      <main className="flex-1 flex items-center justify-center p-2 relative overflow-hidden">
-        <div className={`w-[94%] max-w-[820px] transition-all duration-300 rounded-[140px] sm:rounded-[180px] border-4 sm:border-6 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)] ${
-          isZoomed ? "h-[320px] sm:h-[420px] scale-105" : "h-[250px] sm:h-[330px]"
-        }`}
-          style={{ 
-            background: "radial-gradient(circle at center, #065f2c 0%, #064e21 60%, #022c12 100%)",
-            boxShadow: "inset 0 0 70px rgba(0,0,0,0.85), 0 0 0 6px #381d09, 0 20px 40px rgba(0,0,0,0.9)"
-          }}
-        >
-          <div className="absolute inset-4 rounded-[110px] sm:rounded-[150px] border border-emerald-300/10 pointer-events-none flex items-center justify-center">
-            <span className="text-emerald-400/15 font-black text-base sm:text-3xl tracking-[0.25em] font-mono uppercase select-none drop-shadow">
-              TEXAS HOLD'EM
-            </span>
-          </div>
-
-          <div className="absolute top-1 flex flex-col items-center z-20 px-2 max-w-[280px]">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-yellow-400 overflow-hidden bg-indigo-950 shadow-lg animate-pulse">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
+        <div className="relative z-10 w-full max-w-md bg-slate-900/90 border-2 border-amber-500/50 rounded-3xl p-5 sm:p-8 shadow-[0_0_50px_rgba(245,158,11,0.3)] backdrop-blur-xl space-y-4 sm:space-y-6 max-h-[95vh] overflow-y-auto">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="flex justify-center">
+              <img src="/assets/home/shenron.png" alt="Dragon" className="w-12 h-12 sm:w-16 sm:h-16 object-contain animate-bounce drop-shadow" />
             </div>
-            <span className="text-[6px] bg-yellow-400 text-gray-950 px-2 rounded-full font-black uppercase mt-0.5 shadow">TRỌNG TÀI WHIS</span>
-            <p className="text-[7px] sm:text-[8px] text-yellow-200 bg-black/75 px-3 py-0.5 rounded-full border border-yellow-500/40 mt-0.5 font-mono text-center shadow-lg leading-tight">
-              {resetCountdown !== null ? `⏳ Tổng kết ván (Tự reset sau ${resetCountdown}s)...` : dealerMsg}
+            <h1 className="text-2xl sm:text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 drop-shadow">
+              DRAGON ARCADE
+            </h1>
+            <p className="text-slate-300 text-xs sm:text-sm font-medium">
+              {isSignUp ? "✨ Khởi tạo tài khoản tham gia đua top Sức Mạnh tuần" : "⚡ Đăng nhập bước vào không gian võ đạo"}
             </p>
           </div>
 
-          <div className="absolute flex flex-col items-center gap-1 z-10">
-            <div className="bg-gray-950/90 px-3 py-0.5 rounded-full border border-yellow-500/60 text-yellow-400 text-[10px] font-black flex items-center gap-1.5 shadow-xl font-mono">
-              <span>🪙 POT:</span>
-              <span className="text-amber-300">${pot.toLocaleString()}</span>
+          <form onSubmit={handleAuthSubmit} className="space-y-3 sm:space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-amber-400 ml-1">Tên Đăng Nhập</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: kennylor298"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500 transition lowercase"
+                required
+              />
             </div>
 
-            <div className="flex gap-1.5 bg-black/50 p-1.5 rounded-xl border border-white/15 min-h-[44px] sm:min-h-[54px] items-center shadow-inner">
-              {communityCards.length === 0 ? (
-                <span className="text-[9px] text-emerald-200/60 font-mono italic px-2">
-                  Chờ người chơi sẵn sàng chia bài...
-                </span>
-              ) : (
-                communityCards.map((card, idx) => (
-                  <div key={idx} className="w-7 h-10 sm:w-9 sm:h-13 bg-white rounded-lg flex flex-col justify-between p-1 font-black shadow-2xl text-gray-900 transform transition hover:scale-110">
-                    <span className={`text-[9px] sm:text-[11px] leading-none ${card.color}`}>{card.rank}</span>
-                    <span className={`text-xs sm:text-sm self-center leading-none ${card.color}`}>{card.suit}</span>
-                    <span className={`text-[9px] sm:text-[11px] self-end leading-none ${card.color}`}>{card.rank}</span>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-amber-400 ml-1">Mật Khẩu</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500 transition"
+                required
+              />
+            </div>
+
+            <div className="flex items-center gap-2 mt-1 px-1">
+              <input
+                type="checkbox"
+                id="remember"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="accent-amber-500 w-4 h-4 rounded cursor-pointer"
+              />
+              <label htmlFor="remember" className="text-xs font-semibold text-slate-300 cursor-pointer">
+                Lưu thông tin đăng nhập
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-slate-950 font-black text-xs sm:text-sm py-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+            >
+              {authLoading ? "Đang Vận Ki..." : isSignUp ? "ĐĂNG KÝ NGAY 🚀" : "VÀO SẢNH GAME ⚡"}
+            </button>
+          </form>
+
+          <div className="text-center pt-2 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer transition"
+            >
+              {isSignUp ? "Đã có tài khoản? Đăng nhập ➔" : "Chưa có tài khoản? Đăng ký mới ➔"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isCheckedInToday = lastCheckIn === getTodayString();
+  const currentLevel = getSaiyanLevel(points);
+  const todayReward = getTodayCheckInReward();
+
+  return (
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
+      
+      <div className="bg-slate-900/95 border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-bold shrink-0 backdrop-blur-md z-30">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-amber-400">⚡ Chuyển Sảnh:</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition text-[11px]">
+            🏠 Trang Chủ
+          </Link>
+          <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            🎲 Baccarat Thần Thánh
+          </Link>
+          <Link href="/tienlen" className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            ⚔️ Võ Thuật 13 Ấn Ký
+          </Link>
+          <Link href="/poker" className="bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            ♠️ Sòng Poker Whis
+          </Link>
+          <Link href="/jackpot" className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            🔮 Jackpot Rồng Thần
+          </Link>
+          <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            🎟️ Vòng Quay
+          </Link>
+        </div>
+      </div>
+
+      {showNoticeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-3 relative max-h-[88vh] overflow-y-auto">
+            
+            <div className="text-center space-y-1 border-b border-slate-800 pb-2">
+              <div className="flex justify-center">
+                <img src="/assets/home/dragonball.png" alt="Dragon Ball" className="w-10 h-10 object-contain animate-spin-slow" />
+              </div>
+              <span className="text-[9px] bg-amber-500/20 text-amber-400 font-black px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-widest">
+                ⚡ Sắc Lệnh Từ Thần Hủy Diệt ⚡
+              </span>
+              <h2 className="text-base sm:text-lg font-black text-yellow-300 mt-1">
+                LUẬT CHƠI VÀ SĂN NGỌC RỒNG VŨ TRỤ
+              </h2>
+            </div>
+
+            <div className="bg-gradient-to-r from-red-950/60 via-amber-950/80 to-red-950/60 p-2.5 rounded-xl border border-red-500/50 text-center space-y-1 shadow-lg">
+              <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">⏳ Thời Gian Đến Lúc Reset Tuần (00:00 Thứ 2)</span>
+              <div className="flex justify-center gap-2 text-amber-400 font-mono font-black text-base">
+                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.hours.toString().padStart(2, '0')}h</span> :
+                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.minutes.toString().padStart(2, '0')}m</span> :
+                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.seconds.toString().padStart(2, '0')}s</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-[11px] text-slate-300">
+              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
+                <h3 className="font-bold text-amber-400 flex items-center gap-1">
+                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-3.5 h-3.5 object-contain" /> Chuỗi Thưởng Tụ Ki Theo Ngày:
+                </h3>
+                <p className="text-slate-400 leading-relaxed">
+                  • Thứ 2 ➔ T7: Tăng dần từ 10k đến 60k Ki<br/>
+                  🔥 <b className="text-yellow-400">Chủ Nhật: +100k Ki khủng!</b>
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <button
+                onClick={handleCloseNoticeForToday}
+                className="w-full bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-black text-xs py-2 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg transition"
+              >
+                ĐÃ RÕ, HÔM NAY KHÔNG HIỆN LẠI 🚀
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <header className="bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 sm:px-5 py-2 shadow-md shrink-0 z-20 overflow-x-auto">
+        <div className="w-full min-w-max flex justify-between items-center gap-4">
+          <div className="flex items-center gap-2 shrink-0">
+            <img src="/assets/home/shenron.png" alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain animate-bounce" />
+            <span className="font-black text-lg sm:text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500">
+              DRAGON ARCADE
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-amber-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
+              <img src="/assets/home/dausenzu.png" alt="Ki" className="w-4 h-4 object-contain" />
+              <span className="font-black text-amber-400">{points.toLocaleString()}</span>
+              <span className="text-[10px] text-amber-300/70">Ki</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-purple-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
+              <img src="/assets/home/capsule.png" alt="Ticket" className="w-4 h-4 object-contain" />
+              <span className="font-black text-purple-300">{luckySpins}</span>
+            </div>
+
+            <button
+              onClick={handleCheckIn}
+              disabled={isCheckedInToday}
+              className={`text-xs font-black py-1.5 px-3 rounded-xl transition-all shadow active:scale-95 cursor-pointer whitespace-nowrap ${
+                isCheckedInToday
+                  ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
+                  : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950"
+              }`}
+            >
+              {isCheckedInToday ? "✅ Đã Tụ Ki" : `🔥 Tụ Ki (+${(todayReward.ki / 1000).toFixed(0)}k)`}
+            </button>
+
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              className="w-8 h-8 rounded-full overflow-hidden border-2 border-amber-400 active:scale-95 transition cursor-pointer shadow-md shrink-0"
+            >
+              <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="text-xs text-slate-400 hover:text-rose-400 font-bold px-2.5 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700 cursor-pointer transition shrink-0"
+            >
+              Thoát 🚪
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5">
+        
+        <section
+          className="relative flex flex-col items-center justify-center min-h-[180px] sm:min-h-[240px] bg-cover bg-center text-center p-4 sm:p-6 rounded-3xl border-2 border-amber-500/40 overflow-hidden shadow-2xl"
+          style={{ backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/85 to-slate-950"></div>
+          <div className="relative z-10 w-full max-w-4xl space-y-2.5 flex flex-col items-center">
+            
+            <div className="flex flex-wrap justify-center items-center gap-2">
+              <span className="px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-xs font-bold text-amber-300 uppercase tracking-widest backdrop-blur-md">
+                ✨ Chiến Binh: <span className="text-white font-black">{displayName}</span>
+              </span>
+              <span className={`px-3 py-1 border rounded-full text-xs font-black backdrop-blur-md shadow ${currentLevel.color}`}>
+                {currentLevel.name}
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-xl tracking-wide uppercase break-words leading-tight w-full px-2">
+              DRAGON GAMING ARENA
+            </h1>
+
+            <div className="inline-flex items-center gap-1.5 bg-slate-900/90 border border-amber-500/50 px-3 py-1 rounded-full text-xs font-bold text-amber-300 shadow-md backdrop-blur-md">
+              <span>⏳ Reset Tuần Sau:</span>
+              <span className="font-mono font-black text-yellow-400">
+                {timeLeft.hours.toString().padStart(2, '0')}h {timeLeft.minutes.toString().padStart(2, '0')}m {timeLeft.seconds.toString().padStart(2, '0')}s
+              </span>
+            </div>
+
+            <p className="text-amber-200/90 text-xs sm:text-sm italic font-medium max-w-2xl mx-auto px-3 py-2 bg-slate-900/60 rounded-xl border border-amber-500/30 whitespace-normal leading-relaxed shadow-inner">
+              {dailyQuote}
+            </p>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          
+          <div className="lg:col-span-2 space-y-5">
+            
+            {/* SẢNH NỔI BẬT: JACKPOT ĐẶT TRƯỚC, RỒI TỚI BACCARAT THẦN THÁNH */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
+                <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
+                  <img src="/assets/home/candauvan.png" alt="Fire" className="w-5 h-5 object-contain" /> Sảnh Nổi Bật Vũ Trụ
+                </h2>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* 1. JACKPOT RỒNG THẦN (NỔI BẬT TRƯỚC) */}
+                <Link
+                  href="/jackpot"
+                  className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/home/dragonball.png" alt="Ball" className="w-20 h-20 object-contain" />
                   </div>
-                ))
+                  <h3 className="text-sm sm:text-base font-black text-amber-400 flex items-center gap-2">
+                    <img src="/assets/home/dragon-ball-4.png" alt="Jackpot" className="w-6 h-6 object-contain" /> Jackpot Rồng Thần
+                  </h3>
+                  <p className="text-slate-300 text-xs mt-1 italic font-medium">✨ 'Vận Ki quay hũ tích lũy Điểm Sức Mạnh nổ hũ Chí Tôn!'</p>
+                  <div className="mt-3 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    VÀO NỔ HŨ 🔮
+                  </div>
+                </Link>
+
+                {/* 2. BACCARAT THẦN THÁNH (ĐẶT NGAY SAU JACKPOT VỚI DRAGON BALL AURA) */}
+                <Link
+                  href="/baccarat"
+                  className="bg-slate-900/90 border-2 border-cyan-400/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-300"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/baccarat/champa.png" alt="Champa" className="w-20 h-20 object-contain" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-cyan-400 flex items-center gap-2">
+                    <img src="/assets/baccarat/dragon-ball-7.png" alt="Baccarat" className="w-6 h-6 object-contain" /> Baccarat Thần Thánh
+                  </h3>
+                  <p className="text-slate-300 text-xs mt-1 italic font-medium">⚡ 'Whis phẩy gậy định đoạt, lật bài baccarat phân định cao thấp, húp trọn Pot!'</p>
+                  <div className="mt-3 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    VÀO SÀNH BACCARAT 🎲
+                  </div>
+                </Link>
+
+                <Link
+                  href="/wheel"
+                  className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
+                >
+                  <h3 className="text-sm sm:text-base font-bold text-purple-400 flex items-center gap-2">
+                    <img src="/assets/home/capsule.png" alt="Wheel" className="w-6 h-6 object-contain" /> Vòng Quay Capsule
+                  </h3>
+                  <p className="text-slate-400 text-xs mt-1">Dùng Lượt Quay Capsule mở rộng tiềm năng Ki chiến đấu!</p>
+                  <div className="mt-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    QUAY NGAY 🎟️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/shop"
+                  className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"
+                >
+                  <h3 className="text-sm sm:text-base font-bold text-yellow-400 flex items-center gap-2">
+                    <img src="/assets/home/dausenzu.png" alt="Shop" className="w-6 h-6 object-contain" /> Shop Võ Đạo Saiyan
+                  </h3>
+                  <p className="text-slate-400 text-xs mt-1">Dùng Điểm Ki quy đổi Lượt Quay & Đậu Senzu Phôi Hồi!</p>
+                  <div className="mt-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    VÀO SHOP 💎
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
+                <h2 className="text-base sm:text-lg font-black text-emerald-400 tracking-wider uppercase flex items-center gap-2">
+                  <img src="/assets/home/shenron.png" alt="Game" className="w-5 h-5 object-contain" /> Lôi Đài Võ Đạo Sát Phạt
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Link
+                  href="/tienlen"
+                  className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-black text-emerald-400">Đại Hội 13 Ấn Ký</h3>
+                  </div>
+                  <p className="text-slate-300 text-xs mt-2 italic font-medium leading-relaxed bg-black/40 p-2 rounded-xl border border-emerald-500/20">
+                    🌀 "Dồn 13 Ấn Ký vào tay bài, giải phóng Ki bùng nổ, chặt heo đoạt mệnh đối thủ!"
+                  </p>
+                  <div className="mt-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow">
+                    BƯỚC VÀO LÔI ĐÀI ⚔️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/poker"
+                  className="bg-slate-900/90 border-2 border-blue-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-blue-400"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-black text-blue-400">Sòng Poker Whis</h3>
+                  </div>
+                  <p className="text-slate-300 text-xs mt-2 italic font-medium leading-relaxed bg-black/40 p-2 rounded-xl border border-blue-500/20">
+                    ⚡ "Whis lật bài phân định cao thấp, All-In vận Ki áp đảo Thần Hủy Diệt húp trọn Pot!"
+                  </p>
+                  <div className="mt-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow">
+                    VÀO SÒNG POKER ♠️
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+          </div>
+
+          <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit">
+            <div className="flex items-center justify-between border-l-4 border-orange-500 pl-3">
+              <h2 className="text-sm sm:text-base font-black text-orange-400 tracking-wider uppercase">
+                🏆 Top 5 Võ Đạo Vũ Trụ
+              </h2>
+            </div>
+            <div className="space-y-2.5">
+              {leaderboard.length === 0 ? (
+                <div className="text-xs text-slate-500 text-center py-6">Đang cập nhật...</div>
+              ) : (
+                leaderboard.map((item, index) => {
+                  const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
+                  const isMe = item.id === user?.id;
+                  const userLvl = getSaiyanLevel(item.balance);
+                  const userAvatar = item.avatar_url || DEFAULT_AVATARS[0].url;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border ${
+                        isMe ? "bg-amber-500/15 border-amber-500/60 font-bold" : "bg-slate-950/60 border-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm shrink-0">{medals[index]}</span>
+                        <div className="w-7 h-7 rounded-full overflow-hidden border border-amber-400/60 shrink-0">
+                          <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs text-slate-200 truncate max-w-[90px]">
+                            {item.full_name} {isMe && "(Tôi)"}
+                          </span>
+                          <span className="text-[9px] text-amber-300 font-semibold">{userLvl.name.split(" - ")[1]}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-xs text-amber-400 font-black shrink-0">
+                        <img src="/assets/home/dausenzu.png" alt="Ki" className="w-3.5 h-3.5 object-contain" />
+                        <span>{item.balance?.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
 
-          {seats.map((seat, index) => {
-            if (!seat) {
-              return (
-                <div key={index} className={`absolute text-[8px] text-white/40 border border-dashed border-white/30 w-7 h-7 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-sm ${
-                  index === 0 ? "bottom-2 left-1/2 -translate-x-1/2" : 
-                  index === 1 ? "bottom-5 left-[12%]" : 
-                  index === 2 ? "top-1/2 -translate-y-1/2 left-[3%]" : 
-                  index === 3 ? "top-1/2 -translate-y-1/2 right-[3%]" : 
-                  "bottom-5 right-[12%]"
-                }`}>
-                  Trống
-                </div>
-              );
-            }
-
-            const isTurn = index === currentTurn && phase !== 'IDLE' && phase !== 'SHOWDOWN';
-            const isMySeat = String(seat.id) === String(currentUser?.id) || seat.name === myName;
-
-            return (
-              <div key={index} className={`absolute flex flex-col items-center transition-all duration-200 ${
-                index === 0 ? "bottom-2 left-1/2 -translate-x-1/2 z-25" : 
-                index === 1 ? "bottom-5 left-[12%] z-15" : 
-                index === 2 ? "top-1/2 -translate-y-1/2 left-[3%] z-15" : 
-                index === 3 ? "top-1/2 -translate-y-1/2 right-[3%] z-15" : 
-                "bottom-5 right-[12%] z-15"
-              }`}>
-                
-                {isTurn && (
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <span className="text-[7px] bg-red-600 text-white px-1.5 py-0.5 rounded-full font-bold animate-ping shadow-lg">⚡ LƯỢT</span>
-                    <span className="text-[8px] bg-black/80 text-yellow-400 px-1.5 py-0.5 rounded-full font-mono font-black border border-yellow-500/50">⏱️ {turnTimeLeft}s</span>
-                  </div>
-                )}
-                {phase === 'IDLE' && (
-                  <span className={`text-[7px] px-2 py-0.5 rounded-full font-bold mb-0.5 shadow ${seat.isReady ? 'bg-emerald-400 text-gray-950 font-black' : 'bg-gray-800 text-gray-400'}`}>
-                    {seat.isReady ? '✅ SẴN SÀNG' : '⏳ CHỜ'}
-                  </span>
-                )}
-                {seat.folded && <span className="text-[7px] bg-red-950 text-red-400 border border-red-500/40 px-1.5 rounded mb-0.5 font-bold">ĐÃ ÚP BÀI</span>}
-
-                <div className="flex -space-x-2 mb-0.5">
-                  {isMySeat || phase === 'SHOWDOWN' ? (
-                    seat.cards.map((c, i) => (
-                      <div key={i} className="w-6 h-9 sm:w-7 sm:h-11 bg-white rounded-md flex flex-col justify-between p-0.5 text-gray-900 text-[8px] font-black shadow-xl">
-                        <span className={`leading-none ${c.color}`}>{c.rank}{c.suit}</span>
-                      </div>
-                    ))
-                  ) : (
-                    seat.cards.length > 0 && <div className="w-6 h-9 sm:w-7 sm:h-11 bg-indigo-950 border border-indigo-400/50 rounded-md flex items-center justify-center text-[7px] font-mono shadow-lg">🎴🎴</div>
-                  )}
-                </div>
-
-                <div className={`flex items-center gap-1 bg-gray-900/95 px-2 py-0.5 rounded-full border backdrop-blur shadow-xl ${isTurn ? 'border-yellow-400 ring-2 ring-yellow-400/40 scale-105' : 'border-gray-700'}`}>
-                  <img src={seat.avatar} className="w-4 h-4 rounded-full bg-gray-800 border border-yellow-500/40" />
-                  <div className="text-left">
-                    <p className="text-[7px] font-black text-yellow-400 leading-none truncate max-w-[55px]">{seat.name}</p>
-                    <p className="text-[8px] font-mono font-black text-emerald-300 leading-tight">${seat.chips.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {seat.currentBet > 0 && !seat.folded && (
-                  <div className="mt-1 bg-black/75 px-2 py-0.5 rounded-full border border-yellow-500/50 text-[8px] text-yellow-300 font-mono font-black shadow-md flex items-center gap-1 animate-fadeIn">
-                    <span>🪙 Cược:</span>
-                    <span className="text-amber-400">${seat.currentBet.toLocaleString()}</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
         </div>
-      </main>
 
-      {/* FOOTER ĐIỀU KHIỂN */}
-      <footer className="bg-slate-900/95 border-t border-yellow-500/40 p-2 px-3 z-30 backdrop-blur-md shrink-0">
-        <div className="max-w-xl mx-auto flex flex-col gap-1.5">
-          {phase === 'IDLE' ? (
-            <div className="flex gap-2 w-full">
-              <button
-                onClick={handleToggleReady}
-                className={`w-full py-2 font-black rounded-xl shadow-lg active:scale-95 transition text-xs tracking-wider uppercase ${
-                  mySeat?.isReady 
-                    ? "bg-rose-600 hover:bg-rose-500 text-white" 
-                    : "bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-gray-950"
-                }`}
-              >
-                {mySeat?.isReady ? "❌ HỦY SẴN SÀNG" : "🟢 SẴN SÀNG NHẬP CUỘC"}
-              </button>
+      </div>
+
+      {profileModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <h3 className="text-xs sm:text-sm font-black text-amber-400">HỒ SƠ CHIẾN BINH</h3>
+              <button onClick={() => setProfileModalOpen(false)} className="text-slate-400 hover:text-white font-bold text-xs px-2 py-0.5 cursor-pointer">✖</button>
             </div>
-          ) : phase === 'SHOWDOWN' ? (
-            <div className="flex gap-2 w-full text-center justify-center items-center text-[11px] text-yellow-400 font-bold py-1 font-mono">
-              ⏳ Ván đấu kết thúc. Tự động reset bàn sau {resetCountdown ?? 10}s...
+
+            <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 shadow shrink-0">
+                <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold text-xs text-white truncate">{displayName}</h4>
+                <div className={`inline-block text-[9px] font-black px-1.5 py-0.2 rounded border ${currentLevel.color}`}>
+                  {currentLevel.name}
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between gap-2 bg-black/60 p-1 px-3 rounded-xl border border-gray-800">
-                <span className="text-[9px] text-yellow-400 font-mono font-black shrink-0">Cược: ${raiseVal}</span>
+
+            <form onSubmit={handleUpdateProfile} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-amber-400 ml-1">Tên Hiển Thị</label>
                 <input
-                  type="range"
-                  min={50}
-                  max={myKi}
-                  step={50}
-                  value={raiseVal}
-                  onChange={(e) => setRaiseVal(Number(e.target.value))}
-                  disabled={!isMyTurn}
-                  className="flex-1 accent-yellow-400 h-1 rounded-lg disabled:opacity-30 cursor-pointer"
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-xs text-white px-3 py-2 rounded-lg focus:outline-none focus:border-amber-500"
+                  required
                 />
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => setRaiseVal(50)} disabled={!isMyTurn} className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition">50</button>
-                  <button onClick={() => setRaiseVal(100)} disabled={!isMyTurn} className="bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition">100</button>
-                  <button onClick={() => setRaiseVal(500)} disabled={!isMyTurn} className="bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition">500</button>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-amber-400 ml-1">Chọn Avatar Dragon Ball (30 Mẫu)</label>
+                <div className="grid grid-cols-6 gap-1.5 pt-1 max-h-36 overflow-y-auto bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
+                  {DEFAULT_AVATARS.map((av, idx) => (
+                    <button
+                      type="button"
+                      key={idx}
+                      onClick={() => setAvatarUrl(av.url)}
+                      className={`w-9 h-9 rounded-lg overflow-hidden border-2 cursor-pointer transition shrink-0 ${
+                        avatarUrl === av.url ? "border-amber-400 scale-105 shadow" : "border-slate-700 opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      <img src={av.url} alt={av.name} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-1.5 w-full">
-                <button 
-                  onClick={() => handleAction('fold')} 
-                  disabled={!isMyTurn}
-                  className="bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-500/50 py-1.5 rounded-xl font-black text-[10px] transition active:scale-95 disabled:opacity-30 shadow"
-                >
-                  ÚP BÀI 🏳️
-                </button>
-                <button 
-                  onClick={() => handleAction('call')} 
-                  disabled={!isMyTurn}
-                  className="bg-blue-950/70 hover:bg-blue-900 text-blue-300 border border-blue-500/50 py-1.5 rounded-xl font-black text-[10px] transition active:scale-95 disabled:opacity-30 shadow"
-                >
-                  THEO 🤝
-                </button>
-                <button 
-                  onClick={() => handleAction('raise')} 
-                  disabled={!isMyTurn}
-                  className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:brightness-110 text-gray-950 font-black py-1.5 rounded-xl text-[10px] transition active:scale-95 disabled:opacity-30 shadow"
-                >
-                  TỐ 🚀
-                </button>
-                <button 
-                  onClick={() => handleAction('allin')} 
-                  disabled={!isMyTurn}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-700 hover:brightness-110 text-white font-black py-1.5 rounded-xl text-[10px] transition active:scale-95 disabled:opacity-30 shadow animate-pulse"
-                >
-                  ALL-IN 🔥
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </footer>
-
-      {showRulesModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border-2 border-yellow-500/60 rounded-2xl max-w-lg w-full p-5 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative">
-            <div className="flex justify-between items-center mb-3 border-b border-yellow-500/30 pb-2">
-              <h3 className="text-sm font-black text-yellow-400 uppercase tracking-wide flex items-center gap-1.5">
-                📜 TRỌN BỘ LUẬT POKER VŨ TRỤ
-              </h3>
-              <button 
-                onClick={() => setShowRulesModal(false)}
-                className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3 text-[11px] text-slate-300 leading-relaxed font-sans">
-              <div>
-                <h4 className="text-yellow-400 font-bold mb-1">1. Giới thiệu & Nhập cuộc:</h4>
-                <p>Mỗi người chơi khi vào bàn sẽ mang theo lượng Linh Thạch (Ki) của mình. Bàn chơi tối đa 5 người, chọn bàn thủ công (Lôi Đài 1 hoặc 2) và bấm <strong className="text-emerald-400">Sẵn Sàng</strong> để bắt đầu ván đấu khi có từ 2 người trở lên.</p>
-              </div>
-
-              <div>
-                <h4 className="text-yellow-400 font-bold mb-1">2. Các Vòng Cược (Betting Rounds):</h4>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li><strong>Pre-Flop:</strong> Mỗi người chơi được chia 2 lá bài tẩy riêng biệt. Tiền cược mù ban đầu mỗi người là $100.</li>
-                  <li><strong>Flop:</strong> Trọng tài Whis lật 3 lá bài chung đầu tiên giữa bàn.</li>
-                  <li><strong>Turn:</strong> Lật lá bài chung thứ 4.</li>
-                  <li><strong>River:</strong> Lật lá bài chung thứ 5 (lá cuối cùng).</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-yellow-400 font-bold mb-1">3. Các Hành Động Trong Lượt (⏱️ Giới hạn 30 giây):</h4>
-                <p className="mb-1">Mỗi người có 30 giây suy nghĩ mỗi lượt. Quá thời gian hệ thống tự động úp bài.</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li><strong className="text-rose-400">Úp Bài (Fold):</strong> Bỏ bài nếu thấy bài yếu, chấp nhận mất tiền cược trước đó.</li>
-                  <li><strong className="text-cyan-400">Theo (Call):</strong> Bỏ ra số tiền cược ngang bằng với người tố trước đó để tiếp tục chơi.</li>
-                  <li><strong className="text-yellow-400">Tố (Raise):</strong> Tăng mức cược lên cao hơn để áp đảo đối thủ.</li>
-                  <li><strong className="text-purple-400">All-In:</strong> Cược toàn bộ số Linh Thạch còn lại của mình vào Pot. Khi đối thủ không đủ tiền, bàn chơi tự động mở hết bài (Showdown).</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-yellow-400 font-bold mb-1">4. Xếp Hạng Bài (Từ cao xuống thấp):</h4>
-                <p>Thùng Phá Sảnh &gt; Tứ Quý &gt; Cù Lũ &gt; Thùng (Flush) &gt; Sảnh (Straight) &gt; Sám Chi (3 lá) &gt; Thú (2 đôi) &gt; Một Đôi &gt; Mậu Thầu (Bài cao).</p>
-              </div>
-            </div>
-
-            <div className="mt-5 text-center">
               <button
-                onClick={() => setShowRulesModal(false)}
-                className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-6 py-2 rounded-xl text-xs uppercase shadow"
+                type="submit"
+                disabled={updatingProfile}
+                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs py-2.5 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow disabled:opacity-50"
               >
-                Đã Hiểu, Chiến Thôi! 🚀
+                {updatingProfile ? "Đang lưu..." : "LƯU THAY ĐỔI 💾"}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }

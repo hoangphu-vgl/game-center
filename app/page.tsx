@@ -65,7 +65,6 @@ export default function Home() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [dailyQuote, setDailyQuote] = useState("");
 
-  // State đồng hồ đếm ngược
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({
     hours: 0,
     minutes: 0,
@@ -81,9 +80,8 @@ export default function Home() {
     return `${now.getFullYear()}-W${week}`;
   };
 
-  // Tính mức thưởng Tụ Ki dựa trên thứ trong tuần (Thứ 2 = 1, ..., CN = 7)
   const getTodayCheckInReward = () => {
-    const dayOfWeek = new Date().getDay(); // 0: CN, 1: T2, 2: T3, ...
+    const dayOfWeek = new Date().getDay();
     const dayMap: { [key: number]: { dayName: string; ki: number } } = {
       1: { dayName: "Thứ 2", ki: 10000 },
       2: { dayName: "Thứ 3", ki: 20000 },
@@ -96,13 +94,10 @@ export default function Home() {
     return dayMap[dayOfWeek] || { dayName: "Hôm nay", ki: 10000 };
   };
 
-  // ⏱️ HÀM TÍNH THỜI GIAN ĐẾM NGƯỢC TỚI 00:00 SÁNG THỨ HAI HÀNG TUẦN
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
-      const currentDay = now.getDay(); // 0 là Chủ Nhật, 1 là Thứ 2...
-      
-      // Tính số ngày còn lại đến Thứ Hai tuần tới (Nếu hôm nay là Thứ 2 (1) thì còn 7 ngày)
+      const currentDay = now.getDay();
       const daysUntilMonday = currentDay === 1 ? 7 : (8 - currentDay) % 7;
       
       const targetMonday = new Date(now);
@@ -162,7 +157,6 @@ export default function Home() {
         let currentSpins = profile?.lucky_spins ?? 3;
         let lastCheck = profile?.last_check_in ?? "";
 
-        // Reset Điểm Sức Mạnh (Ki) về 0 vào Thứ 2 hàng tuần
         if (!lastCheckedWeek) {
           localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
         } else if (lastCheckedWeek !== currentWeek) {
@@ -518,7 +512,6 @@ export default function Home() {
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
       
-      {/* 🚀 THANH ĐIỀU HƯỚNG NHANH GIỮA CÁC TRANG */}
       <div className="bg-slate-900/95 border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-bold shrink-0 backdrop-blur-md z-30">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-amber-400">⚡ Chuyển Sảnh:</span>
@@ -526,6 +519,9 @@ export default function Home() {
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition text-[11px]">
             🏠 Trang Chủ
+          </Link>
+          <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            🎲 Baccarat Thần Thánh
           </Link>
           <Link href="/tienlen" className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             ⚔️ Võ Thuật 13 Ấn Ký
@@ -542,7 +538,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* POPUP THÔNG BÁO / LUẬT CHƠI & ĐẾM NGƯỢC */}
       {showNoticeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
           <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-3 relative max-h-[88vh] overflow-y-auto">
@@ -559,9 +554,8 @@ export default function Home() {
               </h2>
             </div>
 
-            {/* HỘP ĐẾM NGƯỢC NỔI BẬT TRONG POPUP */}
             <div className="bg-gradient-to-r from-red-950/60 via-amber-950/80 to-red-950/60 p-2.5 rounded-xl border border-red-500/50 text-center space-y-1 shadow-lg">
-              <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">⏳ Thời Gian Còn Lại Đến Lúc Reset Tuần (00:00 Thứ 2)</span>
+              <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">⏳ Thời Gian Đến Lúc Reset Tuần (00:00 Thứ 2)</span>
               <div className="flex justify-center gap-2 text-amber-400 font-mono font-black text-base">
                 <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.hours.toString().padStart(2, '0')}h</span> :
                 <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.minutes.toString().padStart(2, '0')}m</span> :
@@ -572,13 +566,12 @@ export default function Home() {
             <div className="space-y-2 text-[11px] text-slate-300">
               <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
                 <h3 className="font-bold text-amber-400 flex items-center gap-1">
-                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-3.5 h-3.5 object-contain" /> Chuỗi Thưởng Tụ Ki Theo Ngày (Thứ 2 ➔ Chủ Nhật):
+                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-3.5 h-3.5 object-contain" /> Chuỗi Thưởng Tụ Ki Theo Ngày:
                 </h3>
                 <p className="text-slate-400 leading-relaxed">
-                  • Thứ 2: <b className="text-amber-300">+10k Ki</b> | Thứ 3: <b className="text-amber-300">+20k Ki</b> | Thứ 4: <b className="text-amber-300">+30k Ki</b><br/>
-                  • Thứ 5: <b className="text-amber-300">+40k Ki</b> | Thứ 6: <b className="text-amber-300">+50k Ki</b> | Thứ 7: <b className="text-amber-300">+60k Ki</b><br/>
-                  🔥 <b className="text-yellow-400">Chủ Nhật (Ngày 7): +100k Ki khủng!</b><br/>
-                  <i className="text-slate-500">* Đúng 00:00 sáng Thứ Hai Điểm Ki tự động reset về 0 để bắt đầu chuỗi mới.</i>
+                  • Thứ 2 ➔ T7: Tăng dần từ 10k đến 60k Ki<br/>
+                  🔥 <b className="text-yellow-400">Chủ Nhật: +100k Ki khủng!</b><br/>
+                  <i className="text-slate-500">* Đúng 00:00 sáng Thứ Hai Điểm Ki tự động reset về 0.</i>
                 </p>
               </div>
 
@@ -607,7 +600,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* HEADER TỰ ĐỘNG LƯỚT NGANG TRÊN CÁC MÀN HÌNH MÁY TRÁNH DÍNH CHỮ */}
       <header className="bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 sm:px-5 py-2 shadow-md shrink-0 z-20 overflow-x-auto">
         <div className="w-full min-w-max flex justify-between items-center gap-4">
           <div className="flex items-center gap-2 shrink-0">
@@ -657,15 +649,11 @@ export default function Home() {
         </div>
       </header>
 
-      {/* BODY CHÍNH CÓ THỂ CUỘN - TỰ CO GIÃN THÔNG THOÁNG NỀN VŨ TRỤ */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5">
         
-        {/* BANNER DRAGON GAMING ARENA KÈM ĐỒNG HỒ ĐẾM NGƯỢC */}
         <section
           className="relative flex flex-col items-center justify-center min-h-[180px] sm:min-h-[240px] bg-cover bg-center text-center p-4 sm:p-6 rounded-3xl border-2 border-amber-500/40 overflow-hidden shadow-2xl"
-          style={{
-            backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
-          }}
+          style={{ backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')" }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/85 to-slate-950"></div>
           <div className="relative z-10 w-full max-w-4xl space-y-2.5 flex flex-col items-center">
@@ -683,7 +671,6 @@ export default function Home() {
               DRAGON GAMING ARENA
             </h1>
 
-            {/* 🔥 ĐỒNG HỒ ĐẾM NGƯỢC RESET TUẦN HIỂN THỊ NỔI BẬT */}
             <div className="inline-flex items-center gap-1.5 bg-slate-900/90 border border-amber-500/50 px-3 py-1 rounded-full text-xs font-bold text-amber-300 shadow-md backdrop-blur-md">
               <span>⏳ Reset Tuần Sau:</span>
               <span className="font-mono font-black text-yellow-400">
@@ -706,13 +693,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           
-          {/* CỘT TRÁI (SẢNH NỔI BẬT & GAME GIẢI TRÍ DRAGON BALL) */}
           <div className="lg:col-span-2 space-y-5">
             
-            {/* 1. SẢNH NỔI BẬT */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -721,19 +705,38 @@ export default function Home() {
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* 1. JACKPOT RỒNG THẦN (NỔI BẬT TRƯỚC) */}
                 <Link
                   href="/jackpot"
-                  className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
+                  className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
                 >
                   <div className="absolute right-2 -bottom-2 opacity-15">
                     <img src="/assets/home/dragonball.png" alt="Ball" className="w-20 h-20 object-contain" />
                   </div>
-                  <h3 className="text-sm sm:text-base font-bold text-amber-400 flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-black text-amber-400 flex items-center gap-2">
                     <img src="/assets/home/dragon-ball-4.png" alt="Jackpot" className="w-6 h-6 object-contain" /> Jackpot Rồng Thần
                   </h3>
-                  <p className="text-slate-400 text-xs mt-1">Vận Ki quay hũ tích lũy Điểm Sức Mạnh nổ hũ Chí Tôn!</p>
-                  <div className="mt-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                  <p className="text-slate-300 text-xs mt-1 italic font-medium">✨ 'Vận Ki quay hũ tích lũy Điểm Sức Mạnh nổ hũ Chí Tôn!'</p>
+                  <div className="mt-3 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
                     VÀO NỔ HŨ 🔮
+                  </div>
+                </Link>
+
+                {/* 2. BACCARAT THẦN THÁNH (ĐẶT NGAY SAU JACKPOT VỚI DRAGON BALL AURA) */}
+                <Link
+                  href="/baccarat"
+                  className="bg-slate-900/90 border-2 border-cyan-400/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-300"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/baccarat/champa.png" alt="Champa" className="w-20 h-20 object-contain" />
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-cyan-400 flex items-center gap-2">
+                    <img src="/assets/baccarat/dragon-ball-7.png" alt="Baccarat" className="w-6 h-6 object-contain" /> Baccarat Thần Thánh
+                  </h3>
+                  <p className="text-slate-300 text-xs mt-1 italic font-medium">⚡ 'Whis phẩy gậy định đoạt, lật bài baccarat phân định cao thấp, húp trọn Pot!'</p>
+                  <div className="mt-3 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    VÀO SÀNH BACCARAT 🎲
                   </div>
                 </Link>
 
@@ -771,7 +774,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 2. GAME GIẢI TRÍ DRAGON BALL */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-emerald-400 tracking-wider uppercase flex items-center gap-2">
@@ -818,7 +820,6 @@ export default function Home() {
 
           </div>
 
-          {/* BẢNG XẾP HẠNG TOP 5 */}
           <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit">
             <div className="flex items-center justify-between border-l-4 border-orange-500 pl-3">
               <h2 className="text-sm sm:text-base font-black text-orange-400 tracking-wider uppercase">
@@ -873,7 +874,6 @@ export default function Home() {
 
       </div>
 
-      {/* POPUP HỒ SƠ & SƯU TẬP NGỌC RỒNG */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-md">
           <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
