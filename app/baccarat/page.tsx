@@ -163,7 +163,7 @@ export default function BaccaratPage() {
     createDeck();
 
     const channel = supabase
-      .channel("baccarat_jackpot_sync_v5")
+      .channel("baccarat_jackpot_sync_v6")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -688,55 +688,75 @@ export default function BaccaratPage() {
         <div className="absolute left-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenron.png')" }}></div>
         <div className="absolute right-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenronnamek.png')" }}></div>
 
-        {/* MODAL LUẬT CHƠI & NUÔI HŨ (ĐÃ SẮP XẾP LẠI THEO YÊU CẦU) */}
+        {/* 📜 POPUP LUẬT CHƠI DẠNG MODAL CHUẨN XÁC, CUỘN MƯỢT */}
         {showRules && (
-          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 animate-fadeIn rounded-[30px]">
-            <div className="bg-slate-900 border border-cyan-500/60 p-5 rounded-3xl max-w-lg w-full shadow-2xl relative">
-              <h3 className="text-sm font-black text-cyan-400 mb-2 uppercase text-center">📜 Sổ Tay Luật Chơi Baccarat Thần Thánh</h3>
-              <div className="text-xs text-slate-300 space-y-2.5 max-h-[65vh] overflow-y-auto pr-1">
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3 animate-fadeIn">
+            <div className="bg-slate-900 border-2 border-cyan-500/60 rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
+              
+              {/* Header Popup */}
+              <div className="flex justify-between items-center px-5 py-3 border-b border-cyan-500/30 bg-slate-950/60 shrink-0">
+                <h3 className="text-sm font-black text-cyan-400 uppercase tracking-wide">📜 Sổ Tay Luật Chơi Baccarat</h3>
+                <button 
+                  onClick={() => setShowRules(false)}
+                  className="w-7 h-7 rounded-full bg-slate-800 text-rose-400 border border-rose-500/50 flex items-center justify-center font-bold text-xs hover:bg-rose-950/50 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Nội dung cuộn mượt */}
+              <div className="p-4 overflow-y-auto space-y-3 text-xs text-slate-300 flex-1 pr-2">
                 
-                {/* 1. LUẬT CƠ BẢN */}
-                <div className="bg-slate-950/60 p-2.5 rounded-xl border border-cyan-500/30">
+                {/* 1. Luật cơ bản */}
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-cyan-500/30">
                   <span className="text-cyan-400 font-black block mb-1">1. ⚔️ Luật Cơ Bản</span>
                   <p className="text-[11px] leading-relaxed text-slate-300">
-                    Trận đấu so tài đỉnh cao giữa <b>Chiến Binh</b> và <b>Thần Hủy Diệt Champa</b>. Mỗi bên được chia 2 lá bài đầu tiên. Bên nào có tổng điểm các lá bài đạt gần số <b>9</b> nhất (hoặc bằng 9) sẽ giành chiến thắng. Điểm vượt quá 10 sẽ tính số hàng đơn vị (Ví dụ: 15 điểm tính là 5 điểm).
+                    Trận đấu so tài giữa <b>Chiến Binh</b> và <b>Thần Hủy Diệt Champa</b>. Mỗi bên được chia 2 lá bài đầu tiên. Bên nào có tổng điểm gần <b>9</b> nhất sẽ thắng. Điểm vượt quá 10 sẽ lấy số hàng đơn vị.
                   </p>
                 </div>
 
-                {/* 2. LUẬT NUÔI HŨ & NỔ HŨ (LÀM NỔI BẬT, KHÔNG CÔNG KHAI TỈ LỆ) */}
-                <div className="bg-gradient-to-r from-amber-950/60 via-yellow-950/40 to-amber-950/60 p-3 rounded-2xl border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
-                  <span className="text-yellow-400 font-black text-xs uppercase block mb-1.5 flex items-center gap-1">
+                {/* 2. Nuôi hũ & Nổ hũ */}
+                <div className="bg-gradient-to-r from-amber-950/70 via-yellow-950/50 to-amber-950/70 p-3.5 rounded-2xl border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                  <span className="text-yellow-400 font-black text-xs uppercase block mb-1.5">
                     🌟 2. THỂ LỆ NUÔI HŨ & NỔ HŨ ĐỈNH CAO
                   </span>
                   <p className="text-[11px] text-yellow-100 mb-2 leading-relaxed">
-                    Mỗi đồng Ki cược vào bàn đều tự động tích lũy năng lượng để phình to các hũ Rồng Thần. <b>Khi chiến thắng ván đấu</b>, chiến binh sẽ có cơ hội kích hoạt nổ hũ nhận toàn bộ phần thưởng khủng:
+                    Mỗi đồng Ki cược đều tích lũy năng lượng vào hũ Rồng Thần. <b>Khi chiến thắng ván đấu</b>, chiến binh có cơ hội nổ hũ rinh trọn kho báu:
                   </p>
-                  <ul className="space-y-1 text-[11px] text-slate-200 pl-2">
-                    <li>🔥 <b>Hũ Trái Đất (Minor):</b> Dành riêng cho chiến binh nuôi và nổ khi đặt mức cược từ <b>100 - 5.000 Ki</b> và giành chiến thắng.</li>
-                    <li>💎 <b>Hũ Namek (Major):</b> Dành riêng cho chiến binh nuôi và nổ khi đặt mức cược từ <b>10.000 - 1.000.000 Ki</b> và giành chiến thắng.</li>
-                    <li>👑 <b>Siêu Cấp Hũ (Grand):</b> Hũ lớn nhất hành tinh! Áp dụng cho <b>mọi mức cược</b>, cứ thắng trận là có cơ hội nổ hũ rinh trọn kho báu.</li>
+                  <ul className="space-y-1.5 text-[11px] text-slate-200 pl-1">
+                    <li>🔥 <b>Hũ Trái Đất (Minor):</b> Dành cho mức cược <b>100 - 5.000 Ki</b> chiến thắng.</li>
+                    <li>💎 <b>Hũ Namek (Major):</b> Dành cho mức cược từ <b>10.000 Ki trở lên</b> chiến thắng.</li>
+                    <li>👑 <b>Siêu Cấp Hũ (Grand):</b> Áp dụng cho <b>mọi mức cược</b>, cứ thắng trận là có cơ hội nổ!</li>
                   </ul>
                 </div>
 
-                {/* 3. TẤT CẢ CÁC PHẦN LUẬT CƯỢC PHỤ */}
-                <div className="bg-slate-950/60 p-2.5 rounded-xl border border-purple-500/30 space-y-1.5">
-                  <span className="text-purple-400 font-black block mb-1">3. 🔮 Luật Tất Cả Các Cửa Cược Phụ</span>
-                  <p>• <b>Chiến Binh / Champa (Cửa chính):</b> Thắng tỉ lệ 1:1 (Champa ăn 1:0.95).</p>
-                  <p>• <b>Hòa Khí (Tie):</b> 2 bên bằng điểm nhau (Tỷ lệ 1 : 8).</p>
-                  <p>• <b>Đôi Chiến Binh / Champa:</b> 2 lá đầu tiên của bên đó đồng cấp độ (Tỷ lệ 1 : 11).</p>
-                  <p>• <b>Rồng Thần (Đồng Chất):</b> Bài rút ra có 3 lá cùng chất với nhau (Tỷ lệ 1 : 25).</p>
-                  <p>• <b>Sám Cô Hủy Diệt:</b> 3 lá bài có cùng cấp độ cực kỳ hiếm gặp (Tỷ lệ 1 : 45).</p>
-                  <p>• <b>Tài (≥ 10 điểm tổng) / Xỉu (≤ 9 điểm tổng):</b> Cược tổng điểm ván đấu (Tỷ lệ 1 : 1.95).</p>
-                  <p>• <b>Tuyệt Chiêu Kết Liễu:</b> Khoảng cách điểm biệt lập giữa 2 bên từ 5 điểm trở lên (Tỷ lệ 1 : 5).</p>
+                {/* 3. Cửa cược phụ (Rút gọn chữ trong ngoặc) */}
+                <div className="bg-slate-950/60 p-3 rounded-2xl border border-purple-500/30 space-y-1.5">
+                  <span className="text-purple-400 font-black block mb-1">3. 🔮 Tỷ Lệ Ăn Cược Các Cửa</span>
+                  <div className="grid grid-cols-1 gap-1 text-[11px]">
+                    <p>• <b>Chiến Binh:</b> <span className="text-yellow-300 font-bold">1 : 1</span></p>
+                    <p>• <b>Thần Hủy Diệt Champa:</b> <span className="text-yellow-300 font-bold">1 : 0.95</span></p>
+                    <p>• <b>Hòa Khí (Tie):</b> <span className="text-yellow-300 font-bold">1 : 8</span></p>
+                    <p>• <b>Đôi Chiến Binh / Champa:</b> <span className="text-yellow-300 font-bold">1 : 11</span></p>
+                    <p>• <b>Rồng Thần (Đồng Chất):</b> <span className="text-yellow-300 font-bold">1 : 25</span></p>
+                    <p>• <b>Sám Cô Hủy Diệt:</b> <span className="text-yellow-300 font-bold">1 : 45</span></p>
+                    <p>• <b>Tài / Xỉu:</b> <span className="text-yellow-300 font-bold">1 : 1.95</span></p>
+                    <p>• <b>Tuyệt Chiêu Kết Liễu:</b> <span className="text-yellow-300 font-bold">1 : 5</span></p>
+                  </div>
                 </div>
 
               </div>
-              <button 
-                onClick={() => setShowRules(false)}
-                className="mt-3 w-full bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-xs py-2.5 rounded-xl shadow cursor-pointer uppercase"
-              >
-                Đã Hiểu, Trở Lại Bàn Đấu ⚔️
-              </button>
+
+              {/* Footer Popup */}
+              <div className="p-3 border-t border-cyan-500/30 bg-slate-950/60 shrink-0">
+                <button 
+                  onClick={() => setShowRules(false)}
+                  className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-xs py-2.5 rounded-xl shadow cursor-pointer uppercase tracking-wide"
+                >
+                  Đã Hiểu, Trở Lại Bàn Đấu ⚔️
+                </button>
+              </div>
+
             </div>
           </div>
         )}
@@ -792,7 +812,7 @@ export default function BaccaratPage() {
           </div>
         </div>
 
-        {/* 2. CÁC Ô ĐẶT CƯỢC */}
+        {/* 2. CÁC Ô ĐẶT CƯỢC (Rút gọn chữ trong ngoặc chỉ còn tỷ lệ ăn) */}
         <div className="w-full max-w-5xl mx-auto flex flex-col gap-1.5 my-1 relative z-10 text-[10px] md:text-xs">
           
           <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
@@ -820,7 +840,7 @@ export default function BaccaratPage() {
 
             <div onClick={() => placeBet('dragonSummon')} className="border border-dashed border-amber-500/50 bg-slate-950/70 hover:bg-amber-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
               <span className="font-bold text-amber-400 text-[10px]">Rồng Thần</span>
-              <span className="text-[8px] text-slate-400">Đồng Chất 1:25</span>
+              <span className="text-[8px] text-slate-400">1 : 25</span>
               {bets.dragonSummon.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
                   <img src={bets.dragonSummon.chipIcon} alt="chip" className="w-5 h-5 object-contain" />
@@ -831,7 +851,7 @@ export default function BaccaratPage() {
 
             <div onClick={() => placeBet('samCo')} className="border-2 border-dashed border-yellow-400/70 bg-slate-950/80 hover:bg-amber-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition shadow-[0_0_10px_rgba(250,204,21,0.2)]">
               <span className="font-black text-yellow-300 text-[10px]">Sám Cô Hủy Diệt</span>
-              <span className="text-[8px] text-yellow-200/80 font-bold">3 Lá 1:45</span>
+              <span className="text-[8px] text-yellow-200/80 font-bold">1 : 45</span>
               {bets.samCo.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
                   <img src={bets.samCo.chipIcon} alt="chip" className="w-5 h-5 object-contain" />
@@ -841,7 +861,7 @@ export default function BaccaratPage() {
             </div>
 
             <div onClick={() => placeBet('tai')} className="border border-dashed border-indigo-500/50 bg-slate-950/70 hover:bg-indigo-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
-              <span className="font-bold text-indigo-400 text-[10px]">Tài (≥ 10)</span>
+              <span className="font-bold text-indigo-400 text-[10px]">Tài</span>
               <span className="text-[8px] text-slate-400">1 : 1.95</span>
               {bets.tai.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
@@ -852,7 +872,7 @@ export default function BaccaratPage() {
             </div>
 
             <div onClick={() => placeBet('xiu')} className="border border-dashed border-blue-500/50 bg-slate-950/70 hover:bg-blue-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
-              <span className="font-bold text-blue-400 text-[10px]">Xỉu (≤ 9)</span>
+              <span className="font-bold text-blue-400 text-[10px]">Xỉu</span>
               <span className="text-[8px] text-slate-400">1 : 1.95</span>
               {bets.xiu.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
@@ -865,7 +885,7 @@ export default function BaccaratPage() {
 
           <div className="grid grid-cols-2 gap-1.5">
             <div onClick={() => placeBet('tie')} className="border-2 border-dashed border-emerald-500/60 bg-slate-950/70 hover:bg-emerald-950/40 rounded-xl p-2 text-center cursor-pointer relative flex items-center justify-between px-4 min-h-[42px] transition">
-              <span className="font-bold text-emerald-400 text-xs md:text-sm">HÒA KHÍ (Tỷ lệ 1 : 8)</span>
+              <span className="font-bold text-emerald-400 text-xs md:text-sm">HÒA KHÍ (1 : 8)</span>
               {bets.tie.amount > 0 ? (
                 <div className="bg-slate-900 border border-yellow-400 px-2 py-0.5 rounded-lg flex items-center gap-1">
                   <img src={bets.tie.chipIcon} alt="chip" className="w-5 h-5 object-contain" />
@@ -877,7 +897,7 @@ export default function BaccaratPage() {
             </div>
 
             <div onClick={() => placeBet('finishingMove')} className="border-2 border-dashed border-purple-500/60 bg-slate-950/70 hover:bg-purple-950/40 rounded-xl p-2 text-center cursor-pointer relative flex items-center justify-between px-4 min-h-[42px] transition">
-              <span className="font-bold text-purple-400 text-xs md:text-sm">TUYỆT CHIÊU KẾT LIỄU (1:5)</span>
+              <span className="font-bold text-purple-400 text-xs md:text-sm">TUYỆT CHIÊU KẾT LIỄU (1 : 5)</span>
               {bets.finishingMove.amount > 0 ? (
                 <div className="bg-slate-900 border border-yellow-400 px-2 py-0.5 rounded-lg flex items-center gap-1">
                   <img src={bets.finishingMove.chipIcon} alt="chip" className="w-5 h-5 object-contain" />
@@ -893,7 +913,7 @@ export default function BaccaratPage() {
             <div onClick={() => placeBet('champa')} className="border-3 border-dashed border-rose-500/80 bg-slate-950/70 hover:bg-rose-950/40 rounded-xl p-2.5 text-center cursor-pointer relative flex items-center justify-between px-4 min-h-[50px] transition">
               <div>
                 <span className="font-black text-rose-400 text-xs md:text-sm block">THẦN HỦY DIỆT CHAMPA</span>
-                <span className="text-[9px] text-slate-400">Tỷ lệ 1 : 0.95</span>
+                <span className="text-[9px] text-slate-400">1 : 0.95</span>
               </div>
               {bets.champa.amount > 0 ? (
                 <div className="bg-slate-900 border-2 border-yellow-400 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5">
@@ -908,7 +928,7 @@ export default function BaccaratPage() {
             <div onClick={() => placeBet('warrior')} className="border-3 border-dashed border-cyan-500/80 bg-slate-950/70 hover:bg-cyan-950/40 rounded-xl p-2.5 text-center cursor-pointer relative flex items-center justify-between px-4 min-h-[50px] transition">
               <div>
                 <span className="font-black text-cyan-400 text-xs md:text-sm block">{userName.toUpperCase()}</span>
-                <span className="text-[9px] text-slate-400">Tỷ lệ 1 : 1</span>
+                <span className="text-[9px] text-slate-400">1 : 1</span>
               </div>
               {bets.warrior.amount > 0 ? (
                 <div className="bg-slate-900 border-2 border-yellow-400 px-2.5 py-0.5 rounded-xl flex items-center gap-1.5">
