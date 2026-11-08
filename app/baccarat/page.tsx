@@ -43,7 +43,7 @@ const DBZ_AURAS = {
   ]
 };
 
-export default function BaccaratCleanPage() {
+export default function BaccaratPerfectPage() {
   const [mounted, setMounted] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>("Test");
@@ -81,6 +81,7 @@ export default function BaccaratCleanPage() {
     quote: string;
   } | null>(null);
 
+  // Khởi tạo hũ từ DB trực tiếp tránh bị reset khi F5
   const [jackpots, setJackpots] = useState({ minor: 10000, major: 50000, grand: 200000 });
   const deckRef = useRef<Card[]>([]);
   const balanceRef = useRef<number>(543545);
@@ -96,8 +97,9 @@ export default function BaccaratCleanPage() {
   }, [balance]);
 
   useEffect(() => {
-    async function fetchUserData() {
+    async function initGameData() {
       try {
+        // 1. Lấy thông tin user & balance
         const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user;
         setUser(currentUser);
@@ -115,44 +117,47 @@ export default function BaccaratCleanPage() {
             balanceRef.current = realBalance;
             setUserName(profile.full_name || profile.username || "Test");
             setUserAvatar(profile.avatar_url || profile.avatar || "/assets/avatar/xtra30.ico");
-            return;
+          }
+        } else {
+          const { data: allProfiles } = await supabase
+            .from("profiles")
+            .select("id, balance, username, full_name, avatar_url, avatar")
+            .limit(1);
+
+          if (allProfiles && allProfiles.length > 0) {
+            const p = allProfiles[0];
+            setBalance(p.balance ?? 543545);
+            balanceRef.current = p.balance ?? 543545;
+            setUserName(p.full_name || p.username || "Test");
+            setUserAvatar(p.avatar_url || p.avatar || "/assets/avatar/xtra30.ico");
           }
         }
 
-        const { data: allProfiles } = await supabase
-          .from("profiles")
-          .select("id, balance, username, full_name, avatar_url, avatar")
-          .limit(1);
+        // 2. Lấy hũ Jackpot chuẩn từ Supabase ngay khi load trang
+        const { data: jackpotData } = await supabase
+          .from("baccarat_jackpot")
+          .select("minor, major, grand")
+          .eq("id", "global")
+          .single();
 
-        if (allProfiles && allProfiles.length > 0) {
-          const p = allProfiles[0];
-          setBalance(p.balance ?? 543545);
-          balanceRef.current = p.balance ?? 543545;
-          setUserName(p.full_name || p.username || "Test");
-          setUserAvatar(p.avatar_url || p.avatar || "/assets/avatar/xtra30.ico");
+        if (jackpotData) {
+          setJackpots({
+            minor: jackpotData.minor ?? 10000,
+            major: jackpotData.major ?? 50000,
+            grand: jackpotData.grand ?? 200000,
+          });
         }
       } catch (e) {
-        console.error(e);
+        console.error("Lỗi khởi tạo dữ liệu:", e);
       }
     }
-    fetchUserData();
-  }, []);
 
-  useEffect(() => {
-    async function fetchJackpot() {
-      const { data } = await supabase
-        .from("baccarat_jackpot")
-        .select("minor, major, grand")
-        .eq("id", "global")
-        .single();
-      if (data) {
-        setJackpots({ minor: data.minor, major: data.major, grand: data.grand });
-      }
-    }
-    fetchJackpot();
+    initGameData();
+    createDeck();
 
+    // 3. Đăng ký Realtime lắng nghe hũ toàn server
     const channel = supabase
-      .channel("baccarat_jackpot_clean_v1")
+      .channel("baccarat_jackpot_sync_v2")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -171,10 +176,6 @@ export default function BaccaratCleanPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  useEffect(() => {
-    createDeck();
   }, []);
 
   const updateBalanceInDB = async (newBal: number) => {
@@ -202,9 +203,9 @@ export default function BaccaratCleanPage() {
         .eq("id", "global")
         .single();
 
-      let baseMinor = currentPool?.minor ?? 10000;
-      let baseMajor = currentPool?.major ?? 50000;
-      let baseGrand = currentPool?.grand ?? 200000;
+      let baseMinor = currentPool?.minor ?? jackpots.minor;
+      let baseMajor = currentPool?.major ?? jackpots.major;
+      let baseGrand = currentPool?.grand ?? jackpots.grand;
 
       let addMinor = 0;
       let addMajor = 0;
@@ -538,7 +539,7 @@ export default function BaccaratCleanPage() {
   return (
     <div className="fixed inset-0 h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_center,#0f172a_0%,#020617_100%)] text-white font-sans select-none flex flex-col justify-between p-2 md:p-3" style={{ touchAction: 'manipulation' }}>
       
-      {/* 🚀 HEADER TOP BAR GỌN GÀNG */}
+      {/* 🚀 HEADER TOP BAR */}
       <header className="w-full max-w-7xl mx-auto px-3 flex justify-between items-center bg-slate-900/95 border border-cyan-500/40 rounded-2xl py-1.5 md:py-2 shadow-2xl shrink-0 backdrop-blur-md relative z-30">
         
         <div className="flex items-center gap-2">
@@ -576,7 +577,7 @@ export default function BaccaratCleanPage() {
         </div>
       </header>
 
-      {/* 🏆 HŨ JACKPOT ĐƯA LÊN GÓC DƯỚI HEADING / DƯỚI THANH THOẠI */}
+      {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING */}
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 md:gap-4 shrink-0 mt-1">
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-cyan-500/40 shadow">
           <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất</div>
@@ -607,9 +608,13 @@ export default function BaccaratCleanPage() {
         </p>
       </div>
 
-      {/* 🎴 BÀN CHƠI BACCARAT (TỐI ƯU HÓA KHÔNG GIAN, KHÔNG ICON RỒNG RỜM RÀ) */}
+      {/* 🎴 BÀN CHƠI BACCARAT (CÓ 2 HÌNH RỒNG 2 BÊN GÓC) */}
       <main className="relative w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between border-4 border-cyan-500/60 rounded-[30px] p-2 md:p-4 my-1 bg-[radial-gradient(circle_at_center,#1e3a8a_0%,#020617_100%)] shadow-[0_0_35px_rgba(6,182,212,0.4)] overflow-hidden">
         
+        {/* 🐉 HÌNH RỒNG TRANG TRÍ 2 BÊN GÓC BÀN CHƠI */}
+        <div className="absolute left-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-30 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/home/shenron.png')" }}></div>
+        <div className="absolute right-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-30 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center scale-x-[-1]" style={{ backgroundImage: "url('/assets/home/shenron.png')" }}></div>
+
         {/* MODAL LUẬT CHƠI */}
         {showRules && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 animate-fadeIn rounded-[30px]">
@@ -680,7 +685,7 @@ export default function BaccaratCleanPage() {
           </div>
         </div>
 
-        {/* 2. CÁC Ô ĐẶT CƯỢC (TỐI GIẢN, CHỈNH CHU, DỄ NHÌN) */}
+        {/* 2. CÁC Ô ĐẶT CƯỢC */}
         <div className="w-full max-w-5xl mx-auto flex flex-col gap-1.5 my-1 relative z-10 text-[10px] md:text-xs">
           
           <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
@@ -865,7 +870,7 @@ export default function BaccaratCleanPage() {
 
       </main>
 
-      {/* 🚀 FOOTER THANH CHỌN CHIP & NÚT ĐIỀU KHIỂN */}
+      {/* 🚀 FOOTER: ĐÃ ĐỔI CHỖ NÚT XÓA CƯỢC & NÚT TRIỆU HỒI BÀI HỢP LÝ */}
       <footer className="w-full max-w-7xl mx-auto bg-slate-900/95 border border-cyan-500/40 rounded-3xl p-2 md:p-2.5 flex flex-col md:flex-row items-center justify-between gap-2 shadow-2xl shrink-0 backdrop-blur-md z-30">
         <div className="flex items-center gap-2">
           <button onClick={clearBets} disabled={gameState !== "betting"} className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3.5 py-2 rounded-2xl shadow cursor-pointer disabled:opacity-50 transition active:scale-95">
