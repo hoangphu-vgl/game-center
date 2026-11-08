@@ -919,7 +919,7 @@ export default function TienLenOnlineVip() {
 
       const isCurrentTurn = roomData.status === "PLAYING" && player?.id === roomData.currentTurnId;
       const isMe = slotIdx === 0 && player;
-      const canAct = isMe && roomData.status === "PLAYING" && !player.isSpectator && isMyTurn;
+      const canAct = isMe && roomData.status === "PLAYING" && !player.isSpectator && isCurrentTurn;
 
       return (
         <div key={slotIdx} className={`absolute flex ${posStyle} pointer-events-none transition-all duration-300 items-center`}>
