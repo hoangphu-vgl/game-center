@@ -52,7 +52,9 @@ export default function BaccaratPage() {
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>("Chiến Binh");
   const [userAvatar, setUserAvatar] = useState<string>("/assets/avatar/xtra30.ico");
-  const [balance, setBalance] = useState<number>(543545);
+  
+  // Đã sửa 543545 thành 0
+  const [balance, setBalance] = useState<number>(0); 
   const [inventory, setInventory] = useState<{ [key: string]: number }>({});
   const [currentChip, setCurrentChip] = useState<number>(100);
   const [showRules, setShowRules] = useState<boolean>(false);
@@ -94,7 +96,9 @@ export default function BaccaratPage() {
   const [jackpots, setJackpots] = useState({ minor: 10000, major: 50000, grand: 200000 });
   const jackpotsRef = useRef(jackpots);
   const deckRef = useRef<Card[]>([]);
-  const balanceRef = useRef<number>(543545);
+  
+  // Đã sửa 543545 thành 0
+  const balanceRef = useRef<number>(0); 
   const inventoryRef = useRef<{ [key: string]: number }>({});
   const currentChipRef = useRef<number>(100);
   const handsRef = useRef<{ wHand: Card[]; cHand: Card[] }>({ wHand: [], cHand: [] });
@@ -137,7 +141,8 @@ export default function BaccaratPage() {
             .single();
           
           if (profile) {
-            const realBal = profile.balance ?? 543545;
+            // Đã sửa 543545 thành 0
+            const realBal = profile.balance ?? 0;
             setBalance(realBal);
             balanceRef.current = realBal;
             if (profile.inventory) {
@@ -752,7 +757,8 @@ export default function BaccaratPage() {
             <div className="flex flex-col text-left">
               <span className="text-[9px] text-cyan-300 font-black truncate max-w-[70px]">{userName}</span>
               <span className="font-extrabold text-amber-400 font-mono text-xs">
-                {mounted ? balance.toLocaleString() : "543,545"} Ki
+                {/* Đã sửa placeholder hiển thị thành 0 */}
+                {mounted ? balance.toLocaleString() : "0"} Ki
               </span>
             </div>
           </div>
