@@ -69,8 +69,8 @@ const WIN_PRAISES = [
 
 const JACKPOT_SKILL_ITEMS = [
   { id: "jp_1", name: "Triệu Hồi Thần Long", icon: "🐉", desc: "Cộng ngay +10 Lượt Lọ Miễn Phí (Tự động auto quay đến hết lượt, cộng dồn nếu dính thêm Scatter).", isDynamic: true, addCount: 1, getPrice: (bet: number) => bet * 100 },
-  { id: "jp_2", name: "Hào Quang Saiyan Blue", icon: "🌀", desc: "Kích hoạt hiệu ứng buff Aura x10 liên hoàn cho các lượt quay tiếp theo.", isDynamic: true, addCount: 1, getPrice: (bet: number) => bet * 10 },
-  { id: "jp_3", name: "Phẫn Nộ SSJ3", icon: "⚡", desc: "Nhân đôi điểm thưởng khi nổ chuỗi liên hoàn.", price: 100000, addCount: 1 },
+  { id: "jp_2", name: "Hào Quang Saiyan Blue", icon: "🌀", desc: "Kích hoạt hiệu ứng buff Aura x10 liên hoàn cho các lượt quay tiếp theo.", isDynamic: true, addCount: 1, getPrice: (bet: number) => bet * 50 },
+  { id: "jp_3", name: "Phẫn Nộ SSJ3", icon: "⚡", desc: "Nhân đôi điểm thưởng khi nổ chuỗi liên hoàn.", price: 500000, addCount: 1 },
   { id: "jp_4", name: "Kamehameha Hủy Diệt", icon: "💥", desc: "Bùng nổ quét sạch rủi ro, bảo lưu chuỗi liên hoàn khi thua.", price: 100000, addCount: 5 },
   { id: "jp_5", name: "Khiên Giáp Thần Thánh", icon: "🛡️", desc: "Bảo vệ tự động hoàn trả 50% tiền cược khi thua lượt quay (+5 lượt).", price: 20000, isShield: true, addCount: 5 },
 ];
