@@ -743,7 +743,7 @@ export default function TienLenOnlineVip() {
     }
   };
 
-  // CANVAS RENDER: THU NHỎ LẠI TỐI ƯU CHO MOBILE
+  // CANVAS RENDER: FIX TỌA ĐỘ TOUCH TRÊN IOS PWA KHI XOAY NGANG
   useEffect(() => {
     if (currentPhase !== "ROOM") return;
 
@@ -751,18 +751,28 @@ export default function TienLenOnlineVip() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
+    const updateCanvasSize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
-      stateRef.current.width = window.innerWidth;
-      stateRef.current.height = window.innerHeight;
+      
+      stateRef.current.width = w;
+      stateRef.current.height = h;
     };
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
+    window.addEventListener("orientationchange", () => {
+      setTimeout(updateCanvasSize, 300);
+    });
 
     const drawCard = (ctx: CanvasRenderingContext2D, x: number, y: number, card: Card | null, width: number, height: number, isFaceUp: boolean = true) => {
       const radius = 6;
@@ -818,28 +828,28 @@ export default function TienLenOnlineVip() {
 
       if (data.status === "PLAYING" || data.status === "ENDED") {
         if (data.tableCards.length > 0 && !data.snatchActive) {
-          const tCardW = Math.min(w / 10, 58); const tCardH = tCardW * 1.45;
-          const totalW = (data.tableCards.length - 1) * 24 + tCardW;
-          data.tableCards.forEach((card, idx) => drawCard(ctx, w / 2 - totalW / 2 + idx * 24, h / 2 - tCardH / 2 - 35, card, tCardW, tCardH, true));
+          const tCardW = Math.min(w / 12, 52); const tCardH = tCardW * 1.45;
+          const totalW = (data.tableCards.length - 1) * 22 + tCardW;
+          data.tableCards.forEach((card, idx) => drawCard(ctx, w / 2 - totalW / 2 + idx * 22, h / 2 - tCardH / 2 - 30, card, tCardW, tCardH, true));
         }
 
         const myIdx = data.players.findIndex(p => p.id === myId);
-        const cardW = Math.min(w / 9.5, 62); const cardH = cardW * 1.45;
-        const oppCardW = Math.min(w / 16, 38); const oppCardH = oppCardW * 1.45;
+        const cardW = Math.min(w / 11, 58); const cardH = cardW * 1.45;
+        const oppCardW = Math.min(w / 18, 34); const oppCardH = oppCardW * 1.45;
 
         data.players.forEach((p, idx) => {
           let relativePos = myIdx === -1 ? idx : (idx - myIdx + data.players.length) % data.players.length;
           
           if (relativePos === 0 && p.id === myId) {
             if (!p.isSpectator) {
-              const overlap = Math.min(cardW * 0.4, (w - cardW - 12) / (p.hand.length || 1));
+              const overlap = Math.min(cardW * 0.4, (w - cardW - 20) / (p.hand.length || 1));
               const totalHandWidth = (p.hand.length - 1) * overlap + cardW;
-              const handY = h - cardH - 75;
-              p.hand.forEach((card, i) => drawCard(ctx, w / 2 - totalHandWidth / 2 + i * overlap, card.selected ? handY - 20 : handY, card, cardW, cardH, true));
+              const handY = h - cardH - 65;
+              p.hand.forEach((card, i) => drawCard(ctx, w / 2 - totalHandWidth / 2 + i * overlap, card.selected ? handY - 22 : handY, card, cardW, cardH, true));
             }
           } else {
-            const x = relativePos === 1 ? w - oppCardW - 25 : relativePos === 2 ? w / 2 - oppCardW / 2 : 25;
-            const y = relativePos === 1 ? h / 2 - oppCardH - 30 : relativePos === 2 ? 8 : h / 2 - oppCardH - 30;
+            const x = relativePos === 1 ? w - oppCardW - 20 : relativePos === 2 ? w / 2 - oppCardW / 2 : 20;
+            const y = relativePos === 1 ? h / 2 - oppCardH - 20 : relativePos === 2 ? 6 : h / 2 - oppCardH - 20;
             
             if (!p.isSpectator && p.hand.length > 0) {
               drawCard(ctx, x, y, null, oppCardW, oppCardH, false);
@@ -852,33 +862,43 @@ export default function TienLenOnlineVip() {
     };
     animationFrameId = requestAnimationFrame(render);
 
-    const handleTouchOrClick = (e: MouseEvent | TouchEvent) => {
+    // XỬ LÝ SỰ KIỆN CHẠM CHUẨN XÁC KHI XOAY NGANG TRÊN IOS PWA
+    const handleCardSelection = (e: MouseEvent | TouchEvent) => {
       const { width: w, height: h, data, myId } = stateRef.current;
       if (!data || data.status !== "PLAYING") return;
       const me = data.players.find(p => p.id === myId);
       if (!me || me.isSpectator) return;
 
-      let cX, cY;
+      const rect = canvas.getBoundingClientRect();
+      let clientX = 0, clientY = 0;
+
       if ('touches' in e) {
-        if (e.touches.length === 0) return;
-        cX = e.touches[0].clientX; cY = e.touches[0].clientY;
+        if (e.touches.length === 0 && e.changedTouches.length === 0) return;
+        const touch = e.touches[0] || e.changedTouches[0];
+        clientX = touch.clientX;
+        clientY = touch.clientY;
       } else {
-        cX = (e as MouseEvent).clientX; cY = (e as MouseEvent).clientY;
+        clientX = (e as MouseEvent).clientX;
+        clientY = (e as MouseEvent).clientY;
       }
 
-      const cardW = Math.min(w / 9.5, 62); const cardH = cardW * 1.45;
-      const overlap = Math.min(cardW * 0.4, (w - cardW - 12) / (me.hand.length || 1));
+      // Quy đổi tọa độ chuẩn theo viewport canvas
+      const cX = clientX - rect.left;
+      const cY = clientY - rect.top;
+
+      const cardW = Math.min(w / 11, 58); const cardH = cardW * 1.45;
+      const overlap = Math.min(cardW * 0.4, (w - cardW - 20) / (me.hand.length || 1));
       const handStartX = w / 2 - ((me.hand.length - 1) * overlap + cardW) / 2;
-      const handY = h - cardH - 75;
-      const hitBufferY = 20;
+      const handY = h - cardH - 65;
+      const hitBufferY = 25;
 
       for (let i = me.hand.length - 1; i >= 0; i--) {
         const card = me.hand[i];
         const cardX = handStartX + i * overlap;
-        const cardY = card.selected ? handY - 20 : handY;
+        const cardY = card.selected ? handY - 22 : handY;
         const clickableW = (i === me.hand.length - 1) ? cardW : overlap;
 
-        if (cX >= cardX - 4 && cX <= cardX + clickableW + 4 && cY >= cardY - hitBufferY && cY <= cardY + cardH + hitBufferY) {
+        if (cX >= cardX - 6 && cX <= cardX + clickableW + 6 && cY >= cardY - hitBufferY && cY <= cardY + cardH + hitBufferY) {
            const newPlayers = [...data.players];
            const myIdx = newPlayers.findIndex(p => p.id === myId);
            newPlayers[myIdx].hand[i].selected = !newPlayers[myIdx].hand[i].selected;
@@ -889,14 +909,15 @@ export default function TienLenOnlineVip() {
       }
     };
     
-    window.addEventListener("click", handleTouchOrClick);
-    window.addEventListener("touchend", handleTouchOrClick, { passive: true });
+    const canvasElement = canvasRef.current;
+    canvasElement?.addEventListener("click", handleCardSelection);
+    canvasElement?.addEventListener("touchend", handleCardSelection, { passive: true });
 
     return () => { 
       cancelAnimationFrame(animationFrameId); 
-      window.removeEventListener("resize", resizeCanvas); 
-      window.removeEventListener("click", handleTouchOrClick); 
-      window.removeEventListener("touchend", handleTouchOrClick); 
+      window.removeEventListener("resize", updateCanvasSize); 
+      canvasElement?.removeEventListener("click", handleCardSelection); 
+      canvasElement?.removeEventListener("touchend", handleCardSelection); 
     };
   }, [currentPhase, roomData?.status]);
 
@@ -913,9 +934,9 @@ export default function TienLenOnlineVip() {
 
       const posStyle = 
         slotIdx === 0 ? "bottom-1 left-1/2 -translate-x-1/2 z-10" : 
-        slotIdx === 1 ? "right-2 top-1/2 translate-y-8 flex-col items-end z-20" :
-        slotIdx === 2 ? "top-12 left-1/2 -translate-x-1/2 flex-col items-center z-20" :
-        "left-2 top-1/2 translate-y-8 flex-col items-start z-20";
+        slotIdx === 1 ? "right-2 top-1/2 translate-y-6 flex-col items-end z-20" :
+        slotIdx === 2 ? "top-10 left-1/2 -translate-x-1/2 flex-col items-center z-20" :
+        "left-2 top-1/2 translate-y-6 flex-col items-start z-20";
 
       const isCurrentTurn = roomData.status === "PLAYING" && player?.id === roomData.currentTurnId;
       const isMe = slotIdx === 0 && player;
@@ -930,7 +951,7 @@ export default function TienLenOnlineVip() {
               <button 
                 onClick={handlePassTurn} 
                 disabled={!canAct}
-                className={`font-bold py-1.5 px-3 rounded-xl shadow-md text-[9px] border transition active:scale-95 ${canAct ? 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600 cursor-pointer' : 'bg-slate-900/40 text-slate-500 border-slate-800/40 cursor-not-allowed opacity-40'}`}
+                className={`font-bold py-2 px-3.5 rounded-xl shadow-lg text-[10px] border transition active:scale-95 ${canAct ? 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600 cursor-pointer' : 'bg-slate-900/40 text-slate-500 border-slate-800/40 cursor-not-allowed opacity-40'}`}
               >
                 Né Tránh 🛡️
               </button>
@@ -938,15 +959,15 @@ export default function TienLenOnlineVip() {
           )}
 
           {player ? (
-            <div className={`bg-slate-900/95 border p-1 rounded-lg text-center shadow-xl backdrop-blur-md min-w-[90px] flex flex-col items-center ${isCurrentTurn ? 'border-yellow-400 ring-1 ring-yellow-400/30 animate-pulse' : 'border-emerald-500/40'}`}>
+            <div className={`bg-slate-900/95 border p-1 rounded-lg text-center shadow-xl backdrop-blur-md min-w-[85px] flex flex-col items-center ${isCurrentTurn ? 'border-yellow-400 ring-1 ring-yellow-400/30 animate-pulse' : 'border-emerald-500/40'}`}>
               
               {player.quote && roomData.status === "PLAYING" && (
-                <div className="text-[8px] bg-amber-400 text-slate-950 font-black px-1.5 py-0.1 rounded-full mb-0.5 animate-pulse truncate max-w-[95px] shadow-sm">
+                <div className="text-[7px] bg-amber-400 text-slate-950 font-black px-1.5 py-0.2 rounded-full mb-0.5 animate-pulse truncate max-w-[90px] shadow-sm">
                   ✨ {player.quote}
                 </div>
               )}
 
-              <div className="w-6 h-6 rounded-full bg-slate-800 border border-yellow-500 flex items-center justify-center text-xs mb-0.5 overflow-hidden shadow-inner">
+              <div className="w-5 h-5 rounded-full bg-slate-800 border border-yellow-500 flex items-center justify-center text-[10px] mb-0.5 overflow-hidden shadow-inner">
                 {player.avatar ? (
                   <img src={player.avatar} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -954,7 +975,7 @@ export default function TienLenOnlineVip() {
                 )}
               </div>
 
-              <div className="text-white font-black text-[8px] truncate max-w-[75px]">{player.name}</div>
+              <div className="text-white font-black text-[8px] truncate max-w-[70px]">{player.name}</div>
               <div className="text-yellow-400 font-bold text-[7px]">⚡ {(player.balance || 100000).toLocaleString()}</div>
               
               {roomData.status === "PLAYING" ? (
@@ -968,7 +989,7 @@ export default function TienLenOnlineVip() {
               )}
             </div>
           ) : (
-            <div className="bg-slate-950/40 border border-dashed border-slate-700/60 p-1 rounded-lg text-center min-w-[70px]">
+            <div className="bg-slate-950/40 border border-dashed border-slate-700/60 p-1 rounded-lg text-center min-w-[65px]">
               <div className="text-slate-500 text-[8px] font-bold">Trống 🪑</div>
             </div>
           )}
@@ -979,7 +1000,7 @@ export default function TienLenOnlineVip() {
               <button 
                 onClick={handlePlayCards} 
                 disabled={!canAct}
-                className={`font-black py-1.5 px-4 rounded-xl shadow-md text-[9px] transition active:scale-95 ${canAct ? 'bg-gradient-to-t from-emerald-500 to-teal-400 text-slate-950 cursor-pointer shadow-emerald-500/30' : 'bg-slate-800/50 text-slate-500 cursor-not-allowed opacity-40'}`}
+                className={`font-black py-2 px-4 rounded-xl shadow-lg text-[10px] transition active:scale-95 ${canAct ? 'bg-gradient-to-t from-emerald-500 to-teal-400 text-slate-950 cursor-pointer shadow-emerald-500/30' : 'bg-slate-800/50 text-slate-500 cursor-not-allowed opacity-40'}`}
               >
                 Xuất Chiêu ⚔️
               </button>
@@ -997,7 +1018,7 @@ export default function TienLenOnlineVip() {
         <div className="text-center space-y-4">
           <div className="text-4xl mb-1">⚡ 🐉 💥</div>
           <h1 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-emerald-400 to-cyan-400">ĐẠI HỘI VÕ THUẬT 13 ẤN KÝ</h1>
-          <p className="text-slate-400 text-[10px] tracking-widest uppercase">Lôi Đài Vũ Trụ • Tối Ưu Nhỏ Gọn Mobile</p>
+          <p className="text-slate-400 text-[10px] tracking-widest uppercase">Lôi Đài Vũ Trụ • Tối Ưu PWA & Mobile</p>
           <div className="flex gap-2 justify-center mt-4">
             <Link href="/" className="bg-slate-800 text-amber-400 font-bold py-2 px-5 rounded-full text-xs border border-amber-500/40">
               🏠 Trang Chủ
@@ -1055,7 +1076,7 @@ export default function TienLenOnlineVip() {
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none touch-none" style={{ touchAction: 'none' }}>
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none" style={{ touchAction: 'manipulation' }}>
       <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
 
       {/* TOP HEADER NHỎ GỌN */}
