@@ -65,7 +65,7 @@ export default function PokerPage() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [raiseVal, setRaiseVal] = useState(100);
   const [resetCountdown, setResetCountdown] = useState<number | null>(null);
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [turnTimeLeft, setTurnTimeLeft] = useState<number>(30);
@@ -711,7 +711,7 @@ export default function PokerPage() {
   const mySeat = mySeatIndex !== -1 ? seats[mySeatIndex] : null;
 
   return (
-    <div className="h-screen w-screen bg-slate-950 text-white flex flex-col justify-between select-none overflow-hidden font-sans relative">
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white flex flex-col justify-between select-none font-sans" style={{ touchAction: 'manipulation' }}>
       
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(16,185,129,0.12),transparent_70%)] pointer-events-none" />
       <div className="absolute inset-0 opacity-25 bg-[url('/assets/tienlen/backgroundroom1.png')] bg-cover bg-center pointer-events-none" />
@@ -722,12 +722,12 @@ export default function PokerPage() {
         </div>
       )}
 
-      {/* HEADER GIỐNG HỆT TIẾN LÊN + NÚT CHAT VŨ TRỤ GÓC TRÁI */}
+      {/* HEADER CĂN CHỈNH GIỐNG HỆT TIẾN LÊN */}
       <header className="bg-slate-900/95 border-b border-yellow-500/40 px-3 py-1.5 flex justify-between items-center z-30 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => showToast("💬 Chat Vũ Trụ đang phát triển!")}
-            className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1 active:scale-95 transition"
+            className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1 active:scale-95 transition cursor-pointer"
           >
             <span>💬</span> CHAT VŨ TRỤ
           </button>
@@ -745,7 +745,7 @@ export default function PokerPage() {
 
           <button
             onClick={() => setShowRulesModal(true)}
-            className="bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95"
+            className="bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95 cursor-pointer"
             title="Xem luật chơi"
           >
             📜 Luật
@@ -753,31 +753,28 @@ export default function PokerPage() {
 
           <button
             onClick={handleForceResetRoom}
-            className="bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95"
+            className="bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95 cursor-pointer"
             title="Dọn bàn khẩn cấp khi bị kẹt"
           >
             🧹 Reset
           </button>
 
-          <button
-            onClick={() => setIsZoomed(!isZoomed)}
-            className="bg-gray-800 hover:bg-gray-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-[9px] font-black shadow transition active:scale-95"
-            title={isZoomed ? "Thu nhỏ bàn" : "Phóng to bàn"}
+          <button 
+            onClick={() => { if(!document.fullscreenElement) { document.documentElement.requestFullscreen(); setIsFullscreen(true); } else { document.exitFullscreen(); setIsFullscreen(false); } }} 
+            className="bg-slate-800 text-white font-bold py-1 px-2 rounded-lg text-[9px] cursor-pointer"
           >
-            {isZoomed ? "🔍➖" : "🔍➕"}
+            {isFullscreen ? "🗗" : "🖵"}
           </button>
 
-          <button onClick={handleLeaveRoom} className="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold shadow transition">
+          <button onClick={handleLeaveRoom} className="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1 rounded-lg text-[9px] font-bold shadow transition cursor-pointer">
             Rời 🚪
           </button>
         </div>
       </header>
 
-      {/* SÀN ĐẤU OVAL CĂNG TRÀN BỀ NGANG THEO KIỂU TIẾN LÊN */}
+      {/* SÀN ĐẤU OVAL CĂNG TRÀN BỀ NGANG KHI LẬT NGANG */}
       <main className="flex-1 flex items-center justify-center p-1 sm:p-2 relative overflow-hidden">
-        <div className={`w-[98%] max-w-[1100px] transition-all duration-300 rounded-[140px] sm:rounded-[200px] border-4 sm:border-6 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)] ${
-          isZoomed ? "h-[340px] sm:h-[450px] scale-105" : "h-[260px] sm:h-[350px]"
-        }`}
+        <div className="w-[98%] max-w-[1100px] h-[72vh] sm:h-[78vh] transition-all duration-300 rounded-[140px] sm:rounded-[200px] border-4 sm:border-6 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)]"
           style={{ 
             background: "radial-gradient(circle at center, #065f2c 0%, #064e21 60%, #022c12 100%)",
             boxShadow: "inset 0 0 70px rgba(0,0,0,0.85), 0 0 0 6px #381d09, 0 20px 40px rgba(0,0,0,0.9)"
@@ -789,7 +786,7 @@ export default function PokerPage() {
             </span>
           </div>
 
-          <div className="absolute top-1 flex flex-col items-center z-20 px-2 max-w-[280px]">
+          <div className="absolute top-2 flex flex-col items-center z-20 px-2 max-w-[280px]">
             <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-yellow-400 overflow-hidden bg-indigo-950 shadow-lg animate-pulse">
               <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Whis" alt="Whis" className="w-full h-full object-cover" />
             </div>
@@ -826,11 +823,11 @@ export default function PokerPage() {
             if (!seat) {
               return (
                 <div key={index} className={`absolute text-[8px] text-white/40 border border-dashed border-white/30 w-7 h-7 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-sm ${
-                  index === 0 ? "bottom-2 left-1/2 -translate-x-1/2" : 
-                  index === 1 ? "bottom-5 left-[10%]" : 
+                  index === 0 ? "bottom-3 left-1/2 -translate-x-1/2" : 
+                  index === 1 ? "bottom-6 left-[10%]" : 
                   index === 2 ? "top-1/2 -translate-y-1/2 left-[2%]" : 
                   index === 3 ? "top-1/2 -translate-y-1/2 right-[2%]" : 
-                  "bottom-5 right-[10%]"
+                  "bottom-6 right-[10%]"
                 }`}>
                   Trống
                 </div>
@@ -842,11 +839,11 @@ export default function PokerPage() {
 
             return (
               <div key={index} className={`absolute flex flex-col items-center transition-all duration-200 ${
-                index === 0 ? "bottom-2 left-1/2 -translate-x-1/2 z-25" : 
-                index === 1 ? "bottom-5 left-[10%] z-15" : 
+                index === 0 ? "bottom-3 left-1/2 -translate-x-1/2 z-25" : 
+                index === 1 ? "bottom-6 left-[10%] z-15" : 
                 index === 2 ? "top-1/2 -translate-y-1/2 left-[2%] z-15" : 
                 index === 3 ? "top-1/2 -translate-y-1/2 right-[2%] z-15" : 
-                "bottom-5 right-[10%] z-15"
+                "bottom-6 right-[10%] z-15"
               }`}>
                 
                 {isTurn && (
@@ -894,14 +891,14 @@ export default function PokerPage() {
         </div>
       </main>
 
-      {/* FOOTER ĐIỀU KHIỂN */}
+      {/* FOOTER ĐIỀU KHIỂN TỐI ƯU MOBILE */}
       <footer className="bg-slate-900/95 border-t border-yellow-500/40 p-2 px-3 z-30 backdrop-blur-md shrink-0">
         <div className="max-w-xl mx-auto flex flex-col gap-1.5">
           {phase === 'IDLE' ? (
             <div className="flex gap-2 w-full">
               <button
                 onClick={handleToggleReady}
-                className={`w-full py-2 font-black rounded-xl shadow-lg active:scale-95 transition text-xs tracking-wider uppercase ${
+                className={`w-full py-2 font-black rounded-xl shadow-lg active:scale-95 transition text-xs tracking-wider uppercase cursor-pointer ${
                   mySeat?.isReady 
                     ? "bg-rose-600 hover:bg-rose-500 text-white" 
                     : "bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-gray-950"
@@ -929,9 +926,9 @@ export default function PokerPage() {
                   className="flex-1 accent-yellow-400 h-1 rounded-lg disabled:opacity-30 cursor-pointer"
                 />
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => setRaiseVal(50)} disabled={!isMyTurn} className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition">50</button>
-                  <button onClick={() => setRaiseVal(100)} disabled={!isMyTurn} className="bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition">100</button>
-                  <button onClick={() => setRaiseVal(500)} disabled={!isMyTurn} className="bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition">500</button>
+                  <button onClick={() => setRaiseVal(50)} disabled={!isMyTurn} className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition cursor-pointer">50</button>
+                  <button onClick={() => setRaiseVal(100)} disabled={!isMyTurn} className="bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition cursor-pointer">100</button>
+                  <button onClick={() => setRaiseVal(500)} disabled={!isMyTurn} className="bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-600/40 px-1.5 py-0.5 rounded text-[8px] font-bold disabled:opacity-30 transition cursor-pointer">500</button>
                 </div>
               </div>
 
@@ -939,28 +936,28 @@ export default function PokerPage() {
                 <button 
                   onClick={() => handleAction('fold')} 
                   disabled={!isMyTurn}
-                  className="bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-500/50 py-1.5 rounded-xl font-black text-[10px] transition active:scale-95 disabled:opacity-30 shadow"
+                  className="bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-500/50 py-1.5 rounded-xl font-black text-[10px] transition active:scale-95 disabled:opacity-30 shadow cursor-pointer"
                 >
                   ÚP BÀI 🏳️
                 </button>
                 <button 
                   onClick={() => handleAction('call')} 
                   disabled={!isMyTurn}
-                  className="bg-blue-950/70 hover:bg-blue-900 text-blue-300 border border-blue-500/50 py-1.5 rounded-xl font-black text-[10px] transition active:scale-95 disabled:opacity-30 shadow"
+                  className="bg-blue-950/70 hover:bg-blue-900 text-blue-300 border border-blue-500/50 py-1.5 rounded-xl font-black text-[10px] transition active:scale-95 disabled:opacity-30 shadow cursor-pointer"
                 >
                   THEO 🤝
                 </button>
                 <button 
                   onClick={() => handleAction('raise')} 
                   disabled={!isMyTurn}
-                  className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:brightness-110 text-gray-950 font-black py-1.5 rounded-xl text-[10px] transition active:scale-95 disabled:opacity-30 shadow"
+                  className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:brightness-110 text-gray-950 font-black py-1.5 rounded-xl text-[10px] transition active:scale-95 disabled:opacity-30 shadow cursor-pointer"
                 >
                   TỐ 🚀
                 </button>
                 <button 
                   onClick={() => handleAction('allin')} 
                   disabled={!isMyTurn}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-700 hover:brightness-110 text-white font-black py-1.5 rounded-xl text-[10px] transition active:scale-95 disabled:opacity-30 shadow animate-pulse"
+                  className="bg-gradient-to-r from-purple-600 to-indigo-700 hover:brightness-110 text-white font-black py-1.5 rounded-xl text-[10px] transition active:scale-95 disabled:opacity-30 shadow animate-pulse cursor-pointer"
                 >
                   ALL-IN 🔥
                 </button>
@@ -979,7 +976,7 @@ export default function PokerPage() {
               </h3>
               <button 
                 onClick={() => setShowRulesModal(false)}
-                className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center"
+                className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>
@@ -1021,7 +1018,7 @@ export default function PokerPage() {
             <div className="mt-5 text-center">
               <button
                 onClick={() => setShowRulesModal(false)}
-                className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-6 py-2 rounded-xl text-xs uppercase shadow"
+                className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-6 py-2 rounded-xl text-xs uppercase shadow cursor-pointer"
               >
                 Đã Hiểu, Chiến Thôi! 🚀
               </button>
