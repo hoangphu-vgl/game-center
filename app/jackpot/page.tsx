@@ -424,12 +424,12 @@ export default function JackpotTestPage() {
 
       let addMinor = 0;
       let addMajor = 0;
-      let addGrand = Math.floor(bet * 0.30);
+      let addGrand = Math.floor(bet * 0.20);
 
       if (bet <= 200) {
         addMinor = Math.floor(bet * 0.70);
       } else {
-        addMajor = Math.floor(bet * 0.70);
+        addMajor = Math.floor(bet * 0.40);
       }
 
       const updatedJackpots = {
