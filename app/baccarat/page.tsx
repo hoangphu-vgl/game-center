@@ -43,7 +43,7 @@ const DBZ_AURAS = {
   ]
 };
 
-export default function BaccaratFinalPage() {
+export default function BaccaratPerfectPage() {
   const [mounted, setMounted] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>("Chiến Binh");
@@ -81,7 +81,8 @@ export default function BaccaratFinalPage() {
     quote: string;
   } | null>(null);
 
-  const [jackpots, setJackpots] = useState({ minor: 10000, major: 50000, grand: 200000 });
+  const [jackpots, setJackpots] = useState({ minor: 15000, major: 45000, grand: 100000 });
+  const jackpotsRef = useRef(jackpots);
   const deckRef = useRef<Card[]>([]);
   const balanceRef = useRef<number>(543545);
   const handsRef = useRef<{ wHand: Card[]; cHand: Card[] }>({ wHand: [], cHand: [] });
@@ -93,6 +94,10 @@ export default function BaccaratFinalPage() {
   useEffect(() => {
     balanceRef.current = balance;
   }, [balance]);
+
+  useEffect(() => {
+    jackpotsRef.current = jackpots;
+  }, [jackpots]);
 
   useEffect(() => {
     async function initEverything() {
@@ -130,18 +135,18 @@ export default function BaccaratFinalPage() {
           }
         }
 
-        // Lấy hũ Jackpot trực tiếp từ DB
+        // Đồng bộ hũ chuẩn từ bảng system_jackpot (cùng hệ thống với Jackpot Rồng Thần)
         const { data: jackpotData } = await supabase
-          .from("baccarat_jackpot")
+          .from("system_jackpot")
           .select("minor, major, grand")
           .eq("id", "global")
           .single();
 
         if (jackpotData) {
           setJackpots({
-            minor: jackpotData.minor ?? 10000,
-            major: jackpotData.major ?? 50000,
-            grand: jackpotData.grand ?? 200000,
+            minor: jackpotData.minor ?? 15000,
+            major: jackpotData.major ?? 45000,
+            grand: jackpotData.grand ?? 100000,
           });
         }
       } catch (e) {
@@ -153,10 +158,10 @@ export default function BaccaratFinalPage() {
     createDeck();
 
     const channel = supabase
-      .channel("baccarat_jackpot_sync_v3")
+      .channel("system_jackpot_baccarat_sync")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
+        { event: "UPDATE", schema: "public", table: "system_jackpot", filter: "id=eq.global" },
         (payload) => {
           if (payload.new) {
             setJackpots({
@@ -191,25 +196,37 @@ export default function BaccaratFinalPage() {
     }
   };
 
+  const updateGlobalJackpotInDB = async (newPool: { minor: number; major: number; grand: number }) => {
+    setJackpots(newPool);
+    try {
+      await supabase
+        .from("system_jackpot")
+        .update(newPool)
+        .eq("id", "global");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const contributeToGlobalJackpot = async (totalBet: number) => {
     try {
       const { data: currentPool } = await supabase
-        .from("baccarat_jackpot")
+        .from("system_jackpot")
         .select("minor, major, grand")
         .eq("id", "global")
         .single();
 
-      let baseMinor = currentPool?.minor ?? jackpots.minor;
-      let baseMajor = currentPool?.major ?? jackpots.major;
-      let baseGrand = currentPool?.grand ?? jackpots.grand;
+      let baseMinor = currentPool?.minor ?? jackpotsRef.current.minor;
+      let baseMajor = currentPool?.major ?? jackpotsRef.current.major;
+      let baseGrand = currentPool?.grand ?? jackpotsRef.current.grand;
 
       let addMinor = 0;
       let addMajor = 0;
       let addGrand = Math.floor(totalBet * 0.15);
 
-      if (currentChip >= 100 && currentChip <= 5000) {
+      if (currentChip <= 5000) {
         addMinor = Math.floor(totalBet * 0.40);
-      } else if (currentChip >= 10000 && currentChip <= 1000000) {
+      } else {
         addMajor = Math.floor(totalBet * 0.40);
       }
 
@@ -219,8 +236,7 @@ export default function BaccaratFinalPage() {
         grand: baseGrand + addGrand,
       };
 
-      setJackpots(newPool);
-      await supabase.from("baccarat_jackpot").update(newPool).eq("id", "global");
+      await updateGlobalJackpotInDB(newPool);
     } catch (e) {
       console.error(e);
     }
@@ -573,26 +589,26 @@ export default function BaccaratFinalPage() {
         </div>
       </header>
 
-      {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING */}
+      {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING (ĐỒNG BỘ CHUẨN SYSTEM_JACKPOT) */}
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 md:gap-4 shrink-0 mt-1">
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-cyan-500/40 shadow">
           <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất</div>
           <div className="text-xs font-black text-cyan-200 font-mono">
-            {mounted ? jackpots.minor.toLocaleString() : "10,000"}
+            {mounted ? jackpots.minor.toLocaleString() : "15,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/95 px-4 py-1 rounded-xl border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)] animate-pulse scale-105">
           <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Siêu Cấp Hũ</div>
           <div className="text-sm font-black text-yellow-400 font-mono">
-            {mounted ? jackpots.grand.toLocaleString() : "200,000"}
+            {mounted ? jackpots.grand.toLocaleString() : "100,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-emerald-500/40 shadow">
           <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek</div>
           <div className="text-xs font-black text-emerald-200 font-mono">
-            {mounted ? jackpots.major.toLocaleString() : "50,000"}
+            {mounted ? jackpots.major.toLocaleString() : "45,000"}
           </div>
         </div>
       </div>
@@ -604,12 +620,12 @@ export default function BaccaratFinalPage() {
         </p>
       </div>
 
-      {/* 🎴 BÀN CHƠI BACCARAT (CÓ 2 HÌNH RỒNG 2 BÊN GÓC) */}
+      {/* 🎴 BÀN CHƠI BACCARAT (CÓ 2 HÌNH RỒNG `shenron.png` & `shenronnamek.png` 2 BÊN GÓC) */}
       <main className="relative w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between border-4 border-cyan-500/60 rounded-[30px] p-2 md:p-4 my-1 bg-[radial-gradient(circle_at_center,#1e3a8a_0%,#020617_100%)] shadow-[0_0_35px_rgba(6,182,212,0.4)] overflow-hidden">
         
-        {/* 🐉 HÌNH RỒNG TRANG TRÍ 2 BÊN GÓC BÀN CHƠI */}
-        <div className="absolute left-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-30 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/home/shenron.png')" }}></div>
-        <div className="absolute right-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-30 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center scale-x-[-1]" style={{ backgroundImage: "url('/assets/home/shenron.png')" }}></div>
+        {/* 🐉 HÌNH RỒNG TRANG TRÍ 2 BÊN GÓC BÀN CHƠI DỰA TRÊN ẢNH NÍ CUNG CẤP */}
+        <div className="absolute left-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenron.png')" }}></div>
+        <div className="absolute right-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenronnamek.png')" }}></div>
 
         {/* MODAL LUẬT CHƠI */}
         {showRules && (
@@ -866,7 +882,7 @@ export default function BaccaratFinalPage() {
 
       </main>
 
-      {/* 🚀 FOOTER: BỐ CỤC CHUẨN XÁC [XÓA CƯỢC] - [CHIP] - [TRIỆU HỒI BÀI] */}
+      {/* 🚀 FOOTER: ĐÃ ĐỔI CHỖ NÚT XÓA CƯỢC BÊN TRÁI & NÚT TRIỆU HỒI BÀI BÊN PHẢI */}
       <footer className="w-full max-w-7xl mx-auto bg-slate-900/95 border border-cyan-500/40 rounded-3xl p-2 md:p-2.5 flex flex-col md:flex-row items-center justify-between gap-2 shadow-2xl shrink-0 backdrop-blur-md z-30">
         
         {/* NÚT XÓA CƯỢC BÊN TRÁI */}
