@@ -65,6 +65,13 @@ export default function Home() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [dailyQuote, setDailyQuote] = useState("");
 
+  // State đồng hồ đếm ngược
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+
   const getTodayString = () => new Date().toISOString().split("T")[0];
 
   const getWeekKey = () => {
@@ -73,6 +80,52 @@ export default function Home() {
     const week = Math.ceil(((now.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
     return `${now.getFullYear()}-W${week}`;
   };
+
+  // Tính mức thưởng Tụ Ki dựa trên thứ trong tuần (Thứ 2 = 1, ..., CN = 7)
+  const getTodayCheckInReward = () => {
+    const dayOfWeek = new Date().getDay(); // 0: CN, 1: T2, 2: T3, ...
+    const dayMap: { [key: number]: { dayName: string; ki: number } } = {
+      1: { dayName: "Thứ 2", ki: 10000 },
+      2: { dayName: "Thứ 3", ki: 20000 },
+      3: { dayName: "Thứ 4", ki: 30000 },
+      4: { dayName: "Thứ 5", ki: 40000 },
+      5: { dayName: "Thứ 6", ki: 50000 },
+      6: { dayName: "Thứ 7", ki: 60000 },
+      0: { dayName: "Chủ Nhật", ki: 100000 },
+    };
+    return dayMap[dayOfWeek] || { dayName: "Hôm nay", ki: 10000 };
+  };
+
+  // ⏱️ HÀM TÍNH THỜI GIAN ĐẾM NGƯỢC TỚI 00:00 SÁNG THỨ HAI HÀNG TUẦN
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 là Chủ Nhật, 1 là Thứ 2...
+      
+      // Tính số ngày còn lại đến Thứ Hai tuần tới (Nếu hôm nay là Thứ 2 (1) thì còn 7 ngày)
+      const daysUntilMonday = currentDay === 1 ? 7 : (8 - currentDay) % 7;
+      
+      const targetMonday = new Date(now);
+      targetMonday.setDate(now.getDate() + daysUntilMonday);
+      targetMonday.setHours(0, 0, 0, 0);
+
+      const diff = targetMonday.getTime() - now.getTime();
+
+      if (diff > 0) {
+        const totalHours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setTimeLeft({ hours: totalHours, minutes, seconds });
+      } else {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
@@ -109,6 +162,7 @@ export default function Home() {
         let currentSpins = profile?.lucky_spins ?? 3;
         let lastCheck = profile?.last_check_in ?? "";
 
+        // Reset Điểm Sức Mạnh (Ki) về 0 vào Thứ 2 hàng tuần
         if (!lastCheckedWeek) {
           localStorage.setItem(`last_reset_week_${currentUser.id}`, currentWeek);
         } else if (lastCheckedWeek !== currentWeek) {
@@ -349,7 +403,9 @@ export default function Home() {
       alert("Hôm nay chiến binh đã tụ Ki nhận thưởng rồi!");
       return;
     }
-    const newPoints = points + 1000;
+
+    const reward = getTodayCheckInReward();
+    const newPoints = points + reward.ki;
     const newSpins = luckySpins + 1;
 
     const { error } = await supabase
@@ -361,7 +417,7 @@ export default function Home() {
       setPoints(newPoints);
       setLuckySpins(newSpins);
       setLastCheckIn(today);
-      alert("🔥 TỤ KI THÀNH CÔNG! +1.000 Điểm Sức Mạnh & +1 Lượt Quay Free!");
+      alert(`🔥 TỤ KI THÀNH CÔNG (${reward.dayName})!\n+${reward.ki.toLocaleString()} Ki & +1 Lượt Quay Free!`);
     }
   };
 
@@ -457,6 +513,7 @@ export default function Home() {
 
   const isCheckedInToday = lastCheckIn === getTodayString();
   const currentLevel = getSaiyanLevel(points);
+  const todayReward = getTodayCheckInReward();
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
@@ -485,7 +542,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* POPUP THÔNG BÁO / LUẬT CHƠI */}
+      {/* POPUP THÔNG BÁO / LUẬT CHƠI & ĐẾM NGƯỢC */}
       {showNoticeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
           <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-3 relative max-h-[88vh] overflow-y-auto">
@@ -502,13 +559,26 @@ export default function Home() {
               </h2>
             </div>
 
+            {/* HỘP ĐẾM NGƯỢC NỔI BẬT TRONG POPUP */}
+            <div className="bg-gradient-to-r from-red-950/60 via-amber-950/80 to-red-950/60 p-2.5 rounded-xl border border-red-500/50 text-center space-y-1 shadow-lg">
+              <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">⏳ Thời Gian Còn Lại Đến Lúc Reset Tuần (00:00 Thứ 2)</span>
+              <div className="flex justify-center gap-2 text-amber-400 font-mono font-black text-base">
+                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.hours.toString().padStart(2, '0')}h</span> :
+                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.minutes.toString().padStart(2, '0')}m</span> :
+                <span className="bg-black/70 px-2 py-0.5 rounded border border-amber-500/40">{timeLeft.seconds.toString().padStart(2, '0')}s</span>
+              </div>
+            </div>
+
             <div className="space-y-2 text-[11px] text-slate-300">
               <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
                 <h3 className="font-bold text-amber-400 flex items-center gap-1">
-                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-3.5 h-3.5 object-contain" /> Luật Chơi Võ Đạo Vũ Trụ:
+                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-3.5 h-3.5 object-contain" /> Chuỗi Thưởng Tụ Ki Theo Ngày (Thứ 2 ➔ Chủ Nhật):
                 </h3>
-                <p className="text-slate-400 leading-tight">
-                  Vui vẻ, hòa đồng, cùng nhau cày Sức Mạnh (Ki). <b className="text-amber-300">Thứ Hai hàng tuần, Sức Mạnh tự động reset về 0</b> để chiến binh bắt đầu cuộc đua mới!
+                <p className="text-slate-400 leading-relaxed">
+                  • Thứ 2: <b className="text-amber-300">+10k Ki</b> | Thứ 3: <b className="text-amber-300">+20k Ki</b> | Thứ 4: <b className="text-amber-300">+30k Ki</b><br/>
+                  • Thứ 5: <b className="text-amber-300">+40k Ki</b> | Thứ 6: <b className="text-amber-300">+50k Ki</b> | Thứ 7: <b className="text-amber-300">+60k Ki</b><br/>
+                  🔥 <b className="text-yellow-400">Chủ Nhật (Ngày 7): +100k Ki khủng!</b><br/>
+                  <i className="text-slate-500">* Đúng 00:00 sáng Thứ Hai Điểm Ki tự động reset về 0 để bắt đầu chuỗi mới.</i>
                 </p>
               </div>
 
@@ -537,9 +607,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* HEADER CÂN ĐỀU - GIÃN KHOẢNG CÁCH NÚT CỰC ĐẸP */}
-      <header className="bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 sm:px-5 py-2 shadow-md shrink-0 z-20">
-        <div className="w-full flex justify-between items-center gap-3">
+      {/* HEADER TỰ ĐỘNG LƯỚT NGANG TRÊN CÁC MÀN HÌNH MÁY TRÁNH DÍNH CHỮ */}
+      <header className="bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 sm:px-5 py-2 shadow-md shrink-0 z-20 overflow-x-auto">
+        <div className="w-full min-w-max flex justify-between items-center gap-4">
           <div className="flex items-center gap-2 shrink-0">
             <img src="/assets/home/shenron.png" alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain animate-bounce" />
             <span className="font-black text-lg sm:text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500">
@@ -547,11 +617,11 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             <div className="flex items-center gap-1.5 bg-slate-800/90 border border-amber-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
               <img src="/assets/home/dausenzu.png" alt="Ki" className="w-4 h-4 object-contain" />
               <span className="font-black text-amber-400">{points.toLocaleString()}</span>
-              <span className="text-[10px] text-amber-300/70 hidden sm:inline">Ki</span>
+              <span className="text-[10px] text-amber-300/70">Ki</span>
             </div>
 
             <div className="flex items-center gap-1.5 bg-slate-800/90 border border-purple-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
@@ -562,13 +632,13 @@ export default function Home() {
             <button
               onClick={handleCheckIn}
               disabled={isCheckedInToday}
-              className={`text-xs font-black py-1.5 px-3 rounded-xl transition-all shadow active:scale-95 cursor-pointer ${
+              className={`text-xs font-black py-1.5 px-3 rounded-xl transition-all shadow active:scale-95 cursor-pointer whitespace-nowrap ${
                 isCheckedInToday
                   ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
                   : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950"
               }`}
             >
-              {isCheckedInToday ? "✅ Đã Tụ Ki" : "🔥 Tụ Ki"}
+              {isCheckedInToday ? "✅ Đã Tụ Ki" : `🔥 Tụ Ki (+${(todayReward.ki / 1000).toFixed(0)}k)`}
             </button>
 
             <button
@@ -590,9 +660,9 @@ export default function Home() {
       {/* BODY CHÍNH CÓ THỂ CUỘN - TỰ CO GIÃN THÔNG THOÁNG NỀN VŨ TRỤ */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5">
         
-        {/* BANNER DRAGON GAMING ARENA TO HƠN - TỰ XUỐNG HÀNG CHUẨN ĐẸP KHÔNG LO MẤT CHỮ */}
+        {/* BANNER DRAGON GAMING ARENA KÈM ĐỒNG HỒ ĐẾM NGƯỢC */}
         <section
-          className="relative flex flex-col items-center justify-center min-h-[160px] sm:min-h-[220px] bg-cover bg-center text-center p-4 sm:p-6 rounded-3xl border-2 border-amber-500/40 overflow-hidden shadow-2xl"
+          className="relative flex flex-col items-center justify-center min-h-[180px] sm:min-h-[240px] bg-cover bg-center text-center p-4 sm:p-6 rounded-3xl border-2 border-amber-500/40 overflow-hidden shadow-2xl"
           style={{
             backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
           }}
@@ -609,10 +679,17 @@ export default function Home() {
               </span>
             </div>
 
-            {/* TIÊU ĐỀ TO RÕ HƠN, TỰ ĐỘNG XUỐNG HÀNG CÂN ĐỐI KHI Ở MÀN HÌNH DỌC IPHONE */}
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-xl tracking-wide uppercase break-words leading-tight w-full px-2">
               DRAGON GAMING ARENA
             </h1>
+
+            {/* 🔥 ĐỒNG HỒ ĐẾM NGƯỢC RESET TUẦN HIỂN THỊ NỔI BẬT */}
+            <div className="inline-flex items-center gap-1.5 bg-slate-900/90 border border-amber-500/50 px-3 py-1 rounded-full text-xs font-bold text-amber-300 shadow-md backdrop-blur-md">
+              <span>⏳ Reset Tuần Sau:</span>
+              <span className="font-mono font-black text-yellow-400">
+                {timeLeft.hours.toString().padStart(2, '0')}h {timeLeft.minutes.toString().padStart(2, '0')}m {timeLeft.seconds.toString().padStart(2, '0')}s
+              </span>
+            </div>
 
             <p className="text-amber-200/90 text-xs sm:text-sm italic font-medium max-w-2xl mx-auto px-3 py-2 bg-slate-900/60 rounded-xl border border-amber-500/30 whitespace-normal leading-relaxed shadow-inner">
               {dailyQuote}
@@ -623,7 +700,7 @@ export default function Home() {
                 onClick={() => setShowNoticeModal(true)}
                 className="text-xs text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer bg-slate-900/90 px-4 py-1.5 rounded-xl border border-amber-500/40 transition shadow-lg inline-flex items-center gap-2 active:scale-95"
               >
-                <img src="/assets/home/dragonball.png" alt="Ball" className="w-4 h-4 object-contain animate-pulse" /> Xem Luật Chơi, Reset Thứ Hai & Săn Ngọc Rồng
+                <img src="/assets/home/dragonball.png" alt="Ball" className="w-4 h-4 object-contain animate-pulse" /> Xem Chuỗi Tụ Ki ({todayReward.dayName}: +{(todayReward.ki/1000).toFixed(0)}k Ki) & Săn Ngọc Rồng
               </button>
             </div>
           </div>
@@ -694,7 +771,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 2. CÂU AURA GIỚI THIỆU GAME BÀI CHUYÊN DRAGON BALL 100% */}
+            {/* 2. GAME GIẢI TRÍ DRAGON BALL */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-emerald-400 tracking-wider uppercase flex items-center gap-2">
@@ -703,8 +780,6 @@ export default function Home() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* ĐẠI HỘI VÕ THUẬT 13 Ấn KÝ - MÔ TẢ AURA DRAGON BALL */}
                 <Link
                   href="/tienlen"
                   className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
@@ -722,7 +797,6 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* POKER WHIS - MÔ TẢ AURA DRAGON BALL CỰC GẮT */}
                 <Link
                   href="/poker"
                   className="bg-slate-900/90 border-2 border-blue-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-blue-400"
@@ -739,7 +813,6 @@ export default function Home() {
                     VÀO SÒNG POKER ♠️
                   </div>
                 </Link>
-
               </div>
             </div>
 
