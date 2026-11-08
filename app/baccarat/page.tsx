@@ -134,24 +134,30 @@ export default function BaccaratPage() {
         setUser(currentUser);
 
         if (currentUser) {
-          const { data: profile } = await supabase
+          // ĐÃ XÓA CỘT LỖI: username và avatar
+          const { data: profile, error } = await supabase
             .from("profiles")
-            .select("balance, username, full_name, avatar_url, avatar, inventory")
+            .select("balance, full_name, avatar_url, inventory")
             .eq("id", currentUser.id)
             .single();
           
+          if (error) {
+            console.error("Lỗi fetch profile:", error);
+          }
+
           if (profile) {
-            // Đã sửa 543545 thành 0
             const realBal = profile.balance ?? 0;
             setBalance(realBal);
             balanceRef.current = realBal;
+            
             if (profile.inventory) {
               setInventory(profile.inventory);
               inventoryRef.current = profile.inventory;
             }
-            const nameToUse = profile.full_name || profile.username || currentUser.email?.split("@")[0] || "Chiến Binh";
+            // Dùng full_name hoặc email thay vì username
+            const nameToUse = profile.full_name || currentUser.email?.split("@")[0] || "Chiến Binh";
             setUserName(nameToUse);
-            setUserAvatar(profile.avatar_url || profile.avatar || "/assets/avatar/xtra30.ico");
+            setUserAvatar(profile.avatar_url || "/assets/avatar/xtra30.ico");
           }
         }
 
