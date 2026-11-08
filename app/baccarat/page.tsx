@@ -43,7 +43,7 @@ const DBZ_AURAS = {
   ]
 };
 
-export default function BaccaratExactSyncPage() {
+export default function BaccaratPage() {
   const [mounted, setMounted] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>("Chiến Binh");
@@ -81,7 +81,6 @@ export default function BaccaratExactSyncPage() {
     quote: string;
   } | null>(null);
 
-  // Khởi tạo hũ bám sát bảng baccarat_jackpot của ní
   const [jackpots, setJackpots] = useState({ minor: 10000, major: 50000, grand: 200000 });
   const jackpotsRef = useRef(jackpots);
   const deckRef = useRef<Card[]>([]);
@@ -136,8 +135,8 @@ export default function BaccaratExactSyncPage() {
           }
         }
 
-        // 🌟 ĐỒNG BỘ HŨ CHUẨN TỪ BẢNG baccarat_jackpot
-        const { data: jackpotData } = await supabase
+        // Lấy dữ liệu hũ từ bảng baccarat_jackpot
+        const { data: jackpotData, error: jError } = await supabase
           .from("baccarat_jackpot")
           .select("minor, major, grand")
           .eq("id", "global")
@@ -149,6 +148,8 @@ export default function BaccaratExactSyncPage() {
             major: jackpotData.major ?? 50000,
             grand: jackpotData.grand ?? 200000,
           });
+        } else if (jError) {
+          console.error("Lỗi đọc baccarat_jackpot:", jError.message);
         }
       } catch (e) {
         console.error("Lỗi tải thông tin:", e);
@@ -158,9 +159,9 @@ export default function BaccaratExactSyncPage() {
     initEverything();
     createDeck();
 
-    // Lắng nghe real-time từ bảng baccarat_jackpot
+    // Lắng nghe real-time chính xác từ bảng baccarat_jackpot
     const channel = supabase
-      .channel("baccarat_jackpot_exact_sync")
+      .channel("baccarat_jackpot_realtime_fixed")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -201,10 +202,11 @@ export default function BaccaratExactSyncPage() {
   const updateBaccaratJackpotInDB = async (newPool: { minor: number; major: number; grand: number }) => {
     setJackpots(newPool);
     try {
-      await supabase
+      const { error } = await supabase
         .from("baccarat_jackpot")
         .update(newPool)
         .eq("id", "global");
+      if (error) console.error("Lỗi update hũ:", error.message);
     } catch (e) {
       console.error(e);
     }
@@ -591,7 +593,7 @@ export default function BaccaratExactSyncPage() {
         </div>
       </header>
 
-      {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING (ĐỒNG BỘ CHUẨN BẢNG baccarat_jackpot) */}
+      {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING (ĐỒNG BỘ CHUẨN baccarat_jackpot) */}
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 md:gap-4 shrink-0 mt-1">
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-cyan-500/40 shadow">
           <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất</div>
