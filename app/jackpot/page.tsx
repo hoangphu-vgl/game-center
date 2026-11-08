@@ -37,7 +37,7 @@ const AURA_QUICK_REWARDS = [
   { id: "ki_white", name: "Ki Trắng", mult: 2.0, weight: 800, icon: "/assets/jackpot/kiwhite.png", quote: "Goku nhếch mép: 'Bắt đầu khởi động cơ thể thôi!'" },
   { id: "kaioken", name: "Kaioken", mult: 3.0, weight: 600, icon: "/assets/jackpot/kaioken.png", quote: "Goku gầm lên: 'Gấp đôi sức mạnh, Kaioken hoàn thành!'" },
   { id: "ssj1", name: "SSJ", mult: 4.0, weight: 500, icon: "/assets/jackpot/ssj1.png", quote: "Goku Super Saiyan: 'Ta đã nổi giận thực sự rồi đấy Frieza!'" },
-  { id: "ssj2", name: "SSJ 2", mult: 5.0, weight: 400, icon: "/assets/jackpot/ssj2.png", quote: "Gohan SSJ2: 'Ta sẽ không tha cho ngươi đâu...'" },
+  { id: "ssj2", name: "SSJ 2", mult: 4.0, weight: 400, icon: "/assets/jackpot/ssj2.png", quote: "Gohan SSJ2: 'Ta sẽ không tha cho ngươi đâu...'" },
   { id: "ssj3", name: "SSJ 3", mult: 8.0, weight: 300, icon: "/assets/jackpot/ssj3.png", quote: "Goku SSJ3: 'Hãy xem đây, sức mạnh vượt qua cả Super Saiyan 2!'" },
   { id: "ssj_blue", name: "SSJ Blue", mult: 10.0, weight: 200, icon: "/assets/jackpot/ssj_blue.png", quote: "Goku Blue: 'Sức mạnh của cảnh giới thần linh!'" },
   { id: "ssj_god", name: "SSJ God", mult: 15.0, weight: 100, icon: "/assets/jackpot/ssj_god.png", quote: "Goku God: 'Ánh sáng đỏ rực của thần thánh vũ trụ!'" },
@@ -82,6 +82,7 @@ export default function JackpotTestPage() {
   const [spinning, setSpinning] = useState<boolean>(false);
   const [explosiveEffect, setExplosiveEffect] = useState<boolean>(false);
   const [jackpotSideGlow, setJackpotSideGlow] = useState<boolean>(false);
+  const [showRulesModal, setShowRulesModal] = useState<boolean>(false);
 
   const [winningCoords, setWinningCoords] = useState<number[]>([]);
   const [autoCount, setAutoCount] = useState<number>(0);
@@ -624,7 +625,7 @@ export default function JackpotTestPage() {
       style={{ touchAction: 'manipulation' }}
     >
       
-      {/* 🚀 HEADER TOP BAR GỌN GÀNG GIỐNG POKER */}
+      {/* 🚀 HEADER TOP BAR KÈM NÚT "📜 LUẬT" GÓC TRÊN BÊN PHẢI */}
       <header className="bg-slate-900/95 border-b border-amber-500/40 px-3 py-1.5 flex justify-between items-center z-30 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-2">
           <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 px-2.5 py-1 rounded-lg text-[10px] font-black shadow transition active:scale-95">
@@ -638,6 +639,13 @@ export default function JackpotTestPage() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowRulesModal(true)}
+            className="bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-yellow-500/40 px-2 py-1 rounded-lg text-[10px] font-black shadow transition active:scale-95 cursor-pointer flex items-center gap-1"
+          >
+            📜 Luật
+          </button>
+
           <button
             onClick={toggleFullScreen}
             className="bg-slate-800 text-amber-400 border border-amber-500/40 px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer"
@@ -894,6 +902,90 @@ export default function JackpotTestPage() {
           </button>
         </div>
       </footer>
+
+      {/* 📜 POPUP MODAL THÔNG BÁO LUẬT CHƠI & ĐIỂM BASE BIỂU TƯỢNG */}
+      {showRulesModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-amber-500/70 rounded-2xl max-w-lg w-full p-4 max-h-[85vh] overflow-y-auto text-left shadow-2xl relative space-y-3">
+            
+            <div className="flex justify-between items-center border-b border-amber-500/40 pb-2">
+              <h3 className="text-xs sm:text-sm font-black text-yellow-300 uppercase tracking-wide flex items-center gap-1.5">
+                📜 MẬT SÁCH LUẬT CHƠI JACKPOT RỒNG THẦN
+              </h3>
+              <button 
+                onClick={() => setShowRulesModal(false)}
+                className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center cursor-pointer shadow"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-[11px] text-slate-300 leading-relaxed font-sans">
+              
+              {/* 1. THOẠI DRAGON BALL & LUẬT CƠ BẢN */}
+              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                <h4 className="text-amber-400 font-bold flex items-center gap-1">
+                  🐉 "Beerus đại nhân: 'Vận Ki lọ hũ, liên hoàn 3 cột trở lên sẽ kích hoạt nổ thưởng!'"
+                </h4>
+                <p className="text-slate-400 leading-normal text-[10.5px]">
+                  • Các biểu tượng nối nhau liên tiếp từ **cột 1 sang phải (ít nhất 3 cột)** sẽ tự động bùng nổ điểm Ki.<br/>
+                  • Thu thập đủ **6 biểu tượng Rồng Thần** xuất hiện trên 6 cột sẽ được ban cho **10 Lượt Lọ Miễn Phí**!
+                </p>
+              </div>
+
+              {/* 2. NỔI BẬT QUY TẮC NỔ HŨ */}
+              <div className="bg-gradient-to-r from-red-950/80 via-amber-950/90 to-red-950/80 p-3 rounded-xl border-2 border-amber-400/80 space-y-1.5 shadow-lg">
+                <h4 className="text-yellow-300 font-black text-xs uppercase tracking-wider flex items-center gap-1">
+                  👑 QUY TẮC GIẬT HŨ BÁ CHỦ VŨ TRỤ (NỔ HŨ)
+                </h4>
+                <div className="space-y-1 text-[10.5px] text-amber-100">
+                  <div className="flex justify-between border-b border-amber-500/30 pb-0.5">
+                    <span className="font-bold text-amber-300">🔥 NGỌC RỒNG TRÁI ĐẤT:</span>
+                    <span className="text-white font-semibold">Cược từ 20 đến 200 PTS</span>
+                  </div>
+                  <div className="flex justify-between border-b border-amber-500/30 pb-0.5">
+                    <span className="font-bold text-purple-300">💎 NGỌC RỒNG NAMEK:</span>
+                    <span className="text-white font-semibold">Cược từ 500 đến 5.000 PTS</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-yellow-300 animate-pulse">👑 NGỌC RỒNG SIÊU CẤP:</span>
+                    <span className="text-yellow-400 font-bold">Mọi mức cược đều có cơ hội Nổ Hũ!</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. CÔNG BỐ ĐIỂM BASE TỪNG BIỂU TƯỢNG (KHÔNG CÔNG BỐ TỶ LỆ MULTIPLIER) */}
+              <div className="space-y-1">
+                <h4 className="text-amber-400 font-bold text-xs">
+                  📊 ĐIỂM NĂNG LƯỢNG GỐC (BASE POINTS) CỦA BIỂU TƯỢNG:
+                </h4>
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-950/90 p-2 rounded-xl border border-slate-800 max-h-48 overflow-y-auto">
+                  {DRAGON_SYMBOLS.map((sym) => (
+                    <div key={sym.id} className="flex items-center justify-between bg-slate-900/80 px-2 py-1 rounded border border-slate-800 text-[10px]">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <img src={sym.icon} alt={sym.name} className="w-4 h-4 object-contain shrink-0" />
+                        <span className="font-medium text-slate-200 truncate">{sym.name}</span>
+                      </div>
+                      <span className="font-mono font-black text-amber-400 shrink-0">+{sym.basePoints} PTS</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            <div className="pt-1 text-center">
+              <button
+                onClick={() => setShowRulesModal(false)}
+                className="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-slate-950 font-black text-xs py-2 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg shadow-amber-500/30 transition"
+              >
+                ĐÃ RÕ MẬT SÁCH, VẬN KI LỌ NGAY! 🚀
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
