@@ -17,7 +17,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-const BET_OPTIONS = [100, 500, 1000, 5000, 10000, 100000];
+const BET_OPTIONS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
 
 const ANIME_QUOTES = {
   START: ["Khí áp này... Trận chiến bắt đầu!", "Thế giới này sẽ biết đến nỗi đau!", "Lĩnh Vực Mở Rộng... Khai cuộc!"],
