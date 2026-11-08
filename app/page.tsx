@@ -29,7 +29,6 @@ const AURA_QUOTES = [
   "🐉 'Bản Năng Vô Thượng... trạng thái khi 13 Ấn Ký tự động phản ứng!' - Whis",
 ];
 
-// HỆ THỐNG PHÂN CẤP 10 CẤP ĐỘ SỨC MẠNH DRAGON BALL
 const getSaiyanLevel = (power: number) => {
   if (power >= 1000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
   if (power >= 500000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
@@ -50,26 +49,19 @@ export default function Home() {
   const [lastCheckIn, setLastCheckIn] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // Auth States
   const [isSignUp, setIsSignUp] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
 
-  // Profile & Modal States
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Ngọc Rồng (Mỗi user sở hữu số lượng từ 0 đến 7)
   const [dragonBallsCount, setDragonBallsCount] = useState<number>(0);
-
-  // Popup Thông Báo Luật Chơi & Sưu Tập Ngọc Rồng
   const [showNoticeModal, setShowNoticeModal] = useState(false);
-
-  // Leaderboard State
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [dailyQuote, setDailyQuote] = useState("");
 
@@ -86,7 +78,6 @@ export default function Home() {
     setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
   }, []);
 
-  // 🛠️ ĐỒNG BỘ THÔNG TIN USER, AVATAR, DISPLAY NAME VÀO HỆ THỐNG GAME & LOCALSTORAGE
   useEffect(() => {
     async function loadUserProfile(currentUser: any) {
       if (!currentUser) {
@@ -376,7 +367,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-amber-400 font-black tracking-widest animate-pulse px-4 text-center">
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 text-amber-400 font-black tracking-widest animate-pulse px-4 text-center">
         <img src="/assets/home/shenron.png" alt="Shenron" className="w-20 h-20 object-contain mb-4 animate-bounce drop-shadow-[0_0_20px_rgba(34,197,94,0.8)]" />
         ĐANG KẾT NỐI LONG MẠCH DRAGON ARCADE...
       </div>
@@ -385,17 +376,17 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden select-none"
+      <div className="h-screen w-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 fixed inset-0 overflow-hidden select-none"
         style={{ backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')", backgroundSize: "cover", backgroundPosition: "center" }}
       >
         <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-0"></div>
 
-        <div className="relative z-10 w-full max-w-md bg-slate-900/90 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(245,158,11,0.3)] backdrop-blur-xl space-y-6">
-          <div className="text-center space-y-2">
+        <div className="relative z-10 w-full max-w-md bg-slate-900/90 border-2 border-amber-500/50 rounded-3xl p-5 sm:p-8 shadow-[0_0_50px_rgba(245,158,11,0.3)] backdrop-blur-xl space-y-4 sm:space-y-6 max-h-[95vh] overflow-y-auto">
+          <div className="text-center space-y-1 sm:space-y-2">
             <div className="flex justify-center">
-              <img src="/assets/home/shenron.png" alt="Dragon" className="w-16 h-16 object-contain animate-bounce drop-shadow" />
+              <img src="/assets/home/shenron.png" alt="Dragon" className="w-12 h-12 sm:w-16 sm:h-16 object-contain animate-bounce drop-shadow" />
             </div>
-            <h1 className="text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 drop-shadow">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 drop-shadow">
               DRAGON ARCADE
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm font-medium">
@@ -403,7 +394,7 @@ export default function Home() {
             </p>
           </div>
 
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
+          <form onSubmit={handleAuthSubmit} className="space-y-3 sm:space-y-4">
             <div className="space-y-1">
               <label className="text-xs font-bold text-amber-400 ml-1">Tên Đăng Nhập</label>
               <input
@@ -411,7 +402,7 @@ export default function Home() {
                 placeholder="Ví dụ: kennylor298"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 transition lowercase"
+                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500 transition lowercase"
                 required
               />
             </div>
@@ -423,7 +414,7 @@ export default function Home() {
                 placeholder="••••••••"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-4 py-3 rounded-xl focus:outline-none focus:border-amber-500 transition"
+                className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500 transition"
                 required
               />
             </div>
@@ -444,7 +435,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-slate-950 font-black text-sm py-3.5 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-slate-950 font-black text-xs sm:text-sm py-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-lg shadow-amber-500/20 disabled:opacity-50"
             >
               {authLoading ? "Đang Vận Ki..." : isSignUp ? "ĐĂNG KÝ NGAY 🚀" : "VÀO SẢNH GAME ⚡"}
             </button>
@@ -468,94 +459,76 @@ export default function Home() {
   const currentLevel = getSaiyanLevel(points);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
       
-      {/* 🚀 THANH ĐIỀU HƯỚNG NHANH GIỮA CÁC TRANG (ĐẠI HỘI VÕ THUẬT, POKER, JACKPOT...) */}
-      <div className="bg-slate-900 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs font-bold">
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-amber-400">⚡ Chuyển Sảnh Nhanh:</span>
+      {/* 🚀 THANH ĐIỀU HƯỚNG NHANH GIỮA CÁC TRANG */}
+      <div className="bg-slate-900/95 border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-bold shrink-0 backdrop-blur-md z-30">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-amber-400">⚡ Chuyển Sảnh:</span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-md transition text-[10px]">
             🏠 Trang Chủ
           </Link>
-          <Link href="/tienlen" className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 px-3 py-1 rounded-lg transition">
-            ⚔️ Đại Hội Võ Thuật 13 Ấn Ký
+          <Link href="/tienlen" className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 px-2.5 py-0.5 rounded-md transition text-[10px]">
+            ⚔️ Võ Thuật 13 Ấn Ký
           </Link>
-          <Link href="/poker" className="bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-500/50 px-3 py-1 rounded-lg transition">
+          <Link href="/poker" className="bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-500/50 px-2.5 py-0.5 rounded-md transition text-[10px]">
             ♠️ Sòng Poker
           </Link>
-          <Link href="/jackpot" className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-500/50 px-3 py-1 rounded-lg transition">
+          <Link href="/jackpot" className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-500/50 px-2.5 py-0.5 rounded-md transition text-[10px]">
             🔮 Jackpot
           </Link>
-          <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-3 py-1 rounded-lg transition">
+          <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-2.5 py-0.5 rounded-md transition text-[10px]">
             🎟️ Vòng Quay
           </Link>
         </div>
       </div>
 
-      {/* POPUP THÔNG BÁO / LUẬT CHƠI & SƯU TẬP NGỌC RỒNG */}
+      {/* POPUP THÔNG BÁO / LUẬT CHƠI */}
       {showNoticeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-5 sm:p-6 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-4 relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-lg bg-slate-900 border-2 border-amber-500/60 rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(245,158,11,0.4)] space-y-3 relative max-h-[88vh] overflow-y-auto">
             
-            <div className="text-center space-y-1 border-b border-slate-800 pb-3">
+            <div className="text-center space-y-1 border-b border-slate-800 pb-2">
               <div className="flex justify-center">
-                <img src="/assets/home/dragonball.png" alt="Dragon Ball" className="w-12 h-12 object-contain animate-spin-slow" />
+                <img src="/assets/home/dragonball.png" alt="Dragon Ball" className="w-10 h-10 object-contain animate-spin-slow" />
               </div>
-              <span className="text-[10px] bg-amber-500/20 text-amber-400 font-black px-3 py-1 rounded-full border border-amber-500/30 uppercase tracking-widest">
+              <span className="text-[9px] bg-amber-500/20 text-amber-400 font-black px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-widest">
                 ⚡ Sắc Lệnh Từ Thần Hủy Diệt ⚡
               </span>
-              <h2 className="text-lg sm:text-xl font-black text-yellow-300 mt-2">
+              <h2 className="text-base sm:text-lg font-black text-yellow-300 mt-1">
                 LUẬT CHƠI VÀ SĂN NGỌC RỒNG VŨ TRỤ
               </h2>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-300">
-              <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
-                <h3 className="font-bold text-amber-400 flex items-center gap-1.5">
-                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-4 h-4 object-contain" /> Luật Chơi Võ Đạo Vũ Trụ:
+            <div className="space-y-2 text-[11px] text-slate-300">
+              <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
+                <h3 className="font-bold text-amber-400 flex items-center gap-1">
+                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-3.5 h-3.5 object-contain" /> Luật Chơi Võ Đạo Vũ Trụ:
                 </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  Vui vẻ, hòa đồng, cùng nhau cày Sức Mạnh (Ki). <b className="text-amber-300">Đặc biệt vào thứ Hai hàng tuần, Sức Mạnh sẽ tự động reset về 0</b> để tất cả chiến binh bắt đầu cuộc đua mới từ vạch xuất phát!
+                <p className="text-slate-400 leading-tight">
+                  Vui vẻ, hòa đồng, cùng nhau cày Sức Mạnh (Ki). <b className="text-amber-300">Thứ Hai hàng tuần, Sức Mạnh tự động reset về 0</b> để chiến binh bắt đầu cuộc đua mới!
                 </p>
               </div>
 
-              <div className="bg-gradient-to-r from-amber-950/40 via-yellow-950/30 to-amber-950/40 p-3.5 rounded-2xl border border-amber-500/50 space-y-1.5 shadow-md">
-                <h3 className="font-bold text-yellow-400 flex items-center gap-1.5 text-sm">
-                  <img src="/assets/home/dragon-ball-7.png" alt="Ball" className="w-5 h-5 object-contain" /> SĂN 7 VIÊN NGỌC RỒNG - ĐỔI 100K VNĐ!
+              <div className="bg-gradient-to-r from-amber-950/40 via-yellow-950/30 to-amber-950/40 p-2.5 rounded-xl border border-amber-500/50 space-y-1 shadow-md">
+                <h3 className="font-bold text-yellow-400 flex items-center gap-1 text-xs">
+                  <img src="/assets/home/dragon-ball-7.png" alt="Ball" className="w-4 h-4 object-contain" /> SĂN 7 VIÊN NGỌC RỒNG - ĐỔI 100K VNĐ!
                 </h3>
-                <p className="text-amber-200/90 leading-relaxed">
-                  Chiến binh nào đạt <b className="text-white">Sức Mạnh cao nhất trong tuần</b> sẽ nhận ngay <b className="text-yellow-400">1 Viên Ngọc Rồng</b> vào kho sưu tập cá nhân! 
+                <p className="text-amber-200/90 leading-tight">
+                  Chiến binh đạt <b className="text-white">Sức Mạnh cao nhất tuần</b> nhận ngay <b className="text-yellow-400">1 Viên Ngọc Rồng</b>! 
                 </p>
-                <div className="text-[11px] text-amber-300 pt-1 font-semibold">
-                  ✨ <b>Quy đổi phần thưởng:</b> Đổi lẻ từng viên lấy <b className="text-white">10k VNĐ/viên</b> hoặc tích lũy đủ <b className="text-white">7 Viên Ngọc Rồng</b> để thực hiện điều ước Rồng Thần nhận ngay <b className="text-amber-400 underline">100.000 VNĐ</b>!
+                <div className="text-[10px] text-amber-300 pt-0.5 font-semibold">
+                  ✨ Đổi lẻ <b className="text-white">10k VNĐ/viên</b> hoặc đủ <b className="text-white">7 Viên</b> nhận ngay <b className="text-amber-400 underline">100.000 VNĐ</b>!
                 </div>
-              </div>
-
-              <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
-                <h3 className="font-bold text-emerald-400 flex items-center gap-1.5">
-                  <img src="/assets/home/capsule.png" alt="Capsule" className="w-4 h-4 object-contain" /> Cửa Hàng Đổi Lượt & Siêu Gói Flex:
-                </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  Đổi Ki lấy lượt quay qua các gói từ <b className="text-amber-300">1 Lượt (100k Ki)</b> đến <b className="text-amber-300">50 Lượt Rồng Thần</b>. Có <b className="text-yellow-400">Siêu Gói Flex 1 Củ (5.000 VNĐ / 1.000.000 Ki)</b> giới hạn kho tổng <b className="text-amber-300">20 gói/tuần</b> để flex danh dự!
-                </p>
-              </div>
-
-              <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-1">
-                <h3 className="font-bold text-purple-400 flex items-center gap-1.5">
-                  <img src="/assets/home/candauvan.png" alt="Cloud" className="w-4 h-4 object-contain" /> Kho Quà Vòng Quay Rồng Thần:
-                </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  Húp ngay các mốc khủng: <b className="text-emerald-400">+5.000 Ki</b>, <b className="text-amber-400">+100k / +200k Ki</b>, Lượt quay thêm, và chí tôn <b className="text-yellow-400">JACKPOT 1.000K Ki</b>!
-                </p>
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 onClick={handleCloseNoticeForToday}
-                className="w-full bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-black text-xs py-3 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg shadow-amber-500/30 transition"
+                className="w-full bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-slate-950 font-black text-xs py-2 rounded-xl cursor-pointer hover:brightness-110 active:scale-95 shadow-lg shadow-amber-500/30 transition"
               >
                 ĐÃ RÕ, HÔM NAY KHÔNG HIỆN LẠI 🚀
               </button>
@@ -565,343 +538,311 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-2.5 shadow-[0_4px_20px_rgba(245,158,11,0.15)]">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-          <div className="w-full sm:w-auto flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <img src="/assets/home/shenron.png" alt="Logo" className="w-8 h-8 object-contain animate-bounce" />
-              <span className="font-black text-xl sm:text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500">
-                DRAGON ARCADE
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 sm:hidden">
-              <button
-                onClick={() => setProfileModalOpen(true)}
-                className="w-9 h-9 rounded-full overflow-hidden border-2 border-amber-400 active:scale-95 transition"
-              >
-                <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
-              </button>
-              <button
-                onClick={handleLogout}
-                className="text-xs text-slate-400 hover:text-rose-400 font-bold px-2 py-1 bg-slate-800/80 rounded-lg border border-slate-700"
-              >
-                Thoát 🚪
-              </button>
-            </div>
+      <header className="bg-slate-900/95 backdrop-blur-md border-b border-amber-500/40 px-3 py-1.5 shadow-md shrink-0 z-20">
+        <div className="w-full flex justify-between items-center gap-2">
+          <div className="flex items-center gap-2">
+            <img src="/assets/home/shenron.png" alt="Logo" className="w-6 h-6 sm:w-7 sm:h-7 object-contain animate-bounce" />
+            <span className="font-black text-base sm:text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500">
+              DRAGON ARCADE
+            </span>
           </div>
 
-          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-1.5 sm:gap-3">
-            <div className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-slate-800/90 border border-amber-500/50 px-2.5 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
-              <img src="/assets/home/dausenzu.png" alt="Ki" className="w-4 h-4 object-contain" />
-              <span className="font-black text-amber-400 truncate">{points.toLocaleString()}</span>
-              <span className="text-[10px] text-amber-300/70">Ki</span>
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 bg-slate-800/90 border border-amber-500/50 px-2 py-1 rounded-lg text-[10px] sm:text-xs">
+              <img src="/assets/home/dausenzu.png" alt="Ki" className="w-3.5 h-3.5 object-contain" />
+              <span className="font-black text-amber-400">{points.toLocaleString()}</span>
             </div>
 
-            <div className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-slate-800/90 border border-purple-500/50 px-2.5 py-1.5 rounded-xl shadow-inner text-xs sm:text-sm">
-              <img src="/assets/home/capsule.png" alt="Ticket" className="w-4 h-4 object-contain" />
-              <span className="font-black text-purple-300 truncate">{luckySpins}</span>
+            <div className="flex items-center gap-1 bg-slate-800/90 border border-purple-500/50 px-2 py-1 rounded-lg text-[10px] sm:text-xs">
+              <img src="/assets/home/capsule.png" alt="Ticket" className="w-3.5 h-3.5 object-contain" />
+              <span className="font-black text-purple-300">{luckySpins}</span>
             </div>
 
             <button
               onClick={handleCheckIn}
               disabled={isCheckedInToday}
-              className={`flex-1 sm:flex-none text-xs sm:text-sm font-black py-1.5 px-3 sm:px-4 rounded-xl transition-all shadow-md active:scale-95 ${
+              className={`text-[10px] sm:text-xs font-black py-1 px-2.5 rounded-lg transition-all shadow active:scale-95 ${
                 isCheckedInToday
                   ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed"
-                  : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 cursor-pointer shadow-amber-500/20"
+                  : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 cursor-pointer"
               }`}
             >
-              {isCheckedInToday ? "✅ Đã Tụ Ki" : "🔥 Tụ Ki"}
+              {isCheckedInToday ? "✅ Tụ Ki" : "🔥 Tụ Ki"}
             </button>
 
-            <div className="hidden sm:flex items-center gap-3 ml-2">
-              <button
-                onClick={() => setProfileModalOpen(true)}
-                className="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 border border-amber-500/40 p-1.5 pr-3 rounded-full cursor-pointer transition active:scale-95 shadow-md group"
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-amber-400">
-                  <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover group-hover:scale-110 transition" />
-                </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-xs font-bold text-amber-300 truncate max-w-[100px]">{displayName}</span>
-                  <span className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${currentLevel.color}`}>{currentLevel.name}</span>
-                </div>
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="text-xs text-slate-400 hover:text-rose-400 font-semibold transition cursor-pointer"
-              >
-                Thoát
-              </button>
-            </div>
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              className="w-7 h-7 rounded-full overflow-hidden border border-amber-400 active:scale-95 transition ml-1 cursor-pointer"
+            >
+              <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="text-[10px] text-slate-400 hover:text-rose-400 font-bold px-1.5 py-1 bg-slate-800/80 rounded-lg border border-slate-700 cursor-pointer"
+            >
+              🚪
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Banner & Quote */}
-      <section
-        className="relative flex items-center justify-center min-h-[240px] sm:min-h-[300px] bg-cover bg-center text-center p-4 border-b border-amber-500/30 overflow-hidden"
-        style={{
-          backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950"></div>
-        <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="flex flex-wrap justify-center items-center gap-2">
-            <span className="px-3 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-[11px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
-              ✨ Chiến Binh: <span className="text-white">{displayName}</span>
-            </span>
-            <span className={`px-3 py-1 border rounded-full text-[11px] font-black backdrop-blur-sm shadow ${currentLevel.color}`}>
-              {currentLevel.name}
-            </span>
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow-lg tracking-wide">
-            DRAGON GAMING ARENA
-          </h1>
-          <p className="text-amber-200/90 text-xs sm:text-sm italic font-medium max-w-xl mx-auto px-2 bg-slate-900/40 p-2 rounded-xl border border-amber-500/20">
-            {dailyQuote}
-          </p>
-          
-          <div>
-            <button
-              onClick={() => setShowNoticeModal(true)}
-              className="text-xs text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer bg-slate-900/80 px-3 py-1.5 rounded-xl border border-amber-500/30 transition shadow flex items-center gap-1.5 mx-auto"
-            >
-              <img src="/assets/home/dragonball.png" alt="Ball" className="w-4 h-4 object-contain" /> Xem Luật Chơi, Reset Thứ Hai & Săn Ngọc Rồng
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Grid */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* BODY CHÍNH CÓ THỂ CUỘN - TỰ CO GIÃN THEO KHUNG MOBILE NGANG */}
+      <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-3 space-y-4">
         
-        {/* CỘT TRÁI (SẢNH GAME & GAME GIẢI TRÍ) */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* 1. SẢNH NỔI BẬT */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
-              <h2 className="text-lg sm:text-xl font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
-                <img src="/assets/home/candauvan.png" alt="Fire" className="w-5 h-5 object-contain" /> Sảnh Nổi Bật
-              </h2>
+        {/* Banner & Quote */}
+        <section
+          className="relative flex items-center justify-center min-h-[140px] sm:min-h-[180px] bg-cover bg-center text-center p-3 rounded-2xl border border-amber-500/30 overflow-hidden shadow-lg"
+          style={{
+            backgroundImage: "url('https://images3.alphacoders.com/812/thumb-1920-812808.png')",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/85 to-slate-950"></div>
+          <div className="relative z-10 max-w-3xl space-y-1.5">
+            <div className="flex flex-wrap justify-center items-center gap-1.5">
+              <span className="px-2.5 py-0.5 bg-amber-500/20 border border-amber-400/40 rounded-full text-[9px] sm:text-[10px] font-bold text-amber-300 uppercase tracking-widest backdrop-blur-sm">
+                ✨ Chiến Binh: <span className="text-white">{displayName}</span>
+              </span>
+              <span className={`px-2.5 py-0.5 border rounded-full text-[9px] sm:text-[10px] font-black backdrop-blur-sm shadow ${currentLevel.color}`}>
+                {currentLevel.name}
+              </span>
             </div>
+            <h1 className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-red-500 drop-shadow tracking-wide">
+              DRAGON GAMING ARENA
+            </h1>
+            <p className="text-amber-200/90 text-[10px] sm:text-xs italic font-medium max-w-xl mx-auto px-2 bg-slate-900/50 p-1.5 rounded-lg border border-amber-500/20 truncate">
+              {dailyQuote}
+            </p>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link
-                href="/jackpot"
-                className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
+            <div>
+              <button
+                onClick={() => setShowNoticeModal(true)}
+                className="text-[10px] text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer bg-slate-900/80 px-2.5 py-1 rounded-lg border border-amber-500/30 transition shadow inline-flex items-center gap-1"
               >
-                <div className="absolute right-2 -bottom-2 opacity-15">
-                  <img src="/assets/home/dragonball.png" alt="Ball" className="w-20 h-20 object-contain" />
-                </div>
-                <h3 className="text-base font-bold text-amber-400 flex items-center gap-2">
-                  <img src="/assets/home/dragon-ball-4.png" alt="Jackpot" className="w-6 h-6 object-contain" /> Jackpot Rồng Thần
-                </h3>
-                <p className="text-slate-400 text-xs mt-1">Quay hũ tích tụ Điểm Sức Mạnh nổ hũ Grand, Major!</p>
-                <div className="mt-4 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                  Vào Nổ Hũ 🔮
-                </div>
-              </Link>
-
-              <Link
-                href="/wheel"
-                className="bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
-              >
-                <div className="absolute right-2 -bottom-2 opacity-15">
-                  <img src="/assets/home/capsule.png" alt="Capsule" className="w-20 h-20 object-contain" />
-                </div>
-                <h3 className="text-base font-bold text-purple-400 flex items-center gap-2">
-                  <img src="/assets/home/capsule.png" alt="Wheel" className="w-6 h-6 object-contain" /> Vòng Quay May Mắn
-                </h3>
-                <p className="text-slate-400 text-xs mt-1">Sử dụng Lượt Quay để húp thêm Điểm Sức Mạnh!</p>
-                <div className="mt-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                  Quay Ngay 🎟️
-                </div>
-              </Link>
-
-              <Link
-                href="/shop"
-                className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400 sm:col-span-2 md:col-span-1 lg:col-span-2 xl:col-span-1"
-              >
-                <div className="absolute right-2 -bottom-2 opacity-15">
-                  <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-20 h-20 object-contain" />
-                </div>
-                <h3 className="text-base font-bold text-yellow-400 flex items-center gap-2">
-                  <img src="/assets/home/dausenzu.png" alt="Shop" className="w-6 h-6 object-contain" /> Shop Võ Đạo
-                </h3>
-                <p className="text-slate-400 text-xs mt-1">Dùng Điểm Sức Mạnh quy đổi Lượt Quay & Flex!</p>
-                <div className="mt-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-md">
-                  Vào Shop 💎
-                </div>
-              </Link>
+                <img src="/assets/home/dragonball.png" alt="Ball" className="w-3.5 h-3.5 object-contain" /> Xem Luật Chơi & Săn Ngọc Rồng
+              </button>
             </div>
           </div>
+        </section>
 
-          {/* 2. GAME GIẢI TRÍ */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
-              <h2 className="text-lg sm:text-xl font-black text-emerald-400 tracking-wider uppercase flex items-center gap-2">
-                <img src="/assets/home/shenron.png" alt="Game" className="w-5 h-5 object-contain" /> Game Giải Trí
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link
-                href="/tienlen"
-                className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-emerald-950/40 relative overflow-hidden hover:border-emerald-400 hover:shadow-emerald-500/20"
-              >
-                <div className="absolute right-4 bottom-2 opacity-15">
-                  <img src="/assets/home/dragon-ball-7.png" alt="TienLen" className="w-24 h-24 object-contain" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src="/assets/home/dragonball.png" alt="Card" className="w-6 h-6 object-contain" />
-                  <h3 className="text-base font-black text-emerald-400">Đại Hội Võ Thuật 13 Ấn Ký</h3>
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Hot</span>
-                </div>
-                <p className="text-slate-300 text-xs mt-1.5">Sòng bài đấu trường lôi đài 13 Ấn Ký độc lập online, chặt heo, truy sát cực đỉnh!</p>
-                <div className="mt-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-emerald-500/20 group-hover:brightness-110">
-                  BƯỚC VÀO LÔI ĐÀI ⚔️
-                </div>
-              </Link>
-
-              <Link
-                href="/poker"
-                className="bg-slate-900/90 border-2 border-blue-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-blue-950/40 relative overflow-hidden hover:border-blue-400 hover:shadow-blue-500/20"
-              >
-                <div className="absolute right-4 bottom-2 opacity-15">
-                  <img src="/assets/home/dragon-ball-7.png" alt="Poker" className="w-24 h-24 object-contain" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <img src="/assets/home/dragonball.png" alt="Card" className="w-6 h-6 object-contain" />
-                  <h3 className="text-base font-black text-blue-400">Poker Texas Hold'em</h3>
-                  <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">VIP</span>
-                </div>
-                <p className="text-slate-300 text-xs mt-1.5">Sát phạt Poker Multiplayer 6 ghế, nhà cái Whis chia bài tự động.</p>
-                <div className="mt-4 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-blue-500/20 group-hover:brightness-110">
-                  VÀO SÒNG POKER ♠️
-                </div>
-              </Link>
-            </div>
-          </div>
-
-        </div>
-
-        {/* BẢNG XẾP HẠNG TOP 5 */}
-        <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit lg:sticky lg:top-[85px]">
-          <div className="flex items-center justify-between border-l-4 border-orange-500 pl-3">
-            <h2 className="text-base sm:text-lg font-black text-orange-400 tracking-wider uppercase">
-              🏆 Top 5 Võ Đạo Vũ Trụ
-            </h2>
-            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
-              <img src="/assets/home/dragonball.png" alt="Ball" className="w-3.5 h-3.5 object-contain" /> Săn Ngọc Rồng
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {leaderboard.length === 0 ? (
-              <div className="text-xs text-slate-500 text-center py-6">Đang cập nhật bảng xếp hạng...</div>
-            ) : (
-              leaderboard.map((item, index) => {
-                const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
-                const isMe = item.id === user?.id;
-                const userLvl = getSaiyanLevel(item.balance);
-                const userAvatar = item.avatar_url || DEFAULT_AVATARS[0].url;
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border ${
-                      isMe ? "bg-amber-500/15 border-amber-500/60 font-bold" : "bg-slate-950/60 border-slate-800"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-base shrink-0">{medals[index]}</span>
-                      <div className="w-8 h-8 rounded-full overflow-hidden border border-amber-400/60 shrink-0">
-                        <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs sm:text-sm text-slate-200 truncate max-w-[100px]">
-                          {item.full_name} {isMe && "(Tôi)"}
-                        </span>
-                        <span className="text-[9px] text-amber-300 font-semibold">{userLvl.name.split(" - ")[1]}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-xs text-amber-400 font-black shrink-0">
-                      <img src="/assets/home/dausenzu.png" alt="Ki" className="w-3.5 h-3.5 object-contain" />
-                      <span>{item.balance?.toLocaleString()}</span>
-                    </div>
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          
+          {/* CỘT TRÁI (SẢNH GAME & GAME GIẢI TRÍ) */}
+          <div className="lg:col-span-2 space-y-4">
+            
+            {/* 1. SẢNH NỔI BẬT */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 border-l-4 border-amber-500 pl-2">
+                <h2 className="text-sm sm:text-base font-black text-amber-400 tracking-wider uppercase flex items-center gap-1.5">
+                  <img src="/assets/home/candauvan.png" alt="Fire" className="w-4 h-4 object-contain" /> Sảnh Nổi Bật
+                </h2>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Link
+                  href="/jackpot"
+                  className="bg-slate-900/90 border border-amber-500/40 rounded-xl p-3 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/home/dragonball.png" alt="Ball" className="w-16 h-16 object-contain" />
                   </div>
-                );
-              })
-            )}
+                  <h3 className="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-1.5">
+                    <img src="/assets/home/dragon-ball-4.png" alt="Jackpot" className="w-5 h-5 object-contain" /> Jackpot Rồng Thần
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">Quay hũ tích tụ Điểm Sức Mạnh nổ hũ Grand!</p>
+                  <div className="mt-2.5 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black py-1.5 px-2 rounded-lg text-center text-[10px] shadow">
+                    Vào Nổ Hũ 🔮
+                  </div>
+                </Link>
+
+                <Link
+                  href="/wheel"
+                  className="bg-slate-900/90 border border-purple-500/40 rounded-xl p-3 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-purple-400"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/home/capsule.png" alt="Capsule" className="w-16 h-16 object-contain" />
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-bold text-purple-400 flex items-center gap-1.5">
+                    <img src="/assets/home/capsule.png" alt="Wheel" className="w-5 h-5 object-contain" /> Vòng Quay May Mắn
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">Sử dụng Lượt Quay để húp thêm Điểm Sức Mạnh!</p>
+                  <div className="mt-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black py-1.5 px-2 rounded-lg text-center text-[10px] shadow">
+                    Quay Ngay 🎟️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/shop"
+                  className="bg-slate-900/90 border border-yellow-500/40 rounded-xl p-3 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400 sm:col-span-2 md:col-span-1 lg:col-span-2"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/home/dausenzu.png" alt="Senzu" className="w-16 h-16 object-contain" />
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-bold text-yellow-400 flex items-center gap-1.5">
+                    <img src="/assets/home/dausenzu.png" alt="Shop" className="w-5 h-5 object-contain" /> Shop Võ Đạo
+                  </h3>
+                  <p className="text-slate-400 text-[10px] mt-0.5">Dùng Điểm Sức Mạnh quy đổi Lượt Quay & Flex!</p>
+                  <div className="mt-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black py-1.5 px-2 rounded-lg text-center text-[10px] shadow">
+                    Vào Shop 💎
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+            {/* 2. GAME GIẢI TRÍ */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 border-l-4 border-emerald-500 pl-2">
+                <h2 className="text-sm sm:text-base font-black text-emerald-400 tracking-wider uppercase flex items-center gap-1.5">
+                  <img src="/assets/home/shenron.png" alt="Game" className="w-4 h-4 object-contain" /> Game Giải Trí
+                </h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Link
+                  href="/tienlen"
+                  className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-xl p-3 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <img src="/assets/home/dragonball.png" alt="Card" className="w-5 h-5 object-contain" />
+                    <h3 className="text-xs sm:text-sm font-black text-emerald-400">Đại Hội Võ Thuật 13 Ấn Ký</h3>
+                    <span className="text-[8px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded-full font-bold uppercase ml-auto animate-pulse">Hot</span>
+                  </div>
+                  <p className="text-slate-300 text-[10px] mt-1">Sòng bài lôi đài 13 Ấn Ký độc lập online, chặt heo cực đỉnh!</p>
+                  <div className="mt-2.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2 px-2 rounded-lg text-center text-[10px] shadow">
+                    BƯỚC VÀO LÔI ĐÀI ⚔️
+                  </div>
+                </Link>
+
+                <Link
+                  href="/poker"
+                  className="bg-slate-900/90 border-2 border-blue-500/60 rounded-xl p-3 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-blue-400"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <img src="/assets/home/dragonball.png" alt="Card" className="w-5 h-5 object-contain" />
+                    <h3 className="text-xs sm:text-sm font-black text-blue-400">Poker Texas Hold'em</h3>
+                    <span className="text-[8px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded-full font-bold uppercase ml-auto animate-pulse">VIP</span>
+                  </div>
+                  <p className="text-slate-300 text-[10px] mt-1">Sát phạt Poker Multiplayer 5 ghế, Whis chia bài tự động.</p>
+                  <div className="mt-2.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-600 text-slate-950 font-black py-2 px-2 rounded-lg text-center text-[10px] shadow">
+                    VÀO SÒNG POKER ♠️
+                  </div>
+                </Link>
+              </div>
+            </div>
+
           </div>
+
+          {/* BẢNG XẾP HẠNG TOP 5 */}
+          <div className="bg-slate-900/90 border border-amber-500/40 rounded-xl p-3 shadow-xl space-y-3 h-fit">
+            <div className="flex items-center justify-between border-l-4 border-orange-500 pl-2">
+              <h2 className="text-xs sm:text-sm font-black text-orange-400 tracking-wider uppercase">
+                🏆 Top 5 Võ Đạo Vũ Trụ
+              </h2>
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
+                <img src="/assets/home/dragonball.png" alt="Ball" className="w-3 h-3 object-contain" /> Ngọc Rồng
+              </span>
+            </div>
+            <div className="space-y-2">
+              {leaderboard.length === 0 ? (
+                <div className="text-[10px] text-slate-500 text-center py-4">Đang cập nhật...</div>
+              ) : (
+                leaderboard.map((item, index) => {
+                  const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
+                  const isMe = item.id === user?.id;
+                  const userLvl = getSaiyanLevel(item.balance);
+                  const userAvatar = item.avatar_url || DEFAULT_AVATARS[0].url;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center justify-between p-2 rounded-lg border ${
+                        isMe ? "bg-amber-500/15 border-amber-500/60 font-bold" : "bg-slate-950/60 border-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs shrink-0">{medals[index]}</span>
+                        <div className="w-6 h-6 rounded-full overflow-hidden border border-amber-400/60 shrink-0">
+                          <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] sm:text-xs text-slate-200 truncate max-w-[80px]">
+                            {item.full_name} {isMe && "(Tôi)"}
+                          </span>
+                          <span className="text-[8px] text-amber-300 font-semibold">{userLvl.name.split(" - ")[1]}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-[10px] text-amber-400 font-black shrink-0">
+                        <img src="/assets/home/dausenzu.png" alt="Ki" className="w-3 h-3 object-contain" />
+                        <span>{item.balance?.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
         </div>
 
-      </main>
+      </div>
 
       {/* POPUP HỒ SƠ & SƯU TẬP NGỌC RỒNG */}
       {profileModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-lg rounded-3xl p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-slate-900 border-2 border-amber-500/60 w-full max-w-lg rounded-3xl p-4 sm:p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">🛡️</span>
-                <h3 className="text-base sm:text-lg font-black text-amber-400">HỒ SƠ & SƯU TẬP NGỌC RỒNG</h3>
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg">🛡️</span>
+                <h3 className="text-xs sm:text-sm font-black text-amber-400">HỒ SƠ & SƯU TẬP NGỌC RỒNG</h3>
               </div>
               <button
                 onClick={() => setProfileModalOpen(false)}
-                className="text-slate-400 hover:text-white font-bold text-sm px-2 py-1 cursor-pointer"
+                className="text-slate-400 hover:text-white font-bold text-xs px-2 py-0.5 cursor-pointer"
               >
                 ✖
               </button>
             </div>
 
-            <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400 shadow-md shrink-0">
+            <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 shadow shrink-0">
                 <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
               </div>
-              <div className="space-y-1">
-                <h4 className="font-extrabold text-sm text-white truncate">{displayName}</h4>
-                <div className={`inline-block text-[10px] font-black px-2 py-0.5 rounded border ${currentLevel.color}`}>
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold text-xs text-white truncate">{displayName}</h4>
+                <div className={`inline-block text-[9px] font-black px-1.5 py-0.2 rounded border ${currentLevel.color}`}>
                   {currentLevel.name}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-amber-400 font-bold pt-1">
-                  <span className="flex items-center gap-1"><img src="/assets/home/dausenzu.png" alt="Ki" className="w-3.5 h-3.5 object-contain" /> {points.toLocaleString()} Ki</span>
-                  <span className="flex items-center gap-1"><img src="/assets/home/capsule.png" alt="Ticket" className="w-3.5 h-3.5 object-contain" /> {luckySpins} Lượt</span>
+                <div className="flex items-center gap-2 text-[10px] text-amber-400 font-bold pt-0.5">
+                  <span className="flex items-center gap-1"><img src="/assets/home/dausenzu.png" alt="Ki" className="w-3 h-3 object-contain" /> {points.toLocaleString()} Ki</span>
+                  <span className="flex items-center gap-1"><img src="/assets/home/capsule.png" alt="Ticket" className="w-3 h-3 object-contain" /> {luckySpins} Lượt</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/40 space-y-3">
+            <div className="bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-2">
               <div className="flex justify-between items-center">
-                <h4 className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-                  <img src="/assets/home/dragonball.png" alt="Ball" className="w-4 h-4 object-contain" /> Kho Sưu Tập Ngọc Rồng ({dragonBallsCount}/7 Viên)
+                <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-wide flex items-center gap-1">
+                  <img src="/assets/home/dragonball.png" alt="Ball" className="w-3.5 h-3.5 object-contain" /> Kho Ngọc Rồng ({dragonBallsCount}/7)
                 </h4>
-                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
-                  Top Tuần Nhận Ngọc
-                </span>
               </div>
 
-              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 py-2">
+              <div className="grid grid-cols-7 gap-1 py-1">
                 {[1, 2, 3, 4, 5, 6, 7].map((starNum) => {
                   const isUnlocked = starNum <= dragonBallsCount;
                   const ballImageSrc = `/assets/home/dragon-ball-${starNum}.png`;
                   return (
                     <div
                       key={starNum}
-                      className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                      className={`flex flex-col items-center justify-center p-1 rounded-lg border transition-all ${
                         isUnlocked
-                          ? "bg-gradient-to-t from-amber-600 to-yellow-400 border-yellow-200 shadow-[0_0_15px_rgba(250,204,21,0.6)] scale-105"
+                          ? "bg-gradient-to-t from-amber-600 to-yellow-400 border-yellow-200 shadow scale-105"
                           : "bg-slate-900 border-slate-800 opacity-40 grayscale"
                       }`}
-                      title={`Viên ${starNum} Sao ${isUnlocked ? '(Đã sở hữu)' : '(Chưa mở khóa)'}`}
                     >
-                      <img src={ballImageSrc} alt={`${starNum} Star`} className="w-7 h-7 sm:w-8 sm:h-8 object-contain drop-shadow" />
-                      <span className={`text-[9px] font-black mt-1 ${isUnlocked ? 'text-slate-950 font-extrabold' : 'text-slate-500'}`}>
+                      <img src={ballImageSrc} alt={`${starNum} Star`} className="w-6 h-6 object-contain drop-shadow" />
+                      <span className={`text-[8px] font-black mt-0.5 ${isUnlocked ? 'text-slate-950' : 'text-slate-500'}`}>
                         {starNum}⭐
                       </span>
                     </div>
@@ -909,18 +850,18 @@ export default function Home() {
                 })}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => handleExchangeBalls('single')}
-                  className="bg-slate-900 hover:bg-slate-800 border border-emerald-500/50 text-emerald-400 font-bold text-xs py-2 rounded-xl transition cursor-pointer"
+                  className="bg-slate-900 hover:bg-slate-800 border border-emerald-500/50 text-emerald-400 font-bold text-[10px] py-1.5 rounded-lg cursor-pointer"
                 >
                   Đổi 1 Viên = 10k VNĐ 💵
                 </button>
                 <button
                   type="button"
                   onClick={() => handleExchangeBalls('all')}
-                  className={`font-black text-xs py-2 rounded-xl transition cursor-pointer shadow ${
+                  className={`font-black text-[10px] py-1.5 rounded-lg cursor-pointer shadow ${
                     dragonBallsCount >= 7
                       ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 animate-pulse"
                       : "bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed"
@@ -931,30 +872,29 @@ export default function Home() {
               </div>
             </div>
 
-            <form onSubmit={handleUpdateProfile} className="space-y-4 pt-1">
+            <form onSubmit={handleUpdateProfile} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị (Display Name)</label>
+                <label className="text-[10px] font-bold text-amber-400 ml-1">Tên Hiển Thị</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 text-sm text-white px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-950 border border-slate-700 text-xs text-white px-3 py-2 rounded-lg focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-amber-400 ml-1">Chọn Avatar Dragon Ball (Tổng 30 Mẫu)</label>
-                <div className="grid grid-cols-5 gap-2 pt-1 max-h-48 overflow-y-auto pr-1 bg-slate-950/80 p-2 rounded-xl border border-slate-800">
+                <label className="text-[10px] font-bold text-amber-400 ml-1">Chọn Avatar Dragon Ball (30 Mẫu)</label>
+                <div className="grid grid-cols-6 gap-1.5 pt-1 max-h-36 overflow-y-auto bg-slate-950/80 p-1.5 rounded-lg border border-slate-800">
                   {DEFAULT_AVATARS.map((av, idx) => (
                     <button
                       type="button"
                       key={idx}
                       onClick={() => setAvatarUrl(av.url)}
-                      className={`w-12 h-12 rounded-xl overflow-hidden border-2 cursor-pointer transition shrink-0 ${
-                        avatarUrl === av.url ? "border-amber-400 scale-105 shadow-lg shadow-amber-500/30" : "border-slate-700 opacity-60 hover:opacity-100"
+                      className={`w-9 h-9 rounded-lg overflow-hidden border-2 cursor-pointer transition shrink-0 ${
+                        avatarUrl === av.url ? "border-amber-400 scale-105 shadow" : "border-slate-700 opacity-60 hover:opacity-100"
                       }`}
-                      title={av.name}
                     >
                       <img src={av.url} alt={av.name} className="w-full h-full object-cover" />
                     </button>
@@ -965,7 +905,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={updatingProfile}
-                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs py-3 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow-md disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs py-2.5 rounded-xl cursor-pointer hover:brightness-110 transition active:scale-95 shadow disabled:opacity-50"
               >
                 {updatingProfile ? "Đang lưu..." : "LƯU THAY ĐỔI 💾"}
               </button>
