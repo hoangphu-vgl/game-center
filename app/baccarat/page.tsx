@@ -163,7 +163,7 @@ export default function BaccaratPage() {
     createDeck();
 
     const channel = supabase
-      .channel("baccarat_jackpot_sync_v4")
+      .channel("baccarat_jackpot_sync_v5")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -213,9 +213,6 @@ export default function BaccaratPage() {
     }
   };
 
-  /**
-   * 🌟 NUÔI HŨ TỐC ĐỘ CAO: Đóng góp 25% vào hũ Siêu Cấp và 60% vào hũ tương ứng theo mức chip.
-   */
   const contributeToJackpotOnly = async (totalBet: number) => {
     const currentPool = jackpotsRef.current;
     let baseMinor = currentPool.minor;
@@ -224,13 +221,13 @@ export default function BaccaratPage() {
 
     let addMinor = 0;
     let addMajor = 0;
-    let addGrand = Math.floor(totalBet * 0.50);
+    let addGrand = Math.floor(totalBet * 0.25);
 
     const chipTier = currentChipRef.current;
     if (chipTier <= 5000) {
-      addMinor = Math.floor(totalBet * 0.80);
+      addMinor = Math.floor(totalBet * 0.60);
     } else {
-      addMajor = Math.floor(totalBet * 0.80);
+      addMajor = Math.floor(totalBet * 0.60);
     }
 
     await updateBaccaratJackpotInDB({
@@ -240,26 +237,18 @@ export default function BaccaratPage() {
     });
   };
 
-  /**
-   * 🌟 CƠ CHẾ NỔ HŨ THEO ĐÚNG MỨC CƯỢC KHI THẮNG:
-   * - Cược 100 - 5.000 Ki: Chỉ có cơ hội nổ Hũ Trái Đất hoặc Hũ Siêu Cấp.
-   * - Cược từ 10.000 Ki trở lên: Chỉ có cơ hội nổ Hũ Namek hoặc Hũ Siêu Cấp.
-   */
   const checkJackpotWinOnWin = async () => {
     const currentPool = jackpotsRef.current;
     const chipTier = currentChipRef.current;
 
-    const grandHit = Math.random() < 0.008; // 0.8% nổ hũ Siêu Cấp (áp dụng mọi mức cược khi thắng)
-    
+    const grandHit = Math.random() < 0.008; 
     let majorHit = false;
     let minorHit = false;
 
     if (chipTier <= 5000) {
-      // Mức cược nhỏ: chỉ được nổ Hũ Trái Đất (Minor)
-      minorHit = !grandHit && Math.random() < 0.02; // 2% khi thắng
+      minorHit = !grandHit && Math.random() < 0.02; 
     } else {
-      // Mức cược lớn: chỉ được nổ Hũ Namek (Major)
-      majorHit = !grandHit && Math.random() < 0.02; // 2% khi thắng
+      majorHit = !grandHit && Math.random() < 0.02; 
     }
 
     let jackpotWonAmount = 0;
@@ -699,20 +688,52 @@ export default function BaccaratPage() {
         <div className="absolute left-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenron.png')" }}></div>
         <div className="absolute right-2 top-2 w-16 h-24 md:w-24 md:h-36 opacity-35 pointer-events-none hidden sm:block bg-contain bg-no-repeat bg-center" style={{ backgroundImage: "url('/assets/baccarat/shenronnamek.png')" }}></div>
 
-        {/* MODAL LUẬT CHƠI & NUÔI HŨ */}
+        {/* MODAL LUẬT CHƠI & NUÔI HŨ (ĐÃ SẮP XẾP LẠI THEO YÊU CẦU) */}
         {showRules && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 animate-fadeIn rounded-[30px]">
             <div className="bg-slate-900 border border-cyan-500/60 p-5 rounded-3xl max-w-lg w-full shadow-2xl relative">
-              <h3 className="text-sm font-black text-cyan-400 mb-2 uppercase text-center">📜 Luật Nuôi Hũ & Nổ Hũ</h3>
-              <div className="text-xs text-slate-300 space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
-                <p>🔹 <b>Quy tắc Nổ Hũ theo Mức Cược khi Thắng:</b></p>
-                <p>• <b>Hũ Trái Đất (Minor):</b> Dành riêng cho mức cược chip từ <b>100 - 5.000 Ki</b>. Khi thắng trận sẽ có tỉ lệ nổ Hũ Trái Đất.</p>
-                <p>• <b>Hũ Namek (Major):</b> Dành riêng cho mức cược chip từ <b>10.000 - 1.000.000 Ki</b>. Khi thắng trận sẽ có tỉ lệ nổ Hũ Namek.</p>
-                <p>• <b>Siêu Cấp Hũ (Grand):</b> Áp dụng cho <b>mọi mức cược</b>. Khi thắng trận đều có cơ hội nổ Hũ Siêu Cấp cực lớn!</p>
+              <h3 className="text-sm font-black text-cyan-400 mb-2 uppercase text-center">📜 Sổ Tay Luật Chơi Baccarat Thần Thánh</h3>
+              <div className="text-xs text-slate-300 space-y-2.5 max-h-[65vh] overflow-y-auto pr-1">
+                
+                {/* 1. LUẬT CƠ BẢN */}
+                <div className="bg-slate-950/60 p-2.5 rounded-xl border border-cyan-500/30">
+                  <span className="text-cyan-400 font-black block mb-1">1. ⚔️ Luật Cơ Bản</span>
+                  <p className="text-[11px] leading-relaxed text-slate-300">
+                    Trận đấu so tài đỉnh cao giữa <b>Chiến Binh</b> và <b>Thần Hủy Diệt Champa</b>. Mỗi bên được chia 2 lá bài đầu tiên. Bên nào có tổng điểm các lá bài đạt gần số <b>9</b> nhất (hoặc bằng 9) sẽ giành chiến thắng. Điểm vượt quá 10 sẽ tính số hàng đơn vị (Ví dụ: 15 điểm tính là 5 điểm).
+                  </p>
+                </div>
+
+                {/* 2. LUẬT NUÔI HŨ & NỔ HŨ (LÀM NỔI BẬT, KHÔNG CÔNG KHAI TỈ LỆ) */}
+                <div className="bg-gradient-to-r from-amber-950/60 via-yellow-950/40 to-amber-950/60 p-3 rounded-2xl border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                  <span className="text-yellow-400 font-black text-xs uppercase block mb-1.5 flex items-center gap-1">
+                    🌟 2. THỂ LỆ NUÔI HŨ & NỔ HŨ ĐỈNH CAO
+                  </span>
+                  <p className="text-[11px] text-yellow-100 mb-2 leading-relaxed">
+                    Mỗi đồng Ki cược vào bàn đều tự động tích lũy năng lượng để phình to các hũ Rồng Thần. <b>Khi chiến thắng ván đấu</b>, chiến binh sẽ có cơ hội kích hoạt nổ hũ nhận toàn bộ phần thưởng khủng:
+                  </p>
+                  <ul className="space-y-1 text-[11px] text-slate-200 pl-2">
+                    <li>🔥 <b>Hũ Trái Đất (Minor):</b> Dành riêng cho chiến binh nuôi và nổ khi đặt mức cược từ <b>100 - 5.000 Ki</b> và giành chiến thắng.</li>
+                    <li>💎 <b>Hũ Namek (Major):</b> Dành riêng cho chiến binh nuôi và nổ khi đặt mức cược từ <b>10.000 - 1.000.000 Ki</b> và giành chiến thắng.</li>
+                    <li>👑 <b>Siêu Cấp Hũ (Grand):</b> Hũ lớn nhất hành tinh! Áp dụng cho <b>mọi mức cược</b>, cứ thắng trận là có cơ hội nổ hũ rinh trọn kho báu.</li>
+                  </ul>
+                </div>
+
+                {/* 3. TẤT CẢ CÁC PHẦN LUẬT CƯỢC PHỤ */}
+                <div className="bg-slate-950/60 p-2.5 rounded-xl border border-purple-500/30 space-y-1.5">
+                  <span className="text-purple-400 font-black block mb-1">3. 🔮 Luật Tất Cả Các Cửa Cược Phụ</span>
+                  <p>• <b>Chiến Binh / Champa (Cửa chính):</b> Thắng tỉ lệ 1:1 (Champa ăn 1:0.95).</p>
+                  <p>• <b>Hòa Khí (Tie):</b> 2 bên bằng điểm nhau (Tỷ lệ 1 : 8).</p>
+                  <p>• <b>Đôi Chiến Binh / Champa:</b> 2 lá đầu tiên của bên đó đồng cấp độ (Tỷ lệ 1 : 11).</p>
+                  <p>• <b>Rồng Thần (Đồng Chất):</b> Bài rút ra có 3 lá cùng chất với nhau (Tỷ lệ 1 : 25).</p>
+                  <p>• <b>Sám Cô Hủy Diệt:</b> 3 lá bài có cùng cấp độ cực kỳ hiếm gặp (Tỷ lệ 1 : 45).</p>
+                  <p>• <b>Tài (≥ 10 điểm tổng) / Xỉu (≤ 9 điểm tổng):</b> Cược tổng điểm ván đấu (Tỷ lệ 1 : 1.95).</p>
+                  <p>• <b>Tuyệt Chiêu Kết Liễu:</b> Khoảng cách điểm biệt lập giữa 2 bên từ 5 điểm trở lên (Tỷ lệ 1 : 5).</p>
+                </div>
+
               </div>
               <button 
                 onClick={() => setShowRules(false)}
-                className="mt-3 w-full bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-xs py-2 rounded-xl shadow cursor-pointer uppercase"
+                className="mt-3 w-full bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-xs py-2.5 rounded-xl shadow cursor-pointer uppercase"
               >
                 Đã Hiểu, Trở Lại Bàn Đấu ⚔️
               </button>
