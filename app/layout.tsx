@@ -23,6 +23,7 @@ export default function RootLayout({
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [unreadCount, setUnreadCount] = useState<number>(0); // 🔴 Đếm tin nhắn chưa đọc
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Tọa độ kéo thả khung chat nổi
@@ -62,7 +63,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ
+  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ và đếm tin nhắn chưa đọc
   useEffect(() => {
     if (!user) return;
 
@@ -86,11 +87,21 @@ export default function RootLayout({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "global_chat" },
         (payload) => {
-          const newMsg = payload.new as any;
+          const newMsg = payload.new as ChatMessage;
+          
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+
+          // 🔴 Nếu khung chat đang đóng, tăng biến đếm tin nhắn chưa đọc lên cho tất cả mọi người
+          setChatOpen((isOpen) => {
+            if (!isOpen) {
+              setUnreadCount((count) => count + 1);
+            }
+            return isOpen;
+          });
+
           setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
         }
       )
@@ -100,6 +111,15 @@ export default function RootLayout({
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Xử lý khi bấm mở khung chat thì reset số tin nhắn chưa đọc về 0
+  const toggleChatOpen = (openState: boolean) => {
+    setChatOpen(openState);
+    if (openState) {
+      setUnreadCount(0);
+      setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    }
+  };
 
   // Hàm dịch chuyển khung chat linh hoạt bằng nút bấm trên iPhone
   const moveChat = (direction: 'up' | 'down' | 'left' | 'right') => {
@@ -201,12 +221,19 @@ export default function RootLayout({
           <div className="fixed z-50 select-none" style={{ left: `${chatPosition.x}px`, top: `${chatPosition.y}px` }}>
             {!chatOpen ? (
               <button
-                onClick={() => setChatOpen(true)}
-                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3.5 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.5)] flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-300 hover:scale-110 transition"
+                onClick={() => toggleChatOpen(true)}
+                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3.5 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.5)] flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-300 hover:scale-110 transition relative"
                 title="Mở Chat"
               >
                 <span className="text-xl">💬</span>
                 <span className="text-xs tracking-wider">CHAT</span>
+
+                {/* 🔴 BADGE HIỂN THỊ SỐ LƯỢNG TIN NHẮN CHƯA ĐỌC */}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-950 animate-bounce shadow-md">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </button>
             ) : (
               <div className="bg-slate-900/95 border-2 border-amber-500/70 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] w-[300px] sm:w-[350px] h-[380px] sm:h-[420px] flex flex-col overflow-hidden backdrop-blur-xl">
@@ -220,7 +247,7 @@ export default function RootLayout({
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="font-black text-xs text-amber-400 tracking-wider uppercase">
-                      💬 CHAT
+                      💬 CHAT TOÀN CỤC
                     </span>
                   </div>
 
@@ -233,7 +260,7 @@ export default function RootLayout({
                   </div>
 
                   <button
-                    onClick={() => setChatOpen(false)}
+                    onClick={() => toggleChatOpen(false)}
                     className="text-slate-400 hover:text-white font-bold text-xs px-1.5 py-0.5 rounded cursor-pointer"
                   >
                     ✖
