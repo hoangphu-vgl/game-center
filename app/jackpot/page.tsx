@@ -30,7 +30,7 @@ const DRAGON_SYMBOLS = [
   { id: "ball2", icon: "/assets/jackpot/dragon-ball-2.png", name: "2 sao", type: "weak", basePoints: 15, multiplier: 1.5 },
   { id: "ball1", icon: "/assets/jackpot/dragon-ball-1.png", name: "1 sao", type: "weak", basePoints: 10, multiplier: 1 },
   { id: "senzu", icon: "/assets/jackpot/dausenzu.png", name: "Đậu Senzu", type: "weak", basePoints: 5, multiplier: 0.5 },
-  { id: "yamcha", icon: "/assets/jackpot/yamcha.png", name: "yamcha", type: "weak", basePoints: 1, multiplier: 0.5 },
+  { id: "Yamcha", icon: "/assets/jackpot/yamcha.png", name: "Yamcha", type: "weak", basePoints: 1, multiplier: 0.5 },
 ];
 
 const AURA_QUICK_REWARDS = [
