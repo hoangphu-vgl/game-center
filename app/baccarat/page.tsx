@@ -43,7 +43,7 @@ const DBZ_AURAS = {
   ]
 };
 
-export default function BaccaratResponsivePage() {
+export default function BaccaratCleanPage() {
   const [mounted, setMounted] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
   const [userName, setUserName] = useState<string>("Test");
@@ -152,7 +152,7 @@ export default function BaccaratResponsivePage() {
     fetchJackpot();
 
     const channel = supabase
-      .channel("baccarat_jackpot_responsive_v4")
+      .channel("baccarat_jackpot_clean_v1")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -538,7 +538,8 @@ export default function BaccaratResponsivePage() {
   return (
     <div className="fixed inset-0 h-[100dvh] overflow-hidden bg-[radial-gradient(circle_at_center,#0f172a_0%,#020617_100%)] text-white font-sans select-none flex flex-col justify-between p-2 md:p-3" style={{ touchAction: 'manipulation' }}>
       
-      <header className="w-full max-w-7xl mx-auto px-4 flex justify-between items-center bg-slate-900/95 border border-cyan-500/40 rounded-2xl py-1.5 md:py-2 shadow-2xl shrink-0 backdrop-blur-md relative z-30">
+      {/* 🚀 HEADER TOP BAR GỌN GÀNG */}
+      <header className="w-full max-w-7xl mx-auto px-3 flex justify-between items-center bg-slate-900/95 border border-cyan-500/40 rounded-2xl py-1.5 md:py-2 shadow-2xl shrink-0 backdrop-blur-md relative z-30">
         
         <div className="flex items-center gap-2">
           <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/40 px-3 py-1 rounded-xl text-xs font-black shadow transition active:scale-95">
@@ -552,29 +553,7 @@ export default function BaccaratResponsivePage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-6 z-10">
-          <div className="text-center bg-slate-950/80 px-3 py-0.5 rounded-xl border border-cyan-500/30">
-            <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất</div>
-            <div className="text-xs font-black text-cyan-200 font-mono">
-              {mounted ? jackpots.minor.toLocaleString() : "10,000"}
-            </div>
-          </div>
-
-          <div className="text-center bg-slate-950/90 px-4 py-0.5 rounded-xl border-2 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-pulse scale-105">
-            <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Siêu Cấp</div>
-            <div className="text-sm font-black text-yellow-400 font-mono">
-              {mounted ? jackpots.grand.toLocaleString() : "200,000"}
-            </div>
-          </div>
-
-          <div className="text-center bg-slate-950/80 px-3 py-0.5 rounded-xl border border-emerald-500/30">
-            <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek</div>
-            <div className="text-xs font-black text-emerald-200 font-mono">
-              {mounted ? jackpots.major.toLocaleString() : "50,000"}
-            </div>
-          </div>
-        </div>
-
+        {/* THÔNG TIN USER GÓC PHẢI */}
         <div className="flex items-center gap-2">
           <button
             onClick={toggleFullScreen}
@@ -597,14 +576,41 @@ export default function BaccaratResponsivePage() {
         </div>
       </header>
 
+      {/* 🏆 HŨ JACKPOT ĐƯA LÊN GÓC DƯỚI HEADING / DƯỚI THANH THOẠI */}
+      <div className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 md:gap-4 shrink-0 mt-1">
+        <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-cyan-500/40 shadow">
+          <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất</div>
+          <div className="text-xs font-black text-cyan-200 font-mono">
+            {mounted ? jackpots.minor.toLocaleString() : "10,000"}
+          </div>
+        </div>
+
+        <div className="text-center bg-slate-900/95 px-4 py-1 rounded-xl border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)] animate-pulse scale-105">
+          <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Siêu Cấp Hũ</div>
+          <div className="text-sm font-black text-yellow-400 font-mono">
+            {mounted ? jackpots.grand.toLocaleString() : "200,000"}
+          </div>
+        </div>
+
+        <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-emerald-500/40 shadow">
+          <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek</div>
+          <div className="text-xs font-black text-emerald-200 font-mono">
+            {mounted ? jackpots.major.toLocaleString() : "50,000"}
+          </div>
+        </div>
+      </div>
+
+      {/* 🐉 THOẠI AURA TRUNG TÂM */}
       <div className="w-full max-w-4xl mx-auto bg-slate-900/90 border border-cyan-500/40 rounded-xl px-4 py-0.5 text-center shadow shrink-0 mt-0.5">
         <p className="text-xs font-bold text-cyan-300 animate-pulse tracking-wide truncate">
           💬 {statusMessage}
         </p>
       </div>
 
+      {/* 🎴 BÀN CHƠI BACCARAT (TỐI ƯU HÓA KHÔNG GIAN, KHÔNG ICON RỒNG RỜM RÀ) */}
       <main className="relative w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between border-4 border-cyan-500/60 rounded-[30px] p-2 md:p-4 my-1 bg-[radial-gradient(circle_at_center,#1e3a8a_0%,#020617_100%)] shadow-[0_0_35px_rgba(6,182,212,0.4)] overflow-hidden">
         
+        {/* MODAL LUẬT CHƠI */}
         {showRules && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 animate-fadeIn rounded-[30px]">
             <div className="bg-slate-900 border border-cyan-500/60 p-5 rounded-3xl max-w-lg w-full shadow-2xl relative">
@@ -614,7 +620,7 @@ export default function BaccaratResponsivePage() {
                 <p>✨ <b>Cửa Cược Phụ Siêu Khủng:</b></p>
                 <p>• <b>Đôi Chiến Binh / Champa (1:11):</b> 2 lá đầu tiên trùng giá trị.</p>
                 <p>• <b>Rồng Thần Triệu Hồi (1:25):</b> Bài 3 lá đồng chất (cùng chất).</p>
-                <p>• <b>⚡ Sám Cô Hủy Diệt (1:45):</b> 3 lá bài có cùng cấp độ (Sám cô/Three of a kind) cực kỳ hiếm!</p>
+                <p>• <b>⚡ Sám Cô Hủy Diệt (1:45):</b> 3 lá bài có cùng cấp độ cực kỳ hiếm!</p>
                 <p>• <b>Tài (≥10) / Xỉu (≤9) (1:1.95):</b> Cược tổng điểm ván đấu.</p>
                 <p>• <b>Tuyệt Chiêu Kết Liễu (1:5):</b> Khoảng cách điểm biệt lập ≥ 5 điểm.</p>
               </div>
@@ -628,6 +634,7 @@ export default function BaccaratResponsivePage() {
           </div>
         )}
 
+        {/* RESULT OVERLAY MODAL */}
         {gameState === "result" && resultData && (
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 text-center animate-fadeIn space-y-2 rounded-[30px]">
             <h2 className={`text-2xl md:text-3xl font-black font-serif ${
@@ -647,6 +654,7 @@ export default function BaccaratResponsivePage() {
           </div>
         )}
 
+        {/* 1. KHU VỰC THẦN HỦY DIỆT CHAMPA */}
         <div className="flex flex-col items-center w-full pb-1 border-b border-cyan-500/35 relative z-10 shrink-0">
           <div className="flex items-center gap-2 mb-0.5">
             <div className="w-7 h-7 md:w-9 md:h-9 rounded-full overflow-hidden bg-rose-950 border-2 border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)] flex items-center justify-center">
@@ -672,6 +680,7 @@ export default function BaccaratResponsivePage() {
           </div>
         </div>
 
+        {/* 2. CÁC Ô ĐẶT CƯỢC (TỐI GIẢN, CHỈNH CHU, DỄ NHÌN) */}
         <div className="w-full max-w-5xl mx-auto flex flex-col gap-1.5 my-1 relative z-10 text-[10px] md:text-xs">
           
           <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
@@ -699,7 +708,7 @@ export default function BaccaratResponsivePage() {
             </div>
 
             <div onClick={() => placeBet('dragonSummon')} className="border border-dashed border-amber-500/50 bg-slate-950/70 hover:bg-amber-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
-              <span className="font-bold text-amber-400 text-[10px]">🐉 Rồng Thần</span>
+              <span className="font-bold text-amber-400 text-[10px]">Rồng Thần</span>
               <span className="text-[8px] text-slate-400">Đồng Chất 1:25</span>
               {bets.dragonSummon.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
@@ -710,8 +719,8 @@ export default function BaccaratResponsivePage() {
             </div>
 
             <div onClick={() => placeBet('samCo')} className="border-2 border-dashed border-yellow-400/70 bg-slate-950/80 hover:bg-amber-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition shadow-[0_0_10px_rgba(250,204,21,0.2)]">
-              <span className="font-black text-yellow-300 text-[10px]">⚡ Sám Cô Hủy Diệt</span>
-              <span className="text-[8px] text-yellow-200/80 font-bold">3 Lá Giống 1:45</span>
+              <span className="font-black text-yellow-300 text-[10px]">Sám Cô Hủy Diệt</span>
+              <span className="text-[8px] text-yellow-200/80 font-bold">3 Lá 1:45</span>
               {bets.samCo.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
                   <img src={bets.samCo.chipIcon} alt="chip" className="w-5 h-5 object-contain" />
@@ -721,7 +730,7 @@ export default function BaccaratResponsivePage() {
             </div>
 
             <div onClick={() => placeBet('tai')} className="border border-dashed border-indigo-500/50 bg-slate-950/70 hover:bg-indigo-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
-              <span className="font-bold text-indigo-400 text-[10px]">⚡ Tài (≥ 10)</span>
+              <span className="font-bold text-indigo-400 text-[10px]">Tài (≥ 10)</span>
               <span className="text-[8px] text-slate-400">1 : 1.95</span>
               {bets.tai.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
@@ -732,7 +741,7 @@ export default function BaccaratResponsivePage() {
             </div>
 
             <div onClick={() => placeBet('xiu')} className="border border-dashed border-blue-500/50 bg-slate-950/70 hover:bg-blue-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
-              <span className="font-bold text-blue-400 text-[10px]">❄️ Xỉu (≤ 9)</span>
+              <span className="font-bold text-blue-400 text-[10px]">Xỉu (≤ 9)</span>
               <span className="text-[8px] text-slate-400">1 : 1.95</span>
               {bets.xiu.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
@@ -746,7 +755,7 @@ export default function BaccaratResponsivePage() {
 
           <div className="grid grid-cols-2 gap-1.5">
             <div onClick={() => placeBet('tie')} className="border-2 border-dashed border-emerald-500/60 bg-slate-950/70 hover:bg-emerald-950/40 rounded-xl p-2 text-center cursor-pointer relative flex items-center justify-between px-4 min-h-[42px] transition">
-              <span className="font-bold text-emerald-400 text-xs md:text-sm">🌀 HÒA KHÍ (Tỷ lệ 1 : 8)</span>
+              <span className="font-bold text-emerald-400 text-xs md:text-sm">HÒA KHÍ (Tỷ lệ 1 : 8)</span>
               {bets.tie.amount > 0 ? (
                 <div className="bg-slate-900 border border-yellow-400 px-2 py-0.5 rounded-lg flex items-center gap-1">
                   <img src={bets.tie.chipIcon} alt="chip" className="w-5 h-5 object-contain" />
@@ -758,7 +767,7 @@ export default function BaccaratResponsivePage() {
             </div>
 
             <div onClick={() => placeBet('finishingMove')} className="border-2 border-dashed border-purple-500/60 bg-slate-950/70 hover:bg-purple-950/40 rounded-xl p-2 text-center cursor-pointer relative flex items-center justify-between px-4 min-h-[42px] transition">
-              <span className="font-bold text-purple-400 text-xs md:text-sm">⚔️ TUYỆT CHIÊU KẾT LIỄU (1:5)</span>
+              <span className="font-bold text-purple-400 text-xs md:text-sm">TUYỆT CHIÊU KẾT LIỄU (1:5)</span>
               {bets.finishingMove.amount > 0 ? (
                 <div className="bg-slate-900 border border-yellow-400 px-2 py-0.5 rounded-lg flex items-center gap-1">
                   <img src={bets.finishingMove.chipIcon} alt="chip" className="w-5 h-5 object-contain" />
@@ -803,6 +812,7 @@ export default function BaccaratResponsivePage() {
           </div>
         </div>
 
+        {/* 3. KHU VỰC CHIẾN BINH */}
         <div className="flex flex-col items-center w-full pt-0.5 relative z-10 shrink-0">
           
           <div className="flex items-center justify-center gap-3 w-full px-4">
@@ -812,7 +822,7 @@ export default function BaccaratResponsivePage() {
                   onClick={handlePlayerDraw}
                   className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs px-3 py-2.5 rounded-2xl shadow-xl cursor-pointer uppercase animate-bounce border border-yellow-200"
                 >
-                  🎯 Rút Bài
+                  Rút Bài
                 </button>
               )}
             </div>
@@ -836,7 +846,7 @@ export default function BaccaratResponsivePage() {
                   onClick={handlePlayerStand}
                   className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs px-3 py-2.5 rounded-2xl shadow-xl cursor-pointer uppercase animate-bounce border border-purple-300"
                 >
-                  🛡️ Dằn Bài
+                  Dằn Bài
                 </button>
               )}
             </div>
@@ -855,6 +865,7 @@ export default function BaccaratResponsivePage() {
 
       </main>
 
+      {/* 🚀 FOOTER THANH CHỌN CHIP & NÚT ĐIỀU KHIỂN */}
       <footer className="w-full max-w-7xl mx-auto bg-slate-900/95 border border-cyan-500/40 rounded-3xl p-2 md:p-2.5 flex flex-col md:flex-row items-center justify-between gap-2 shadow-2xl shrink-0 backdrop-blur-md z-30">
         <div className="flex items-center gap-2">
           <button onClick={clearBets} disabled={gameState !== "betting"} className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-3.5 py-2 rounded-2xl shadow cursor-pointer disabled:opacity-50 transition active:scale-95">
