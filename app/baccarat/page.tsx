@@ -163,7 +163,7 @@ export default function BaccaratPage() {
     createDeck();
 
     const channel = supabase
-      .channel("baccarat_jackpot_sync_v6")
+      .channel("baccarat_jackpot_sync_v7")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -307,10 +307,16 @@ export default function BaccaratPage() {
     }
   };
 
+  /**
+   * 🌟 THUẬT TOÁN XÁO BÀI ĐA TẦNG (MULTI-PASS FISHER-YATES SHUFFLE)
+   * Tăng độ ngẫu nhiên tuyệt đối cho 8 bộ bài chuẩn (416 lá)
+   */
   const createDeck = () => {
     const suits = ["hearts", "diamonds", "clubs", "spades"];
     const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
     let newDeck: Card[] = [];
+    
+    // Tạo 8 bộ bài tây chuẩn
     for (let i = 0; i < 8; i++) {
       for (let suit of suits) {
         for (let rank of ranks) {
@@ -324,10 +330,15 @@ export default function BaccaratPage() {
         }
       }
     }
-    for (let i = newDeck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+
+    // Xáo trộn đa tầng (3 vòng liên tục) để loại bỏ mọi hiện tượng bài trùng lặp cụm
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = newDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+      }
     }
+
     deckRef.current = newDeck;
   };
 
@@ -390,7 +401,8 @@ export default function BaccaratPage() {
     await updateBalanceInDB(balanceRef.current);
     await contributeToJackpotOnly(totalBet);
 
-    if (deckRef.current.length < 20) createDeck();
+    // Nếu bộ bài còn dưới 40 lá, tự động xáo lại bộ mới tinh chuẩn casino
+    if (deckRef.current.length < 40) createDeck();
 
     setGameState("dealing");
     setWarriorHand([]);
@@ -653,21 +665,21 @@ export default function BaccaratPage() {
       {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING */}
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 md:gap-4 shrink-0 mt-1">
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-cyan-500/40 shadow">
-          <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất (100-5K)</div>
+          <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất </div>
           <div className="text-xs font-black text-cyan-200 font-mono">
             {mounted ? jackpots.minor.toLocaleString() : "10,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/95 px-4 py-1 rounded-xl border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)] animate-pulse scale-105">
-          <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Siêu Cấp Hũ (Mọi Cược)</div>
+          <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Rồng Siêu Cấp </div>
           <div className="text-sm font-black text-yellow-400 font-mono">
             {mounted ? jackpots.grand.toLocaleString() : "200,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-emerald-500/40 shadow">
-          <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek (&ge;10K)</div>
+          <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek </div>
           <div className="text-xs font-black text-emerald-200 font-mono">
             {mounted ? jackpots.major.toLocaleString() : "50,000"}
           </div>
@@ -730,7 +742,7 @@ export default function BaccaratPage() {
                   </ul>
                 </div>
 
-                {/* 3. Cửa cược phụ (Rút gọn chữ trong ngoặc) */}
+                {/* 3. Cửa cược phụ */}
                 <div className="bg-slate-950/60 p-3 rounded-2xl border border-purple-500/30 space-y-1.5">
                   <span className="text-purple-400 font-black block mb-1">3. 🔮 Tỷ Lệ Ăn Cược Các Cửa</span>
                   <div className="grid grid-cols-1 gap-1 text-[11px]">
@@ -812,7 +824,7 @@ export default function BaccaratPage() {
           </div>
         </div>
 
-        {/* 2. CÁC Ô ĐẶT CƯỢC (Rút gọn chữ trong ngoặc chỉ còn tỷ lệ ăn) */}
+        {/* 2. CÁC Ô ĐẶT CƯỢC */}
         <div className="w-full max-w-5xl mx-auto flex flex-col gap-1.5 my-1 relative z-10 text-[10px] md:text-xs">
           
           <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
