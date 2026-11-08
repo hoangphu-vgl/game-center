@@ -1213,7 +1213,7 @@ export default function TienLenOnlineVip() {
               </div>
 
               <div className="text-white font-black text-[8px] truncate max-w-[70px]">{player.name}</div>
-              <div className="text-yellow-400 font-bold text-[7px]">⚡ {(player.balance || 100000).toLocaleString()}</div>
+              <div className="text-yellow-400 font-bold text-[7px]">⚡ {(player.balance || 0).toLocaleString()}</div>
               
               {roomData.status === "PLAYING" && isCurrentTurn && (
                 <div className="mt-0.5 bg-red-600 text-white font-black text-[7px] px-1.5 py-0.2 rounded-full animate-pulse">
