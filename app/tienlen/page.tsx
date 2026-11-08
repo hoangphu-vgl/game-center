@@ -172,10 +172,9 @@ export default function TienLenOnlineVip() {
   const [roomData, setRoomData] = useState<RoomState | null>(null);
   const [isJoining, setIsJoining] = useState<boolean>(false);
   
-  // Trạng thái bật/tắt Popup Luật Đại Hội Võ Thuật
   const [showRuleModal, setShowRuleModal] = useState<boolean>(false);
-
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const bgImageRef = useRef<HTMLImageElement | null>(null);
 
@@ -744,7 +743,7 @@ export default function TienLenOnlineVip() {
     }
   };
 
-  // CANVAS RENDER VỚI BACKGROUND HD
+  // CANVAS RENDER: THU NHỎ KÍCH THƯỚC BÀI, TỐI ƯU MOBILE HD & CẢM ỨNG
   useEffect(() => {
     if (currentPhase !== "ROOM") return;
 
@@ -766,9 +765,9 @@ export default function TienLenOnlineVip() {
     window.addEventListener("resize", resizeCanvas);
 
     const drawCard = (ctx: CanvasRenderingContext2D, x: number, y: number, card: Card | null, width: number, height: number, isFaceUp: boolean = true) => {
-      const radius = 10;
+      const radius = 8;
       ctx.save(); ctx.translate(x, y);
-      ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 4;
+      ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
       ctx.beginPath();
       ctx.moveTo(radius, 0); ctx.lineTo(width - radius, 0); ctx.quadraticCurveTo(width, 0, width, radius);
       ctx.lineTo(width, height - radius); ctx.quadraticCurveTo(width, height, width - radius, height);
@@ -777,18 +776,18 @@ export default function TienLenOnlineVip() {
 
       if (isFaceUp && card) {
         ctx.fillStyle = "#ffffff"; ctx.fill();
-        ctx.shadowColor = "transparent"; ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.shadowColor = "transparent"; ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1.2; ctx.stroke();
         ctx.fillStyle = SUIT_COLORS[card.suit];
-        const fontSize = Math.max(18, width * 0.3);
-        ctx.font = `900 ${fontSize}px sans-serif`; ctx.fillText(card.rank, 8, fontSize + 4);
-        const symbolSize = Math.max(16, width * 0.25);
-        ctx.font = `${symbolSize}px sans-serif`; ctx.fillText(SUIT_SYMBOLS[card.suit], 8, fontSize + symbolSize + 8);
-        const centerSize = Math.max(34, width * 0.48);
+        const fontSize = Math.max(14, width * 0.28);
+        ctx.font = `900 ${fontSize}px sans-serif`; ctx.fillText(card.rank, 6, fontSize + 2);
+        const symbolSize = Math.max(12, width * 0.22);
+        ctx.font = `${symbolSize}px sans-serif`; ctx.fillText(SUIT_SYMBOLS[card.suit], 6, fontSize + symbolSize + 4);
+        const centerSize = Math.max(26, width * 0.42);
         ctx.font = `${centerSize}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(SUIT_SYMBOLS[card.suit], width / 2, height / 2 + 5);
+        ctx.fillText(SUIT_SYMBOLS[card.suit], width / 2, height / 2 + 2);
       } else {
         ctx.fillStyle = "#1e3a8a"; ctx.fill();
-        ctx.shadowColor = "transparent"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.strokeRect(6, 6, width - 12, height - 12);
+        ctx.shadowColor = "transparent"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.strokeRect(4, 4, width - 8, height - 8);
         ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.beginPath(); ctx.arc(width/2, height/2, width*0.3, 0, Math.PI*2); ctx.fill();
       }
       ctx.restore();
@@ -814,33 +813,34 @@ export default function TienLenOnlineVip() {
         ctx.fillStyle = gradient; ctx.fillRect(0, 0, w, h);
       }
 
-      ctx.strokeStyle = "rgba(234, 179, 8, 0.4)"; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.ellipse(w / 2, h / 2 - 10, w * 0.42, h * 0.35, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "rgba(234, 179, 8, 0.4)"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.ellipse(w / 2, h / 2 - 15, w * 0.4, h * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
 
       if (data.status === "PLAYING" || data.status === "ENDED") {
         if (data.tableCards.length > 0 && !data.snatchActive) {
-          const tCardW = Math.min(w / 8, 85); const tCardH = tCardW * 1.45;
-          const totalW = (data.tableCards.length - 1) * 38 + tCardW;
-          data.tableCards.forEach((card, idx) => drawCard(ctx, w / 2 - totalW / 2 + idx * 38, h / 2 - tCardH / 2 - 20, card, tCardW, tCardH, true));
+          const tCardW = Math.min(w / 9, 70); const tCardH = tCardW * 1.45;
+          const totalW = (data.tableCards.length - 1) * 30 + tCardW;
+          data.tableCards.forEach((card, idx) => drawCard(ctx, w / 2 - totalW / 2 + idx * 30, h / 2 - tCardH / 2 - 25, card, tCardW, tCardH, true));
         }
 
         const myIdx = data.players.findIndex(p => p.id === myId);
-        const cardW = Math.min(w / 7.5, 110); const cardH = cardW * 1.45;
-        const oppCardW = Math.min(w / 12, 55); const oppCardH = oppCardW * 1.45;
+        // THU NHỎ KÍCH THƯỚC BÀI TRÊN MOBILE ĐỂ KHÔNG BỊ TRÀN VIỀN
+        const cardW = Math.min(w / 8.5, 76); const cardH = cardW * 1.45;
+        const oppCardW = Math.min(w / 14, 45); const oppCardH = oppCardW * 1.45;
 
         data.players.forEach((p, idx) => {
           let relativePos = myIdx === -1 ? idx : (idx - myIdx + data.players.length) % data.players.length;
           
           if (relativePos === 0 && p.id === myId) {
             if (!p.isSpectator) {
-              const overlap = Math.min(cardW * 0.52, (w - cardW - 20) / (p.hand.length || 1));
+              const overlap = Math.min(cardW * 0.45, (w - cardW - 16) / (p.hand.length || 1));
               const totalHandWidth = (p.hand.length - 1) * overlap + cardW;
-              const handY = h - cardH - 120;
-              p.hand.forEach((card, i) => drawCard(ctx, w / 2 - totalHandWidth / 2 + i * overlap, card.selected ? handY - 35 : handY, card, cardW, cardH, true));
+              const handY = h - cardH - 95;
+              p.hand.forEach((card, i) => drawCard(ctx, w / 2 - totalHandWidth / 2 + i * overlap, card.selected ? handY - 26 : handY, card, cardW, cardH, true));
             }
           } else {
-            const x = relativePos === 1 ? w - oppCardW - 50 : relativePos === 2 ? w / 2 - oppCardW / 2 : 50;
-            const y = relativePos === 1 ? h / 2 - oppCardH - 50 : relativePos === 2 ? 15 : h / 2 - oppCardH - 50;
+            const x = relativePos === 1 ? w - oppCardW - 35 : relativePos === 2 ? w / 2 - oppCardW / 2 : 35;
+            const y = relativePos === 1 ? h / 2 - oppCardH - 40 : relativePos === 2 ? 10 : h / 2 - oppCardH - 40;
             
             if (!p.isSpectator && p.hand.length > 0) {
               drawCard(ctx, x, y, null, oppCardW, oppCardH, false);
@@ -853,28 +853,36 @@ export default function TienLenOnlineVip() {
     };
     animationFrameId = requestAnimationFrame(render);
 
-    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+    // XỬ LÝ CẢM ỨNG CHUẨN XÁC CHO IPHONE / PWA (HẠN CHẾ LÚC ĐƯỢC LÚC KHÔNG)
+    const handleTouchOrClick = (e: MouseEvent | TouchEvent) => {
       const { width: w, height: h, data, myId } = stateRef.current;
       if (!data || data.status !== "PLAYING") return;
       const me = data.players.find(p => p.id === myId);
       if (!me || me.isSpectator) return;
 
       let cX, cY;
-      if ('touches' in e) { cX = e.touches[0].clientX; cY = e.touches[0].clientY; } 
-      else { cX = (e as MouseEvent).clientX; cY = (e as MouseEvent).clientY; }
+      if ('touches' in e) {
+        if (e.touches.length === 0) return;
+        cX = e.touches[0].clientX; cY = e.touches[0].clientY;
+      } else {
+        cX = (e as MouseEvent).clientX; cY = (e as MouseEvent).clientY;
+      }
 
-      const cardW = Math.min(w / 7.5, 110); const cardH = cardW * 1.45;
-      const overlap = Math.min(cardW * 0.52, (w - cardW - 20) / (me.hand.length || 1));
+      const cardW = Math.min(w / 8.5, 76); const cardH = cardW * 1.45;
+      const overlap = Math.min(cardW * 0.45, (w - cardW - 16) / (me.hand.length || 1));
       const handStartX = w / 2 - ((me.hand.length - 1) * overlap + cardW) / 2;
-      const handY = h - cardH - 120;
+      const handY = h - cardH - 95;
+
+      // MỞ RỘNG VÙNG HITBOX CHẠM ĐỂ DỄ NHẤN HƠN TRÊN MOBILE
+      const hitBufferY = 25; 
 
       for (let i = me.hand.length - 1; i >= 0; i--) {
         const card = me.hand[i];
         const cardX = handStartX + i * overlap;
-        const cardY = card.selected ? handY - 35 : handY;
+        const cardY = card.selected ? handY - 26 : handY;
         const clickableW = (i === me.hand.length - 1) ? cardW : overlap;
 
-        if (cX >= cardX && cX <= cardX + clickableW && cY >= cardY && cY <= cardY + cardH) {
+        if (cX >= cardX - 5 && cX <= cardX + clickableW + 5 && cY >= cardY - hitBufferY && cY <= cardY + cardH + hitBufferY) {
            const newPlayers = [...data.players];
            const myIdx = newPlayers.findIndex(p => p.id === myId);
            newPlayers[myIdx].hand[i].selected = !newPlayers[myIdx].hand[i].selected;
@@ -885,9 +893,16 @@ export default function TienLenOnlineVip() {
       }
     };
     
-    window.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("touchstart", handlePointerDown, { passive: false });
-    return () => { cancelAnimationFrame(animationFrameId); window.removeEventListener("resize", resizeCanvas); window.removeEventListener("mousedown", handlePointerDown); window.removeEventListener("touchstart", handlePointerDown); };
+    // ĐĂNG KÝ CẢM ỨNG CẢ 2 SỰ KIỆN POINTER/TOUCH ĐỂ LOẠI BỎ ĐỘ TRỄ SAFARI
+    window.addEventListener("click", handleTouchOrClick);
+    window.addEventListener("touchend", handleTouchOrClick, { passive: true });
+
+    return () => { 
+      cancelAnimationFrame(animationFrameId); 
+      window.removeEventListener("resize", resizeCanvas); 
+      window.removeEventListener("click", handleTouchOrClick); 
+      window.removeEventListener("touchend", handleTouchOrClick); 
+    };
   }, [currentPhase, roomData?.status]);
 
   const renderCornerSlots = () => {
@@ -903,25 +918,24 @@ export default function TienLenOnlineVip() {
 
       const posStyle = 
         slotIdx === 0 ? "bottom-2 left-1/2 -translate-x-1/2 z-10" : 
-        slotIdx === 1 ? "right-4 top-1/2 translate-y-16 flex-col items-end z-20" :
-        slotIdx === 2 ? "top-24 left-1/2 -translate-x-1/2 flex-col items-center z-20" :
-        "left-4 top-1/2 translate-y-16 flex-col items-start z-20";
+        slotIdx === 1 ? "right-2 top-1/2 translate-y-12 flex-col items-end z-20" :
+        slotIdx === 2 ? "top-16 left-1/2 -translate-x-1/2 flex-col items-center z-20" :
+        "left-2 top-1/2 translate-y-12 flex-col items-start z-20";
 
       const isCurrentTurn = roomData.status === "PLAYING" && player?.id === roomData.currentTurnId;
 
       return (
         <div key={slotIdx} className={`absolute flex ${posStyle} pointer-events-none transition-all duration-300`}>
           {player ? (
-            <div className={`bg-slate-900/95 border p-2 rounded-xl text-center shadow-2xl backdrop-blur-md min-w-[125px] flex flex-col items-center ${isCurrentTurn ? 'border-yellow-400 ring-4 ring-yellow-400/30 animate-pulse' : 'border-emerald-500/40'}`}>
+            <div className={`bg-slate-900/95 border p-1.5 rounded-xl text-center shadow-2xl backdrop-blur-md min-w-[110px] flex flex-col items-center ${isCurrentTurn ? 'border-yellow-400 ring-2 ring-yellow-400/30 animate-pulse' : 'border-emerald-500/40'}`}>
               
               {player.quote && roomData.status === "PLAYING" && (
-                <div className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full mb-1 animate-pulse truncate max-w-[130px] shadow-md">
+                <div className="text-[9px] bg-amber-400 text-slate-950 font-black px-2 py-0.2 rounded-full mb-0.5 animate-pulse truncate max-w-[110px] shadow-md">
                   ✨ {player.quote}
                 </div>
               )}
 
-              {/* AVATAR CHIẾN BINH */}
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-yellow-500 flex items-center justify-center text-base mb-1 overflow-hidden shadow-inner">
+              <div className="w-7 h-7 rounded-full bg-slate-800 border border-yellow-500 flex items-center justify-center text-sm mb-0.5 overflow-hidden shadow-inner">
                 {player.avatar ? (
                   <img src={player.avatar} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -929,22 +943,22 @@ export default function TienLenOnlineVip() {
                 )}
               </div>
 
-              <div className="text-white font-black text-[10px] truncate max-w-[95px]">{player.name}</div>
-              <div className="text-yellow-400 font-bold text-[9px]">⚡ {(player.balance || 100000).toLocaleString()} Linh Thạch</div>
+              <div className="text-white font-black text-[9px] truncate max-w-[85px]">{player.name}</div>
+              <div className="text-yellow-400 font-bold text-[8px]">⚡ {(player.balance || 100000).toLocaleString()}</div>
               
               {roomData.status === "PLAYING" ? (
-                <div className={`mt-0.5 text-[8px] font-black px-2 py-0.5 rounded-full ${player.isSpectator ? 'bg-slate-800 text-slate-400' : (player.hasPassed ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40')}`}>
-                  {player.isSpectator ? '👀 Quan Sát Sư' : (player.hasPassed ? '🛑 ĐÃ NÉ TRÁNH' : `🃏 ${player.hand.length} Ấn Ký`)}
+                <div className={`mt-0.5 text-[7px] font-black px-1.5 py-0.2 rounded-full ${player.isSpectator ? 'bg-slate-800 text-slate-400' : (player.hasPassed ? 'bg-rose-500/30 text-rose-300 border border-rose-500/50' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40')}`}>
+                  {player.isSpectator ? '👀' : (player.hasPassed ? '🛑 BỎ' : `🃏 ${player.hand.length}`)}
                 </div>
               ) : (
-                <div className={`mt-0.5 text-[8px] font-bold px-2 py-0.5 rounded-full ${player.isReady ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
-                  {player.isReady ? "✨ ĐÃ GIẢI PHÓNG KHÍ" : "💤 ĐANG TỤ KHÍ"}
+                <div className={`mt-0.5 text-[7px] font-bold px-1.5 py-0.2 rounded-full ${player.isReady ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>
+                  {player.isReady ? "✨ SẴN SÀNG" : "💤 ĐỢI"}
                 </div>
               )}
             </div>
           ) : (
-            <div className="bg-slate-950/40 border border-dashed border-slate-700/60 p-2 rounded-xl text-center min-w-[100px]">
-              <div className="text-slate-500 text-[10px] font-bold">Lôi Đài Trống 🪑</div>
+            <div className="bg-slate-950/40 border border-dashed border-slate-700/60 p-1.5 rounded-xl text-center min-w-[80px]">
+              <div className="text-slate-500 text-[9px] font-bold">Trống 🪑</div>
             </div>
           )}
         </div>
@@ -956,14 +970,14 @@ export default function TienLenOnlineVip() {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-4">
-          <div className="text-6xl mb-2">⚡ 🐉 💥 🐉 ⚡</div>
-          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-emerald-400 to-cyan-400 drop-shadow-2xl">ĐẠI HỘI VÕ THUẬT - 13 ẤN KÝ</h1>
-          <p className="text-slate-400 text-xs tracking-widest uppercase">Lôi Đài Vũ Trụ • Bộc Phát Khí Lực Tột Đỉnh</p>
-          <div className="flex gap-4 justify-center mt-6">
-            <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-3 px-8 rounded-full text-sm border border-amber-500/40 transition">
-              🏠 Trở Về Đại Bản Doanh
+          <div className="text-5xl mb-2">⚡ 🐉 💥</div>
+          <h1 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-emerald-400 to-cyan-400 drop-shadow-2xl">ĐẠI HỘI VÕ THUẬT - 13 ẤN KÝ</h1>
+          <p className="text-slate-400 text-xs tracking-widest uppercase">Lôi Đài Vũ Trụ • Tối Ưu Hóa Mobile</p>
+          <div className="flex gap-3 justify-center mt-6">
+            <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2.5 px-6 rounded-full text-xs border border-amber-500/40 transition">
+              🏠 Trang Chủ
             </Link>
-            <button onClick={() => setCurrentPhase("LOBBY")} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black py-3 px-12 rounded-full text-lg shadow-[0_0_30px_rgba(16,185,129,0.5)] transition active:scale-95">
+            <button onClick={() => setCurrentPhase("LOBBY")} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black py-2.5 px-8 rounded-full text-sm shadow-[0_0_20px_rgba(16,185,129,0.5)] transition active:scale-95">
               BƯỚC VÀO LÔI ĐÀI 🔥
             </button>
           </div>
@@ -974,40 +988,40 @@ export default function TienLenOnlineVip() {
 
   if (currentPhase === "LOBBY") {
     return (
-      <div className="min-h-screen bg-slate-950 p-6 flex flex-col items-center">
-        <div className="w-full max-w-3xl flex justify-between items-center mb-6">
-          <Link href="/" className="bg-slate-900 text-amber-400 border border-amber-500/40 px-4 py-2 rounded-xl text-xs font-bold">
-            ⬅️ Về Đại Bản Doanh
+      <div className="min-h-screen bg-slate-950 p-4 sm:p-6 flex flex-col items-center">
+        <div className="w-full max-w-2xl flex justify-between items-center mb-6">
+          <Link href="/" className="bg-slate-900 text-amber-400 border border-amber-500/40 px-3.5 py-2 rounded-xl text-xs font-bold">
+            ⬅️ Về Trang Chủ
           </Link>
-          <div className="text-amber-400 font-black text-sm">⚡ Linh Thạch Của Ngươi: {myRealBalance.toLocaleString()} Ki</div>
+          <div className="text-amber-400 font-black text-xs">⚡ Linh Thạch: {myRealBalance.toLocaleString()}</div>
         </div>
-        <h2 className="text-3xl font-black text-yellow-400 mb-8 tracking-wide">🏰 LỰA CHỌN CHIẾN TRƯỜNG VŨ TRỤ</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-          <div className="bg-slate-900/90 border border-emerald-500/30 p-6 rounded-3xl flex justify-between items-center shadow-2xl backdrop-blur-md">
+        <h2 className="text-2xl sm:text-3xl font-black text-yellow-400 mb-6 tracking-wide">🏰 CHỌN LÔI ĐÀI VŨ TRỤ</h2>
+        <div className="grid grid-cols-1 gap-4 w-full max-w-2xl">
+          <div className="bg-slate-900/90 border border-emerald-500/30 p-5 rounded-2xl flex justify-between items-center shadow-xl backdrop-blur-md">
             <div>
-              <div className="text-2xl font-black text-emerald-400">LÔI ĐÀI 1 (Hành Tinh Namek)</div>
-              <div className="text-slate-400 text-xs mt-1">Nền Khí Tức Cổ Đại HD</div>
+              <div className="text-lg sm:text-xl font-black text-emerald-400">LÔI ĐÀI 1 (Hành Tinh Namek)</div>
+              <div className="text-slate-400 text-xs mt-0.5">Nền Khí Tức Cổ Đại HD</div>
             </div>
             <button 
               onClick={() => handleJoinRoom("ROOM_1")} 
               disabled={isJoining}
-              className="bg-yellow-500 hover:bg-yellow-400 active:scale-95 text-slate-950 font-black py-3 px-8 rounded-2xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition"
+              className="bg-yellow-500 hover:bg-yellow-400 active:scale-95 text-slate-950 font-black py-2.5 px-6 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition text-xs"
             >
-              {isJoining ? "Đang dịch chuyển..." : "XUẤT TRẬN 🚀"}
+              {isJoining ? "Đang vào..." : "XUẤT TRẬN 🚀"}
             </button>
           </div>
 
-          <div className="bg-slate-900/90 border border-emerald-500/30 p-6 rounded-3xl flex justify-between items-center shadow-2xl backdrop-blur-md">
+          <div className="bg-slate-900/90 border border-emerald-500/30 p-5 rounded-2xl flex justify-between items-center shadow-xl backdrop-blur-md">
             <div>
-              <div className="text-2xl font-black text-emerald-400">LÔI ĐÀI 2 (Đại Hội Sức Mạnh)</div>
-              <div className="text-slate-400 text-xs mt-1">Sàn Đấu Thần Thánh HD</div>
+              <div className="text-lg sm:text-xl font-black text-emerald-400">LÔI ĐÀI 2 (Đại Hội Sức Mạnh)</div>
+              <div className="text-slate-400 text-xs mt-0.5">Sàn Đấu Thần Thánh HD</div>
             </div>
             <button 
               onClick={() => handleJoinRoom("ROOM_2")} 
               disabled={isJoining}
-              className="bg-yellow-500 hover:bg-yellow-400 active:scale-95 text-slate-950 font-black py-3 px-8 rounded-2xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition"
+              className="bg-yellow-500 hover:bg-yellow-400 active:scale-95 text-slate-950 font-black py-2.5 px-6 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.4)] transition text-xs"
             >
-              {isJoining ? "Đang dịch chuyển..." : "XUẤT TRẬN 🚀"}
+              {isJoining ? "Đang vào..." : "XUẤT TRẬN 🚀"}
             </button>
           </div>
         </div>
@@ -1018,22 +1032,22 @@ export default function TienLenOnlineVip() {
   const isMyTurn = roomData?.status === "PLAYING" && roomData?.currentTurnId === myUserId;
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none touch-none">
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none touch-none" style={{ touchAction: 'none' }}>
       <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full" />
 
-      {/* TOP HEADER */}
-      <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-auto z-40">
-        <div className="bg-slate-900/90 border border-yellow-500/40 p-2.5 rounded-2xl shadow-xl backdrop-blur-md flex flex-col gap-1.5">
-           <div className="text-yellow-400 font-bold text-[10px] uppercase tracking-wider">
-             ⚡ Mức Đặt Cược: {(roomData?.betAmount || 1000).toLocaleString()} Linh Thạch {roomData?.hostId === myUserId ? "(Chủ Lôi Đài)" : ""}
+      {/* TOP HEADER: TỐI ƯU CẢM ỨNG NÚT BẤM TO HƠN, DỄ BẤM KHÔNG BỊ TRƯỢT */}
+      <div className="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-auto z-40">
+        <div className="bg-slate-900/95 border border-yellow-500/40 px-3 py-2 rounded-xl shadow-xl backdrop-blur-md flex flex-col gap-1">
+           <div className="text-yellow-400 font-bold text-[9px] uppercase tracking-wider">
+             ⚡ Cược: {(roomData?.betAmount || 1000).toLocaleString()} {roomData?.hostId === myUserId ? "(Chủ Bàn)" : ""}
            </div>
            {roomData?.hostId === myUserId && roomData?.status !== "PLAYING" && (
-             <div className="flex gap-1">
+             <div className="flex gap-1 overflow-x-auto py-0.5">
                {BET_OPTIONS.map(b => (
                  <button
                    key={b}
                    onClick={() => handleSelectBet(b)}
-                   className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition ${roomData?.betAmount === b ? 'bg-yellow-500 text-slate-950 border-yellow-400' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                   className={`px-2 py-1 rounded-md text-[9px] font-bold border transition shrink-0 ${roomData?.betAmount === b ? 'bg-yellow-500 text-slate-950 border-yellow-400' : 'bg-slate-800 text-slate-300 border-slate-700'}`}
                  >
                    {b >= 1000 ? `${b/1000}k` : b}
                  </button>
@@ -1042,137 +1056,104 @@ export default function TienLenOnlineVip() {
            )}
         </div>
 
-        {/* CỤM NÚT PHẢI: NÚT LUẬT LỆ VÀ NÚT RỜI BÀN */}
         <div className="flex gap-2 items-center">
           <button 
             onClick={() => setShowRuleModal(true)} 
-            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl backdrop-blur-md shadow-[0_0_15px_rgba(245,158,11,0.6)] text-xs active:scale-95 transition cursor-pointer flex items-center gap-1"
+            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 px-3.5 rounded-xl shadow-md text-[10px] active:scale-95 transition cursor-pointer flex items-center gap-1"
           >
-            📜 LUẬT VÕ ĐẠO
+            📜 LUẬT
           </button>
           <button 
             onClick={handleLeaveRoom} 
-            className="bg-rose-600 hover:bg-rose-500 text-white font-black py-2.5 px-5 rounded-xl backdrop-blur-md shadow-xl text-xs active:scale-95 transition cursor-pointer"
+            className="bg-rose-600 hover:bg-rose-500 text-white font-black py-2 px-3.5 rounded-xl shadow-md text-[10px] active:scale-95 transition cursor-pointer"
           >
-            🚪 RỜI LÔI ĐÀI
+            🚪 THOÁT
           </button>
           <button 
             onClick={() => { if(!document.fullscreenElement) { document.documentElement.requestFullscreen(); setIsFullscreen(true); } else { document.exitFullscreen(); setIsFullscreen(false); } }} 
-            className="bg-slate-800/90 text-white font-bold py-2.5 px-3.5 rounded-xl backdrop-blur-md text-xs active:scale-95 transition"
+            className="bg-slate-800/90 text-white font-bold py-2 px-2.5 rounded-xl text-[10px] active:scale-95 transition"
           >
             {isFullscreen ? "🗗" : "🖵"}
           </button>
         </div>
       </div>
 
-      {/* POPUP LUẬT ĐẠI HỘI VÕ THUẬT */}
+      {/* POPUP LUẬT LỆ */}
       {showRuleModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 pointer-events-auto">
-          <div className="bg-slate-900 border-2 border-yellow-400 w-full max-w-lg rounded-3xl p-6 shadow-[0_0_50px_rgba(234,179,8,0.5)] text-white relative animate-in fade-in zoom-in duration-200">
-            
-            <div className="text-center mb-4">
-              <div className="text-3xl mb-1">📜 ⚡ 📜</div>
-              <h3 className="text-xl font-black text-yellow-400 uppercase tracking-widest">
-                LUẬT ĐẠI HỘI VÕ ĐẠO 13 ẤN KÝ
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 pointer-events-auto">
+          <div className="bg-slate-900 border-2 border-yellow-400 w-full max-w-md rounded-2xl p-5 shadow-2xl text-white">
+            <div className="text-center mb-3">
+              <h3 className="text-base font-black text-yellow-400 uppercase tracking-widest">
+                📜 LUẬT VÕ ĐẠO 13 ẤN KÝ
               </h3>
-              <p className="text-xs text-slate-400 italic mt-1">Quy tắc sinh tử và hệ thống xuất chiêu lôi đài</p>
             </div>
-
-            <div className="space-y-3 text-xs text-slate-300 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-yellow-500/30">
-                <div className="font-black text-yellow-400 mb-1">1. Khai Cuộc & Tụ Khí (Sẵn sàng)</div>
-                <p>Mỗi chiến binh cần bấm <span className="text-emerald-400 font-bold">Giải Phóng Khí</span> để điểm danh vào lôi đài. Khi đủ từ 2 cao thủ trở lên, đồng hồ đếm ngược 10s sẽ kích hoạt để phân phát 13 ấn ký bài ngẫu nhiên.</p>
+            <div className="space-y-2 text-[11px] text-slate-300 max-h-[55vh] overflow-y-auto pr-1">
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-yellow-500/30">
+                <div className="font-black text-yellow-400 mb-0.5">1. Sẵn Sàng & Đếm Ngược</div>
+                <p>Bấm Sẵn Sàng để tham gia. Đủ 2+ người, đồng hồ 10s đếm ngược bắt đầu phát 13 ấn ký bài.</p>
               </div>
-
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-yellow-500/30">
-                <div className="font-black text-yellow-400 mb-1">2. Thứ Tự Xuất Chiêu (Lượt đánh)</div>
-                <p>Ván đầu tiên, ai nắm giữ ấn ký <span className="text-amber-300 font-bold">3 Bích (♠ 3)</span> sẽ giành quyền tiên phong ra đòn trước. Các ván tiếp theo, người thống trị (thắng ván trước) sẽ được quyền chưởng ấn đầu tiên.</p>
+              <div className="bg-slate-800/20 p-2.5 rounded-xl border border-yellow-500/30">
+                <div className="font-black text-yellow-400 mb-0.5">2. Thứ Tự Đánh</div>
+                <p>Ván đầu tiên ai có 3 Bích đánh trước. Các ván sau người thắng ván trước đi đầu tiên.</p>
               </div>
-
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-yellow-500/30">
-                <div className="font-black text-yellow-400 mb-1">3. Hệ Thống Chiêu Thức (Bộ bài)</div>
-                <ul className="list-disc list-inside space-y-1 mt-1 text-slate-300">
-                  <li><strong className="text-white">Đơn / Độc Thủ:</strong> 1 lá bài độc lập.</li>
-                  <li><strong className="text-white">Đôi / Song Kiếm:</strong> 2 lá bài cùng quân số.</li>
-                  <li><strong className="text-white">Ba / Tam Hoa:</strong> 3 lá bài đồng cấp độ.</li>
-                  <li><strong className="text-white">Sảnh / Liên Hoàn Trảm:</strong> Từ 3 lá trở lên liên tiếp (3 đến A, không tính 2).</li>
-                  <li><strong className="text-white">Tứ Quý & 3 Đôi Thông:</strong> Tuyệt kỹ tối thượng dùng để khắc chế Heo (2).</li>
-                </ul>
-              </div>
-
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-yellow-500/30">
-                <div className="font-black text-yellow-400 mb-1">4. Khai Hỏa Chặt Heo & Phạt Nặng</div>
-                <p>Khi đối phương đánh ra <span className="text-rose-400 font-bold">Heo (2) đơn lẻ</span>, người có <span className="text-yellow-400 font-bold">Tứ Quý</span> hoặc <span className="text-yellow-400 font-bold">3 Đôi Thông</span> có thể xuất chiêu Chặt khét, ép đối thủ gánh chịu từ x5 đến x10 lần Linh Thạch cược bàn!</p>
-              </div>
-
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-yellow-500/30">
-                <div className="font-black text-yellow-400 mb-1">5. Truy Sát Heo (Kết thúc 2 người)</div>
-                <p>Nếu trận đấu chỉ còn 2 người và người thua cố thủ ôm Heo trong tay khi kết thúc, hệ thống kích hoạt tính năng <span className="text-cyan-400 font-bold">Truy Sát 10 giây</span> cho phép người thắng đoán chất Heo để phạt nặng hoặc bị phản phệ gấp đôi.</p>
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-yellow-500/30">
+                <div className="font-black text-yellow-400 mb-0.5">3. Chặt Heo & Phạt</div>
+                <p>Dùng Tứ Quý hoặc 3 Đôi Thông để chặt Heo (2) kiếm x5 - x10 lần Linh Thạch.</p>
               </div>
             </div>
-
-            <div className="mt-6 text-center">
+            <div className="mt-4 text-center">
               <button 
                 onClick={() => setShowRuleModal(false)}
-                className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 text-slate-950 font-black py-3 px-8 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.6)] active:scale-95 transition text-sm cursor-pointer"
+                className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2.5 px-8 rounded-xl active:scale-95 transition text-xs cursor-pointer"
               >
-                ĐÃ RÕ, TRỞ LẠI LÔI ĐÀI ⚔️
+                ĐÃ RÕ ⚔️
               </button>
             </div>
-
           </div>
         </div>
       )}
 
-      <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 z-10">
+      <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 z-10">
         {renderCornerSlots()}
 
-        {/* BẢNG TRUY SÁT HEO (BẮT HEO) */}
+        {/* BẢNG TRUY SÁT HEO */}
         {roomData?.snatchActive && roomData.snatchSnatcherId === myUserId && (
-          <div className="absolute top-[36%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-40 w-full max-w-xs px-3">
-            <div className="bg-slate-900/90 border border-yellow-500/60 p-3 rounded-xl text-center shadow-2xl backdrop-blur-md">
-              <div className="text-xl mb-0.5">🎯 🐷 ⚡</div>
-              <h4 className="text-xs font-black text-yellow-400 uppercase tracking-wide mb-1">
-                TRUY SÁT HEO ĐỐI PHƯƠNG! (10s)
-              </h4>
-              <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-                <button onClick={() => handleSnatchPig("Bích")} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] active:scale-95">♠ Heo Bích (x2)</button>
-                <button onClick={() => handleSnatchPig("Chuồn")} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] active:scale-95">♣ Heo Chuồn (x2)</button>
-                <button onClick={() => handleSnatchPig("Rô")} className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 font-bold py-1.5 px-2 rounded-lg text-[10px] active:scale-95">♦ Heo Rô (x4)</button>
-                <button onClick={() => handleSnatchPig("Cơ")} className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 font-bold py-1.5 px-2 rounded-lg text-[10px] active:scale-95">♥ Heo Cơ (x4)</button>
+          <div className="absolute top-[35%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-40 w-full max-w-xs px-3">
+            <div className="bg-slate-900/95 border border-yellow-500/60 p-3 rounded-xl text-center shadow-2xl backdrop-blur-md">
+              <h4 className="text-xs font-black text-yellow-400 uppercase mb-2">🎯 TRUY SÁT HEO ĐỐI PHƯƠNG!</h4>
+              <div className="grid grid-cols-2 gap-1.5 mb-2">
+                <button onClick={() => handleSnatchPig("Bích")} className="bg-slate-800 hover:bg-slate-750 text-white font-bold py-2 px-2 rounded-lg text-[10px]">♠ Heo Bích (x2)</button>
+                <button onClick={() => handleSnatchPig("Chuồn")} className="bg-slate-800 hover:bg-slate-750 text-white font-bold py-2 px-2 rounded-lg text-[10px]">♣ Heo Chuồn (x2)</button>
+                <button onClick={() => handleSnatchPig("Rô")} className="bg-rose-950 text-rose-300 font-bold py-2 px-2 rounded-lg text-[10px]">♦ Heo Rô (x4)</button>
+                <button onClick={() => handleSnatchPig("Cơ")} className="bg-rose-950 text-rose-300 font-bold py-2 px-2 rounded-lg text-[10px]">♥ Heo Cơ (x4)</button>
               </div>
-              <button onClick={() => handleSnatchPig(null)} className="w-full bg-slate-800 text-slate-300 font-bold py-1 rounded-lg text-[10px] active:scale-95">
-                🛡️ Hủy truy sát
+              <button onClick={() => handleSnatchPig(null)} className="w-full bg-slate-800 text-slate-300 font-bold py-1.5 rounded-lg text-[10px]">
+                🛡️ Bỏ qua
               </button>
             </div>
           </div>
         )}
 
         {roomData?.chopMessage && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-amber-500 border border-yellow-200 text-slate-950 text-xs font-black px-5 py-2 rounded-full shadow-lg animate-bounce z-40">
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-amber-500 border border-yellow-200 text-slate-950 text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg animate-bounce z-40">
              {roomData.chopMessage}
           </div>
         )}
 
         {errorMessage && (
-          <div className="absolute top-36 left-1/2 -translate-x-1/2 bg-rose-600/90 border border-rose-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg animate-bounce z-40">
+          <div className="absolute top-32 left-1/2 -translate-x-1/2 bg-rose-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg animate-bounce z-40">
              ⚠️ {errorMessage}
           </div>
         )}
 
-        {/* THÔNG BÁO KẾT THÚC VÁN ĐẤU */}
         {roomData?.status === "ENDED" && !roomData?.snatchActive && (
-          <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-50 w-full max-w-sm px-4">
-            <div className="bg-slate-900/95 border-2 border-yellow-400 p-5 rounded-2xl text-center shadow-[0_0_30px_rgba(234,179,8,0.7)] backdrop-blur-md">
-              <div className="text-3xl mb-1">👑 ⚡ 👑</div>
-              <h3 className="text-base font-black text-yellow-400 uppercase tracking-wide mb-1">
-                {roomData.winnerName} THỐNG TRỊ LÔI ĐÀI!
+          <div className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto z-50 w-full max-w-xs px-4">
+            <div className="bg-slate-900/95 border-2 border-yellow-400 p-4 rounded-2xl text-center shadow-2xl backdrop-blur-md">
+              <h3 className="text-sm font-black text-yellow-400 uppercase mb-1">
+                👑 {roomData.winnerName} THẮNG!
               </h3>
-              <div className="text-[11px] text-yellow-200 font-semibold mb-3">
-                {roomData.chopMessage || "Hấp thụ toàn bộ linh khí đối phương thành công! 💰"}
-              </div>
-              <div className="text-[10px] text-slate-400 italic animate-pulse">
-                Chuẩn bị tái thiết lập lôi đài...
+              <div className="text-[10px] text-yellow-200 font-semibold">
+                {roomData.chopMessage || "Hấp thụ linh khí thành công! 💰"}
               </div>
             </div>
           </div>
@@ -1181,47 +1162,47 @@ export default function TienLenOnlineVip() {
         {roomData?.status !== "PLAYING" && roomData?.status !== "ENDED" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto p-4 z-30">
             {roomData?.status === "COUNTDOWN" && (
-              <div className="text-center mb-6">
-                 <div className="text-xs text-yellow-400 font-bold tracking-widest uppercase mb-1">Tụ Khí Khai Trận</div>
-                 <div className="text-6xl font-black text-yellow-400 animate-bounce drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]">{roomData.countdown}s</div>
+              <div className="text-center mb-4">
+                 <div className="text-[10px] text-yellow-400 font-bold tracking-widest uppercase mb-1">Khai Trận</div>
+                 <div className="text-5xl font-black text-yellow-400 animate-bounce">{roomData.countdown}s</div>
               </div>
             )}
 
             <button 
               onClick={handleToggleReady} 
-              className={`font-black py-4 px-12 rounded-full text-lg shadow-[0_0_25px_rgba(16,185,129,0.5)] transition active:scale-95 ${roomData?.players.find(p=>p.id===myUserId)?.isReady ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950'}`}
+              className={`font-black py-3 px-10 rounded-full text-sm shadow-xl transition active:scale-95 ${roomData?.players.find(p=>p.id===myUserId)?.isReady ? 'bg-rose-600 text-white' : 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950'}`}
             >
-              {roomData?.players.find(p=>p.id===myUserId)?.isReady ? 'THU HỒI KHÍ (HỦY SẴN SÀNG)' : 'GIẢI PHÓNG KHÍ (SẴN SÀNG) 🔥'}
+              {roomData?.players.find(p=>p.id===myUserId)?.isReady ? 'HỦY SẴN SÀNG' : 'SẴN SÀNG KHAI TRẬN 🔥'}
             </button>
           </div>
         )}
 
         {roomData?.status === "PLAYING" && roomData.players.find(p=>p.id===myUserId)?.isSpectator && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/60 border border-yellow-500/50 text-yellow-400 text-xs font-bold px-4 py-2 rounded-full backdrop-blur-md animate-pulse">
-             👁️ Ngươi chưa giải phóng khí nên đang đứng ngoài tọa sơn quan hổ đấu!
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-black/60 border border-yellow-500/50 text-yellow-400 text-[10px] font-bold px-3 py-1 rounded-full animate-pulse">
+             👁️ Đang quan sát lôi đài
           </div>
         )}
 
-        {/* NÚT XUẤT CHIÊU & NÉ TRÁNH */}
+        {/* NÚT XUẤT CHIÊU & NÉ TRÁNH: THU NHỎ, BO TRÒN VÀ MỞ RỘNG VÙNG CHẠM CỰC NHẠY TRÊN IPHONE */}
         {roomData?.status === "PLAYING" && !roomData.players.find(p=>p.id===myUserId)?.isSpectator && (
-          <div className="absolute bottom-[340px] left-0 w-full flex flex-col items-center gap-2 pointer-events-none z-30">
-             <div className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-md ${isMyTurn ? 'bg-amber-400 text-slate-950 animate-pulse shadow-[0_0_15px_rgba(251,191,36,0.8)]' : 'bg-slate-900/80 text-slate-400 border border-slate-700'}`}>
-                {isMyTurn ? '⚡ ĐẾN LƯỢT NGƯƠI XUẤT CHIÊU ⚡' : '⏳ ĐANG QUAN SÁT KHÍ TỨC ĐỐI PHƯƠNG...'}
+          <div className="absolute bottom-[280px] left-0 w-full flex flex-col items-center gap-1.5 pointer-events-none z-30">
+             <div className={`text-[9px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-md ${isMyTurn ? 'bg-amber-400 text-slate-950 animate-pulse shadow-md' : 'bg-slate-900/80 text-slate-400 border border-slate-700'}`}>
+                {isMyTurn ? '⚡ ĐẾN LƯỢT BẠN XUẤT CHIÊU!' : '⏳ ĐỢI ĐỐI PHƯƠNG...'}
              </div>
 
-             <div className="flex justify-center gap-4">
+             <div className="flex justify-center gap-3">
                <button 
                   onClick={handlePassTurn} 
                   disabled={!isMyTurn}
-                  className={`pointer-events-auto font-bold py-3 px-8 rounded-full shadow-2xl backdrop-blur-md transition text-sm border ${isMyTurn ? 'bg-slate-800/90 hover:bg-slate-700 text-white border-slate-600 active:scale-95 cursor-pointer' : 'bg-slate-900/40 text-slate-600 border-slate-800/40 cursor-not-allowed opacity-50'}`}
+                  className={`pointer-events-auto font-bold py-2.5 px-6 rounded-full shadow-lg backdrop-blur-md transition text-xs border ${isMyTurn ? 'bg-slate-800 hover:bg-slate-700 text-white border-slate-600 active:scale-95 cursor-pointer' : 'bg-slate-900/40 text-slate-600 border-slate-800/40 cursor-not-allowed opacity-50'}`}
                >
-                  NÉ TRÁNH (BỎ LƯỢT) 🛡️
+                  NÉ TRÁNH (BỎ) 🛡️
                </button>
                
                <button 
                   onClick={handlePlayCards} 
                   disabled={!isMyTurn}
-                  className={`pointer-events-auto font-black py-3 px-10 rounded-full transition text-sm ${isMyTurn ? 'bg-gradient-to-t from-emerald-500 to-teal-400 text-slate-950 shadow-[0_4px_25px_rgba(16,185,129,0.6)] active:scale-95 cursor-pointer' : 'bg-slate-800/50 text-slate-600 cursor-not-allowed opacity-50'}`}
+                  className={`pointer-events-auto font-black py-2.5 px-8 rounded-full transition text-xs ${isMyTurn ? 'bg-gradient-to-t from-emerald-500 to-teal-400 text-slate-950 shadow-lg active:scale-95 cursor-pointer' : 'bg-slate-800/50 text-slate-600 cursor-not-allowed opacity-50'}`}
                >
                   XUẤT CHIÊU (ĐÁNH) ⚔️
                </button>
