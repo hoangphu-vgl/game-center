@@ -17,16 +17,16 @@ const DEFAULT_AVATARS = Array.from({ length: 30 }, (_, index) => ({
 }));
 
 const AURA_QUOTES = [
-  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn của chính mình!' - Son Goku",
-  "⚡ 'Sức mạnh đến từ nhu cầu, không phải từ mong muốn.' - Vegeta",
-  "🐉 'Khi bạn từ bỏ hy vọng, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi",
-  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan!' - Vegeta",
-  "🌟 'Hãy dồn toàn bộ Ki vào cú đánh quyết định!' - Gogeta",
-  "🌀 'Nỗi sợ hãi không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku",
-  "🥋 'Võ thuật không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
-  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là kẻ mạnh nhất!' - Broly",
-  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước số phận!' - Vegeta",
-  "🐉 'Bản Năng Vô Thượng... trạng thái khi cơ thể tự động phản ứng!' - Whis",
+  "🔥 'Không phải là hoàn hảo, nhưng ta sẽ vượt qua giới hạn tại Đại Hội Võ Thuật!' - Son Goku",
+  "⚡ 'Sức mạnh 13 Ấn Ký đến từ ý chí kiên định, không phải từ mong muốn.' - Vegeta",
+  "🐉 'Khi bạn từ bỏ hy vọng trên lôi đài, đó là lúc cuộc chơi thực sự kết thúc.' - Master Roshi",
+  "💥 'Ta mang trong mình dòng máu kiêu hãnh của chiến binh Saiyan tham chiến!' - Vegeta",
+  "🌟 'Hãy dồn toàn bộ Ki và 13 Ấn Ký vào cú đánh quyết định!' - Gogeta",
+  "🌀 'Nỗi sợ hãi khi đối đầu không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku",
+  "🥋 'Võ thuật lôi đài không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
+  "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là Bá Chủ Đại Hội Võ Thuật!' - Broly",
+  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước lôi đài số phận!' - Vegeta",
+  "🐉 'Bản Năng Vô Thượng... trạng thái khi 13 Ấn Ký tự động phản ứng!' - Whis",
 ];
 
 // HỆ THỐNG PHÂN CẤP 10 CẤP ĐỘ SỨC MẠNH DRAGON BALL
@@ -86,6 +86,7 @@ export default function Home() {
     setDailyQuote(AURA_QUOTES[Math.floor(Math.random() * AURA_QUOTES.length)]);
   }, []);
 
+  // 🛠️ ĐỒNG BỘ THÔNG TIN USER, AVATAR, DISPLAY NAME VÀO HỆ THỐNG GAME & LOCALSTORAGE
   useEffect(() => {
     async function loadUserProfile(currentUser: any) {
       if (!currentUser) {
@@ -107,7 +108,7 @@ export default function Home() {
           .eq("id", currentUser.id)
           .single();
 
-        const defaultName = currentUser.user_metadata?.username || "Chiến Binh Saiyan";
+        const defaultName = currentUser.user_metadata?.username || currentUser.user_metadata?.full_name || "Chiến Binh Saiyan";
         const defaultAvatar = currentUser.user_metadata?.avatar_url || DEFAULT_AVATARS[0].url;
 
         const currentWeek = getWeekKey();
@@ -135,22 +136,31 @@ export default function Home() {
             email: currentUser.email || "",
             full_name: defaultName,
             avatar_url: defaultAvatar,
-            balance: 0,
+            balance: 5000,
             lucky_spins: 3,
             last_check_in: "",
           };
           await supabase.from("profiles").insert([initialData]);
-          setPoints(0);
+          setPoints(5000);
           setLuckySpins(3);
           setLastCheckIn("");
           setDisplayName(defaultName);
           setAvatarUrl(defaultAvatar);
+          
+          localStorage.setItem("tlmn_user_name", defaultName);
+          localStorage.setItem("tlmn_user_avatar", defaultAvatar);
         } else {
           setPoints(currentBalance);
           setLuckySpins(currentSpins);
           setLastCheckIn(lastCheck);
-          setDisplayName(profile.full_name || defaultName);
-          setAvatarUrl(profile.avatar_url || defaultAvatar);
+          const activeName = profile.full_name || defaultName;
+          const activeAvatar = profile.avatar_url || defaultAvatar;
+          
+          setDisplayName(activeName);
+          setAvatarUrl(activeAvatar);
+
+          localStorage.setItem("tlmn_user_name", activeName);
+          localStorage.setItem("tlmn_user_avatar", activeAvatar);
         }
 
         const savedBalls = localStorage.getItem(`dragon_balls_${currentUser.id}`);
@@ -163,7 +173,7 @@ export default function Home() {
         }
 
       } catch (err) {
-        console.error("Lỗi profile:", err);
+        console.error("Lỗi tải profile game:", err);
       } finally {
         setLoading(false);
       }
@@ -189,7 +199,6 @@ export default function Home() {
     setShowNoticeModal(false);
   };
 
-  // 🛠️ ĐÃ CẬP NHẬT LẤY THÊM avatar_url CHO BẢNG XẾP HẠNG
   useEffect(() => {
     async function fetchLeaderboard() {
       const { data } = await supabase
@@ -304,6 +313,8 @@ export default function Home() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    localStorage.removeItem("tlmn_user_name");
+    localStorage.removeItem("tlmn_user_avatar");
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -328,7 +339,10 @@ export default function Home() {
         data: { full_name: newCleanName, avatar_url: avatarUrl }
       });
 
-      alert("✨ Cập nhật thông tin chiến binh thành công! Điểm số được bảo toàn.");
+      localStorage.setItem("tlmn_user_name", newCleanName);
+      localStorage.setItem("tlmn_user_avatar", avatarUrl);
+
+      alert("✨ Cập nhật thông tin chiến binh thành công! Đã đồng bộ vào toàn bộ sòng game.");
       setProfileModalOpen(false);
     } catch (err: any) {
       alert("Lỗi cập nhật: " + err.message);
@@ -456,6 +470,30 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans select-none relative pb-20 overflow-x-hidden">
       
+      {/* 🚀 THANH ĐIỀU HƯỚNG NHANH GIỮA CÁC TRANG (ĐẠI HỘI VÕ THUẬT, POKER, JACKPOT...) */}
+      <div className="bg-slate-900 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto text-xs font-bold">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-amber-400">⚡ Chuyển Sảnh Nhanh:</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition">
+            🏠 Trang Chủ
+          </Link>
+          <Link href="/tienlen" className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 px-3 py-1 rounded-lg transition">
+            ⚔️ Đại Hội Võ Thuật 13 Ấn Ký
+          </Link>
+          <Link href="/poker" className="bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-500/50 px-3 py-1 rounded-lg transition">
+            ♠️ Sòng Poker
+          </Link>
+          <Link href="/jackpot" className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-500/50 px-3 py-1 rounded-lg transition">
+            🔮 Jackpot
+          </Link>
+          <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-3 py-1 rounded-lg transition">
+            🎟️ Vòng Quay
+          </Link>
+        </div>
+      </div>
+
       {/* POPUP THÔNG BÁO / LUẬT CHƠI & SƯU TẬP NGỌC RỒNG */}
       {showNoticeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
@@ -710,21 +748,39 @@ export default function Home() {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link
+                href="/tienlen"
+                className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-emerald-950/40 relative overflow-hidden hover:border-emerald-400 hover:shadow-emerald-500/20"
+              >
+                <div className="absolute right-4 bottom-2 opacity-15">
+                  <img src="/assets/home/dragon-ball-7.png" alt="TienLen" className="w-24 h-24 object-contain" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <img src="/assets/home/dragonball.png" alt="Card" className="w-6 h-6 object-contain" />
+                  <h3 className="text-base font-black text-emerald-400">Đại Hội Võ Thuật 13 Ấn Ký</h3>
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Hot</span>
+                </div>
+                <p className="text-slate-300 text-xs mt-1.5">Sòng bài đấu trường lôi đài 13 Ấn Ký độc lập online, chặt heo, truy sát cực đỉnh!</p>
+                <div className="mt-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-emerald-500/20 group-hover:brightness-110">
+                  BƯỚC VÀO LÔI ĐÀI ⚔️
+                </div>
+              </Link>
+
               <Link
                 href="/poker"
-                className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-emerald-950/40 relative overflow-hidden hover:border-emerald-400 hover:shadow-emerald-500/20"
+                className="bg-slate-900/90 border-2 border-blue-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg shadow-blue-950/40 relative overflow-hidden hover:border-blue-400 hover:shadow-blue-500/20"
               >
                 <div className="absolute right-4 bottom-2 opacity-15">
                   <img src="/assets/home/dragon-ball-7.png" alt="Poker" className="w-24 h-24 object-contain" />
                 </div>
                 <div className="flex items-center gap-2">
                   <img src="/assets/home/dragonball.png" alt="Card" className="w-6 h-6 object-contain" />
-                  <h3 className="text-base font-black text-emerald-400">Poker Texas Hold'em</h3>
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Phòng VIP</span>
+                  <h3 className="text-base font-black text-blue-400">Poker Texas Hold'em</h3>
+                  <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">VIP</span>
                 </div>
-                <p className="text-slate-300 text-xs mt-1.5">Sát phạt Poker Multiplayer 6 ghế, nhà cái Whis chia bài tự động. Đặt cược bằng Ki!</p>
-                <div className="mt-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-emerald-500/20 group-hover:brightness-110">
+                <p className="text-slate-300 text-xs mt-1.5">Sát phạt Poker Multiplayer 6 ghế, nhà cái Whis chia bài tự động.</p>
+                <div className="mt-4 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow-md shadow-blue-500/20 group-hover:brightness-110">
                   VÀO SÒNG POKER ♠️
                 </div>
               </Link>
@@ -733,7 +789,7 @@ export default function Home() {
 
         </div>
 
-        {/* BẢNG XẾP HẠNG TOP 5 (ĐÃ BỐ TRÍ: [HUY CHƯƠNG] ➔ [AVATAR] ➔ [TÊN & CẤP ĐỘ]) */}
+        {/* BẢNG XẾP HẠNG TOP 5 */}
         <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit lg:sticky lg:top-[85px]">
           <div className="flex items-center justify-between border-l-4 border-orange-500 pl-3">
             <h2 className="text-base sm:text-lg font-black text-orange-400 tracking-wider uppercase">
@@ -761,15 +817,10 @@ export default function Home() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      {/* 1. Huy chương */}
                       <span className="text-base shrink-0">{medals[index]}</span>
-                      
-                      {/* 2. Avatar chiến binh */}
                       <div className="w-8 h-8 rounded-full overflow-hidden border border-amber-400/60 shrink-0">
                         <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
                       </div>
-
-                      {/* 3. Tên & Cấp độ */}
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs sm:text-sm text-slate-200 truncate max-w-[100px]">
                           {item.full_name} {isMe && "(Tôi)"}
@@ -809,7 +860,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Thông tin chiến binh */}
             <div className="flex items-center gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-400 shadow-md shrink-0">
                 <img src={avatarUrl || DEFAULT_AVATARS[0].url} alt="Avatar" className="w-full h-full object-cover" />
@@ -826,7 +876,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* KHO SƯU TẬP 7 VIÊN NGỌC RỒNG */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/40 space-y-3">
               <div className="flex justify-between items-center">
                 <h4 className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
@@ -882,7 +931,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Form đổi tên & avatar */}
             <form onSubmit={handleUpdateProfile} className="space-y-4 pt-1">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-amber-400 ml-1">Tên Hiển Thị (Display Name)</label>
