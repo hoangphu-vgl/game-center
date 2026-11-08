@@ -246,24 +246,59 @@ export default function TienLenOnlineVip() {
     };
   }, [currentPhase, roomId]);
 
+  // XỬ LÝ KHI RỜI BÀN (XỬ THUA NẾU ĐANG PLAYING)
   const leaveRoomInternal = useCallback(async () => {
     const { data, myId, roomId: rId } = stateRef.current;
     if (!rId || !myId) return;
 
     let currentPlayers: PlayerState[] = [];
+    let currentStatus = "WAITING";
+    let betAmt = 1000;
+
     if (data && data.players) {
       currentPlayers = data.players;
+      currentStatus = data.status;
+      betAmt = data.betAmount;
     } else {
       const { data: res } = await supabase.from("tienlen_rooms").select("state").eq("id", rId).single();
-      if (res?.state?.players) currentPlayers = res.state.players;
+      if (res?.state?.players) {
+        currentPlayers = res.state.players;
+        currentStatus = res.state.status;
+        betAmt = res.state.betAmount || 1000;
+      }
     }
 
+    const leaver = currentPlayers.find(p => p.id === myId);
     const remainingPlayers = currentPlayers.filter(p => p.id !== myId);
     let updatedState: RoomState;
 
     if (remainingPlayers.length === 0) {
       updatedState = DEFAULT_ROOM_STATE;
     } else {
+      // NẾU ĐANG TRONG TRẬN ĐẤU (PLAYING) MÀ BỎ CHẠY -> XỬ THUA, TRỪ ĐIỂM, NGƯỜI CÒN LẠI THẮNG
+      if (currentStatus === "PLAYING" && leaver && !leaver.isSpectator) {
+        const activeRemaining = remainingPlayers.filter(p => !p.isSpectator);
+        if (activeRemaining.length === 1) {
+          const winner = activeRemaining[0];
+          const penalty = 13 * betAmt; // Phạt nặng khi bỏ trận
+
+          leaver.balance -= penalty;
+          winner.balance += penalty;
+
+          updatedState = {
+            ...(data || DEFAULT_ROOM_STATE),
+            status: "ENDED",
+            players: remainingPlayers.map(p => p.id === winner.id ? { ...p, balance: winner.balance } : p),
+            winnerName: `${winner.name} (Do đối thủ bỏ chạy 🏳️)`,
+            chopMessage: `⚡ ${leaver.name} đã đào tẩu giữa trận! Xử thua trừ ${penalty.toLocaleString()} Linh Thạch!`,
+            snatchActive: false
+          };
+
+          await supabase.from("tienlen_rooms").update({ state: updatedState }).eq("id", rId);
+          return;
+        }
+      }
+
       const oldHost = data?.hostId || currentPlayers[0]?.id;
       const newHost = remainingPlayers.some(p => p.id === oldHost) ? oldHost : remainingPlayers[0].id;
       updatedState = {
@@ -283,19 +318,40 @@ export default function TienLenOnlineVip() {
       if (!rId || !myId) return;
 
       const currentPlayers = data?.players || [];
+      const currentStatus = data?.status || "WAITING";
+      const betAmt = data?.betAmount || 1000;
+      const leaver = currentPlayers.find(p => p.id === myId);
       const remainingPlayers = currentPlayers.filter(p => p.id !== myId);
       let updatedState: RoomState;
 
       if (remainingPlayers.length === 0) {
         updatedState = DEFAULT_ROOM_STATE;
       } else {
-        const oldHost = data?.hostId || currentPlayers[0]?.id;
-        const newHost = remainingPlayers.some(p => p.id === oldHost) ? oldHost : remainingPlayers[0].id;
-        updatedState = {
-          ...(data || DEFAULT_ROOM_STATE),
-          players: remainingPlayers,
-          hostId: newHost
-        };
+        if (currentStatus === "PLAYING" && leaver && !leaver.isSpectator) {
+          const activeRemaining = remainingPlayers.filter(p => !p.isSpectator);
+          if (activeRemaining.length === 1) {
+            const winner = activeRemaining[0];
+            const penalty = 13 * betAmt;
+            leaver.balance -= penalty;
+            winner.balance += penalty;
+            updatedState = {
+              ...(data || DEFAULT_ROOM_STATE),
+              status: "ENDED",
+              players: remainingPlayers,
+              winnerName: `${winner.name} (Đối thủ bỏ chạy)`,
+              chopMessage: `⚡ ${leaver.name} đã bỏ trốn! Xử thua!`,
+              snatchActive: false
+            };
+          } else {
+            const oldHost = data?.hostId || currentPlayers[0]?.id;
+            const newHost = remainingPlayers.some(p => p.id === oldHost) ? oldHost : remainingPlayers[0].id;
+            updatedState = { ...(data || DEFAULT_ROOM_STATE), players: remainingPlayers, hostId: newHost };
+          }
+        } else {
+          const oldHost = data?.hostId || currentPlayers[0]?.id;
+          const newHost = remainingPlayers.some(p => p.id === oldHost) ? oldHost : remainingPlayers[0].id;
+          updatedState = { ...(data || DEFAULT_ROOM_STATE), players: remainingPlayers, hostId: newHost };
+        }
       }
 
       navigator.sendBeacon(
@@ -743,7 +799,7 @@ export default function TienLenOnlineVip() {
     }
   };
 
-  // CANVAS RENDER: FIX TỌA ĐỘ TOUCH TRÊN IOS PWA KHI XOAY NGANG
+  // CANVAS RENDER: FIX TỌA ĐỘ TOUCH TRÊN IOS PWA KHI XOAY NGANG & CHỐNG TRẢ NGƯỢC LÁ BÀI
   useEffect(() => {
     if (currentPhase !== "ROOM") return;
 
@@ -862,8 +918,8 @@ export default function TienLenOnlineVip() {
     };
     animationFrameId = requestAnimationFrame(render);
 
-    // XỬ LÝ SỰ KIỆN CHẠM CHUẨN XÁC KHI XOAY NGANG TRÊN IOS PWA
-    const handleCardSelection = (e: MouseEvent | TouchEvent) => {
+    // XỬ LÝ CHỈ DÙNG TOUCHSTART ĐỂ BẮT CHUẨN XÁC, TRÁNH LỖI GẤP ĐÔI SỰ KIỆN TRÊN MOBILE
+    const handleCardSelection = (e: TouchEvent | MouseEvent) => {
       const { width: w, height: h, data, myId } = stateRef.current;
       if (!data || data.status !== "PLAYING") return;
       const me = data.players.find(p => p.id === myId);
@@ -873,16 +929,14 @@ export default function TienLenOnlineVip() {
       let clientX = 0, clientY = 0;
 
       if ('touches' in e) {
-        if (e.touches.length === 0 && e.changedTouches.length === 0) return;
-        const touch = e.touches[0] || e.changedTouches[0];
-        clientX = touch.clientX;
-        clientY = touch.clientY;
+        if (e.touches.length === 0) return;
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
       } else {
         clientX = (e as MouseEvent).clientX;
         clientY = (e as MouseEvent).clientY;
       }
 
-      // Quy đổi tọa độ chuẩn theo viewport canvas
       const cX = clientX - rect.left;
       const cY = clientY - rect.top;
 
@@ -890,15 +944,16 @@ export default function TienLenOnlineVip() {
       const overlap = Math.min(cardW * 0.4, (w - cardW - 20) / (me.hand.length || 1));
       const handStartX = w / 2 - ((me.hand.length - 1) * overlap + cardW) / 2;
       const handY = h - cardH - 65;
-      const hitBufferY = 25;
+      const hitBufferY = 30;
 
+      // Duyệt ngược từ phải qua trái để chọn đúng lá bài trên cùng khi bị xếp chồng
       for (let i = me.hand.length - 1; i >= 0; i--) {
         const card = me.hand[i];
         const cardX = handStartX + i * overlap;
         const cardY = card.selected ? handY - 22 : handY;
         const clickableW = (i === me.hand.length - 1) ? cardW : overlap;
 
-        if (cX >= cardX - 6 && cX <= cardX + clickableW + 6 && cY >= cardY - hitBufferY && cY <= cardY + cardH + hitBufferY) {
+        if (cX >= cardX - 8 && cX <= cardX + clickableW + 8 && cY >= cardY - hitBufferY && cY <= cardY + cardH + hitBufferY) {
            const newPlayers = [...data.players];
            const myIdx = newPlayers.findIndex(p => p.id === myId);
            newPlayers[myIdx].hand[i].selected = !newPlayers[myIdx].hand[i].selected;
@@ -910,14 +965,15 @@ export default function TienLenOnlineVip() {
     };
     
     const canvasElement = canvasRef.current;
+    // Chỉ lắng nghe touchstart trên mobile để nhạy và không bị trả ngược trạng thái
+    canvasElement?.addEventListener("touchstart", handleCardSelection, { passive: true });
     canvasElement?.addEventListener("click", handleCardSelection);
-    canvasElement?.addEventListener("touchend", handleCardSelection, { passive: true });
 
     return () => { 
       cancelAnimationFrame(animationFrameId); 
       window.removeEventListener("resize", updateCanvasSize); 
+      canvasElement?.removeEventListener("touchstart", handleCardSelection); 
       canvasElement?.removeEventListener("click", handleCardSelection); 
-      canvasElement?.removeEventListener("touchend", handleCardSelection); 
     };
   }, [currentPhase, roomData?.status]);
 
