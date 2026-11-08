@@ -619,7 +619,7 @@ export default function JackpotTestPage() {
 
   return (
     <div 
-      className={`fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between ${
+      className={`fixed inset-0 h-[100dvh] overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between ${
         explosiveEffect ? "ring-4 ring-amber-400 bg-amber-950/30" : ""
       }`} 
       style={{ touchAction: 'manipulation' }}
