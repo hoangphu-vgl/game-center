@@ -722,10 +722,15 @@ export default function PokerPage() {
         </div>
       )}
 
-      {/* HEADER */}
+      {/* HEADER GIỐNG HỆT TIẾN LÊN + NÚT CHAT VŨ TRỤ GÓC TRÁI */}
       <header className="bg-slate-900/95 border-b border-yellow-500/40 px-3 py-1.5 flex justify-between items-center z-30 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm animate-pulse">👑</span>
+          <button 
+            onClick={() => showToast("💬 Chat Vũ Trụ đang phát triển!")}
+            className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1 active:scale-95 transition"
+          >
+            <span>💬</span> CHAT VŨ TRỤ
+          </button>
           <div>
             <h1 className="text-[10px] font-black text-yellow-400 uppercase font-mono tracking-tight leading-none">Poker VIP Royale #{roomCode}</h1>
             <p className="text-[8px] text-emerald-400 font-bold leading-tight">Blinds $50/$100</p>
@@ -768,18 +773,18 @@ export default function PokerPage() {
         </div>
       </header>
 
-      {/* SÀN ĐẤU OVAL */}
-      <main className="flex-1 flex items-center justify-center p-2 relative overflow-hidden">
-        <div className={`w-[94%] max-w-[820px] transition-all duration-300 rounded-[140px] sm:rounded-[180px] border-4 sm:border-6 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)] ${
-          isZoomed ? "h-[320px] sm:h-[420px] scale-105" : "h-[250px] sm:h-[330px]"
+      {/* SÀN ĐẤU OVAL CĂNG TRÀN BỀ NGANG THEO KIỂU TIẾN LÊN */}
+      <main className="flex-1 flex items-center justify-center p-1 sm:p-2 relative overflow-hidden">
+        <div className={`w-[98%] max-w-[1100px] transition-all duration-300 rounded-[140px] sm:rounded-[200px] border-4 sm:border-6 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)] ${
+          isZoomed ? "h-[340px] sm:h-[450px] scale-105" : "h-[260px] sm:h-[350px]"
         }`}
           style={{ 
             background: "radial-gradient(circle at center, #065f2c 0%, #064e21 60%, #022c12 100%)",
             boxShadow: "inset 0 0 70px rgba(0,0,0,0.85), 0 0 0 6px #381d09, 0 20px 40px rgba(0,0,0,0.9)"
           }}
         >
-          <div className="absolute inset-4 rounded-[110px] sm:rounded-[150px] border border-emerald-300/10 pointer-events-none flex items-center justify-center">
-            <span className="text-emerald-400/15 font-black text-base sm:text-3xl tracking-[0.25em] font-mono uppercase select-none drop-shadow">
+          <div className="absolute inset-4 rounded-[110px] sm:rounded-[160px] border border-emerald-300/10 pointer-events-none flex items-center justify-center">
+            <span className="text-emerald-400/15 font-black text-base sm:text-3xl tracking-[0.3em] font-mono uppercase select-none drop-shadow">
               TEXAS HOLD'EM
             </span>
           </div>
@@ -822,10 +827,10 @@ export default function PokerPage() {
               return (
                 <div key={index} className={`absolute text-[8px] text-white/40 border border-dashed border-white/30 w-7 h-7 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-sm ${
                   index === 0 ? "bottom-2 left-1/2 -translate-x-1/2" : 
-                  index === 1 ? "bottom-5 left-[12%]" : 
-                  index === 2 ? "top-1/2 -translate-y-1/2 left-[3%]" : 
-                  index === 3 ? "top-1/2 -translate-y-1/2 right-[3%]" : 
-                  "bottom-5 right-[12%]"
+                  index === 1 ? "bottom-5 left-[10%]" : 
+                  index === 2 ? "top-1/2 -translate-y-1/2 left-[2%]" : 
+                  index === 3 ? "top-1/2 -translate-y-1/2 right-[2%]" : 
+                  "bottom-5 right-[10%]"
                 }`}>
                   Trống
                 </div>
@@ -838,10 +843,10 @@ export default function PokerPage() {
             return (
               <div key={index} className={`absolute flex flex-col items-center transition-all duration-200 ${
                 index === 0 ? "bottom-2 left-1/2 -translate-x-1/2 z-25" : 
-                index === 1 ? "bottom-5 left-[12%] z-15" : 
-                index === 2 ? "top-1/2 -translate-y-1/2 left-[3%] z-15" : 
-                index === 3 ? "top-1/2 -translate-y-1/2 right-[3%] z-15" : 
-                "bottom-5 right-[12%] z-15"
+                index === 1 ? "bottom-5 left-[10%] z-15" : 
+                index === 2 ? "top-1/2 -translate-y-1/2 left-[2%] z-15" : 
+                index === 3 ? "top-1/2 -translate-y-1/2 right-[2%] z-15" : 
+                "bottom-5 right-[10%] z-15"
               }`}>
                 
                 {isTurn && (
