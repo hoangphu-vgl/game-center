@@ -163,7 +163,7 @@ export default function BaccaratPage() {
     createDeck();
 
     const channel = supabase
-      .channel("baccarat_jackpot_sync_v7")
+      .channel("baccarat_jackpot_sync_v8")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "baccarat_jackpot", filter: "id=eq.global" },
@@ -307,16 +307,10 @@ export default function BaccaratPage() {
     }
   };
 
-  /**
-   * 🌟 THUẬT TOÁN XÁO BÀI ĐA TẦNG (MULTI-PASS FISHER-YATES SHUFFLE)
-   * Tăng độ ngẫu nhiên tuyệt đối cho 8 bộ bài chuẩn (416 lá)
-   */
   const createDeck = () => {
     const suits = ["hearts", "diamonds", "clubs", "spades"];
     const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
     let newDeck: Card[] = [];
-    
-    // Tạo 8 bộ bài tây chuẩn
     for (let i = 0; i < 8; i++) {
       for (let suit of suits) {
         for (let rank of ranks) {
@@ -331,7 +325,6 @@ export default function BaccaratPage() {
       }
     }
 
-    // Xáo trộn đa tầng (3 vòng liên tục) để loại bỏ mọi hiện tượng bài trùng lặp cụm
     for (let pass = 0; pass < 3; pass++) {
       for (let i = newDeck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -401,7 +394,6 @@ export default function BaccaratPage() {
     await updateBalanceInDB(balanceRef.current);
     await contributeToJackpotOnly(totalBet);
 
-    // Nếu bộ bài còn dưới 40 lá, tự động xáo lại bộ mới tinh chuẩn casino
     if (deckRef.current.length < 40) createDeck();
 
     setGameState("dealing");
@@ -665,21 +657,21 @@ export default function BaccaratPage() {
       {/* 🏆 HŨ JACKPOT NẰM DƯỚI HEADING */}
       <div className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 md:gap-4 shrink-0 mt-1">
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-cyan-500/40 shadow">
-          <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất </div>
+          <div className="text-[8px] text-cyan-300 uppercase font-bold">Rồng Trái Đất (100-5K)</div>
           <div className="text-xs font-black text-cyan-200 font-mono">
             {mounted ? jackpots.minor.toLocaleString() : "10,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/95 px-4 py-1 rounded-xl border-2 border-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.4)] animate-pulse scale-105">
-          <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Rồng Siêu Cấp </div>
+          <div className="text-[9px] text-yellow-300 uppercase font-black">🌟 Siêu Cấp Hũ</div>
           <div className="text-sm font-black text-yellow-400 font-mono">
             {mounted ? jackpots.grand.toLocaleString() : "200,000"}
           </div>
         </div>
 
         <div className="text-center bg-slate-900/90 px-3 py-1 rounded-xl border border-emerald-500/40 shadow">
-          <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek </div>
+          <div className="text-[8px] text-emerald-300 uppercase font-bold">Rồng Namek (&ge;10K)</div>
           <div className="text-xs font-black text-emerald-200 font-mono">
             {mounted ? jackpots.major.toLocaleString() : "50,000"}
           </div>
@@ -723,7 +715,7 @@ export default function BaccaratPage() {
                 <div className="bg-slate-950/60 p-3 rounded-2xl border border-cyan-500/30">
                   <span className="text-cyan-400 font-black block mb-1">1. ⚔️ Luật Cơ Bản</span>
                   <p className="text-[11px] leading-relaxed text-slate-300">
-                    Trận đấu so tài giữa <b>Chiến Binh</b> và <b>Thần Hủy Diệt Champa</b>. Mỗi bên được chia 2 lá bài đầu tiên. Bên nào có tổng điểm gần <b>9</b> nhất sẽ thắng. Điểm vượt quá 10 sẽ lấy số hàng đơn vị.
+                    Trận đấu so tài giữa <b>{userName}</b> và <b>Thần Hủy Diệt Champa</b>. Mỗi bên được chia 2 lá bài đầu tiên. Bên nào có tổng điểm gần <b>9</b> nhất sẽ thắng. Điểm vượt quá 10 sẽ lấy số hàng đơn vị.
                   </p>
                 </div>
 
@@ -746,10 +738,10 @@ export default function BaccaratPage() {
                 <div className="bg-slate-950/60 p-3 rounded-2xl border border-purple-500/30 space-y-1.5">
                   <span className="text-purple-400 font-black block mb-1">3. 🔮 Tỷ Lệ Ăn Cược Các Cửa</span>
                   <div className="grid grid-cols-1 gap-1 text-[11px]">
-                    <p>• <b>Chiến Binh:</b> <span className="text-yellow-300 font-bold">1 : 1</span></p>
+                    <p>• <b>{userName}:</b> <span className="text-yellow-300 font-bold">1 : 1</span></p>
                     <p>• <b>Thần Hủy Diệt Champa:</b> <span className="text-yellow-300 font-bold">1 : 0.95</span></p>
                     <p>• <b>Hòa Khí (Tie):</b> <span className="text-yellow-300 font-bold">1 : 8</span></p>
-                    <p>• <b>Đôi Chiến Binh / Champa:</b> <span className="text-yellow-300 font-bold">1 : 11</span></p>
+                    <p>• <b>Đôi {userName} / Champa:</b> <span className="text-yellow-300 font-bold">1 : 11</span></p>
                     <p>• <b>Rồng Thần (Đồng Chất):</b> <span className="text-yellow-300 font-bold">1 : 25</span></p>
                     <p>• <b>Sám Cô Hủy Diệt:</b> <span className="text-yellow-300 font-bold">1 : 45</span></p>
                     <p>• <b>Tài / Xỉu:</b> <span className="text-yellow-300 font-bold">1 : 1.95</span></p>
@@ -840,7 +832,7 @@ export default function BaccaratPage() {
             </div>
 
             <div onClick={() => placeBet('warriorPair')} className="border border-dashed border-cyan-500/50 bg-slate-950/70 hover:bg-cyan-950/40 rounded-xl p-1.5 text-center cursor-pointer relative flex flex-col items-center justify-center min-h-[46px] transition">
-              <span className="font-bold text-cyan-400 text-[10px]">Đôi Chiến Binh</span>
+              <span className="font-bold text-cyan-400 text-[10px]">Đôi {userName}</span>
               <span className="text-[8px] text-slate-400">1 : 11</span>
               {bets.warriorPair.amount > 0 && (
                 <div className="absolute inset-0 bg-slate-950/90 rounded-xl flex items-center justify-center gap-1 px-1">
