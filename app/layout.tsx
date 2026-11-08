@@ -62,7 +62,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ (Chỉ 1 luồng duy nhất)
+  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ
   useEffect(() => {
     if (!user) return;
 
@@ -101,7 +101,21 @@ export default function RootLayout({
     };
   }, [user]);
 
-  // Xử lý kéo thả khung chat trên màn hình
+  // Hàm dịch chuyển khung chat linh hoạt bằng nút bấm trên iPhone
+  const moveChat = (direction: 'up' | 'down' | 'left' | 'right') => {
+    const step = 60;
+    setChatPosition((prev) => {
+      let newX = prev.x;
+      let newY = prev.y;
+      if (direction === 'up') newY = Math.max(10, prev.y - step);
+      if (direction === 'down') newY = Math.min(window.innerHeight - 150, prev.y + step);
+      if (direction === 'left') newX = Math.max(10, prev.x - step);
+      if (direction === 'right') newX = Math.min(window.innerWidth - 100, prev.x + step);
+      return { x: newX, y: newY };
+    });
+  };
+
+  // Xử lý kéo thả chuột trên máy tính
   const handleMouseDown = (e: React.MouseEvent) => {
     isDraggingRef.current = true;
     dragOffsetRef.current = {
@@ -189,30 +203,38 @@ export default function RootLayout({
               <button
                 onClick={() => setChatOpen(true)}
                 className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3.5 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.5)] flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-300 hover:scale-110 transition"
-                title="Mở Chat Vũ Trụ"
+                title="Mở Chat"
               >
                 <span className="text-xl">💬</span>
-                <span className="text-xs tracking-wider hidden sm:inline">CHAT VŨ TRỤ</span>
+                <span className="text-xs tracking-wider">CHAT</span>
               </button>
             ) : (
               <div className="bg-slate-900/95 border-2 border-amber-500/70 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] w-[300px] sm:w-[350px] h-[380px] sm:h-[420px] flex flex-col overflow-hidden backdrop-blur-xl">
                 
-                {/* THANH TIÊU ĐỀ KÉO THẢ */}
+                {/* THANH TIÊU ĐỀ TÍCH HỢP NÚT ĐIỀU HƯỚNG DỄ DÀNG TRÊN IPHONE */}
                 <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
-                  className="bg-slate-800/95 border-b border-amber-500/30 p-2.5 flex justify-between items-center cursor-move select-none"
+                  className="bg-slate-800/95 border-b border-amber-500/30 p-2 flex justify-between items-center cursor-move select-none"
                   title="Nhấn và kéo để di chuyển khung chat"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">✥</span>
+                  <div className="flex items-center gap-1.5">
                     <span className="font-black text-xs text-amber-400 tracking-wider uppercase">
-                      CHAT VŨ TRỤ (NỔI)
+                      💬 CHAT
                     </span>
                   </div>
+
+                  {/* NÚT ĐIỀU HƯỚNG DI CHUYỂN NHANH TRÊN MOBILE */}
+                  <div className="flex items-center gap-0.5 bg-slate-900/80 px-1 py-0.5 rounded-lg border border-slate-700">
+                    <button onClick={() => moveChat('left')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Sang trái">◀</button>
+                    <button onClick={() => moveChat('up')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Lên trên">▲</button>
+                    <button onClick={() => moveChat('down')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Xuống dưới">▼</button>
+                    <button onClick={() => moveChat('right')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Sang phải">▶</button>
+                  </div>
+
                   <button
                     onClick={() => setChatOpen(false)}
-                    className="text-slate-400 hover:text-white font-bold text-xs px-2 py-0.5 rounded cursor-pointer"
+                    className="text-slate-400 hover:text-white font-bold text-xs px-1.5 py-0.5 rounded cursor-pointer"
                   >
                     ✖
                   </button>

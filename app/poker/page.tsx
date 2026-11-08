@@ -596,7 +596,7 @@ export default function PokerPage() {
         <div className="absolute top-4 right-4">
           <button
             onClick={() => setShowRulesModal(true)}
-            className="bg-slate-900 text-yellow-400 border border-yellow-500/40 px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-slate-800 transition active:scale-95 flex items-center gap-1"
+            className="bg-slate-900 text-yellow-400 border border-yellow-500/40 px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-slate-800 transition active:scale-95 flex items-center gap-1 cursor-pointer"
           >
             📜 Luật Chơi
           </button>
@@ -623,7 +623,7 @@ export default function PokerPage() {
             </div>
             <button 
               onClick={() => handleJoinRoomByCode("ROOM_1")} 
-              className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 px-5 rounded-lg text-xs shadow"
+              className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 px-5 rounded-lg text-xs shadow cursor-pointer"
             >
               VÀO BÀN 🚀
             </button>
@@ -636,7 +636,7 @@ export default function PokerPage() {
             </div>
             <button 
               onClick={() => handleJoinRoomByCode("ROOM_2")} 
-              className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 px-5 rounded-lg text-xs shadow"
+              className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black py-2 px-5 rounded-lg text-xs shadow cursor-pointer"
             >
               VÀO BÀN 🚀
             </button>
@@ -652,7 +652,7 @@ export default function PokerPage() {
                 </h3>
                 <button 
                   onClick={() => setShowRulesModal(false)}
-                  className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center"
+                  className="bg-rose-600 hover:bg-rose-500 text-white w-6 h-6 rounded-full font-bold text-xs flex items-center justify-center cursor-pointer"
                 >
                   ✕
                 </button>
@@ -694,7 +694,7 @@ export default function PokerPage() {
               <div className="mt-5 text-center">
                 <button
                   onClick={() => setShowRulesModal(false)}
-                  className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-6 py-2 rounded-xl text-xs uppercase shadow"
+                  className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-black px-6 py-2 rounded-xl text-xs uppercase shadow cursor-pointer"
                 >
                   Đã Hiểu, Chiến Thôi! 🚀
                 </button>
@@ -722,15 +722,9 @@ export default function PokerPage() {
         </div>
       )}
 
-      {/* HEADER CĂN CHỈNH GIỐNG HỆT TIẾN LÊN */}
+      {/* HEADER ĐÃ GỌN GÀNG, KHÔNG CÒN NÚT CHAT THỪA */}
       <header className="bg-slate-900/95 border-b border-yellow-500/40 px-3 py-1.5 flex justify-between items-center z-30 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => showToast("💬 Chat Vũ Trụ đang phát triển!")}
-            className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1 active:scale-95 transition cursor-pointer"
-          >
-            <span>💬</span> CHAT VŨ TRỤ
-          </button>
           <div>
             <h1 className="text-[10px] font-black text-yellow-400 uppercase font-mono tracking-tight leading-none">Poker VIP Royale #{roomCode}</h1>
             <p className="text-[8px] text-emerald-400 font-bold leading-tight">Blinds $50/$100</p>
@@ -772,7 +766,7 @@ export default function PokerPage() {
         </div>
       </header>
 
-      {/* SÀN ĐẤU OVAL CĂNG TRÀN BỀ NGANG KHI LẬT NGANG */}
+      {/* SÀN ĐẤU OVAL CĂNG TRÀN BỀ NGANG */}
       <main className="flex-1 flex items-center justify-center p-1 sm:p-2 relative overflow-hidden">
         <div className="w-[98%] max-w-[1100px] h-[72vh] sm:h-[78vh] transition-all duration-300 rounded-[140px] sm:rounded-[200px] border-4 sm:border-6 border-amber-900/80 relative flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.9)]"
           style={{ 
