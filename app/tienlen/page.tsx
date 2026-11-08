@@ -246,7 +246,6 @@ export default function TienLenOnlineVip() {
     };
   }, [currentPhase, roomId]);
 
-  // XỬ LÝ KHI RỜI BÀN (XỬ THUA NẾU ĐANG PLAYING)
   const leaveRoomInternal = useCallback(async () => {
     const { data, myId, roomId: rId } = stateRef.current;
     if (!rId || !myId) return;
@@ -275,12 +274,11 @@ export default function TienLenOnlineVip() {
     if (remainingPlayers.length === 0) {
       updatedState = DEFAULT_ROOM_STATE;
     } else {
-      // NẾU ĐANG TRONG TRẬN ĐẤU (PLAYING) MÀ BỎ CHẠY -> XỬ THUA, TRỪ ĐIỂM, NGƯỜI CÒN LẠI THẮNG
       if (currentStatus === "PLAYING" && leaver && !leaver.isSpectator) {
         const activeRemaining = remainingPlayers.filter(p => !p.isSpectator);
         if (activeRemaining.length === 1) {
           const winner = activeRemaining[0];
-          const penalty = 13 * betAmt; // Phạt nặng khi bỏ trận
+          const penalty = 13 * betAmt;
 
           leaver.balance -= penalty;
           winner.balance += penalty;
@@ -799,7 +797,7 @@ export default function TienLenOnlineVip() {
     }
   };
 
-  // CANVAS RENDER: FIX TỌA ĐỘ TOUCH TRÊN IOS PWA KHI XOAY NGANG & CHỐNG TRẢ NGƯỢC LÁ BÀI
+  // CANVAS RENDER: CHỐNG TRẢ NGƯỢC LÁ BÀI & CỐ ĐỊNH CHUẨN XÁC TỌA ĐỘ TOUCH TRÊN MOBILE
   useEffect(() => {
     if (currentPhase !== "ROOM") return;
 
@@ -918,35 +916,24 @@ export default function TienLenOnlineVip() {
     };
     animationFrameId = requestAnimationFrame(render);
 
-    // XỬ LÝ CHỈ DÙNG TOUCHSTART ĐỂ BẮT CHUẨN XÁC, TRÁNH LỖI GẤP ĐÔI SỰ KIỆN TRÊN MOBILE
-    const handleCardSelection = (e: TouchEvent | MouseEvent) => {
+    // XỬ LÝ CHỌN BÀI CHỈ BẰNG MỘT SỰ KIỆN DUY NHẤT (POINTERDOWN) ĐỂ TRÁNH LẶP VÀ TỰ TRẢ NGƯỢC
+    const handleCardSelection = (e: PointerEvent) => {
       const { width: w, height: h, data, myId } = stateRef.current;
       if (!data || data.status !== "PLAYING") return;
       const me = data.players.find(p => p.id === myId);
       if (!me || me.isSpectator) return;
 
       const rect = canvas.getBoundingClientRect();
-      let clientX = 0, clientY = 0;
-
-      if ('touches' in e) {
-        if (e.touches.length === 0) return;
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = (e as MouseEvent).clientX;
-        clientY = (e as MouseEvent).clientY;
-      }
-
-      const cX = clientX - rect.left;
-      const cY = clientY - rect.top;
+      const cX = e.clientX - rect.left;
+      const cY = e.clientY - rect.top;
 
       const cardW = Math.min(w / 11, 58); const cardH = cardW * 1.45;
       const overlap = Math.min(cardW * 0.4, (w - cardW - 20) / (me.hand.length || 1));
       const handStartX = w / 2 - ((me.hand.length - 1) * overlap + cardW) / 2;
       const handY = h - cardH - 65;
-      const hitBufferY = 30;
+      const hitBufferY = 35;
 
-      // Duyệt ngược từ phải qua trái để chọn đúng lá bài trên cùng khi bị xếp chồng
+      // Duyệt ngược từ phải qua trái để bắt đúng lá bài phía trên cùng
       for (let i = me.hand.length - 1; i >= 0; i--) {
         const card = me.hand[i];
         const cardX = handStartX + i * overlap;
@@ -965,15 +952,13 @@ export default function TienLenOnlineVip() {
     };
     
     const canvasElement = canvasRef.current;
-    // Chỉ lắng nghe touchstart trên mobile để nhạy và không bị trả ngược trạng thái
-    canvasElement?.addEventListener("touchstart", handleCardSelection, { passive: true });
-    canvasElement?.addEventListener("click", handleCardSelection);
+    // Dùng pointerdown để gom chung chuột và cảm ứng trên iOS mượt mà, chống lặp sự kiện
+    canvasElement?.addEventListener("pointerdown", handleCardSelection);
 
     return () => { 
       cancelAnimationFrame(animationFrameId); 
       window.removeEventListener("resize", updateCanvasSize); 
-      canvasElement?.removeEventListener("touchstart", handleCardSelection); 
-      canvasElement?.removeEventListener("click", handleCardSelection); 
+      canvasElement?.removeEventListener("pointerdown", handleCardSelection); 
     };
   }, [currentPhase, roomData?.status]);
 
