@@ -784,7 +784,13 @@ export default function CauCa2NPage() {
         this.castStartX = 0;
         this.castStartY = 0;
         this.castProgress = 0;
-        this.caughtFish = null;
+        
+        // GIẢI PHÓNG CON CÁ NẾU ĐANG DÍNH HOẶC ĐỨT DÂY ĐỂ NÓ KHÔNG BỊ ĐỨNG CỨNG
+        if (this.caughtFish) {
+          this.caughtFish.isCaught = false;
+          this.caughtFish = null;
+        }
+
         this.lineTension = 0;
         this.isJointPulling = false;
         this.isAssistingOpponent = false;
@@ -1017,11 +1023,10 @@ export default function CauCa2NPage() {
             }
           }
         } else if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
-          // Tụt thanh nhẹ nhàng khi ngưng tay
           this.lineTension = Math.max(0, this.lineTension - 0.35); 
           this.struggleIdleTime += 1;
 
-          // Cập nhật tọa độ con cá bơi lượn quanh đầu móc khi đang giằng co
+          // Cập nhật vị trí con cá bơi theo đầu móc khi đang giằng co
           if (this.caughtFish) {
             this.caughtFish.animFrame += 0.15;
             this.caughtFish.x = this.x + Math.sin(this.caughtFish.animFrame) * 12;
@@ -1030,6 +1035,16 @@ export default function CauCa2NPage() {
 
           // Nếu ngưng tay quá 3.5 giây -> Cá đứt dây sổng mất!
           if (this.struggleIdleTime > 210) {
+            if (this.caughtFish) {
+              // Trả con cá về trạng thái bơi tự do hoặc xóa khỏi mảng để sinh cá mới
+              this.caughtFish.isCaught = false;
+              let idx = fishes.indexOf(this.caughtFish);
+              if (idx > -1) {
+                fishes.splice(idx, 1);
+                fishes.push(new Fish(undefined, undefined, undefined, roomRng));
+              }
+            }
+
             this.state = "IDLE";
             if (statusEl) {
               statusEl.innerText = "💥 Cá quẫy quá mạnh làm đứt dây mất tiêu!";
