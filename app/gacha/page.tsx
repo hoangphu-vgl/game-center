@@ -39,6 +39,7 @@ const getRandomRewardAmount = () => {
 export default function GachaPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [balance, setBalance] = useState(0);
+  const [luckySpins, setLuckySpins] = useState(0);
   const [inventory, setInventory] = useState<{ [key: string]: number }>({});
   const [history, setHistory] = useState<any[]>([]);
   const [opening, setOpening] = useState(false);
@@ -69,12 +70,13 @@ export default function GachaPage() {
         setCurrentUser(session.user);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("balance, inventory, gacha_history, silver_pity, gold_pity")
+          .select("balance, lucky_spins, inventory, gacha_history, silver_pity, gold_pity")
           .eq("id", session.user.id)
           .single();
 
         if (profile) {
           setBalance(profile.balance ?? 0);
+          setLuckySpins(profile.lucky_spins ?? 0);
           setInventory(profile.inventory ?? {});
           setHistory(profile.gacha_history ?? []);
           setSilverPityCount(profile.silver_pity ?? 0);
@@ -251,6 +253,11 @@ export default function GachaPage() {
             ⚡ Ki: {balance.toLocaleString()}
           </div>
 
+          <div className="bg-slate-800/90 border border-purple-500/50 px-3.5 py-2 rounded-xl text-xs shadow-inner flex items-center gap-1.5">
+            <img src="/assets/home/capsule.png" alt="Capsule" className="w-4 h-4 object-contain" />
+            <span className="font-black text-purple-300">{luckySpins} Lượt</span>
+          </div>
+
           <button
             onClick={() => setShowRulesModal(true)}
             className="bg-slate-900 hover:bg-slate-800 text-yellow-400 border border-yellow-500/50 px-3 py-2 rounded-xl text-xs font-black shadow transition active:scale-95 flex items-center gap-1 cursor-pointer"
@@ -284,7 +291,7 @@ export default function GachaPage() {
           </div>
           <h2 className="text-base font-black text-cyan-300 uppercase">Rương Bạc Phòng Thủ</h2>
           <p className="text-[11px] text-slate-400 mt-1 mb-3">Chứa các kỹ năng phòng thủ và bảo vệ tài sản.</p>
-          <div className="text-amber-400 font-mono font-black text-sm mb-4">Giá mở: 10,000 Ki</div>
+          <div className="text-amber-400 font-mono font-black text-sm mb-4">Giá mở: 50,000 Ki</div>
           <button
             onClick={() => handleOpenChest('silver')}
             disabled={opening}
@@ -305,7 +312,7 @@ export default function GachaPage() {
           </div>
           <h2 className="text-base font-black text-yellow-400 uppercase">Rương Vàng Tấn Công</h2>
           <p className="text-[11px] text-slate-400 mt-1 mb-3">Chứa các kỹ năng tối thượng, thấu thị và lật ngược ván bài.</p>
-          <div className="text-amber-400 font-mono font-black text-sm mb-4">Giá mở: 30,000 Ki</div>
+          <div className="text-amber-400 font-mono font-black text-sm mb-4">Giá mở: 100,000 Ki</div>
           <button
             onClick={() => handleOpenChest('gold')}
             disabled={opening}
