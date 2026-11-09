@@ -482,7 +482,7 @@ export default function Home() {
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
       
-      {/* 1. THANH CHUYỂN SẢNH HEADER (ĐÃ CHÈN CÂU CÁ 2 NGƯỜI) */}
+      {/* 1. THANH CHUYỂN SẢNH HEADER (ĐÃ CHÈN CÂU CÁ TEAM 7) */}
       <div className="bg-slate-900/95 border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-bold shrink-0 backdrop-blur-md z-30">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-amber-400">⚡ Chuyển Sảnh:</span>
@@ -494,9 +494,9 @@ export default function Home() {
           <Link href="/cauca" className="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎣 Cần Thủ Vũ Trụ
           </Link>
-          {/* NÚT CHUYỂN HƯỚNG CÂU CÁ 2 NGƯỜI */}
+          {/* NÚT CHUYỂN HƯỚNG CÂU CÁ MULTI */}
           <Link href="/caucamulti" className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:brightness-110 text-slate-950 font-black border border-amber-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
-            👥 Câu Cá 2 Người
+            👥 Câu Cá Team 7
           </Link>
           <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎲 Baccarat Thần Thánh

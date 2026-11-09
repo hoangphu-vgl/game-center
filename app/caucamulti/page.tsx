@@ -389,7 +389,7 @@ export default function CauCa2NPage() {
       { filename: "Coryphaena_hippurus.png", vnName: "Cá cờ xanh Mahi-Mahi", sizeScale: 1.9, basePoints: 7200000, multi: 7.0, layer: "mid", struggleWeight: 0.6, isRare: false },
       { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 1.7, basePoints: 10800000, multi: 8.0, layer: "mid", struggleWeight: 0.65, isRare: false },
 
-      // --- TẦNG ĐÁY / SÂU (Cá lớn & Quái vật - Đảm bảo bơi từ ngoài vào và số lượng ít) ---
+      // --- TẦNG ĐÁY / SÂU (Cá lớn & Quái vật) ---
       { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 2.6, basePoints: 18000000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true, maxHp: 15 },
       { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 2.8, basePoints: 42000000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true, maxHp: 22 },
       { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 3.2, basePoints: 96000000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true, maxHp: 30 },
@@ -425,7 +425,6 @@ export default function CauCa2NPage() {
     let bottomTimer: NodeJS.Timeout | null = null;
 
     let oppStates: { [userId: string]: any } = {};
-
     const critPopups: { x: number; y: number; alpha: number; scale: number }[] = [];
 
     (window as any).updateGameScore = (newScore: number) => {
@@ -466,6 +465,7 @@ export default function CauCa2NPage() {
       layer!: string;
       notifiedRare?: boolean;
       rngFunc: () => number;
+      isWaitingForWave?: boolean;
 
       constructor(forcedLayer?: string, forcedY?: number, forcedDirection?: number, customRng?: () => number) {
         this.rngFunc = customRng || roomRng;
@@ -505,32 +505,32 @@ export default function CauCa2NPage() {
 
         this.animFrame = r() * 100;
         this.notifiedRare = false;
+        this.isWaitingForWave = false;
 
         const waterHeight = height - waterY;
         if (this.layer === "top") {
           this.y = forcedY !== undefined ? forcedY : waterY + 20 + r() * (waterHeight * 0.28);
           this.speed = (r() * 1.5 + 1.0) * this.direction;
+          this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         } else if (this.layer === "mid") {
           this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + r() * (waterHeight * 0.35);
           this.speed = (r() * 0.9 + 0.5) * this.direction;
+          this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         } else {
-          // Tầng đáy: Cá bơi từ ngoài mép màn hình dạt vào, tốc độ chậm rãi
+          // Tầng đáy: Cá lớn/quái vật bơi từ ngoài vào
           this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + r() * (waterHeight * 0.22);
           this.speed = (r() * 0.4 + 0.2) * this.direction;
+          this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         }
-
-        // Bắt đầu từ ngoài màn hình bơi vào để không bị pop-up thô
-        this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         this.isCaught = false;
       }
 
       update() {
-        if (this.isCaught) return;
+        if (this.isCaught || this.isWaitingForWave) return;
 
         this.x += this.speed;
         this.animFrame += 0.08;
 
-        // Thông báo khi cá lớn bơi vào vùng giữa màn hình
         if (this.layer === "bottom" && !this.notifiedRare && this.x > width * 0.2 && this.x < width * 0.8) {
           this.notifiedRare = true;
           window.dispatchEvent(
@@ -552,14 +552,26 @@ export default function CauCa2NPage() {
           }
         }
 
-        // Khi cá bơi qua hết màn hình thì respawn lại từ ngoài
+        // Khi cá bơi qua hết màn hình
         if ((this.direction === 1 && this.x > width + this.size * 3) || 
             (this.direction === -1 && this.x < -this.size * 3)) {
-          this.spawn(this.layer);
+          if (this.layer === "bottom") {
+            // Đánh dấu chờ đợt cá lớn tiếp theo (ngầm đếm ngược 15-60s)
+            this.isWaitingForWave = true;
+            const delayMs = Math.floor(Math.random() * (60000 - 15000 + 1)) + 15000;
+            setTimeout(() => {
+              if (isMounted) {
+                this.spawn("bottom");
+              }
+            }, delayMs);
+          } else {
+            this.spawn(this.layer);
+          }
         }
       }
 
       draw() {
+        if (this.isWaitingForWave) return;
         ctx!.save();
         ctx!.translate(this.x, this.y);
         ctx!.rotate(Math.sin(this.animFrame) * 0.04);
@@ -842,7 +854,7 @@ export default function CauCa2NPage() {
           }
 
           for (let f of fishes) {
-            if (f.isCaught || Math.abs(this.y - f.y) > 40) continue;
+            if (f.isCaught || f.isWaitingForWave || Math.abs(this.y - f.y) > 40) continue;
 
             const isBigFish = f.layer === "bottom" || f.fishData.isRare;
 
@@ -1157,15 +1169,15 @@ export default function CauCa2NPage() {
     const computedWaterY = (canvas.height / (window.devicePixelRatio || 1)) * 0.22;
     const waterHeight = canvas.height / (window.devicePixelRatio || 1) - computedWaterY;
 
-    // Thiết lập số lượng cá vừa phải, cá lớn đáy chỉ giới hạn 2-3 con bơi từ ngoài vào
     for (let i = 0; i < 20; i++) {
       fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 20) * i, undefined, roomRng));
     }
     for (let i = 0; i < 10; i++) {
       fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 10) * i, undefined, roomRng));
     }
-    for (let i = 0; i < 3; i++) {
-      fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 3) * i, undefined, roomRng));
+    // Chỉ tạo đúng 2 con tầng đáy cho mỗi đợt xuất hiện
+    for (let i = 0; i < 2; i++) {
+      fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 2) * i, undefined, roomRng));
     }
 
     const hook = new Hook();
@@ -1591,7 +1603,7 @@ export default function CauCa2NPage() {
     { cost: 500000, filename: "moi.png", label: "Mồi Khá - 500,000🪙" },
     { cost: 1000000, filename: "tom.png", label: "Mồi Thơm - 1,000,000🪙" },
     { cost: 10000000, filename: "dragon-ball-4.png", label: "Mồi Xịn - 10,000,000🪙" },
-    { cost: 50000000, filename: "kiblue.png", label: "Mồi Cao Cấp - 50,000,000🪙" },
+    { cost: 50000050, filename: "kiblue.png", label: "Mồi Cao Cấp - 50,000,000🪙" },
     { cost: 100000000, filename: "hakai.png", label: "Mồi Quái Vật - 100,000,000🪙" },
   ];
 
