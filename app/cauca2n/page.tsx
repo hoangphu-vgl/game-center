@@ -16,7 +16,6 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-// Thuật toán sinh số ngẫu nhiên theo Seed đồng bộ theo phòng
 function createSeededRandom(seedStr: string) {
   let seed = 0;
   for (let i = 0; i < seedStr.length; i++) {
@@ -90,7 +89,6 @@ export default function CauCa2NPage() {
     }
     fetchRooms();
 
-    // ĐÃ SỬA LỖI CÚ PHÁP (payload.new as any)?.id
     const roomsChannel = supabase
       .channel("public:cauca_rooms")
       .on("postgres_changes", { event: "*", schema: "public", table: "cauca_rooms" }, (payload: any) => {
@@ -340,37 +338,37 @@ export default function CauCa2NPage() {
     const roomRng = createSeededRandom(activeRoom || "room_1");
 
     const fishDatabase = [
-      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 500, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn sọc", sizeScale: 0.7, basePoints: 800, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 600, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 1000, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 750, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 1200, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abramis_brama.png", vnName: "Cá vền nước ngọt", sizeScale: 0.85, basePoints: 2000, multi: 1.8, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_sexfasciatus.png", vnName: "Cá thia sáu sọc", sizeScale: 0.7, basePoints: 1500, multi: 1.6, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chaetodon_aurantus.png", vnName: "Cá bướm vàng cam", sizeScale: 0.8, basePoints: 3000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chaetodon_lunula.png", vnName: "Cá bướm mặt trăng", sizeScale: 0.85, basePoints: 5000, multi: 2.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chromis_viridis.png", vnName: "Cá thia lục bảo", sizeScale: 0.6, basePoints: 4000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Acanthurus_coerulus.png", vnName: "Cá đuôi gai xanh", sizeScale: 1.1, basePoints: 50000, multi: 2.5, layer: "mid", struggleWeight: 0.25, isRare: false },
-      { filename: "Oreochromis_niloticus.png", vnName: "Cá rô phi vằn", sizeScale: 1.25, basePoints: 80000, multi: 2.8, layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "Micropterus_salmoides.png", vnName: "Cá vược miệng rộng", sizeScale: 1.3, basePoints: 150000, multi: 3.0, layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "Lates_calcarifer.png", vnName: "Cá chẽm lớn", sizeScale: 1.6, basePoints: 300000, multi: 3.5, layer: "mid", struggleWeight: 0.4, isRare: false },
-      { filename: "Perca_flavescens.png", vnName: "Cá vược vàng", sizeScale: 1.1, basePoints: 200000, multi: 3.2, layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "Cyprinus_carpio.png", vnName: "Cá chép vàng", sizeScale: 1.5, basePoints: 500000, multi: 4.0, layer: "mid", struggleWeight: 0.45, isRare: false },
-      { filename: "Carophi.png", vnName: "Cá rô phi", sizeScale: 1.15, basePoints: 120000, multi: 2.9, layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "Canham.png", vnName: "Cá nhám", sizeScale: 1.4, basePoints: 800000, multi: 4.5, layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "Arothron_meleagris.png", vnName: "Cá nóc đốm sao", sizeScale: 1.25, basePoints: 1000000, multi: 5.0, layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "Caranx_ignobilis.png", vnName: "Cá khế khổng lồ", sizeScale: 1.8, basePoints: 3000000, multi: 6.0, layer: "mid", struggleWeight: 0.55, isRare: false },
-      { filename: "Coryphaena_hippurus.png", vnName: "Cá cờ xanh Mahi-Mahi", sizeScale: 1.9, basePoints: 6000000, multi: 7.0, layer: "mid", struggleWeight: 0.6, isRare: false },
-      { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 1.7, basePoints: 9000000, multi: 8.0, layer: "mid", struggleWeight: 0.65, isRare: false },
-      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 2.6, basePoints: 15000000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true, maxHp: 15 },
-      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 2.8, basePoints: 35000000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true, maxHp: 22 },
-      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 3.2, basePoints: 80000000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true, maxHp: 30 },
-      { filename: "Mola_mola.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 3.4, basePoints: 150000000, multi: 20.0, layer: "bottom", struggleWeight: 0.88, isRare: true, maxHp: 38 },
-      { filename: "Sphyrna_zygaena.png", vnName: "Cá mập đầu búa", sizeScale: 3.0, basePoints: 250000000, multi: 25.0, layer: "bottom", struggleWeight: 0.9, isRare: true, maxHp: 45 },
-      { filename: "Xiphias_gladius.png", vnName: "Cá kiếm đại dương", sizeScale: 3.4, basePoints: 450000000, multi: 30.0, layer: "bottom", struggleWeight: 0.93, isRare: true, maxHp: 52 },
-      { filename: "Mobula_alfredi.png", vnName: "Cá đuối manta khổng lồ", sizeScale: 3.6, basePoints: 750000000, multi: 40.0, layer: "bottom", struggleWeight: 0.95, isRare: true, maxHp: 60 },
-      { filename: "Gymnothorax_javanicus.png", vnName: "Cá trình khổng lồ Java", sizeScale: 3.3, basePoints: 1000000000, multi: 50.0, layer: "bottom", struggleWeight: 0.96, isRare: true, maxHp: 70 }
+      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.5, basePoints: 500, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn sọc", sizeScale: 0.55, basePoints: 800, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.48, basePoints: 600, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.55, basePoints: 1000, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.5, basePoints: 750, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.6, basePoints: 1200, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abramis_brama.png", vnName: "Cá vền nước ngọt", sizeScale: 0.65, basePoints: 2000, multi: 1.8, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_sexfasciatus.png", vnName: "Cá thia sáu sọc", sizeScale: 0.55, basePoints: 1500, multi: 1.6, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chaetodon_aurantus.png", vnName: "Cá bướm vàng cam", sizeScale: 0.6, basePoints: 3000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chaetodon_lunula.png", vnName: "Cá bướm mặt trăng", sizeScale: 0.65, basePoints: 5000, multi: 2.2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chromis_viridis.png", vnName: "Cá thia lục bảo", sizeScale: 0.48, basePoints: 4000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Acanthurus_coerulus.png", vnName: "Cá đuôi gai xanh", sizeScale: 0.85, basePoints: 50000, multi: 2.5, layer: "mid", struggleWeight: 0.25, isRare: false },
+      { filename: "Oreochromis_niloticus.png", vnName: "Cá rô phi vằn", sizeScale: 0.95, basePoints: 80000, multi: 2.8, layer: "mid", struggleWeight: 0.3, isRare: false },
+      { filename: "Micropterus_salmoides.png", vnName: "Cá vược miệng rộng", sizeScale: 1.0, basePoints: 150000, multi: 3.0, layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "Lates_calcarifer.png", vnName: "Cá chẽm lớn", sizeScale: 1.2, basePoints: 300000, multi: 3.5, layer: "mid", struggleWeight: 0.4, isRare: false },
+      { filename: "Perca_flavescens.png", vnName: "Cá vược vàng", sizeScale: 0.85, basePoints: 200000, multi: 3.2, layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "Cyprinus_carpio.png", vnName: "Cá chép vàng", sizeScale: 1.1, basePoints: 500000, multi: 4.0, layer: "mid", struggleWeight: 0.45, isRare: false },
+      { filename: "Carophi.png", vnName: "Cá rô phi", sizeScale: 0.9, basePoints: 120000, multi: 2.9, layer: "mid", struggleWeight: 0.3, isRare: false },
+      { filename: "Canham.png", vnName: "Cá nhám", sizeScale: 1.1, basePoints: 800000, multi: 4.5, layer: "mid", struggleWeight: 0.5, isRare: false },
+      { filename: "Arothron_meleagris.png", vnName: "Cá nóc đốm sao", sizeScale: 0.95, basePoints: 1000000, multi: 5.0, layer: "mid", struggleWeight: 0.5, isRare: false },
+      { filename: "Caranx_ignobilis.png", vnName: "Cá khế khổng lồ", sizeScale: 1.3, basePoints: 3000000, multi: 6.0, layer: "mid", struggleWeight: 0.55, isRare: false },
+      { filename: "Coryphaena_hippurus.png", vnName: "Cá cờ xanh Mahi-Mahi", sizeScale: 1.4, basePoints: 6000000, multi: 7.0, layer: "mid", struggleWeight: 0.6, isRare: false },
+      { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 1.25, basePoints: 9000000, multi: 8.0, layer: "mid", struggleWeight: 0.65, isRare: false },
+      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 1.8, basePoints: 15000000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true, maxHp: 15 },
+      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 1.9, basePoints: 35000000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true, maxHp: 22 },
+      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 2.2, basePoints: 80000000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true, maxHp: 30 },
+      { filename: "Mola_mola.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 2.3, basePoints: 150000000, multi: 20.0, layer: "bottom", struggleWeight: 0.88, isRare: true, maxHp: 38 },
+      { filename: "Sphyrna_zygaena.png", vnName: "Cá mập đầu búa", sizeScale: 2.1, basePoints: 250000000, multi: 25.0, layer: "bottom", struggleWeight: 0.9, isRare: true, maxHp: 45 },
+      { filename: "Xiphias_gladius.png", vnName: "Cá kiếm đại dương", sizeScale: 2.3, basePoints: 450000000, multi: 30.0, layer: "bottom", struggleWeight: 0.93, isRare: true, maxHp: 52 },
+      { filename: "Mobula_alfredi.png", vnName: "Cá đuối manta khổng lồ", sizeScale: 2.5, basePoints: 750000000, multi: 40.0, layer: "bottom", struggleWeight: 0.95, isRare: true, maxHp: 60 },
+      { filename: "Gymnothorax_javanicus.png", vnName: "Cá trình khổng lồ Java", sizeScale: 2.3, basePoints: 1000000000, multi: 50.0, layer: "bottom", struggleWeight: 0.96, isRare: true, maxHp: 70 }
     ];
 
     const loadedFishObjects = fishDatabase.map((item) => {
@@ -388,7 +386,7 @@ export default function CauCa2NPage() {
 
     let width: number = window.innerWidth;
     let height: number = window.innerHeight;
-    let waterY: number = height * 0.3;
+    let waterY: number = height * 0.26; // Thu gọn mặt nước lên cao một chút để thấy trọn đáy biển
     
     const isPlayer2 = currentSlot === "player_2";
     let boatX: number = isPlayer2 ? width * 0.75 : width * 0.25;
@@ -417,12 +415,11 @@ export default function CauCa2NPage() {
       ctx!.scale(dpr, dpr);
       width = w;
       height = h;
-      waterY = height * 0.3;
+      waterY = height * 0.26;
     }
     window.addEventListener("resize", resize);
     resize();
 
-    // LỚP CÁ ĐỒNG BỘ THEO THỜI GIAN THỰC (DATE.NOW)
     class Fish {
       direction!: number;
       size!: number;
@@ -460,7 +457,7 @@ export default function CauCa2NPage() {
         this.fishObj = loadedFishObjects.find((f) => f.info.filename === chosenInfo.filename) || loadedFishObjects[0];
         this.fishData = this.fishObj.info;
         this.layer = this.fishData.layer;
-        this.size = (r() * 8 + 14) * this.fishData.sizeScale;
+        this.size = (r() * 6 + 12) * this.fishData.sizeScale;
 
         const randomPriceFactor = 0.8 + r() * 0.7;
         const rawPoints = this.fishData.basePoints * this.fishData.multi * randomPriceFactor;
@@ -477,14 +474,14 @@ export default function CauCa2NPage() {
 
         const waterHeight = height - waterY;
         if (this.layer === "top") {
-          this.y = forcedY !== undefined ? forcedY : waterY + 25 + r() * (waterHeight * 0.25);
-          this.speed = (r() * 1.6 + 1.2) * this.direction;
+          this.y = forcedY !== undefined ? forcedY : waterY + 20 + r() * (waterHeight * 0.28);
+          this.speed = (r() * 1.5 + 1.0) * this.direction;
         } else if (this.layer === "mid") {
-          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + r() * (waterHeight * 0.3);
-          this.speed = (r() * 1.0 + 0.6) * this.direction;
+          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + r() * (waterHeight * 0.35);
+          this.speed = (r() * 0.9 + 0.5) * this.direction;
         } else {
-          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.68 + r() * (waterHeight * 0.25);
-          this.speed = (r() * 0.5 + 0.25) * this.direction;
+          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + r() * (waterHeight * 0.22);
+          this.speed = (r() * 0.45 + 0.2) * this.direction;
         }
         this.isCaught = false;
       }
@@ -492,7 +489,6 @@ export default function CauCa2NPage() {
       update() {
         if (this.isCaught) return;
 
-        // TÍNH VỊ TRÍ X ĐỒNG BỘ 100% THEO THỜI GIAN CHUẨN
         const nowSec = Date.now() / 1000 + this.timeOffset;
         const totalDistance = width + this.size * 4;
         const rawPos = (nowSec * Math.abs(this.speed) * 60) % totalDistance;
@@ -600,8 +596,8 @@ export default function CauCa2NPage() {
       }
 
       reset() {
-        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 120) : boatX + 2 + Math.cos(-0.42) * 120;
-        let rodTipY = waterY - 32 + Math.sin(-0.42) * 120;
+        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 110) : boatX + 2 + Math.cos(-0.42) * 110;
+        let rodTipY = waterY - 28 + Math.sin(-0.42) * 110;
         this.x = rodTipX;
         this.y = rodTipY;
         this.state = "IDLE";
@@ -662,23 +658,23 @@ export default function CauCa2NPage() {
         }
         contributeJackpot(this.baitPrice);
 
-        let maxAllowedDepthRatio = 0.3;
+        let maxAllowedDepthRatio = 0.35;
         if (this.baitPrice >= 10000000) maxAllowedDepthRatio = 1.0;
-        else if (this.baitPrice >= 1000000) maxAllowedDepthRatio = 0.85;
-        else if (this.baitPrice >= 500000) maxAllowedDepthRatio = 0.7;
-        else if (this.baitPrice >= 100000) maxAllowedDepthRatio = 0.55;
-        else if (this.baitPrice >= 2000) maxAllowedDepthRatio = 0.45;
-        else maxAllowedDepthRatio = 0.35;
+        else if (this.baitPrice >= 1000000) maxAllowedDepthRatio = 0.88;
+        else if (this.baitPrice >= 500000) maxAllowedDepthRatio = 0.75;
+        else if (this.baitPrice >= 100000) maxAllowedDepthRatio = 0.6;
+        else if (this.baitPrice >= 2000) maxAllowedDepthRatio = 0.48;
+        else maxAllowedDepthRatio = 0.38;
 
         this.maxDepthY = waterY + (height - waterY) * maxAllowedDepthRatio;
 
-        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 120) : boatX + 2 + Math.cos(-0.42) * 120;
-        let rodTipY = waterY - 32 + Math.sin(-0.42) * 120;
+        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 110) : boatX + 2 + Math.cos(-0.42) * 110;
+        let rodTipY = waterY - 28 + Math.sin(-0.42) * 110;
 
         if (isPlayer2) {
-          this.targetWaterX = Math.min(width - 50, Math.max(rodTipX - (rodTipX - 80) * (this.power / 100), 80));
+          this.targetWaterX = Math.min(width - 40, Math.max(rodTipX - (rodTipX - 60) * (this.power / 100), 60));
         } else {
-          this.targetWaterX = Math.max(50, Math.min(rodTipX + (width - 80 - rodTipX) * (this.power / 100), width - 80));
+          this.targetWaterX = Math.max(40, Math.min(rodTipX + (width - 60 - rodTipX) * (this.power / 100), width - 60));
         }
 
         this.state = "CASTING";
@@ -743,8 +739,8 @@ export default function CauCa2NPage() {
       }
 
       update() {
-        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 120) : boatX + 2 + Math.cos(-0.42) * 120;
-        let rodTipY = waterY - 32 + Math.sin(-0.42) * 120;
+        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 110) : boatX + 2 + Math.cos(-0.42) * 110;
+        let rodTipY = waterY - 28 + Math.sin(-0.42) * 110;
 
         if (this.state === "IDLE" || this.state === "CHARGING") {
           this.x = rodTipX;
@@ -764,7 +760,7 @@ export default function CauCa2NPage() {
           }
           let t = this.castProgress;
           this.x = this.castStartX + (this.targetWaterX - this.castStartX) * t;
-          this.y = this.castStartY + (waterY - this.castStartY) * t - Math.sin(t * Math.PI) * 70;
+          this.y = this.castStartY + (waterY - this.castStartY) * t - Math.sin(t * Math.PI) * 60;
         } else if (this.state === "SINKING") {
           this.y += Math.min(2.5, 1.2 + this.baitPrice / 20000000);
 
@@ -784,19 +780,16 @@ export default function CauCa2NPage() {
             }
           }
 
-          // XỬ LÝ LOGIC CẮN MỒI & TUỘT CÁ ĐƯỢC ĐIỀU CHỈNH CHUẨN ĐÉT
           for (let f of fishes) {
             if (f.isCaught || Math.abs(this.y - f.y) > 40) continue;
 
             const isBigFish = f.layer === "bottom" || f.fishData.isRare;
 
             if (isBigFish) {
-              // Cá lớn BỎ QUA nếu dùng mồi quá nhỏ (< 10 Trụi)
               if (this.baitPrice < 10000000) {
                 continue;
               }
 
-              // Mồi Xịn (10,000,000🪙): Có 35% tỷ lệ TUỘT CÁ khi đớp!
               if (this.baitPrice === 10000000) {
                 let mouthX = f.direction === 1 ? f.x + f.size * 0.7 : f.x - f.size * 0.7;
                 let mouthY = f.y - f.size * 0.15;
@@ -823,7 +816,7 @@ export default function CauCa2NPage() {
           }
 
           if (this.state === "SINKING" && this.y >= this.maxDepthY) {
-            const isAtVeryBottom = this.y >= height - 80;
+            const isAtVeryBottom = this.y >= height - 40;
             if (isAtVeryBottom && !bottomTimer) {
               if (statusEl) {
                 statusEl.innerText = "Mồi chạm đáy! Chờ 3s...";
@@ -1034,8 +1027,8 @@ export default function CauCa2NPage() {
           drawX += (Math.random() - 0.5) * 14;
           drawY += (Math.random() - 0.5) * 14;
         }
-        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 120) : boatX + 2 + Math.cos(-0.42) * 120;
-        let rodTipY = waterY - 32 + Math.sin(-0.42) * 120;
+        let rodTipX = isPlayer2 ? boatX - (2 + Math.cos(-0.42) * 110) : boatX + 2 + Math.cos(-0.42) * 110;
+        let rodTipY = waterY - 28 + Math.sin(-0.42) * 110;
 
         ctx!.beginPath();
         ctx!.moveTo(rodTipX, rodTipY);
@@ -1075,39 +1068,35 @@ export default function CauCa2NPage() {
       drawHookAndBait(hx: number, hy: number) {
         if (typeof activeBaitImg !== "undefined" && activeBaitImg.complete && activeBaitImg.naturalWidth !== 0) {
           ctx!.imageSmoothingEnabled = false;
-          ctx!.drawImage(activeBaitImg, hx - 14, hy - 14, 28, 28);
+          ctx!.drawImage(activeBaitImg, hx - 12, hy - 12, 24, 24);
         } else {
           ctx!.fillStyle = "#FF9800";
           ctx!.beginPath();
-          ctx!.arc(hx, hy, 6, 0, Math.PI * 2);
+          ctx!.arc(hx, hy, 5, 0, Math.PI * 2);
           ctx!.fill();
         }
         ctx!.strokeStyle = "#B0BEC5";
-        ctx!.lineWidth = 2.5;
+        ctx!.lineWidth = 2;
         ctx!.beginPath();
-        ctx!.arc(hx, hy + 8, 5, 0, Math.PI, false);
-        ctx!.moveTo(hx + 5, hy + 8);
-        ctx!.lineTo(hx + 5, hy + 2);
+        ctx!.arc(hx, hy + 6, 4, 0, Math.PI, false);
+        ctx!.moveTo(hx + 4, hy + 6);
+        ctx!.lineTo(hx + 4, hy + 2);
         ctx!.stroke();
-        ctx!.fillStyle = "#FFFFFF";
-        ctx!.beginPath();
-        ctx!.arc(hx - 2, hy + 6, 1.5, 0, Math.PI * 2);
-        ctx!.fill();
       }
     }
 
     const fishes: Fish[] = [];
-    const computedWaterY = (canvas.height / (window.devicePixelRatio || 1)) * 0.3;
+    const computedWaterY = (canvas.height / (window.devicePixelRatio || 1)) * 0.26;
     const waterHeight = canvas.height / (window.devicePixelRatio || 1) - computedWaterY;
 
     for (let i = 0; i < Math.floor(roomRng() * 5) + 4; i++) {
-      fishes.push(new Fish("top", computedWaterY + 20 + ((waterHeight * 0.28) / 6) * i, undefined, roomRng));
+      fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 6) * i, undefined, roomRng));
     }
     for (let i = 0; i < Math.floor(roomRng() * 5) + 2; i++) {
-      fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.32) / 4) * i, undefined, roomRng));
+      fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 4) * i, undefined, roomRng));
     }
     for (let i = 0; i < Math.floor(roomRng() * 2) + 2; i++) {
-      fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.68 + ((waterHeight * 0.28) / 3) * i, undefined, roomRng));
+      fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 3) * i, undefined, roomRng));
     }
 
     const hook = new Hook();
@@ -1181,33 +1170,33 @@ export default function CauCa2NPage() {
 
     function initDecorationsMap() {
       if (loadedDecorImages.length === 0) return;
-      let clusterCenters = [80, 180, 320, width - 380, width - 220, width - 90, width / 2 - 100, width / 2 + 120];
+      let clusterCenters = [60, 150, 280, width - 320, width - 180, width - 70, width / 2 - 80, width / 2 + 90];
       for (let cx of clusterCenters) {
         let countInCluster = Math.floor(roomRng() * 2) + 1;
         for (let i = 0; i < countInCluster; i++) {
           const randomDecor = loadedDecorImages[Math.floor(roomRng() * loadedDecorImages.length)];
           let isWeed = randomDecor.filename.includes("rongbien") || randomDecor.filename.includes("taobien");
-          let w = 55 + roomRng() * 55;
-          let h = 50 + roomRng() * 50;
+          let w = 45 + roomRng() * 45;
+          let h = 40 + roomRng() * 40;
           if (randomDecor.filename.includes("sanho")) {
-            w = 85;
-            h = 70;
+            w = 70;
+            h = 55;
           }
           if (randomDecor.filename.includes("dabien")) {
-            w = 80;
-            h = 60;
+            w = 65;
+            h = 50;
           }
-          let offsetX = cx + (roomRng() - 0.5) * 70;
-          let itemY = height - h - roomRng() * 15;
+          let offsetX = cx + (roomRng() - 0.5) * 50;
+          let itemY = height - h - roomRng() * 10;
           placedDecorations.push({ imgObj: randomDecor, x: offsetX, y: itemY, width: w, height: h, isWeed, swayOffset: roomRng() * Math.PI * 2 });
           if (randomDecor.filename.includes("dabien")) {
-            for (let b = 0; b < 4; b++) {
+            for (let b = 0; b < 3; b++) {
               bubbles.push({
-                x: offsetX + w * 0.5 + (roomRng() - 0.5) * 30,
-                y: itemY + roomRng() * 20,
-                radius: roomRng() * 3 + 1.5,
-                speed: roomRng() * 0.6 + 0.3,
-                alpha: roomRng() * 0.6 + 0.3,
+                x: offsetX + w * 0.5 + (roomRng() - 0.5) * 20,
+                y: itemY + roomRng() * 15,
+                radius: roomRng() * 2.5 + 1,
+                speed: roomRng() * 0.5 + 0.2,
+                alpha: roomRng() * 0.5 + 0.3,
               });
             }
           }
@@ -1218,11 +1207,16 @@ export default function CauCa2NPage() {
 
     function drawOpponent() {
       if (!oppState) return;
-      oppCurrentBoatX += (oppTargetBoatX - oppCurrentBoatX) * 0.15;
+
+      if (Math.abs(oppTargetBoatX - oppCurrentBoatX) > 60) {
+        oppCurrentBoatX = oppTargetBoatX;
+      } else {
+        oppCurrentBoatX += (oppTargetBoatX - oppCurrentBoatX) * 0.25;
+      }
 
       const charX = oppCurrentBoatX;
-      const charY = waterY - 35;
-      const scaleFactor = 0.85;
+      const charY = waterY - 28;
+      const scaleFactor = 0.75; // Thu nhỏ thuyền mobile cho cân đối
 
       const oppIsPlayer2 = !isPlayer2;
 
@@ -1236,10 +1230,10 @@ export default function CauCa2NPage() {
 
       ctx!.fillStyle = "#5D4037";
       ctx!.beginPath();
-      ctx!.moveTo(-50, 20);
-      ctx!.lineTo(60, 20);
-      ctx!.lineTo(45, 36);
-      ctx!.lineTo(-35, 36);
+      ctx!.moveTo(-45, 18);
+      ctx!.lineTo(55, 18);
+      ctx!.lineTo(40, 32);
+      ctx!.lineTo(-30, 32);
       ctx!.closePath();
       ctx!.fill();
       ctx!.strokeStyle = "#3E2723";
@@ -1247,45 +1241,45 @@ export default function CauCa2NPage() {
       ctx!.stroke();
 
       ctx!.fillStyle = "#424242";
-      ctx!.fillRect(-12, -32, 24, 35);
+      ctx!.fillRect(-10, -28, 20, 30);
 
       const oppAvatarImg = new Image();
       oppAvatarImg.src = oppState.avatar;
       if (oppAvatarImg.complete && oppAvatarImg.naturalWidth !== 0) {
         ctx!.save();
         ctx!.beginPath();
-        ctx!.arc(0, -14, 15, 0, Math.PI * 2);
+        ctx!.arc(0, -12, 13, 0, Math.PI * 2);
         ctx!.closePath();
         ctx!.clip();
         if (oppIsPlayer2) ctx!.scale(-1, 1);
-        ctx!.drawImage(oppAvatarImg, -15, -29, 30, 30);
+        ctx!.drawImage(oppAvatarImg, -13, -25, 26, 26);
         ctx!.restore();
         ctx!.strokeStyle = "#00B0FF";
         ctx!.lineWidth = 2;
         ctx!.beginPath();
-        ctx!.arc(0, -14, 15, 0, Math.PI * 2);
+        ctx!.arc(0, -12, 13, 0, Math.PI * 2);
         ctx!.stroke();
       } else {
         ctx!.fillStyle = "#00B0FF";
         ctx!.beginPath();
-        ctx!.arc(0, -14, 13, 0, Math.PI * 2);
+        ctx!.arc(0, -12, 11, 0, Math.PI * 2);
         ctx!.fill();
       }
 
       const oppRodImg = new Image();
       oppRodImg.src = `/assets/cauca/cancau/${oppState.rodFilename}`;
       ctx!.save();
-      ctx!.translate(2, -12);
+      ctx!.translate(2, -10);
       ctx!.rotate(oppState.hookState === "CHARGING" ? -0.5 : -0.42);
       if (oppRodImg.complete && oppRodImg.naturalWidth !== 0) {
-        ctx!.drawImage(oppRodImg, 0, -14, 135, 45);
+        ctx!.drawImage(oppRodImg, 0, -12, 110, 38);
       } else {
         ctx!.strokeStyle = "#5D4037";
-        ctx!.lineWidth = 5;
+        ctx!.lineWidth = 4;
         ctx!.lineCap = "round";
         ctx!.beginPath();
         ctx!.moveTo(0, 0);
-        ctx!.lineTo(110, -35);
+        ctx!.lineTo(90, -30);
         ctx!.stroke();
       }
       ctx!.restore();
@@ -1293,27 +1287,27 @@ export default function CauCa2NPage() {
       ctx!.restore();
 
       let oppRodTipX = oppIsPlayer2 
-        ? charX - scaleFactor * (2 + Math.cos(-0.42) * 120)
-        : charX + scaleFactor * (2 + Math.cos(-0.42) * 120);
-      let oppRodTipY = charY + scaleFactor * (-12 + Math.sin(-0.42) * 120);
+        ? charX - scaleFactor * (2 + Math.cos(-0.42) * 110)
+        : charX + scaleFactor * (2 + Math.cos(-0.42) * 110);
+      let oppRodTipY = charY + scaleFactor * (-10 + Math.sin(-0.42) * 110);
       let oppHookX = oppState.hookX;
       let oppHookY = oppState.hookY;
 
       ctx!.beginPath();
       ctx!.moveTo(oppRodTipX, oppRodTipY);
       if (oppState.hookState === "IDLE" || oppState.hookState === "CHARGING") {
-        ctx!.lineTo(oppRodTipX, oppRodTipY + 20);
+        ctx!.lineTo(oppRodTipX, oppRodTipY + 15);
         ctx!.strokeStyle = "rgba(255,255,255,0.5)";
         ctx!.lineWidth = 1.5;
         ctx!.stroke();
       } else {
-        ctx!.quadraticCurveTo((oppRodTipX + oppHookX) / 2, Math.min(oppRodTipY, oppHookY) - 30, oppHookX, oppHookY);
+        ctx!.quadraticCurveTo((oppRodTipX + oppHookX) / 2, Math.min(oppRodTipY, oppHookY) - 25, oppHookX, oppHookY);
         ctx!.strokeStyle = "rgba(255,255,255,0.5)";
         ctx!.lineWidth = 1.5;
         ctx!.stroke();
         ctx!.fillStyle = "#FF9800";
         ctx!.beginPath();
-        ctx!.arc(oppHookX, oppHookY, 6, 0, Math.PI * 2);
+        ctx!.arc(oppHookX, oppHookY, 5, 0, Math.PI * 2);
         ctx!.fill();
       }
     }
@@ -1323,7 +1317,7 @@ export default function CauCa2NPage() {
       ctx!.fillRect(0, 0, width, waterY);
       ctx!.fillStyle = "#FFEB3B";
       ctx!.beginPath();
-      ctx!.arc(width * 0.8, height * 0.1, 40, 0, Math.PI * 2);
+      ctx!.arc(width * 0.8, height * 0.08, 35, 0, Math.PI * 2);
       ctx!.fill();
 
       let grad = ctx!.createLinearGradient(0, waterY, 0, height);
@@ -1338,7 +1332,7 @@ export default function CauCa2NPage() {
         if (img && img.complete && img.naturalWidth !== 0) {
           ctx!.save();
           if (item.isWeed) {
-            let sway = Math.sin(now * 0.0025 + item.swayOffset) * 6;
+            let sway = Math.sin(now * 0.0025 + item.swayOffset) * 5;
             ctx!.translate(item.x + item.width / 2, item.y + item.height);
             ctx!.transform(1, 0, sway / item.height, 1, 0, 0);
             ctx!.drawImage(img, -item.width / 2, -item.height, item.width, item.height);
@@ -1351,8 +1345,8 @@ export default function CauCa2NPage() {
       ctx!.fillStyle = "rgba(255, 255, 255, 0.65)";
       for (let b of bubbles) {
         b.y -= b.speed;
-        b.x += Math.sin(now * 0.003 + b.y) * 0.4;
-        if (b.y < waterY + 40) b.y = height - 30;
+        b.x += Math.sin(now * 0.003 + b.y) * 0.3;
+        if (b.y < waterY + 30) b.y = height - 20;
         ctx!.beginPath();
         ctx!.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
         ctx!.fillStyle = `rgba(255, 255, 255, ${b.alpha})`;
@@ -1360,31 +1354,34 @@ export default function CauCa2NPage() {
       }
 
       ctx!.fillStyle = "rgba(255,255,255,0.25)";
-      ctx!.fillRect(0, waterY, width, 4);
+      ctx!.fillRect(0, waterY, width, 3);
 
       drawOpponent();
 
       if (boatSpeed !== 0 && hook.state === "IDLE") {
         boatX += boatSpeed;
-        if (boatX < 50) boatX = 50;
-        if (boatX > width - 120) boatX = width - 120;
+        if (boatX < 40) boatX = 40;
+        if (boatX > width - 100) boatX = width - 100;
       }
 
       const charX = boatX;
-      const charY = waterY - 15;
+      const charY = waterY - 12;
+      const scaleFactor = 0.75;
 
       ctx!.save();
       ctx!.translate(charX, charY);
       if (isPlayer2) {
-        ctx!.scale(-1, 1);
+        ctx!.scale(-scaleFactor, scaleFactor);
+      } else {
+        ctx!.scale(scaleFactor, scaleFactor);
       }
 
       ctx!.fillStyle = "#8D6E63";
       ctx!.beginPath();
-      ctx!.moveTo(-50, 15);
-      ctx!.lineTo(60, 15);
-      ctx!.lineTo(45, 31);
-      ctx!.lineTo(-35, 31);
+      ctx!.moveTo(-45, 15);
+      ctx!.lineTo(55, 15);
+      ctx!.lineTo(40, 28);
+      ctx!.lineTo(-30, 28);
       ctx!.closePath();
       ctx!.fill();
       ctx!.strokeStyle = "#3E2723";
@@ -1392,43 +1389,43 @@ export default function CauCa2NPage() {
       ctx!.stroke();
 
       ctx!.fillStyle = "#212121";
-      ctx!.fillRect(-12, -17, 24, 35);
+      ctx!.fillRect(-10, -15, 20, 30);
 
       const avatarImg = new Image();
       avatarImg.src = userAvatar;
       if (avatarImg.complete && avatarImg.naturalWidth !== 0) {
         ctx!.save();
         ctx!.beginPath();
-        ctx!.arc(0, 1, 15, 0, Math.PI * 2);
+        ctx!.arc(0, 0, 13, 0, Math.PI * 2);
         ctx!.closePath();
         ctx!.clip();
         if (isPlayer2) ctx!.scale(-1, 1);
-        ctx!.drawImage(avatarImg, -15, -14, 30, 30);
+        ctx!.drawImage(avatarImg, -13, -13, 26, 26);
         ctx!.restore();
         ctx!.strokeStyle = "#FFD700";
         ctx!.lineWidth = 2;
         ctx!.beginPath();
-        ctx!.arc(0, 1, 15, 0, Math.PI * 2);
+        ctx!.arc(0, 0, 13, 0, Math.PI * 2);
         ctx!.stroke();
       } else {
         ctx!.fillStyle = "#FFD700";
         ctx!.beginPath();
-        ctx!.arc(0, 1, 13, 0, Math.PI * 2);
+        ctx!.arc(0, 0, 11, 0, Math.PI * 2);
         ctx!.fill();
       }
 
       ctx!.save();
-      ctx!.translate(2, 3);
+      ctx!.translate(2, 2);
       ctx!.rotate(hook.state === "CHARGING" ? -0.5 : -0.42);
       if (rodImg && rodImg.complete && rodImg.naturalWidth !== 0) {
-        ctx!.drawImage(rodImg, 0, -14, 135, 45);
+        ctx!.drawImage(rodImg, 0, -12, 110, 38);
       } else {
         ctx!.strokeStyle = "#8B4513";
-        ctx!.lineWidth = 5;
+        ctx!.lineWidth = 4;
         ctx!.lineCap = "round";
         ctx!.beginPath();
         ctx!.moveTo(0, 0);
-        ctx!.lineTo(110, -35);
+        ctx!.lineTo(90, -30);
         ctx!.stroke();
       }
       ctx!.restore();
@@ -1446,7 +1443,7 @@ export default function CauCa2NPage() {
         }
         ctx!.save();
         ctx!.globalAlpha = p.alpha;
-        ctx!.font = `900 ${Math.round(20 * p.scale)}px sans-serif`;
+        ctx!.font = `900 ${Math.round(18 * p.scale)}px sans-serif`;
         ctx!.fillStyle = "#FFD700";
         ctx!.strokeStyle = "#000000";
         ctx!.lineWidth = 3;
@@ -1599,31 +1596,32 @@ export default function CauCa2NPage() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: "manipulation" }}>
-      <div className="absolute top-2 left-2 right-2 flex justify-between items-start z-50 pointer-events-auto">
-        <div className="flex items-center space-x-1.5">
+      {/* THANH TOP HEADER COMPACT CHO MOBILE */}
+      <div className="absolute top-1 left-1 right-1 flex justify-between items-center z-50 pointer-events-auto gap-1">
+        <div className="flex items-center space-x-1">
           <button
             onClick={leaveRoom}
-            className="bg-rose-900/95 text-rose-200 hover:bg-rose-800 px-2.5 py-1.5 rounded-lg text-[9px] font-black border border-rose-500/40 shadow cursor-pointer"
+            className="bg-rose-900/95 text-rose-200 hover:bg-rose-800 px-2 py-1 rounded-md text-[8px] sm:text-[9px] font-black border border-rose-500/40 shadow cursor-pointer"
           >
-            ← Rời Phòng
+            ← Rời
           </button>
-          <div className="bg-black/85 text-white px-2.5 py-1.5 rounded-lg font-bold text-[9px] border border-amber-500/40 shadow flex items-center gap-1.5">
-            <img src={userAvatar} alt="Avatar" className="w-4 h-4 rounded-full border border-amber-400 object-cover" />
+          <div className="bg-black/85 text-white px-2 py-1 rounded-md font-bold text-[8px] sm:text-[9px] border border-amber-500/40 shadow flex items-center gap-1">
+            <img src={userAvatar} alt="Avatar" className="w-3.5 h-3.5 rounded-full border border-amber-400 object-cover" />
             <span>
               <span id="score" className="text-[#FFEB3B] font-black">
                 {isMounted ? score.toLocaleString() : "..."}
-              </span>{" "}
-              🪙
+              </span>🪙
             </span>
           </div>
           <button
             onClick={() => setIsShopOpen(true)}
-            className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-2.5 py-1.5 rounded-lg font-black text-[9px] shadow-lg active:scale-95 transition cursor-pointer flex items-center gap-1 border border-white/40"
+            className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-2 py-1 rounded-md font-black text-[8px] sm:text-[9px] shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40"
           >
-            🛍️ Shop Cần
+            🛍️ Shop
           </button>
         </div>
-        <div className="flex items-center gap-1.5">
+
+        <div className="flex items-center gap-1">
           <button
             onClick={() => {
               if (!document.fullscreenElement) {
@@ -1634,44 +1632,46 @@ export default function CauCa2NPage() {
                 setIsFullscreen(false);
               }
             }}
-            className="bg-slate-800/90 hover:bg-slate-700 text-white font-bold py-1.5 px-2.5 rounded-lg text-[9px] border border-slate-700 shadow"
+            className="bg-slate-800/90 text-white font-bold py-1 px-2 rounded-md text-[8px] sm:text-[9px] border border-slate-700 shadow hidden sm:block"
           >
-            {isFullscreen ? "🗗 Thu Nhỏ" : "🖵 Toàn Màn Hình"}
+            {isFullscreen ? "🗗 Thu Nhỏ" : "🖵 Full"}
           </button>
         </div>
       </div>
 
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-slate-950/90 border border-amber-500/60 px-3 py-1 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none">
+      {/* JACKPOT BOARD THU NHỎ */}
+      <div className="absolute top-9 left-1/2 -translate-x-1/2 z-30 bg-slate-950/90 border border-amber-500/60 px-2.5 py-0.5 rounded-lg shadow-xl flex items-center space-x-2 pointer-events-none scale-90 sm:scale-100">
         <div className="text-center">
-          <span className="text-[7px] font-bold text-slate-300 block">CÁ TRÁI ĐẤT</span>
-          <span className="text-[10px] sm:text-xs font-black text-amber-300">{isMounted ? jackpot.minor.toLocaleString("en-US") : "..."} 🪙</span>
+          <span className="text-[6px] font-bold text-slate-300 block">CÁ TRÁI ĐẤT</span>
+          <span className="text-[9px] font-black text-amber-300">{isMounted ? jackpot.minor.toLocaleString("en-US") : "..."}🪙</span>
         </div>
-        <div className="h-5 w-[1px] bg-amber-500/30"></div>
+        <div className="h-4 w-[1px] bg-amber-500/30"></div>
         <div className="text-center">
-          <span className="text-[7px] font-bold text-red-400 block">CÁ SIÊU CẤP</span>
-          <span className="text-[10px] sm:text-xs font-black text-red-500 animate-pulse">{isMounted ? jackpot.grand.toLocaleString("en-US") : "..."} 🪙</span>
+          <span className="text-[6px] font-bold text-red-400 block">CÁ SIÊU CẤP</span>
+          <span className="text-[9px] font-black text-red-500 animate-pulse">{isMounted ? jackpot.grand.toLocaleString("en-US") : "..."}🪙</span>
         </div>
-        <div className="h-5 w-[1px] bg-amber-500/30"></div>
+        <div className="h-4 w-[1px] bg-amber-500/30"></div>
         <div className="text-center">
-          <span className="text-[7px] font-bold text-blue-400 block">CÁ NAMEK</span>
-          <span className="text-[10px] sm:text-xs font-black text-cyan-400">{isMounted ? jackpot.major.toLocaleString("en-US") : "..."} 🪙</span>
+          <span className="text-[6px] font-bold text-blue-400 block">CÁ NAMEK</span>
+          <span className="text-[9px] font-black text-cyan-400">{isMounted ? jackpot.major.toLocaleString("en-US") : "..."}🪙</span>
         </div>
       </div>
 
-      <div className="absolute top-12 right-2 z-50 pointer-events-auto">
+      {/* DROPDOWN CHỌN MỒI GÓC PHẢI */}
+      <div className="absolute top-1 right-1 z-50 pointer-events-auto">
         <div className="relative">
           <button
             onClick={() => setIsBaitDropdownOpen(!isBaitDropdownOpen)}
-            className="bg-slate-900/95 hover:bg-slate-800 border border-amber-500/70 px-3 py-1.5 rounded-xl shadow-2xl flex items-center space-x-2 text-amber-300 text-[10px] font-black cursor-pointer transition select-none"
+            className="bg-slate-900/95 hover:bg-slate-800 border border-amber-500/70 px-2 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-amber-300 text-[8px] sm:text-[9px] font-black cursor-pointer transition select-none"
           >
             <span>🪱</span>
-            <span className="truncate max-w-[140px]">{selectedBait.name}</span>
-            <span className="text-[9px]">{isBaitDropdownOpen ? "▲" : "▼"}</span>
+            <span className="truncate max-w-[100px] sm:max-w-[130px]">{selectedBait.name}</span>
+            <span>{isBaitDropdownOpen ? "▲" : "▼"}</span>
           </button>
           {isBaitDropdownOpen && (
-            <div className="absolute right-0 mt-1 w-52 bg-slate-950/98 border-2 border-amber-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
+            <div className="absolute right-0 mt-1 w-48 bg-slate-950/98 border-2 border-amber-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
               <div className="px-2 py-1 text-[8px] font-black text-amber-400 uppercase border-b border-slate-800">Chọn Mồi Câu</div>
-              <div className="max-h-56 overflow-y-auto space-y-1 pr-0.5">
+              <div className="max-h-48 overflow-y-auto space-y-1 pr-0.5">
                 {baitList.map((bait) => (
                   <button
                     key={bait.cost}
@@ -1681,7 +1681,7 @@ export default function CauCa2NPage() {
                       window.dispatchEvent(new CustomEvent("changeBait", { detail: bait.cost }));
                       window.dispatchEvent(new CustomEvent("changeBaitImg", { detail: bait }));
                     }}
-                    className={`w-full text-left px-2.5 py-2 rounded-lg text-[10px] font-black transition cursor-pointer flex items-center justify-between ${
+                    className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center justify-between ${
                       selectedBait.cost === bait.cost
                         ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 shadow"
                         : "bg-slate-900 text-slate-200 hover:bg-slate-800"
@@ -1697,7 +1697,7 @@ export default function CauCa2NPage() {
       </div>
 
       {oppAlert && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-white px-4 py-1.5 rounded-xl font-black text-xs shadow-lg animate-bounce border border-emerald-300 pointer-events-none">
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-white px-3 py-1 rounded-lg font-black text-[10px] shadow-lg animate-bounce border border-emerald-300 pointer-events-none">
           {oppAlert}
         </div>
       )}
@@ -1833,28 +1833,29 @@ export default function CauCa2NPage() {
 
       {popupData && popupData.show && (
         <div
-          className={`absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-bounce text-center bg-slate-950/95 border-4 px-5 py-3 rounded-2xl shadow-2xl space-y-1 max-w-sm ${
+          className={`absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-bounce text-center bg-slate-950/95 border-4 px-4 py-2 rounded-xl shadow-2xl space-y-1 max-w-xs ${
             popupData.type === "beerus"
-              ? "border-rose-500 shadow-[0_0_40px_rgba(244,67,54,0.6)]"
+              ? "border-rose-500 shadow-[0_0_30px_rgba(244,67,54,0.6)]"
               : popupData.type === "coop"
-              ? "border-emerald-400 shadow-[0_0_40px_rgba(52,211,153,0.6)]"
-              : "border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.6)]"
+              ? "border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.6)]"
+              : "border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.6)]"
           }`}
         >
           <p
-            className={`font-black text-[10px] sm:text-xs tracking-widest uppercase ${
+            className={`font-black text-[9px] sm:text-[10px] tracking-widest uppercase ${
               popupData.type === "beerus" ? "text-rose-400" : popupData.type === "coop" ? "text-emerald-300" : "text-amber-300"
             }`}
           >
             {popupData.title}
           </p>
-          <p className="text-white font-black text-xs sm:text-sm leading-snug whitespace-pre-line drop-shadow-[2px_2px_0_#000]">
+          <p className="text-white font-black text-[10px] sm:text-xs leading-snug whitespace-pre-line drop-shadow-[2px_2px_0_#000]">
             {popupData.message}
           </p>
         </div>
       )}
 
-      <div className="absolute bottom-3 left-3 z-40 flex items-center space-x-2 bg-black/80 p-2 rounded-xl border border-amber-500/60 shadow-2xl backdrop-blur-md pointer-events-auto">
+      {/* NÚT ĐIỀU KHIỂN CHÈO THUYỀN GÓC DƯỚI TRÁI */}
+      <div className="absolute bottom-2 left-2 z-40 flex items-center space-x-1.5 bg-black/80 p-1.5 rounded-xl border border-amber-500/60 shadow-xl backdrop-blur-md pointer-events-auto">
         <button
           onMouseDown={(e) => {
             e.stopPropagation();
@@ -1876,11 +1877,11 @@ export default function CauCa2NPage() {
             e.stopPropagation();
             window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 }));
           }}
-          className="w-11 h-11 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-lg rounded-xl active:scale-90 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
+          className="w-9 h-9 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-sm rounded-lg active:scale-90 transition shadow cursor-pointer flex items-center justify-center select-none"
         >
           ◀
         </button>
-        <span className="text-[10px] font-black text-amber-300 uppercase px-1">Chèo</span>
+        <span className="text-[9px] font-black text-amber-300 uppercase px-0.5">Chèo</span>
         <button
           onMouseDown={(e) => {
             e.stopPropagation();
@@ -1902,7 +1903,7 @@ export default function CauCa2NPage() {
             e.stopPropagation();
             window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 }));
           }}
-          className="w-11 h-11 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-lg rounded-xl active:scale-90 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
+          className="w-9 h-9 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-sm rounded-lg active:scale-90 transition shadow cursor-pointer flex items-center justify-center select-none"
         >
           ▶
         </button>
@@ -1910,11 +1911,11 @@ export default function CauCa2NPage() {
 
       <div
         id="power-container"
-        className="absolute bottom-12 left-1/2 -translate-x-1/2 w-[200px] h-[20px] bg-black/70 rounded-xl border-2 border-white hidden pointer-events-none overflow-hidden shadow-lg z-30"
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[160px] h-[16px] bg-black/70 rounded-lg border border-white hidden pointer-events-none overflow-hidden shadow-lg z-30"
       >
         <div id="power-bar" className="w-[0%] h-full bg-gradient-to-r from-[#4CAF50] via-[#FFEB3B] to-[#F44336] transition-all duration-75"></div>
       </div>
-      <div id="status" className="absolute bottom-20 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs font-black drop-shadow-[1px_1px_1px_#000] text-center w-full z-30 pointer-events-none text-white">
+      <div id="status" className="absolute bottom-14 left-1/2 -translate-x-1/2 text-[9px] sm:text-[10px] font-black drop-shadow-[1px_1px_1px_#000] text-center w-full z-30 pointer-events-none text-white">
         Sẵn sàng
       </div>
 
