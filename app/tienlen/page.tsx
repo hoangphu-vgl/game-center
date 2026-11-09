@@ -1,31 +1,19 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-
-// --- CẤU HÌNH SUPABASE ---
-const supabaseUrl = "https://iaejbvlibjfpdwuqfszp.supabase.co";
-const supabaseKey = "sb_publishable_Bf1jY3-FAjFRij0LMn5FLQ_nLrw2MUE";
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-  },
-});
+import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 const BET_OPTIONS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
 
 // KỸ NĂNG TIẾN LÊN (13 ẤN KÝ)
 const TIENLEN_SKILL_ITEMS = [
-  { id: "tl_1", name: "🌀 Biến Hóa Bài", desc: "Đổi 1 lá bài rác thành lá bài ngẫu nhiên không trùng với bài đối thủ đang giữ.", price: 150000, icon: "🌀", addCount: 1 },
-  { id: "tl_2", name: "👁️ Thấu Thị Thiên Hãn", desc: "Xem chính xác số lượng bài còn lại của các đối thủ trên lôi đài.", price: 50000, icon: "👁️", addCount: 1 },
-  { id: "tl_3", name: "⚡ Chặt Chém Thần Tốc", desc: "Dùng đôi thông hoặc tứ quý nhỏ chặt Heo (2) không cần vòng.", price: 100000, icon: "⚡", addCount: 1 },
-  { id: "tl_4", name: "🛡️ Giáp Sắt Saiyan", desc: "Giảm 50% điểm phạt khi có người chơi khác đánh Thắng Trắng (+5 lượt/mua).", price: 50000, icon: "🛡️", addCount: 5 },
-  { id: "tl_5", name: "👑 Uy Lực Bá Chủ", desc: "Giành quyền đánh trước ở ván đấu tiếp theo không cần dựa vào 3 bích.", price: 300000, icon: "👑", addCount: 1 },
+  { id: "tl_1", name: "🌀 Biến Hóa Bài", desc: "Đổi 1 lá bài rác thành lá bài ngẫu nhiên không trùng", price: 5000, addCount: 3, icon: "🌀" },
+  { id: "tl_2", name: "👁️ Thấu Thị Thiên Hãn", desc: "Xem chính xác số lượng bài còn lại của các đối thủ", price: 8000, addCount: 3, icon: "👁️" },
+  { id: "tl_3", name: "⚡ Chặt Chém Thần Tốc", desc: "Dùng đôi thông hoặc tứ quý nhỏ chặt Heo (2)", price: 10000, addCount: 2, icon: "⚡" },
+  { id: "tl_4", name: "🛡️ Giáp Sắt Saiyan", desc: "Giảm 50% điểm phạt khi có người chơi khác đánh Heo", price: 12000, addCount: 3, icon: "🛡️" },
+  { id: "tl_5", name: "👑 Uy Lực Bá Chủ", desc: "Giành quyền đánh trước ở ván đấu tiếp theo không cần tới 3 bích", price: 15000, addCount: 2, icon: "👑" }
 ];
 
 const ANIME_QUOTES = {
@@ -476,7 +464,7 @@ export default function TienLenOnlineVip() {
       }
 
       navigator.sendBeacon(
-        `${supabaseUrl}/rest/v1/tienlen_rooms?id=eq.${rId}`,
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/tienlen_rooms?id=eq.${rId}`,
         JSON.stringify({ state: updatedState })
       );
     };
@@ -520,26 +508,7 @@ export default function TienLenOnlineVip() {
     };
   }, [currentPhase, roomId]);
 
-  useEffect(() => {
-    if (!roomData || roomData.status !== "PLAYING" || !roomData.currentTurnId) return;
-
-    setTurnTimeLeft(15);
-    const deadline = Date.now() + 15000;
-
-    const timer = setInterval(() => {
-      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      setTurnTimeLeft(left);
-
-      if (left === 0 && roomData.currentTurnId === myUserId) {
-        clearInterval(timer);
-        handlePassTurnAuto();
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [roomData?.currentTurnId, roomData?.status]);
-
-  const handlePassTurnAuto = async () => {
+  const handlePassTurnAuto = useCallback(async () => {
     if (!roomData || roomData.currentTurnId !== myUserId) return;
     if (roomData.tableCards.length === 0) {
       const me = roomData.players.find(p => p.id === myUserId);
@@ -585,7 +554,88 @@ export default function TienLenOnlineVip() {
         chopMessage: "⏰ Quá 15s! Tự động né tránh (bỏ lượt)."
       });
     }
-  };
+  }, [roomData, myUserId]);
+
+  useEffect(() => {
+    if (!roomData || roomData.status !== "PLAYING" || !roomData.currentTurnId) return;
+
+    setTurnTimeLeft(15);
+    const deadline = Date.now() + 15000;
+
+    const timer = setInterval(() => {
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setTurnTimeLeft(left);
+
+      if (left === 0 && roomData.currentTurnId === myUserId) {
+        clearInterval(timer);
+        handlePassTurnAuto();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [roomData?.currentTurnId, roomData?.status, myUserId, handlePassTurnAuto]);
+
+  const handleStartGame = useCallback(async (stateToStart: RoomState) => {
+    let deck: Card[] = [];
+    for (let r = 0; r < RANKS.length; r++) {
+      for (let s = 0; s < SUITS.length; s++) {
+        deck.push({ id: `${RANKS[r]}_${SUITS[s]}`, rank: RANKS[r], suit: SUITS[s], rankValue: r + 3, suitValue: s, selected: false });
+      }
+    }
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+
+    let deckIndex = 0;
+    const updatedPlayers = stateToStart.players.map(p => {
+      if (p.isReady) {
+        let hand = deck.slice(deckIndex * 13, (deckIndex + 1) * 13);
+        hand.sort((a, b) => compareCards(a, b));
+        deckIndex++;
+        return {
+          ...p,
+          isSpectator: false,
+          hand: hand,
+          hasPassed: false,
+          quote: ANIME_QUOTES.START[Math.floor(Math.random() * ANIME_QUOTES.START.length)],
+          usedSkillThisMatch: false
+        };
+      } else {
+        return {
+          ...p,
+          isSpectator: true,
+          hand: [],
+          hasPassed: true,
+          quote: "Ta tọa sơn quan hổ đấu!",
+          usedSkillThisMatch: false
+        };
+      }
+    });
+
+    const activePlayers = updatedPlayers.filter(p => !p.isSpectator);
+    let firstTurnId = activePlayers[0]?.id;
+
+    if (stateToStart.lastWinnerId && activePlayers.find(p => p.id === stateToStart.lastWinnerId)) {
+      firstTurnId = stateToStart.lastWinnerId;
+    } else {
+      const playerWith3Bich = activePlayers.find(p => p.hand.find(c => c.id === "3_Bích"));
+      if (playerWith3Bich) firstTurnId = playerWith3Bich.id;
+    }
+
+    await updateRoomState({
+      status: "PLAYING",
+      players: updatedPlayers,
+      tableCards: [],
+      currentTurnId: firstTurnId,
+      passCount: 0,
+      winnerName: null,
+      chopMessage: null,
+      snatchActive: false,
+      snatchTargetId: null,
+      snatchSnatcherId: null
+    });
+  }, []);
 
   useEffect(() => {
     if (!roomData || roomData.status !== "COUNTDOWN" || roomData.players[0]?.id !== myUserId) return;
@@ -598,7 +648,7 @@ export default function TienLenOnlineVip() {
     } else {
       handleStartGame(roomData);
     }
-  }, [roomData?.status, roomData?.countdown]);
+  }, [roomData?.status, roomData?.countdown, roomData?.players, myUserId, handleStartGame]);
 
   useEffect(() => {
     if (!roomData || !roomData.snatchActive || roomData.snatchSnatcherId !== myUserId) return;
@@ -623,7 +673,7 @@ export default function TienLenOnlineVip() {
     }, 10000);
 
     return () => clearTimeout(timer);
-  }, [roomData?.snatchActive, roomData?.snatchSnatcherId]);
+  }, [roomData?.snatchActive, roomData?.snatchSnatcherId, roomData?.players, myUserId]);
 
   const handleJoinRoom = async (selectedRoom: string) => {
     if (isJoining) return;
@@ -714,68 +764,6 @@ export default function TienLenOnlineVip() {
     }
 
     await updateRoomState({ players: newPlayers, status: newStatus, countdown: newCountdown });
-  };
-
-  const handleStartGame = async (stateToStart: RoomState) => {
-    let deck: Card[] = [];
-    for (let r = 0; r < RANKS.length; r++) {
-      for (let s = 0; s < SUITS.length; s++) {
-        deck.push({ id: `${RANKS[r]}_${SUITS[s]}`, rank: RANKS[r], suit: SUITS[s], rankValue: r + 3, suitValue: s, selected: false });
-      }
-    }
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
-    let deckIndex = 0;
-    const updatedPlayers = stateToStart.players.map(p => {
-      if (p.isReady) {
-        let hand = deck.slice(deckIndex * 13, (deckIndex + 1) * 13);
-        hand.sort((a, b) => compareCards(a, b));
-        deckIndex++;
-        return {
-          ...p,
-          isSpectator: false,
-          hand: hand,
-          hasPassed: false,
-          quote: ANIME_QUOTES.START[Math.floor(Math.random() * ANIME_QUOTES.START.length)],
-          usedSkillThisMatch: false
-        };
-      } else {
-        return {
-          ...p,
-          isSpectator: true,
-          hand: [],
-          hasPassed: true,
-          quote: "Ta tọa sơn quan hổ đấu!",
-          usedSkillThisMatch: false
-        };
-      }
-    });
-
-    const activePlayers = updatedPlayers.filter(p => !p.isSpectator);
-    let firstTurnId = activePlayers[0]?.id;
-
-    if (stateToStart.lastWinnerId && activePlayers.find(p => p.id === stateToStart.lastWinnerId)) {
-      firstTurnId = stateToStart.lastWinnerId;
-    } else {
-      const playerWith3Bich = activePlayers.find(p => p.hand.find(c => c.id === "3_Bích"));
-      if (playerWith3Bich) firstTurnId = playerWith3Bich.id;
-    }
-
-    await updateRoomState({
-      status: "PLAYING",
-      players: updatedPlayers,
-      tableCards: [],
-      currentTurnId: firstTurnId,
-      passCount: 0,
-      winnerName: null,
-      chopMessage: null,
-      snatchActive: false,
-      snatchTargetId: null,
-      snatchSnatcherId: null
-    });
   };
 
   const getNextTurnPlayerId = (currentPlayers: PlayerState[], currentId: string) => {
