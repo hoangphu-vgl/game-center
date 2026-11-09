@@ -404,6 +404,8 @@ export default function CauCa2NPage() {
     const isPlayer2 = currentSlot === "player_2";
     let boatX: number = isPlayer2 ? width * 0.75 : width * 0.25;
     let boatSpeed: number = 0;
+    // Biến ghi nhận hướng nhìn của người chơi: mặc định player_2 hướng trái (-1), player_1 hướng phải (1)
+    let boatFacing: number = isPlayer2 ? -1 : 1;
     let bottomTimer: NodeJS.Timeout | null = null;
 
     let oppState: any = null;
@@ -589,6 +591,8 @@ export default function CauCa2NPage() {
 
     const moveBoatListener = (e: any) => {
       boatSpeed = e.detail;
+      if (boatSpeed < 0) boatFacing = -1; // Quay trái
+      else if (boatSpeed > 0) boatFacing = 1;  // Quay phải
     };
     window.addEventListener("moveBoat", moveBoatListener);
 
@@ -624,9 +628,9 @@ export default function CauCa2NPage() {
       }
 
       reset() {
-        const scaleFactor = 0.75;
-        // Tọa độ đầu cần chuẩn hóa tuyệt đối theo thuyền của từng bên (tránh lệch tọa độ PC/Mobile)
-        let rodTipX = isPlayer2 
+        // Scale nhỏ lại 0.62 cho thuyền và người chơi gọn gàng
+        const scaleFactor = 0.62;
+        let rodTipX = boatFacing === -1
           ? boatX - scaleFactor * (2 + Math.cos(-0.42) * 110)
           : boatX + scaleFactor * (2 + Math.cos(-0.42) * 110);
         let rodTipY = waterY - 12 + scaleFactor * (-10 + Math.sin(-0.42) * 110);
@@ -701,13 +705,13 @@ export default function CauCa2NPage() {
 
         this.maxDepthY = waterY + (height - waterY) * maxAllowedDepthRatio;
 
-        const scaleFactor = 0.75;
-        let rodTipX = isPlayer2 
+        const scaleFactor = 0.62;
+        let rodTipX = boatFacing === -1
           ? boatX - scaleFactor * (2 + Math.cos(-0.42) * 110)
           : boatX + scaleFactor * (2 + Math.cos(-0.42) * 110);
         let rodTipY = waterY - 12 + scaleFactor * (-10 + Math.sin(-0.42) * 110);
 
-        if (isPlayer2) {
+        if (boatFacing === -1) {
           this.targetWaterX = Math.min(width - 40, Math.max(rodTipX - (rodTipX - 60) * (this.power / 100), 60));
         } else {
           this.targetWaterX = Math.max(40, Math.min(rodTipX + (width - 60 - rodTipX) * (this.power / 100), width - 60));
@@ -775,8 +779,8 @@ export default function CauCa2NPage() {
       }
 
       update() {
-        const scaleFactor = 0.75;
-        let rodTipX = isPlayer2 
+        const scaleFactor = 0.62;
+        let rodTipX = boatFacing === -1
           ? boatX - scaleFactor * (2 + Math.cos(-0.42) * 110)
           : boatX + scaleFactor * (2 + Math.cos(-0.42) * 110);
         let rodTipY = waterY - 12 + scaleFactor * (-10 + Math.sin(-0.42) * 110);
@@ -1068,8 +1072,8 @@ export default function CauCa2NPage() {
           drawX += (Math.random() - 0.5) * 14;
           drawY += (Math.random() - 0.5) * 14;
         }
-        const scaleFactor = 0.75;
-        let rodTipX = isPlayer2 
+        const scaleFactor = 0.62;
+        let rodTipX = boatFacing === -1
           ? boatX - scaleFactor * (2 + Math.cos(-0.42) * 110)
           : boatX + scaleFactor * (2 + Math.cos(-0.42) * 110);
         let rodTipY = waterY - 12 + scaleFactor * (-10 + Math.sin(-0.42) * 110);
@@ -1260,13 +1264,14 @@ export default function CauCa2NPage() {
 
       const charX = oppCurrentBoatX;
       const charY = waterY - 12;
-      const scaleFactor = 0.75;
+      const scaleFactor = 0.62;
 
       const oppIsPlayer2 = !isPlayer2;
+      const oppFacing = oppState.facing !== undefined ? oppState.facing : (oppIsPlayer2 ? -1 : 1);
 
       ctx!.save();
       ctx!.translate(charX, charY);
-      if (oppIsPlayer2) {
+      if (oppFacing === -1) {
         ctx!.scale(-scaleFactor, scaleFactor);
       } else {
         ctx!.scale(scaleFactor, scaleFactor);
@@ -1295,7 +1300,7 @@ export default function CauCa2NPage() {
         ctx!.arc(0, 0, 13, 0, Math.PI * 2);
         ctx!.closePath();
         ctx!.clip();
-        if (oppIsPlayer2) ctx!.scale(-1, 1);
+        if (oppFacing === -1) ctx!.scale(-1, 1);
         ctx!.drawImage(oppAvatarImg, -13, -13, 26, 26);
         ctx!.restore();
         ctx!.strokeStyle = "#00B0FF";
@@ -1330,7 +1335,7 @@ export default function CauCa2NPage() {
 
       ctx!.restore();
 
-      let oppRodTipX = oppIsPlayer2 
+      let oppRodTipX = oppFacing === -1
         ? charX - scaleFactor * (2 + Math.cos(-0.42) * 110)
         : charX + scaleFactor * (2 + Math.cos(-0.42) * 110);
       let oppRodTipY = charY + scaleFactor * (-10 + Math.sin(-0.42) * 110);
@@ -1410,12 +1415,13 @@ export default function CauCa2NPage() {
 
       const charX = boatX;
       const charY = waterY - 12;
-      const scaleFactor = 0.75;
+      const scaleFactor = 0.62;
 
       ctx!.save();
       ctx!.translate(charX, charY);
-      if (isPlayer2) {
-        ctx!.scale(-1, 1);
+      // Lật hướng thuyền và nhân vật theo hướng chèo (boatFacing: 1 = phải, -1 = trái)
+      if (boatFacing === -1) {
+        ctx!.scale(-scaleFactor, scaleFactor);
       } else {
         ctx!.scale(scaleFactor, scaleFactor);
       }
@@ -1443,7 +1449,7 @@ export default function CauCa2NPage() {
         ctx!.arc(0, 0, 13, 0, Math.PI * 2);
         ctx!.closePath();
         ctx!.clip();
-        if (isPlayer2) ctx!.scale(-1, 1);
+        if (boatFacing === -1) ctx!.scale(-1, 1);
         ctx!.drawImage(avatarImg, -13, -13, 26, 26);
         ctx!.restore();
         ctx!.strokeStyle = "#FFD700";
@@ -1527,6 +1533,7 @@ export default function CauCa2NPage() {
             hookX: hook.x,
             hookY: hook.y,
             hookState: hook.state,
+            facing: boatFacing,
           },
         });
         lastBroadcastTime = now;
