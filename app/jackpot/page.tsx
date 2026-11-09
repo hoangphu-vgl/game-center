@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-const BET_OPTIONS = [20, 50, 100, 200, 500, 1000, 2000, 5000];
+const BET_OPTIONS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 30000, 50000];
 const AUTO_OPTIONS = [
   { label: "Thủ Công", value: 0 },
   { label: "10 Lượt", value: 10 },
@@ -1176,11 +1176,11 @@ export default function JackpotTestPage() {
                 <div className="space-y-1.5 text-xs text-amber-100">
                   <div className="flex justify-between border-b border-amber-500/30 pb-1">
                     <span className="font-bold text-amber-300">🔥 NGỌC RỒNG TRÁI ĐẤT:</span>
-                    <span className="text-white font-semibold">Cược từ 20 đến 200 PTS</span>
+                    <span className="text-white font-semibold">Cược từ 20 đến 2000 PTS</span>
                   </div>
                   <div className="flex justify-between border-b border-amber-500/30 pb-1">
                     <span className="font-bold text-purple-300">💎 NGỌC RỒNG NAMEK:</span>
-                    <span className="text-white font-semibold">Cược từ 500 đến 5.000 PTS</span>
+                    <span className="text-white font-semibold">Cược từ 5000 đến 50.0000 PTS</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-bold text-yellow-300 animate-pulse">👑 NGỌC RỒNG SIÊU CẤP:</span>
