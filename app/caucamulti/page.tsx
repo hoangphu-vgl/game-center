@@ -856,9 +856,7 @@ export default function CauCa2NPage() {
       }
 
       holdStruggleTick() {
-        if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
-          this.applyStruggleDamage(0.08, true);
-        } else if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
+        if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
           activeSkillState.sk1_holding = true;
           if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Mồi đứng yên 5s!";
           setTimeout(() => {
