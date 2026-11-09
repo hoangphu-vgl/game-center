@@ -8,8 +8,8 @@ const SHOP_SPIN_PACKS = [
   { id: 1, name: "🎟️ 1 Lượt Quay Tập Sự", cost: 100000000, spins: 1, desc: "Gói đổi Ki lấy lượt quay thử vận may nhỏ lẻ!" },
   { id: 2, name: "🎟️ 5 Lượt Quay Saiyan", cost: 450000000, spins: 5, desc: "Khuyến mãi tiết kiệm Điểm Sức Mạnh!" },
   { id: 3, name: "🎟️ 10 Lượt Quay SSJ", cost: 850000000, spins: 10, desc: "Siêu ưu đãi bứt phá giới hạn chiến lực!" },
-  { id: 4, name: "🎟️ 20 Lượt Quay Ultra Instinct", cost: 16000000000, spins: 20, desc: "Gói lượt quay tối thượng húp trọn kho phần thưởng!" },
-  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 45000000000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
+  { id: 4, name: "🎟️ 20 Lượt Quay Ultra Instinct", cost: 1600000000, spins: 20, desc: "Gói lượt quay tối thượng húp trọn kho phần thưởng!" },
+  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 4500000000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
 ];
 
 // SIÊU GÓI 5 CỦ (FLEX TƯỢNG TRƯNG - CHỈ GHI LỊCH SỬ, KHÔNG CỘNG LƯỢT, KHÔNG TRỪ KI)
@@ -121,7 +121,7 @@ export default function ShopPage() {
     }
   };
 
-  // Mua Siêu Gói 1 Củ (CHỈ GHI LỊCH SỬ FLEX, KHÔNG CỘNG GÌ CẢ)
+  // Mua Siêu Gói 5 Củ (CHỈ GHI LỊCH SỬ FLEX, KHÔNG CỘNG GÌ CẢ)
   const handleFlexMegaVip = () => {
     if (!user) return;
     const currentWeekKey = getWeekKey();
@@ -131,11 +131,11 @@ export default function ShopPage() {
       return;
     }
     if (globalStock <= 0) {
-      alert("💨 CHẬM CHÂN RỒI ĐẠI GIA! Kho tổng gói 1 củ tuần này đã bị anh em húp sạch bách 20/20 vé flex. Đợi tuần sau reset kho nhé!");
+      alert("💨 CHẬM CHÂN RỒI ĐẠI GIA! Kho tổng gói 5 củ tuần này đã bị anh em húp sạch bách 20/20 vé flex. Đợi tuần sau reset kho nhé!");
       return;
     }
 
-    if (confirm(`Xác nhận Flex Siêu Gói 1 Củ (5.000 VNĐ / 5.000.000 Ki) để lưu danh sử sách vũ trụ?`)) {
+    if (confirm(`Xác nhận Flex Siêu Gói 5 Củ (5.000 VNĐ / 5.000.000 Ki) để lưu danh sử sách vũ trụ?`)) {
       const newGlobal = globalStock - 1;
       const newUserCount = userBuyCount + 1;
       setGlobalStock(newGlobal);
