@@ -11,16 +11,23 @@ interface SkillItem {
   price?: number;
   getPrice?: (bet: number) => number;
   icon: string;
-  category: "baccarat" | "jackpot" | "tienlen" | "poker";
+  category: "baccarat" | "jackpot" | "tienlen" | "poker" | "fishing";
   effect: string;
-  isDynamic?: boolean; // Skill mua theo hệ số cược (ví dụ x10 cược)
-  isShield?: boolean;  // Skill khiên bảo vệ cộng dồn +5 lượt
+  isDynamic?: boolean;
+  isShield?: boolean;
 }
 
-// Khớp chính xác các mức cược có trong game Jackpot (20 đến 5000)
 const JACKPOT_BET_OPTIONS = [20, 50, 100, 200, 500, 1000, 2000, 5000];
 
 const ALL_SKILLS: SkillItem[] = [
+  // --- FISHING (CÂU CÁ DRAGON BALL) ---
+  { id: "fish_sk1", name: "🌀 Chân Không Trấn Hải", desc: "Cần câu đứng yên 1 chỗ trong 5s khi thả dây rồi mới tuột lên.", price: 500000, icon: "🌀", category: "fishing", effect: "Đứng yên cần 5s", isShield: false },
+  { id: "fish_sk2", name: "⚡ Bản Năng Vô Cực", desc: "Đóng băng thời gian và đứng yên cá lớn/trung bình để giật (mất lượt nếu cá nhỏ ăn).", price: 5000000, icon: "⚡", category: "fishing", effect: "Đóng băng cá/thời gian", isShield: false },
+  { id: "fish_sk3", name: "🛡️ Giáp Sắt Kachi Katchin", desc: "Tăng 30% khả năng chống đứt dây khi ghì cá lớn.", price: 2000000, icon: "🛡️", category: "fishing", effect: "Kháng đứt dây +30%", isShield: false },
+  { id: "fish_sk4", name: "⏳ Thời Gian Ngoại Lệ", desc: "Làm chậm toàn bộ cá dưới nước 30% trong vòng 5 giây.", price: 1000000, icon: "⏳", category: "fishing", effect: "Làm chậm cá 30%", isShield: false },
+  { id: "fish_sk5", name: "👻 Hào Quang Biến Mất", desc: "Cá nhỏ phớt lờ bạn trong lượt kế, cá lớn cắn câu sẽ dẫy mạnh hơn.", price: 1000000, icon: "👻", category: "fishing", effect: "Phớt lờ cá nhỏ", isShield: false },
+  { id: "fish_sk6", name: "🔮 Nhãn Quan Thần Linh", desc: "Soi chính xác giá trị tiền thưởng của 1 con cá lớn ngẫu nhiên trong hồ.", price: 500000, icon: "🔮", category: "fishing", effect: "Soi giá cá lớn", isShield: false },
+
   // --- BACCARAT ---
   { id: "bc_1", name: "🌀 Nhãn Quan Whis", desc: "Cho phép nhìn trước 1 lá bài tiếp theo chuẩn bị được chia cho Player hoặc Banker.", price: 150000, icon: "🌀", category: "baccarat", effect: "Thấu thị ma thuật", isShield: false },
   { id: "bc_2", name: "🛡️ Hộ Thân Ki", desc: "Giảm ngay 50% số lượng Ki bị trừ khi thua cược ở bất kỳ cửa nào (+5 lượt/lần mua).", price: 50000, icon: "🛡️", category: "baccarat", effect: "Giảm sát thương thua", isShield: true },
@@ -55,15 +62,11 @@ export default function UnifiedSkillShopPage() {
   const [user, setUser] = useState<any>(null);
   const [balance, setBalance] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<string>("all");
-  
-  // ⚙️ Đọc mức cược chuẩn xác từ localStorage khớp với sảnh Jackpot
   const [currentBet, setCurrentBet] = useState<number>(100);
-  
   const [inventory, setInventory] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     setMounted(true);
-    // Đồng bộ key localStorage chung với trang jackpottest.txt (nếu có)
     const savedBet = localStorage.getItem("jackpot_current_bet");
     if (savedBet) {
       setCurrentBet(Number(savedBet));
@@ -99,26 +102,13 @@ export default function UnifiedSkillShopPage() {
       return;
     }
 
-    if (!skill.isShield && !skill.isDynamic && inventory[skill.id] > 0) {
-      alert("✨ Ní đã sở hữu kỹ năng này rồi!");
-      return;
-    }
-
-    let confirmMsg = "";
-    if (skill.isShield) {
-      confirmMsg = `Xác nhận dùng ${price.toLocaleString()} Ki để mua thêm +5 lượt cho [${skill.name}]?`;
-    } else if (skill.isDynamic) {
-      confirmMsg = `Xác nhận mua +1 lượt sử dụng [${skill.name}] với giá ${price.toLocaleString()} Ki?`;
-    } else {
-      confirmMsg = `Xác nhận dùng ${price.toLocaleString()} Ki để lĩnh ngộ kỹ năng [${skill.name}]?`;
-    }
-
+    let confirmMsg = `Xác nhận dùng ${price.toLocaleString()} Ki để mua/lĩnh ngộ [${skill.name}]?`;
     if (confirm(confirmMsg)) {
       const newBal = balance - price;
       setBalance(newBal);
 
       const currentCount = inventory[skill.id] || 0;
-      const addAmount = skill.isShield ? 5 : 1;
+      const addAmount = 1;
       const updatedInventory = { ...inventory, [skill.id]: currentCount + addAmount };
       
       setInventory(updatedInventory);
@@ -132,16 +122,9 @@ export default function UnifiedSkillShopPage() {
         .eq("id", user.id);
 
       if (error) {
-        console.error("Lỗi cập nhật Supabase:", error.message);
         alert("❌ Lỗi đồng bộ Supabase: " + error.message);
       } else {
-        if (skill.isShield) {
-          alert(`🎉 Mua thành công! +5 lượt [${skill.name}]. Tổng kho: ${updatedInventory[skill.id]} lượt.`);
-        } else if (skill.isDynamic) {
-          alert(`🎉 Mua thành công! +1 lượt [${skill.name}]. Tổng kho: ${updatedInventory[skill.id]} lượt.`);
-        } else {
-          alert(`🎉 Lĩnh ngộ thành công kỹ năng [${skill.name}]!`);
-        }
+        alert(`🎉 Mua thành công! Tổng kho [${skill.name}]: ${updatedInventory[skill.id]} lượt.`);
       }
     }
   };
@@ -175,64 +158,14 @@ export default function UnifiedSkillShopPage() {
       {/* BODY CONTAINER */}
       <main className="w-full max-w-5xl mx-auto flex-1 my-4 space-y-4">
         
-        {/* TABS LỌC MƯỢT MÀ */}
+        {/* TABS LỌC */}
         <div className="flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => setActiveTab("all")}
-            className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-              activeTab === "all" ? "bg-amber-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"
-            }`}
-          >
-            🔥 Tất Cả Skill
-          </button>
-          <button
-            onClick={() => setActiveTab("baccarat")}
-            className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-              activeTab === "baccarat" ? "bg-cyan-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"
-            }`}
-          >
-            🎲 Baccarat Thần Thánh
-          </button>
-          <button
-            onClick={() => setActiveTab("jackpot")}
-            className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-              activeTab === "jackpot" ? "bg-amber-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"
-            }`}
-          >
-            🔮 Jackpot Rồng Thần
-          </button>
-          <button
-            onClick={() => setActiveTab("tienlen")}
-            className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-              activeTab === "tienlen" ? "bg-emerald-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"
-            }`}
-          >
-            ⚔️ Tiến Lên (13 Ấn Ký)
-          </button>
-          <button
-            onClick={() => setActiveTab("poker")}
-            className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-              activeTab === "poker" ? "bg-blue-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"
-            }`}
-          >
-            ♠️ Sòng Poker Whis
-          </button>
-        </div>
-
-        {/* THANH CHỌN MỨC CƯỢC ĐÃ ĐỒNG BỘ CHÍNH XÁC VỚI GAME JACKPOT */}
-        <div className="bg-slate-900/80 border border-amber-500/30 p-3 rounded-2xl flex items-center justify-between animate-fadeIn">
-          <span className="text-xs font-bold text-amber-300">⚙️ Mức cược đang chọn trong Sảnh Jackpot (Tính giá Skill x10):</span>
-          <select 
-            value={currentBet} 
-            onChange={(e) => handleBetChange(Number(e.target.value))} 
-            className="bg-slate-950 text-amber-400 font-black text-xs px-3 py-1.5 rounded-xl border border-amber-500/50 focus:outline-none cursor-pointer"
-          >
-            {JACKPOT_BET_OPTIONS.map((amt) => (
-              <option key={amt} value={amt}>
-                {amt.toLocaleString()} PTS (Giá skill: {(amt * 10).toLocaleString()} Ki)
-              </option>
-            ))}
-          </select>
+          <button onClick={() => setActiveTab("all")} className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${activeTab === "all" ? "bg-amber-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"}`}>🔥 Tất Cả</button>
+          <button onClick={() => setActiveTab("fishing")} className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${activeTab === "fishing" ? "bg-emerald-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"}`}>🎣 Câu Cá Thần Long</button>
+          <button onClick={() => setActiveTab("baccarat")} className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${activeTab === "baccarat" ? "bg-cyan-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"}`}>🎲 Baccarat</button>
+          <button onClick={() => setActiveTab("jackpot")} className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${activeTab === "jackpot" ? "bg-amber-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"}`}>🔮 Jackpot</button>
+          <button onClick={() => setActiveTab("tienlen")} className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${activeTab === "tienlen" ? "bg-emerald-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"}`}>⚔️ Tiến Lên</button>
+          <button onClick={() => setActiveTab("poker")} className={`px-4 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${activeTab === "poker" ? "bg-blue-400 text-slate-950 shadow" : "bg-slate-900 text-slate-300 border border-slate-800"}`}>♠️ Poker</button>
         </div>
 
         {/* DANH SÁCH SKILL GRID */}
@@ -240,15 +173,9 @@ export default function UnifiedSkillShopPage() {
           {filteredSkills.map((skill) => {
             const price = skill.isDynamic && skill.getPrice ? skill.getPrice(currentBet) : (skill.price || 0);
             const count = inventory[skill.id] || 0;
-            const isOwnedPermanent = !skill.isShield && !skill.isDynamic && count > 0;
 
             return (
-              <div 
-                key={skill.id}
-                className={`bg-slate-900/90 border rounded-2xl p-4 flex flex-col justify-between shadow-lg relative overflow-hidden transition ${
-                  isOwnedPermanent || count > 0 ? "border-amber-400 bg-amber-950/20" : "border-amber-500/40 hover:border-amber-400"
-                }`}
-              >
+              <div key={skill.id} className="bg-slate-900/90 border border-amber-500/40 hover:border-amber-400 rounded-2xl p-4 flex flex-col justify-between shadow-lg relative overflow-hidden transition">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -259,30 +186,19 @@ export default function UnifiedSkillShopPage() {
                       {skill.effect}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                    {skill.desc}
-                  </p>
-
+                  <p className="text-xs text-slate-300 leading-relaxed font-medium">{skill.desc}</p>
                   <div className="text-[11px] font-bold text-cyan-400 pt-1">
-                    🛡️ Đang có sẵn trong Supabase: <span className="text-white font-black underline">{count} lượt</span>
+                    🛡️ Kho trong Supabase: <span className="text-white font-black underline">{count} lượt</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 mt-2 border-t border-slate-800/80">
-                  <span className="text-xs font-mono font-black text-amber-400">
-                    💎 {price.toLocaleString()} Ki {skill.isShield ? <span className="text-[9px] text-slate-400 font-normal">(+5 lượt)</span> : skill.isDynamic ? <span className="text-[9px] text-slate-400 font-normal">(+1 lượt)</span> : ""}
-                  </span>
-                  
+                  <span className="text-xs font-mono font-black text-amber-400">💎 {price.toLocaleString()} Ki</span>
                   <button
                     onClick={() => handleBuySkill(skill)}
-                    disabled={isOwnedPermanent}
-                    className={`px-4 py-2 rounded-xl text-xs font-black shadow transition active:scale-95 cursor-pointer ${
-                      isOwnedPermanent
-                        ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 cursor-default"
-                        : "bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 hover:brightness-110"
-                    }`}
+                    className="px-4 py-2 rounded-xl text-xs font-black shadow transition active:scale-95 cursor-pointer bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 hover:brightness-110"
                   >
-                    {isOwnedPermanent ? "✨ Đã Sở Hữu" : skill.isShield ? "Mua +5 Lượt 🛒" : skill.isDynamic ? "Mua +1 Lượt ⚡" : "Lĩnh Ngộ 🔮"}
+                    Mua Lượt 🛒
                   </button>
                 </div>
               </div>
@@ -292,11 +208,9 @@ export default function UnifiedSkillShopPage() {
 
       </main>
 
-      {/* FOOTER */}
       <footer className="w-full max-w-5xl mx-auto text-center text-[10px] text-slate-500 py-2 shrink-0">
         🛡️ Bản quyền thuộc về Hệ Thống Sảnh Game Dragon Arcade - Tích trữ kỹ năng chiến thuật trực tiếp lên CSDL Supabase.
       </footer>
-
     </div>
   );
 }

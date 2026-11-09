@@ -45,6 +45,21 @@ export default function CauCa2NPage() {
   const roomChannelRef = useRef<any>(null);
   const [oppAlert, setOppAlert] = useState<string | null>(null);
 
+  // --- HỆ THỐNG KHO SKILL & COOLDOWN (5 Phút) ---
+  const [inventory, setInventory] = useState<{ [key: string]: number }>({});
+  const [skillCooldowns, setSkillCooldowns] = useState<{ [key: string]: number }>({});
+  const [isSkillShopOpen, setIsSkillShopOpen] = useState<boolean>(false);
+
+  // Danh sách 6 Skill Câu Cá Dragon Ball
+  const fishingSkills = [
+    { id: "fish_sk1", name: "Chân Không Trấn Hải", icon: "🌀", desc: "Cần câu đứng yên 1 chỗ trong 5s khi thả dây rồi mới tuột lên.", price: 200000 },
+    { id: "fish_sk2", name: "Bản Năng Vô Cực", icon: "⚡", desc: "Đóng băng thời gian và đứng yên cá lớn/trung bình để giật.", price: 350000 },
+    { id: "fish_sk3", name: "Giáp Sắt Kachi Katchin", icon: "🛡️", desc: "Tăng 30% khả năng chống đứt dây khi ghì cá lớn.", price: 150000 },
+    { id: "fish_sk4", name: "Thời Gian Ngoại Lệ", icon: "⏳", desc: "Làm chậm toàn bộ cá dưới nước 30% trong vòng 5 giây.", price: 250000 },
+    { id: "fish_sk5", name: "Hào Quang Biến Mất", icon: "👻", desc: "Cá nhỏ phớt lờ bạn trong lượt kế, cá lớn cắn câu sẽ dẫy mạnh hơn.", price: 300000 },
+    { id: "fish_sk6", name: "Nhãn Quan Thần Linh", icon: "🔮", desc: "Soi chính xác giá trị tiền thưởng của 1 con cá lớn ngẫu nhiên trong hồ.", price: 400000 },
+  ];
+
   // --- HỆ THỐNG THÔNG BÁO ---
   const [myCatchNotice, setMyCatchNotice] = useState<{ text: string; amount: string; show: boolean } | null>(null);
   const [oppCatchNotice, setOppCatchNotice] = useState<{ text: string; amount: string; show: boolean } | null>(null);
@@ -114,7 +129,7 @@ export default function CauCa2NPage() {
       setUser(currentUser);
       const { data } = await supabase
         .from("profiles")
-        .select("balance, avatar_url, equipped_rod")
+        .select("balance, avatar_url, equipped_rod, inventory")
         .eq("id", currentUser.id)
         .single();
 
@@ -125,6 +140,7 @@ export default function CauCa2NPage() {
         }
         if (data.avatar_url) setUserAvatar(data.avatar_url);
         if (data.equipped_rod) setSelectedRod(data.equipped_rod);
+        if (data.inventory) setInventory(data.inventory);
       }
 
       const { data: rodsData } = await supabase
@@ -167,6 +183,53 @@ export default function CauCa2NPage() {
   const showShopNotice = (msg: string) => {
     setShopNotification(msg);
     setTimeout(() => setShopNotification(null), 3000);
+  };
+
+  // Mua Skill từ Shop Popup trong game
+  const handleBuySkillInGame = async (skill: any) => {
+    if (!user) { alert("Vui lòng đăng nhập!"); return; }
+    if (score < skill.price) {
+      alert("⚡ Số dư Ki không đủ để lĩnh ngộ kỹ năng này!");
+      return;
+    }
+
+    const newBal = score - skill.price;
+    const currentCount = inventory[skill.id] || 0;
+    const updatedInventory = { ...inventory, [skill.id]: currentCount + 1 };
+
+    setScore(newBal);
+    setInventory(updatedInventory);
+    (window as any).currentGameScore = newBal;
+
+    await supabase.from("profiles").update({ balance: newBal, inventory: updatedInventory }).eq("id", user.id);
+    alert(`🎉 Lĩnh ngộ thành công kỹ năng [${skill.name}]!`);
+  };
+
+  // Sử dụng Skill trong Game (Cooldown 5 phút = 300,000ms)
+  const handleUseSkill = (skillId: string) => {
+    const now = Date.now();
+    const coolEnd = skillCooldowns[skillId] || 0;
+    if (now < coolEnd) {
+      const remainSec = Math.ceil((coolEnd - now) / 1000);
+      alert(`⏳ Kỹ năng đang hồi chiêu! Vui lòng chờ thêm ${remainSec}s.`);
+      return;
+    }
+
+    const count = inventory[skillId] || 0;
+    if (count <= 0) {
+      alert("⚡ Ní đã hết lượt sử dụng kỹ năng này! Hãy ghé Thần Điện mua thêm nhé.");
+      setIsSkillShopOpen(true);
+      return;
+    }
+
+    const updatedInv = { ...inventory, [skillId]: count - 1 };
+    setInventory(updatedInv);
+    if (user) {
+      supabase.from("profiles").update({ inventory: updatedInv }).eq("id", user.id);
+    }
+
+    setSkillCooldowns({ ...skillCooldowns, [skillId]: now + 300000 });
+    window.dispatchEvent(new CustomEvent("triggerFishingSkill", { detail: { skillId } }));
   };
 
   const handleRentRod = async (rod: typeof shopRods[0], days: number) => {
@@ -427,6 +490,51 @@ export default function CauCa2NPage() {
     let oppStates: { [userId: string]: any } = {};
     const critPopups: { x: number; y: number; alpha: number; scale: number }[] = [];
 
+    // --- TRẠNG THÁI ACTIVE SKILLS TRONG GAME ---
+    let activeSkillState = {
+      sk1_freezeStand: false,
+      sk1_timer: null as any,
+      sk2_timeFreeze: false,
+      sk3_armorBuff: false,
+      sk4_slowDown: false,
+      sk5_ignoreSmall: false,
+      sk6_active: false,
+    };
+
+    const fishingSkillListener = (e: any) => {
+      const { skillId } = e.detail;
+      if (skillId === "fish_sk1") {
+        activeSkillState.sk1_freezeStand = true;
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🌀 CHÂN KHÔNG TRẤN HẢI", message: "Cần câu sẽ đứng yên 5 giây!", type: "coop" } }));
+        if (activeSkillState.sk1_timer) clearTimeout(activeSkillState.sk1_timer);
+        activeSkillState.sk1_timer = setTimeout(() => {
+          activeSkillState.sk1_freezeStand = false;
+        }, 5000);
+      } else if (skillId === "fish_sk2") {
+        activeSkillState.sk2_timeFreeze = true;
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "⚡ BẢN NĂNG VÔ CỰC", message: "Đã kích hoạt đóng băng cá lớn/trung bình trong lượt tới!", type: "rare" } }));
+      } else if (skillId === "fish_sk3") {
+        activeSkillState.sk3_armorBuff = true;
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🛡️ GIÁP SẮT KACHI KATCHIN", message: "Tăng 30% kháng đứt dây khi kéo cá lớn!", type: "coop" } }));
+      } else if (skillId === "fish_sk4") {
+        activeSkillState.sk4_slowDown = true;
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "⏳ THỜI GIAN NGOẠI LỆ", message: "Toàn bộ cá dưới nước bị làm chậm 30% trong 5 giây!", type: "beerus" } }));
+        setTimeout(() => { activeSkillState.sk4_slowDown = false; }, 5000);
+      } else if (skillId === "fish_sk5") {
+        activeSkillState.sk5_ignoreSmall = true;
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "👻 HÀO QUANG BIẾN MẤT", message: "Cá nhỏ sẽ phớt lờ mồi câu trong lần thả tới!", type: "coop" } }));
+      } else if (skillId === "fish_sk6") {
+        const bottomFishes = fishes.filter(f => f.layer === "bottom" && !f.isCaught);
+        if (bottomFishes.length > 0) {
+          const randFish = bottomFishes[Math.floor(Math.random() * bottomFishes.length)];
+          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🔮 SOI THẤU TƯƠNG LAI", message: `Phát hiện ${randFish.fishData.vnName} trị giá ${randFish.points.toLocaleString()} 🪙!`, type: "rare" } }));
+        } else {
+          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🔮 SOI THẤU TƯƠNG LAI", message: "Hiện chưa có cá lớn xuất hiện dưới đáy!", type: "beerus" } }));
+        }
+      }
+    };
+    window.addEventListener("triggerFishingSkill", fishingSkillListener);
+
     (window as any).updateGameScore = (newScore: number) => {
       syncScoreToSupabase(newScore);
     };
@@ -517,7 +625,6 @@ export default function CauCa2NPage() {
           this.speed = (r() * 0.9 + 0.5) * this.direction;
           this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         } else {
-          // Tầng đáy: Cá lớn/quái vật bơi từ ngoài vào
           this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + r() * (waterHeight * 0.22);
           this.speed = (r() * 0.4 + 0.2) * this.direction;
           this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
@@ -528,7 +635,15 @@ export default function CauCa2NPage() {
       update() {
         if (this.isCaught || this.isWaitingForWave) return;
 
-        this.x += this.speed;
+        let currentSpeed = this.speed;
+        if (activeSkillState.sk4_slowDown) {
+          currentSpeed *= 0.7;
+        }
+        if (activeSkillState.sk2_timeFreeze && (this.layer === "bottom" || this.layer === "mid")) {
+          currentSpeed = 0;
+        }
+
+        this.x += currentSpeed;
         this.animFrame += 0.08;
 
         if (this.layer === "bottom" && !this.notifiedRare && this.x > width * 0.2 && this.x < width * 0.8) {
@@ -552,11 +667,9 @@ export default function CauCa2NPage() {
           }
         }
 
-        // Khi cá bơi qua hết màn hình
         if ((this.direction === 1 && this.x > width + this.size * 3) || 
             (this.direction === -1 && this.x < -this.size * 3)) {
           if (this.layer === "bottom") {
-            // Đánh dấu chờ đợt cá lớn tiếp theo (ngầm đếm ngược 15-60s)
             this.isWaitingForWave = true;
             const delayMs = Math.floor(Math.random() * (60000 - 15000 + 1)) + 15000;
             setTimeout(() => {
@@ -780,6 +893,10 @@ export default function CauCa2NPage() {
         }
 
         let tensionGain = isHold ? (0.6 / currentRodDamageBuff) : (0.25 / currentRodDamageBuff);
+        if (activeSkillState.sk3_armorBuff) {
+          tensionGain *= 0.7; // Skill 3: Giảm 30% tăng tension (kháng đứt dây)
+        }
+
         if (this.isJointPulling || this.isAssistingOpponent) tensionGain *= 0.5;
         
         this.lineTension += tensionGain;
@@ -833,7 +950,11 @@ export default function CauCa2NPage() {
           this.x = this.castStartX + (this.targetWaterX - this.castStartX) * t;
           this.y = this.castStartY + (waterY - this.castStartY) * t - Math.sin(t * Math.PI) * 60;
         } else if (this.state === "SINKING") {
-          this.y += Math.min(2.5, 1.2 + this.baitPrice / 20000000);
+          if (!activeSkillState.sk1_freezeStand) {
+            this.y += Math.min(2.5, 1.2 + this.baitPrice / 20000000);
+          } else {
+            if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Cần đứng yên!";
+          }
 
           for (let opp of Object.values(oppStates) as any[]) {
             if (opp && opp.hookState === "STRUGGLING") {
@@ -855,6 +976,10 @@ export default function CauCa2NPage() {
 
           for (let f of fishes) {
             if (f.isCaught || f.isWaitingForWave || Math.abs(this.y - f.y) > 40) continue;
+
+            if (activeSkillState.sk5_ignoreSmall && f.layer === "top") {
+              continue;
+            }
 
             const isBigFish = f.layer === "bottom" || f.fishData.isRare;
 
@@ -920,7 +1045,7 @@ export default function CauCa2NPage() {
           this.lineTension = Math.max(0, this.lineTension - 0.08); 
           
           if (this.caughtFish) {
-            this.currentFishHp += 0.035; 
+            this.currentFishHp += (activeSkillState.sk2_timeFreeze ? 0 : 0.035); 
             if (this.currentFishHp > this.maxFishHp) {
               this.caughtFish.isCaught = false;
               this.caughtFish = null;
@@ -1073,6 +1198,13 @@ export default function CauCa2NPage() {
         this.caughtFish = fish;
         fish.isCaught = true;
         this.lineTension = 0;
+
+        if (activeSkillState.sk5_ignoreSmall && fish.layer === "top") {
+          fish.isCaught = false;
+          this.caughtFish = null;
+          return;
+        }
+
         ctx!.fillStyle = "white";
         for (let i = 0; i < 10; i++) {
           ctx!.beginPath();
@@ -1080,10 +1212,11 @@ export default function CauCa2NPage() {
           ctx!.fill();
         }
 
-        if (fish.points >= 5000000) {
+        if (fish.points >= 5000000 || fish.layer === "bottom") {
           this.state = "STRUGGLING";
-          this.maxFishHp = fish.maxHp;
-          this.currentFishHp = fish.maxHp;
+          let hpMultiplier = activeSkillState.sk5_ignoreSmall ? 1.5 : 1.0;
+          this.maxFishHp = Math.round(fish.maxHp * hpMultiplier);
+          this.currentFishHp = this.maxFishHp;
           if (statusEl) {
             statusEl.innerText = `Dính ${fish.fishData.vnName}! ĐÈ GIỮ HOẶC NHẤP ĐỂ KÉO!`;
             statusEl.style.color = "#FF5252";
@@ -1175,7 +1308,6 @@ export default function CauCa2NPage() {
     for (let i = 0; i < 10; i++) {
       fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 10) * i, undefined, roomRng));
     }
-    // Chỉ tạo đúng 2 con tầng đáy cho mỗi đợt xuất hiện
     for (let i = 0; i < 2; i++) {
       fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 2) * i, undefined, roomRng));
     }
@@ -1575,6 +1707,7 @@ export default function CauCa2NPage() {
       window.removeEventListener("moveBoat", moveBoatListener);
       window.removeEventListener("updateOpponentState", oppStateListener);
       window.removeEventListener("receivedCoopDamage", coopDamageListener);
+      window.removeEventListener("triggerFishingSkill", fishingSkillListener);
       canvas.removeEventListener("mousedown", onMouseDown);
       canvas.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -1694,6 +1827,12 @@ export default function CauCa2NPage() {
           >
             🛍️ Shop
           </button>
+          <button
+            onClick={() => setIsSkillShopOpen(true)}
+            className="bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 px-2 py-1 rounded-md font-black text-[8px] sm:text-[9px] shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40"
+          >
+            🔮 Skill Shop
+          </button>
         </div>
 
         {/* --- KHUNG HŨ (JACKPOT) --- */}
@@ -1731,6 +1870,75 @@ export default function CauCa2NPage() {
           </button>
         </div>
       </div>
+
+      {/* QUICK SKILL BAR */}
+      <div className="absolute bottom-16 left-2 z-40 flex items-center space-x-1 bg-black/80 p-1.5 rounded-xl border border-cyan-500/60 shadow-xl backdrop-blur-md pointer-events-auto">
+        {fishingSkills.map((sk) => {
+          const count = inventory[sk.id] || 0;
+          const coolEnd = skillCooldowns[sk.id] || 0;
+          const isCooling = Date.now() < coolEnd;
+          return (
+            <button
+              key={sk.id}
+              onClick={() => handleUseSkill(sk.id)}
+              title={`${sk.name}: ${sk.desc} (Kho: ${count})`}
+              className={`relative w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black border transition cursor-pointer ${
+                count > 0 ? "bg-slate-900 border-cyan-400 text-cyan-300 hover:scale-105" : "bg-slate-950 border-slate-800 text-slate-600"
+              }`}
+            >
+              <span>{sk.icon}</span>
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-black px-1 rounded-full">
+                {count}
+              </span>
+              {isCooling && (
+                <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center text-[8px] text-red-400 font-bold">
+                  ⌛
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* POPUP SHOP SKILL TRONG GAME */}
+      {isSkillShopOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
+          <div className="bg-slate-950 border-2 border-cyan-500/60 w-full max-w-2xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+              <h2 className="text-base sm:text-lg font-black text-cyan-400 uppercase tracking-wider">🔮 Thần Điện Kỹ Năng Câu Cá</h2>
+              <button
+                onClick={() => setIsSkillShopOpen(false)}
+                className="bg-slate-800 hover:bg-rose-600 text-white font-black w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer shadow text-xs"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto my-3 space-y-2 pr-1">
+              {fishingSkills.map((sk) => {
+                const count = inventory[sk.id] || 0;
+                return (
+                  <div key={sk.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">{sk.icon}</span>
+                      <div>
+                        <h4 className="text-xs font-black text-amber-300">{sk.name}</h4>
+                        <p className="text-[10px] text-slate-300">{sk.desc}</p>
+                        <p className="text-[9px] text-cyan-400 font-bold mt-1">Đang có: {count} lượt</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleBuySkillInGame(sk)}
+                      className="bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 px-3 py-1.5 rounded-xl text-[10px] font-black shadow cursor-pointer hover:brightness-110"
+                    >
+                      Mua ({sk.price.toLocaleString()}🪙)
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="absolute top-1 right-1 z-50 pointer-events-auto">
         <div className="relative">
