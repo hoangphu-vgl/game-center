@@ -24,10 +24,11 @@ export default function CauCaPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   const [selectedBait, setSelectedBait] = useState<{ cost: number; filename: string; name: string }>({ 
-    cost: 50, 
+    cost: 100000, 
     filename: "giun.png", 
-    name: "Mồi Tiêu Chuẩn" 
+    name: "Mồi Tiêu Chuẩn (100,000🪙)" 
   });
+  const [isBaitDropdownOpen, setIsBaitDropdownOpen] = useState(false);
 
   const [selectedRod, setSelectedRod] = useState<string>("cancaucoban.png");
   const [popupData, setPopupData] = useState<{ show: boolean; title: string; message: string; type: 'rare' | 'beerus' } | null>(null);
@@ -213,39 +214,39 @@ export default function CauCaPage() {
     const powerBar = document.getElementById('power-bar');
 
     const fishDatabase = [
-      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.8, basePoints: 500, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn sọc", sizeScale: 0.9, basePoints: 800, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.7, basePoints: 600, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.9, basePoints: 1000, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.8, basePoints: 750, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 1.0, basePoints: 1200, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abramis_brama.png", vnName: "Cá vền nước ngọt", sizeScale: 1.1, basePoints: 2000, multi: 1.8, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_sexfasciatus.png", vnName: "Cá thia sáu sọc", sizeScale: 0.9, basePoints: 1500, multi: 1.6, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chaetodon_aurantus.png", vnName: "Cá bướm vàng cam", sizeScale: 1.0, basePoints: 3000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chaetodon_lunula.png", vnName: "Cá bướm mặt trăng", sizeScale: 1.1, basePoints: 5000, multi: 2.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chromis_viridis.png", vnName: "Cá thia lục bảo", sizeScale: 0.7, basePoints: 4000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 500, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn sọc", sizeScale: 0.7, basePoints: 800, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 600, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 1000, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 750, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 1200, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abramis_brama.png", vnName: "Cá vền nước ngọt", sizeScale: 0.85, basePoints: 2000, multi: 1.8, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_sexfasciatus.png", vnName: "Cá thia sáu sọc", sizeScale: 0.7, basePoints: 1500, multi: 1.6, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chaetodon_aurantus.png", vnName: "Cá bướm vàng cam", sizeScale: 0.8, basePoints: 3000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chaetodon_lunula.png", vnName: "Cá bướm mặt trăng", sizeScale: 0.85, basePoints: 5000, multi: 2.2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chromis_viridis.png", vnName: "Cá thia lục bảo", sizeScale: 0.6, basePoints: 4000, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
 
-      { filename: "Acanthurus_coerulus.png", vnName: "Cá đuôi gai xanh", sizeScale: 1.3, basePoints: 50000, multi: 2.5, layer: "mid", struggleWeight: 0.25, isRare: false },
-      { filename: "Oreochromis_niloticus.png", vnName: "Cá rô phi vằn", sizeScale: 1.5, basePoints: 80000, multi: 2.8, layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "Micropterus_salmoides.png", vnName: "Cá vược miệng rộng", sizeScale: 1.6, basePoints: 150000, multi: 3.0, layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "Lates_calcarifer.png", vnName: "Cá chẽm lớn", sizeScale: 2.0, basePoints: 300000, multi: 3.5, layer: "mid", struggleWeight: 0.4, isRare: false },
-      { filename: "Perca_flavescens.png", vnName: "Cá vược vàng", sizeScale: 1.3, basePoints: 200000, multi: 3.2, layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "Cyprinus_carpio.png", vnName: "Cá chép vàng", sizeScale: 1.8, basePoints: 500000, multi: 4.0, layer: "mid", struggleWeight: 0.45, isRare: false },
-      { filename: "Carophi.png", vnName: "Cá rô phi", sizeScale: 1.4, basePoints: 120000, multi: 2.9, layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "Canham.png", vnName: "Cá nhám", sizeScale: 1.7, basePoints: 800000, multi: 4.5, layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "Arothron_meleagris.png", vnName: "Cá nóc đốm sao", sizeScale: 1.5, basePoints: 1000000, multi: 5.0, layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "Caranx_ignobilis.png", vnName: "Cá khế khổng lồ", sizeScale: 2.2, basePoints: 3000000, multi: 6.0, layer: "mid", struggleWeight: 0.55, isRare: false },
-      { filename: "Coryphaena_hippurus.png", vnName: "Cá cờ xanh Mahi-Mahi", sizeScale: 2.4, basePoints: 6000000, multi: 7.0, layer: "mid", struggleWeight: 0.6, isRare: false },
-      { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 2.1, basePoints: 9000000, multi: 8.0, layer: "mid", struggleWeight: 0.65, isRare: false },
+      { filename: "Acanthurus_coerulus.png", vnName: "Cá đuôi gai xanh", sizeScale: 1.1, basePoints: 50000, multi: 2.5, layer: "mid", struggleWeight: 0.25, isRare: false },
+      { filename: "Oreochromis_niloticus.png", vnName: "Cá rô phi vằn", sizeScale: 1.25, basePoints: 80000, multi: 2.8, layer: "mid", struggleWeight: 0.3, isRare: false },
+      { filename: "Micropterus_salmoides.png", vnName: "Cá vược miệng rộng", sizeScale: 1.3, basePoints: 150000, multi: 3.0, layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "Lates_calcarifer.png", vnName: "Cá chẽm lớn", sizeScale: 1.6, basePoints: 300000, multi: 3.5, layer: "mid", struggleWeight: 0.4, isRare: false },
+      { filename: "Perca_flavescens.png", vnName: "Cá vược vàng", sizeScale: 1.1, basePoints: 200000, multi: 3.2, layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "Cyprinus_carpio.png", vnName: "Cá chép vàng", sizeScale: 1.5, basePoints: 500000, multi: 4.0, layer: "mid", struggleWeight: 0.45, isRare: false },
+      { filename: "Carophi.png", vnName: "Cá rô phi", sizeScale: 1.15, basePoints: 120000, multi: 2.9, layer: "mid", struggleWeight: 0.3, isRare: false },
+      { filename: "Canham.png", vnName: "Cá nhám", sizeScale: 1.4, basePoints: 800000, multi: 4.5, layer: "mid", struggleWeight: 0.5, isRare: false },
+      { filename: "Arothron_meleagris.png", vnName: "Cá nóc đốm sao", sizeScale: 1.25, basePoints: 1000000, multi: 5.0, layer: "mid", struggleWeight: 0.5, isRare: false },
+      { filename: "Caranx_ignobilis.png", vnName: "Cá khế khổng lồ", sizeScale: 1.8, basePoints: 3000000, multi: 6.0, layer: "mid", struggleWeight: 0.55, isRare: false },
+      { filename: "Coryphaena_hippurus.png", vnName: "Cá cờ xanh Mahi-Mahi", sizeScale: 1.9, basePoints: 6000000, multi: 7.0, layer: "mid", struggleWeight: 0.6, isRare: false },
+      { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 1.7, basePoints: 9000000, multi: 8.0, layer: "mid", struggleWeight: 0.65, isRare: false },
 
-      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 3.2, basePoints: 15000000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true, maxHp: 15 },
-      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 3.5, basePoints: 35000000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true, maxHp: 22 },
-      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 4.0, basePoints: 80000000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true, maxHp: 30 },
-      { filename: "Mola_mola.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 4.2, basePoints: 150000000, multi: 20.0, layer: "bottom", struggleWeight: 0.88, isRare: true, maxHp: 38 },
-      { filename: "Sphyrna_zygaena.png", vnName: "Cá mập đầu búa", sizeScale: 3.8, basePoints: 250000000, multi: 25.0, layer: "bottom", struggleWeight: 0.9, isRare: true, maxHp: 45 },
-      { filename: "Xiphias_gladius.png", vnName: "Cá kiếm đại dương", sizeScale: 4.2, basePoints: 450000000, multi: 30.0, layer: "bottom", struggleWeight: 0.93, isRare: true, maxHp: 52 },
-      { filename: "Mobula_alfredi.png", vnName: "Cá đuối manta khổng lồ", sizeScale: 4.5, basePoints: 750000000, multi: 40.0, layer: "bottom", struggleWeight: 0.95, isRare: true, maxHp: 60 },
-      { filename: "Gymnothorax_javanicus.png", vnName: "Cá trình khổng lồ Java", sizeScale: 4.1, basePoints: 1000000000, multi: 50.0, layer: "bottom", struggleWeight: 0.96, isRare: true, maxHp: 70 }
+      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 2.6, basePoints: 15000000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true, maxHp: 15 },
+      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 2.8, basePoints: 35000000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true, maxHp: 22 },
+      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 3.2, basePoints: 80000000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true, maxHp: 30 },
+      { filename: "Mola_mola.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 3.4, basePoints: 150000000, multi: 20.0, layer: "bottom", struggleWeight: 0.88, isRare: true, maxHp: 38 },
+      { filename: "Sphyrna_zygaena.png", vnName: "Cá mập đầu búa", sizeScale: 3.0, basePoints: 250000000, multi: 25.0, layer: "bottom", struggleWeight: 0.9, isRare: true, maxHp: 45 },
+      { filename: "Xiphias_gladius.png", vnName: "Cá kiếm đại dương", sizeScale: 3.4, basePoints: 450000000, multi: 30.0, layer: "bottom", struggleWeight: 0.93, isRare: true, maxHp: 52 },
+      { filename: "Mobula_alfredi.png", vnName: "Cá đuối manta khổng lồ", sizeScale: 3.6, basePoints: 750000000, multi: 40.0, layer: "bottom", struggleWeight: 0.95, isRare: true, maxHp: 60 },
+      { filename: "Gymnothorax_javanicus.png", vnName: "Cá trình khổng lồ Java", sizeScale: 3.3, basePoints: 1000000000, multi: 50.0, layer: "bottom", struggleWeight: 0.96, isRare: true, maxHp: 70 }
     ];
 
     const loadedFishObjects = fishDatabase.map((item) => {
@@ -329,7 +330,7 @@ export default function CauCaPage() {
         this.fishData = this.fishObj.info;
         this.layer = this.fishData.layer;
 
-        this.size = (Math.random() * 10 + 18) * this.fishData.sizeScale;
+        this.size = (Math.random() * 8 + 14) * this.fishData.sizeScale;
         
         const rawPoints = this.fishData.basePoints * this.fishData.multi;
         if (this.fishData.layer === 'bottom') {
@@ -932,7 +933,8 @@ export default function CauCaPage() {
     const computedWaterY = canvas.height / (window.devicePixelRatio || 1) * 0.3;
     const waterHeight = (canvas.height / (window.devicePixelRatio || 1)) - computedWaterY;
 
-    const topSlots = 9;
+    // Phân bổ số lượng cá theo tầng: Cá nhỏ nhiều nhất, cá trung ít hơn, cá lớn ít nhất
+    const topSlots = 12;
     for (let i = 0; i < topSlots; i++) {
       let clusterY = computedWaterY + 20 + (waterHeight * 0.28 / topSlots) * i;
       let clusterSize = Math.floor(Math.random() * 3) + 2; 
@@ -944,14 +946,14 @@ export default function CauCaPage() {
       }
     }
 
-    const midSlots = 9;
+    const midSlots = 7;
     for (let i = 0; i < midSlots; i++) {
       let slotY = computedWaterY + (waterHeight * 0.32) + (waterHeight * 0.32 / midSlots) * i;
       let f = new Fish("mid", slotY);
       fishes.push(f);
     }
 
-    const bottomSlots = 10;
+    const bottomSlots = 4;
     for (let i = 0; i < bottomSlots; i++) {
       let slotY = computedWaterY + (waterHeight * 0.68) + (waterHeight * 0.28 / bottomSlots) * i;
       let f = new Fish("bottom", slotY);
@@ -1275,6 +1277,7 @@ export default function CauCaPage() {
 
   const handleBaitChange = (bait: { cost: number; filename: string; name: string }) => {
     setSelectedBait(bait);
+    setIsBaitDropdownOpen(false);
     window.dispatchEvent(new CustomEvent('changeBait', { detail: bait.cost }));
     window.dispatchEvent(new CustomEvent('changeBaitImg', { detail: bait }));
   };
@@ -1286,10 +1289,10 @@ export default function CauCaPage() {
   const baitList = [
     { cost: 1000, filename: "dausenzu.png", label: "Mồi Sơ Cấp (1,000🪙)" },
     { cost: 2000, filename: "cagia.png", label: "Mồi Thường (2,000🪙)" },
-    { cost: 10000, filename: "giun.png", label: "Mồi Tiêu Chuẩn (100,000🪙)" },
+    { cost: 100000, filename: "giun.png", label: "Mồi Tiêu Chuẩn (100,000🪙)" },
     { cost: 500000, filename: "moi.png", label: "Mồi Khá (500,000🪙)" },
     { cost: 1000000, filename: "tom.png", label: "Mồi Thơm (1,000,000🪙)" },
-    { cost: 10000000, filename: "dragon-ball-4.png", label: "Mồi Xịn (10,0000,000🪙)" },
+    { cost: 10000000, filename: "dragon-ball-4.png", label: "Mồi Xịn (10,000,000🪙)" },
     { cost: 50000000, filename: "kiblue.png", label: "Mồi Cao Cấp (50,000,000🪙)" },
     { cost: 100000000, filename: "hakai.png", label: "Mồi Quái Vật (100,000,000🪙)" }
   ];
@@ -1349,25 +1352,42 @@ export default function CauCaPage() {
         </div>
       </div>
 
-      <div className="absolute top-12 right-2 z-20 bg-slate-900/95 border border-amber-500/50 p-1.5 rounded-xl shadow-2xl flex flex-col items-center space-y-1 max-w-[260px]">
-        <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
-          🪱 CHỌN MỒI (<img src={`/assets/baits/${selectedBait.filename}`} className="w-3.5 h-3.5 inline object-contain" />)
-        </span>
-        <div className="flex flex-wrap justify-center gap-1">
-          {baitList.map((bait) => (
-            <button
-              key={bait.cost}
-              onClick={() => handleBaitChange({ cost: bait.cost, filename: bait.filename, name: bait.label })}
-              className={`px-2 py-0.5 rounded-lg text-[8px] font-black transition cursor-pointer shadow flex items-center gap-1 ${
-                selectedBait.cost === bait.cost
-                  ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 scale-105 ring-1 ring-white"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-              }`}
-            >
-              <img src={`/assets/baits/${bait.filename}`} alt={bait.label} className="w-3.5 h-3.5 object-contain drop-shadow" />
-              <span>{bait.label}</span>
-            </button>
-          ))}
+      {/* THANH CHỌN MỒI DROPDOWN GỌN GÀNG GÓC PHẢI */}
+      <div className="absolute top-12 right-2 z-40">
+        <div className="relative">
+          <button
+            onClick={() => setIsBaitDropdownOpen(!isBaitDropdownOpen)}
+            className="bg-slate-900/95 hover:bg-slate-800 border border-amber-500/60 px-2.5 py-1.5 rounded-xl shadow-xl flex items-center space-x-1.5 text-amber-300 text-[9px] font-black cursor-pointer transition"
+          >
+            <span>🪱</span>
+            <img src={`/assets/baits/${selectedBait.filename}`} alt="Bait" className="w-3.5 h-3.5 object-contain" />
+            <span className="truncate max-w-[110px]">{selectedBait.name}</span>
+            <span className="text-[8px] ml-0.5">{isBaitDropdownOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {isBaitDropdownOpen && (
+            <div className="absolute right-0 mt-1 w-52 bg-slate-950/95 border-2 border-amber-500/70 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
+              <div className="px-2 py-1 text-[8px] font-black text-amber-400 uppercase border-b border-slate-800">
+                Danh Sách Mồi Câu
+              </div>
+              <div className="max-h-56 overflow-y-auto space-y-1 pr-0.5">
+                {baitList.map((bait) => (
+                  <button
+                    key={bait.cost}
+                    onClick={() => handleBaitChange({ cost: bait.cost, filename: bait.filename, name: bait.label })}
+                    className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center gap-2 ${
+                      selectedBait.cost === bait.cost
+                        ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 shadow"
+                        : "bg-slate-900/80 text-slate-200 hover:bg-slate-800"
+                    }`}
+                  >
+                    <img src={`/assets/baits/${bait.filename}`} alt={bait.label} className="w-4 h-4 object-contain shrink-0" />
+                    <span className="truncate">{bait.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1524,23 +1544,26 @@ export default function CauCaPage() {
         </div>
       )}
 
-      <div className="absolute bottom-3 left-3 z-30 flex items-center space-x-2 bg-black/60 p-1.5 rounded-xl border border-amber-500/40 shadow-xl backdrop-blur-md">
+      {/* NÚT CHÈO THUYỀN TỐI ƯU CẢ MOUSE VÀ TOUCH */}
+      <div className="absolute bottom-3 left-3 z-30 flex items-center space-x-2 bg-black/70 p-2 rounded-xl border border-amber-500/50 shadow-2xl backdrop-blur-md pointer-events-auto">
         <button
-          onMouseDown={() => handleBoatMove(-4)}
-          onMouseUp={() => handleBoatMove(0)}
-          onTouchStart={() => handleBoatMove(-4)}
-          onTouchEnd={() => handleBoatMove(0)}
-          className="w-8 h-8 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-sm rounded-lg active:scale-95 transition shadow cursor-pointer flex items-center justify-center select-none"
+          onMouseDown={(e) => { e.stopPropagation(); handleBoatMove(-4); }}
+          onMouseUp={(e) => { e.stopPropagation(); handleBoatMove(0); }}
+          onMouseLeave={(e) => { e.stopPropagation(); handleBoatMove(0); }}
+          onTouchStart={(e) => { e.stopPropagation(); handleBoatMove(-4); }}
+          onTouchEnd={(e) => { e.stopPropagation(); handleBoatMove(0); }}
+          className="w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-base rounded-lg active:scale-95 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
         >
           ◀
         </button>
-        <span className="text-[9px] font-black text-amber-300 uppercase px-0.5">Chèo</span>
+        <span className="text-[10px] font-black text-amber-300 uppercase px-1">Chèo</span>
         <button
-          onMouseDown={() => handleBoatMove(4)}
-          onMouseUp={() => handleBoatMove(0)}
-          onTouchStart={() => handleBoatMove(4)}
-          onTouchEnd={() => handleBoatMove(0)}
-          className="w-8 h-8 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-sm rounded-lg active:scale-95 transition shadow cursor-pointer flex items-center justify-center select-none"
+          onMouseDown={(e) => { e.stopPropagation(); handleBoatMove(4); }}
+          onMouseUp={(e) => { e.stopPropagation(); handleBoatMove(0); }}
+          onMouseLeave={(e) => { e.stopPropagation(); handleBoatMove(0); }}
+          onTouchStart={(e) => { e.stopPropagation(); handleBoatMove(4); }}
+          onTouchEnd={(e) => { e.stopPropagation(); handleBoatMove(0); }}
+          className="w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-base rounded-lg active:scale-95 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
         >
           ▶
         </button>
