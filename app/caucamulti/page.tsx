@@ -492,14 +492,14 @@ export default function CauCa2NPage() {
 
     // --- TRẠNG THÁI ACTIVE SKILLS TRONG GAME ---
     let activeSkillState = {
-      sk1_armed: false,         // Đã kích hoạt Skill 1 (Chờ quăng dây)
-      sk1_holding: false,       // Đang giữ mồi đứng yên
+      sk1_armed: false,
+      sk1_holding: false,
       sk1_timer: null as any,
-      sk2_timeFreeze: false,    // Đóng băng 5s
-      sk3_armorBuff: false,     // Giáp sắt 10s
+      sk2_timeFreeze: false,
+      sk3_armorBuff: false,
       sk3_timer: null as any,
-      sk4_slowDown: false,      // Làm chậm 5s
-      sk5_ignoreSmall: false,   // Bỏ qua cá nhỏ lượt tới
+      sk4_slowDown: false,
+      sk5_ignoreSmall: false,
     };
 
     const fishingSkillListener = (e: any) => {
@@ -639,9 +639,8 @@ export default function CauCa2NPage() {
         }
         if (activeSkillState.sk2_timeFreeze) {
           if (this.layer === "top") {
-            currentSpeed = 0; // Cá nhỏ đóng băng hoàn toàn
+            currentSpeed = 0;
           } else {
-            // Cá lớn/quái vật tầng đáy có 40% kháng đóng băng
             const isResisted = this.layer === "bottom" && this.rngFunc() < 0.4;
             if (!isResisted) currentSpeed = 0;
           }
@@ -874,7 +873,6 @@ export default function CauCa2NPage() {
         if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
           this.applyStruggleDamage(0.08, true);
         } else if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
-          // Skill 1: Chạm giữ để mồi đứng yên 5 giây tại chỗ
           activeSkillState.sk1_holding = true;
           if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Mồi đứng yên 5s!";
           setTimeout(() => {
@@ -903,7 +901,7 @@ export default function CauCa2NPage() {
 
         let tensionGain = isHold ? (0.6 / currentRodDamageBuff) : (0.25 / currentRodDamageBuff);
         if (activeSkillState.sk3_armorBuff) {
-          tensionGain *= 0.7; // Giảm 30% tăng tension (kháng đứt dây khi có giáp sắt)
+          tensionGain *= 0.7;
         }
 
         if (this.isJointPulling || this.isAssistingOpponent) tensionGain *= 0.5;
@@ -921,10 +919,9 @@ export default function CauCa2NPage() {
             }
           });
         } else {
-          // Lập tức kéo lên ngay khi dính cá (bỏ hoàn toàn thanh máu ảo)
           this.state = "REELING_HORIZ";
           if (statusEl) {
-            statusEl.innerText = `Đã dính cá ${this.caughtFish?.fishData.vnName}! Kéo lên xuồng...`;
+            statusEl.innerText = `Đã kéo lên xuồng...`;
             statusEl.style.color = "#FFEB3B";
           }
         }
@@ -1073,7 +1070,7 @@ export default function CauCa2NPage() {
             bottomTimer = null;
           }
           let dx = rodTipX - this.x;
-          let speed = this.caughtFish ? 5 : 12;
+          let speed = this.caughtFish ? 8 : 15;
           if (Math.abs(dx) < speed) {
             this.x = rodTipX;
             this.state = "REELING_VERT";
@@ -1087,7 +1084,7 @@ export default function CauCa2NPage() {
           }
         } else if (this.state === "REELING_VERT") {
           let dy = rodTipY - this.y;
-          let speed = 25;
+          let speed = 30;
           if (Math.abs(dy) < speed) {
             if (this.caughtFish) {
               let earnedPoints = this.caughtFish.points;
@@ -1199,11 +1196,23 @@ export default function CauCa2NPage() {
           ctx!.fill();
         }
 
-        // Vào trạng thái giật trực tiếp thu dây luôn, không dùng thanh máu cá nữa
-        this.state = "STRUGGLING";
-        if (statusEl) {
-          statusEl.innerText = `Dính ${fish.fishData.vnName}! Kéo lên xuồng ngay!`;
-          statusEl.style.color = "#FFEB3B";
+        // --- PHÂN LOẠI CÁ NHỎ VS CÁ LỚN ---
+        // Cá nhỏ (tầng top hoặc mid bình thường): Tự động thu dây kéo lên ngay lập tức mà không cần ghì / giật
+        const isSmallFish = fish.layer === "top" || (fish.layer === "mid" && !fish.fishData.isRare);
+
+        if (isSmallFish) {
+          this.state = "REELING_HORIZ";
+          if (statusEl) {
+            statusEl.innerText = `Câu được ${fish.fishData.vnName}! Thu dây tự động...`;
+            statusEl.style.color = "#FFEB3B";
+          }
+        } else {
+          // Cá lớn / Quái vật tầng đáy: Bắt đầu vào trạng thái giật lực căng dây
+          this.state = "STRUGGLING";
+          if (statusEl) {
+            statusEl.innerText = `Dính ${fish.fishData.vnName} lớn! Kéo ngay!`;
+            statusEl.style.color = "#FF5252";
+          }
         }
       }
 
@@ -1236,6 +1245,7 @@ export default function CauCa2NPage() {
           this.drawHookAndBait(drawX, drawY);
         }
 
+        // Đã xóa bỏ hoàn toàn thanh máu cá (HP bar), chỉ giữ lại thanh tension (lực căng dây) khi giật cá lớn
         if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
           const barW = 60;
           const barH = 6;
