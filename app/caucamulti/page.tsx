@@ -885,8 +885,13 @@ export default function CauCa2NPage() {
           critPopups.push({ x: this.x + (Math.random() - 0.5) * 40, y: this.y - 30, alpha: 1.0, scale: 1.2 });
         }
 
-        // Tăng lượng tiến độ hoàn thành thanh lực kéo thay vì tăng lineTension trực tiếp làm đầy hỏng game
-        this.lineTension += (isHold ? 1.5 : 4.5) * hitDamage;
+        // ĐỘ KHÓ CÁ LỚN: Cá lớn yêu cầu từ 15 đến 30+ lần tap tùy theo độ to/multi, có crit hỗ trợ nhẹ hơn
+        const isBottomOrRare = this.caughtFish?.layer === "bottom" || this.caughtFish?.fishData?.isRare;
+        const fishMulti = this.caughtFish?.fishData?.multi || 3.0;
+        const requiredTaps = isBottomOrRare ? Math.min(200, Math.max(25, Math.round(fishMulti * 2))) : 12;
+        const gainPerTap = 100 / requiredTaps;
+
+        this.lineTension += (isHold ? 0.5 : 1.0) * hitDamage * gainPerTap;
 
         if (this.isAssistingOpponent) {
           Object.values(oppStates).forEach((opp: any) => {
@@ -1010,8 +1015,7 @@ export default function CauCa2NPage() {
             }
           }
         } else if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
-          // Trạng thái giật cá lớn: lineTension ở đây đóng vai trò tiến độ kéo (0 -> 100). 
-          // Nếu không tap/giữ, tiến độ sẽ tụt dần theo thời gian.
+          // Tụt thanh nhẹ nhàng khi ngưng tay để thanh không bị kẹt ở 0
           this.lineTension = Math.max(0, this.lineTension - 0.25); 
 
           // Có thể thêm cơ chế đứt dây nếu không tap trong thời gian quá lâu (ví dụ lineTension tụt về 0 hoặc có thanh quá tải riêng). Ở đây giữ nhịp chuẩn để ní tap/giữ.
