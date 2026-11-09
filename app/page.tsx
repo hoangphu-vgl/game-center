@@ -678,7 +678,7 @@ export default function Home() {
           
           <div className="lg:col-span-2 space-y-5">
             
-            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỨA CÂU CÁ 1 NGƯỜI, CÂU CÁ 2 NGƯỜI, JACKPOT, BACCARAT) */}
+            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỨA CÂU CÁ 1 NGƯỜI, CÂU CÁ Multi, JACKPOT, BACCARAT) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -707,7 +707,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 2. CÂU CÁ 2 NGƯỜI (MULTIPLAYER MỚI CHÈN) */}
+                {/* 2. CÂU CÁ Multi (MULTIPLAYER MỚI CHÈN) */}
                 <Link
                   href="/cauca2n"
                   className="bg-slate-900/90 border-2 border-amber-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-yellow-300 flex flex-col justify-between ring-2 ring-amber-500/30"
@@ -720,9 +720,9 @@ export default function Home() {
                       2 Player
                     </span>
                     <h3 className="text-sm font-black text-amber-300 flex items-center gap-1.5">
-                      <span>👥</span> Câu Cá 2 Người
+                      <span>👥</span> Câu Cá Team 7
                     </h3>
-                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">🤝 'Săn cá cùng đồng đội thời gian thực, móc dây x2 dame!'</p>
+                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">🤝 'Săn cá cùng đồng đội, móc dây câu thả ga!'</p>
                   </div>
                   <div className="mt-3 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-lg animate-bounce">
                     VÀO SẢNH 2N 👥
