@@ -819,20 +819,6 @@ export default function CauCa2NPage() {
         const currentActiveScore = (window as any).currentGameScore ?? 1000;
         syncScoreToSupabase(currentActiveScore - this.baitPrice);
 
-        async function contributeJackpot(baitCost: number) {
-          const { data } = await supabase.from("cauca_jackpot").select("*").eq("id", "global").single();
-          if (data) {
-            let addMinor = baitCost >= 10 && baitCost <= 1000 ? Math.round(baitCost * 0.2) : 0;
-            let addMajor = baitCost >= 2000 && baitCost <= 100000 ? Math.round(baitCost * 0.2) : 0;
-            let addGrand = Math.round(baitCost * 0.1);
-            await supabase
-              .from("cauca_jackpot")
-              .update({ minor: data.minor + addMinor, major: data.major + addMajor, grand: data.grand + addGrand })
-              .eq("id", "global");
-          }
-        }
-        contributeJackpot(this.baitPrice);
-
         let maxAllowedDepthRatio = 0.35;
         if (this.baitPrice >= 10000000) maxAllowedDepthRatio = 1.0;
         else if (this.baitPrice >= 1000000) maxAllowedDepthRatio = 0.88;
@@ -1091,6 +1077,64 @@ export default function CauCa2NPage() {
               const currentFish = this.caughtFish.fishData;
               if (selectedRod === "cancauvectorvang.png") earnedPoints *= 2;
 
+              // --- HỆ THỐNG NUÔI HŨ MỚI: TRÍCH TRỰC TIẾP TỪ ĐIỂM CÂU ĐƯỢC CÁ ---
+              async function processJackpotAndNutrient(fishLayer: string, fPoints: number) {
+                const { data } = await supabase.from("cauca_jackpot").select("*").eq("id", "global").single();
+                if (data) {
+                  let addMinor = fishLayer === "top" ? Math.round(fPoints * 0.7) : 0;
+                  let addMajor = fishLayer === "mid" ? Math.round(fPoints * 0.5) : 0;
+                  let addGrand = Math.round(fPoints * 0.3);
+
+                  let newMinor = data.minor + addMinor;
+                  let newMajor = data.major + addMajor;
+                  let newGrand = data.grand + addGrand;
+
+                  let wonAmount = 0;
+                  let wonType = "";
+
+                  // Tỉ lệ nổ hũ khó hơn (giống game jackpot trước)
+                  const randRoll = Math.random();
+
+                  // Hũ Trái Đất: Cá nhỏ & cá vừa (layer top hoặc mid) có tỉ lệ nổ
+                  if ((fishLayer === "top" || fishLayer === "mid") && randRoll < 0.0035) {
+                    wonAmount = newMinor;
+                    wonType = "Cá Trái Đất";
+                    newMinor = 100000;
+                  }
+                  // Hũ Namek: Cá vừa & cá lớn (layer mid hoặc bottom) có tỉ lệ nổ
+                  else if ((fishLayer === "mid" || fishLayer === "bottom") && randRoll < 0.0025) {
+                    wonAmount = newMajor;
+                    wonType = "Cá Namek";
+                    newMajor = 500000;
+                  }
+                  // Hũ Siêu Cấp: Bất cứ cá nào cũng có tỉ lệ nổ
+                  else if (randRoll < 0.0012) {
+                    wonAmount = newGrand;
+                    wonType = "Cá Siêu Cấp";
+                    newGrand = 2000000;
+                  }
+
+                  await supabase
+                    .from("cauca_jackpot")
+                    .update({ minor: newMinor, major: newMajor, grand: newGrand })
+                    .eq("id", "global");
+
+                  if (wonAmount > 0) {
+                    earnedPoints += wonAmount;
+                    window.dispatchEvent(
+                      new CustomEvent("showPopupBanner", {
+                        detail: {
+                          title: `🎉 NỔ HŨ ${wonType.toUpperCase()}! 🎉`,
+                          message: `Chúc mừng ní nổ hũ nhận thêm +${wonAmount.toLocaleString()} 🪙!`,
+                          type: "rare",
+                        },
+                      })
+                    );
+                  }
+                }
+              }
+              processJackpotAndNutrient(currentFish.layer, earnedPoints);
+
               if (roomChannelRef.current) {
                 roomChannelRef.current.send({
                   type: "broadcast",
@@ -1107,50 +1151,15 @@ export default function CauCa2NPage() {
               setTimeout(() => setMyCatchNotice(null), 3500);
 
               if (currentFish.isRare) {
-                if (Math.random() < 0.25) {
-                  const cbCost = this.baitPrice;
-                  async function triggerJackpotWin() {
-                    const { data } = await supabase.from("cauca_jackpot").select("*").eq("id", "global").single();
-                    if (data) {
-                      let won = 0;
-                      let hName = "";
-                      if (cbCost >= 10 && cbCost <= 1000) {
-                        won = data.minor;
-                        hName = "Cá Trái Đất";
-                        await supabase.from("cauca_jackpot").update({ minor: 100000 }).eq("id", "global");
-                      } else if (cbCost >= 2000 && cbCost <= 100000) {
-                        won = data.major;
-                        hName = "Cá Namek";
-                        await supabase.from("cauca_jackpot").update({ major: 500000 }).eq("id", "global");
-                      } else {
-                        won = data.grand;
-                        hName = "Cá Siêu Cấp";
-                        await supabase.from("cauca_jackpot").update({ grand: 2000000 }).eq("id", "global");
-                      }
-                      earnedPoints += won;
-                      window.dispatchEvent(
-                        new CustomEvent("showPopupBanner", {
-                          detail: {
-                            title: `🎉 NỔ HŨ ${hName}! 🎉`,
-                            message: `Thưởng thêm +${won.toLocaleString()} 🪙`,
-                            type: "rare",
-                          },
-                        })
-                      );
-                    }
-                  }
-                  triggerJackpotWin();
-                } else {
-                  window.dispatchEvent(
-                    new CustomEvent("showPopupBanner", {
-                      detail: {
-                        title: `🏆 KÉO ĐƯỢC ${currentFish.vnName.toUpperCase()}!`,
-                        message: `+${earnedPoints.toLocaleString()} Điểm!`,
-                        type: "rare",
-                      },
-                    })
-                  );
-                }
+                window.dispatchEvent(
+                  new CustomEvent("showPopupBanner", {
+                    detail: {
+                      title: `🏆 KÉO ĐƯỢC ${currentFish.vnName.toUpperCase()}!`,
+                      message: `+${earnedPoints.toLocaleString()} Điểm!`,
+                      type: "rare",
+                    },
+                  })
+                );
               }
 
               syncScoreToSupabase(((window as any).currentGameScore ?? 1000) + earnedPoints);
@@ -1196,8 +1205,6 @@ export default function CauCa2NPage() {
           ctx!.fill();
         }
 
-        // --- PHÂN LOẠI CÁ NHỎ VS CÁ LỚN ---
-        // Cá nhỏ (tầng top hoặc mid bình thường): Tự động thu dây kéo lên ngay lập tức mà không cần ghì / giật
         const isSmallFish = fish.layer === "top" || (fish.layer === "mid" && !fish.fishData.isRare);
 
         if (isSmallFish) {
@@ -1207,7 +1214,6 @@ export default function CauCa2NPage() {
             statusEl.style.color = "#FFEB3B";
           }
         } else {
-          // Cá lớn / Quái vật tầng đáy: Bắt đầu vào trạng thái giật lực căng dây
           this.state = "STRUGGLING";
           if (statusEl) {
             statusEl.innerText = `Dính ${fish.fishData.vnName} lớn! Kéo ngay!`;
@@ -1245,7 +1251,6 @@ export default function CauCa2NPage() {
           this.drawHookAndBait(drawX, drawY);
         }
 
-        // Đã xóa bỏ hoàn toàn thanh máu cá (HP bar), chỉ giữ lại thanh tension (lực căng dây) khi giật cá lớn
         if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
           const barW = 60;
           const barH = 6;
