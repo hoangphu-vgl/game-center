@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+
+interface LeaderboardUser {
+  id: string;
+  full_name: string;
+  balance: number;
+  avatar_url: string;
+}
 
 interface LocalHistory {
   id: number;
