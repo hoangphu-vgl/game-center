@@ -23,6 +23,7 @@ const CHIP_LIST = [
   { amount: 1000000, icon: "/assets/baccarat/kiyellow.png", label: "1M" },
   { amount: 5000000, icon: "/assets/baccarat/kiblue.png", label: "5M" },
   { amount: 10000000, icon: "/assets/baccarat/hakai.png", label: "10M" },
+  { amount: 50000000, icon: "/assets/baccarat/vocuc.png", label: "50M" },
 ];
 
 const BACCARAT_SKILL_ITEMS = [
