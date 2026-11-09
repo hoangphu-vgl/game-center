@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 
 // --- CÁC CÂU THOẠI KHỊA "QUAY HỤT" TỪ WHIS ---
 const WHIS_MISS_QUOTES = [
-  "Whis: Ôi da! Vừa quay hụt kìa cưng! Lại tốn thêm ít Linh Thạch cúng nhà cái rồi!",
+  "Whis: Ôi da! Vừa quay hụt kìa cưng! Lại tốn thêm ít Ki cúng nhà cái rồi!",
   "Whis: Khí của ngươi mỏng quá nên hòm không thèm độ đấy! Thử lại phát nữa xem có khóc không nào!",
   "Whis: Trắng tay hoàn toàn! Thần Hủy Diệt mà thấy cú quay này chắc ngài cho hủy diệt luôn cái ví của ngươi quá!",
   "Whis: Hahaha, tưởng hốt được quà to lắm cơ hóa ra chỉ là gió thoảng mây bay!",
@@ -109,7 +109,7 @@ export default function GachaPage() {
   const handleOpenChest = async (chestType: 'silver' | 'gold') => {
     const cost = chestType === 'silver' ? 50000 : 100000;
     if (balance < cost) {
-      alert("⚡ Linh Thạch (Ki) của bạn không đủ để mở hòm này!");
+      alert("⚡ Ki tích lũy của bạn không đủ để mở hòm này!");
       return;
     }
 
@@ -248,7 +248,7 @@ export default function GachaPage() {
 
         <div className="flex items-center gap-2">
           <div className="bg-slate-900/90 border border-cyan-500/40 px-4 py-2 rounded-xl text-cyan-400 font-mono font-black text-sm shadow">
-            ⚡ Linh Thạch: {balance.toLocaleString()} Ki
+            ⚡ Ki: {balance.toLocaleString()}
           </div>
 
           <button
@@ -387,7 +387,7 @@ export default function GachaPage() {
             <div className="space-y-3 text-[11px] text-slate-300 leading-relaxed font-sans">
               <div>
                 <h4 className="text-yellow-400 font-bold mb-1">1. Giới thiệu Rương Báu:</h4>
-                <p>Nơi các chiến binh dùng Linh Thạch (Ki) từ tài khoản cá nhân để khai mở những hòm báu vật do Thần Hủy Diệt và Trọng Tài Whis quản lý (Rương Bạc Phòng Thủ và Rương Vàng Tấn Công).</p>
+                <p>Nơi các chiến binh dùng Ki từ tài khoản cá nhân để khai mở những hòm báu vật do Thần Hủy Diệt và Trọng Tài Whis quản lý (Rương Bạc Phòng Thủ và Rương Vàng Tấn Công).</p>
               </div>
 
               <div>
