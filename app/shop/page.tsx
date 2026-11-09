@@ -5,18 +5,18 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 const SHOP_SPIN_PACKS = [
-  { id: 1, name: "🎟️ 1 Lượt Quay Tập Sự", cost: 100000, spins: 1, desc: "Gói đổi Ki lấy lượt quay thử vận may nhỏ lẻ!" },
-  { id: 2, name: "🎟️ 5 Lượt Quay Saiyan", cost: 450000, spins: 5, desc: "Khuyến mãi tiết kiệm Điểm Sức Mạnh!" },
-  { id: 3, name: "🎟️ 10 Lượt Quay SSJ", cost: 850000, spins: 10, desc: "Siêu ưu đãi bứt phá giới hạn chiến lực!" },
-  { id: 4, name: "🎟️ 20 Lượt Quay Ultra Instinct", cost: 1600000, spins: 20, desc: "Gói lượt quay tối thượng húp trọn kho phần thưởng!" },
-  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 2500000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
+  { id: 1, name: "🎟️ 1 Lượt Quay Tập Sự", cost: 100000000, spins: 1, desc: "Gói đổi Ki lấy lượt quay thử vận may nhỏ lẻ!" },
+  { id: 2, name: "🎟️ 5 Lượt Quay Saiyan", cost: 450000000, spins: 5, desc: "Khuyến mãi tiết kiệm Điểm Sức Mạnh!" },
+  { id: 3, name: "🎟️ 10 Lượt Quay SSJ", cost: 850000000, spins: 10, desc: "Siêu ưu đãi bứt phá giới hạn chiến lực!" },
+  { id: 4, name: "🎟️ 20 Lượt Quay Ultra Instinct", cost: 15000000000, spins: 20, desc: "Gói lượt quay tối thượng húp trọn kho phần thưởng!" },
+  { id: 5, name: "🎟️ 50 Lượt Quay Rồng Thần", cost: 450000000000, spins: 50, desc: "Gói đại gia võ đạo dành riêng cho cao thủ tích Ki!" },
 ];
 
 // SIÊU GÓI 5 CỦ (FLEX TƯỢNG TRƯNG - CHỈ GHI LỊCH SỬ, KHÔNG CỘNG LƯỢT, KHÔNG TRỪ KI)
 const MEGA_VIP_PACK = {
   id: 99,
-  name: "👑 SIÊU GÓI 5.000.000 KI",
-  costText: "5.000.000 Ki / 5.000 VNĐ",
+  name: "👑 SIÊU GÓI 5.000.000.000 KI",
+  costText: "5.000.000.000 Ki / 5.000 VNĐ",
   desc: "Gói flex danh dự vũ trụ!",
   maxGlobalStock: 20, // Kho chung còn lại mỗi tuần
   maxUserLimit: 5,    // Giới hạn cá nhân mỗi user/tuần

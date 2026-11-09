@@ -272,11 +272,10 @@ export default function JackpotTestPage() {
     }
   };
 
-  // 🌟 HÀM KÍCH HOẠT KỸ NĂNG: ĐÓNG POPUP + THÔNG BÁO CHO NGƯỜI CHƠI (CHO PHÉP SỬ DỤNG THOẢI MÁI KHÔNG CẤM LƯỢT)
   const handleActivateSkill = async (skillId: string, skillName: string) => {
     const success = await useSkillFromSupabase(skillId);
     if (success) {
-      setShowSkillModal(false); // Tự động đóng popup kho skill
+      setShowSkillModal(false);
 
       let notificationText = `✨ Đã thi triển kỹ năng [${skillName}] thành công!`;
 
@@ -538,7 +537,11 @@ export default function JackpotTestPage() {
       setLastWonAura(null);
       triggerJackpotSideGlow();
       triggerBroadcast(`📢 KHO TÀNG CHẤN ĐỘNG: Chiến binh [${playerName}] vừa HÚP TRỌN NGỌC RỒNG SIÊU CẤP khủng khiếp +${baseWinAmount.toLocaleString()} PTS! 👑🔥`);
-      await updateGlobalJackpotInDB({ ...jackpotsRef.current, grand: 100000 });
+      await updateGlobalJackpotInDB({ 
+        minor: jackpotsRef.current.minor, 
+        major: jackpotsRef.current.major, 
+        grand: 100000 
+      });
     } else if (majorHit) {
       hitJackpotType = "major";
       baseWinAmount = jackpotsRef.current.major;
@@ -548,7 +551,12 @@ export default function JackpotTestPage() {
       setLastWonAura(null);
       triggerJackpotSideGlow();
       triggerBroadcast(`📢 TIN VUI SẢNH CAO: Chiến binh [${playerName}] vừa nổ tung NGỌC RỒNG NAMEK nhận +${baseWinAmount.toLocaleString()} PTS! 💎⚡`);
-      await updateGlobalJackpotInDB({ ...jackpotsRef.current, major: 45000 });
+      // ĐÃ SỬA: Ép cứng reset về 45000 chuẩn xác ngay lần đầu tiên
+      await updateGlobalJackpotInDB({ 
+        minor: jackpotsRef.current.minor, 
+        major: 45000, 
+        grand: jackpotsRef.current.grand 
+      });
     } else if (minorHit) {
       hitJackpotType = "minor";
       baseWinAmount = jackpotsRef.current.minor;
@@ -558,7 +566,11 @@ export default function JackpotTestPage() {
       setLastWonAura(null);
       triggerJackpotSideGlow();
       triggerBroadcast(`📢 CHÚ MỪNG: Chiến binh [${playerName}] vừa giật hũ NGỌC RỒNG TRÁI ĐẤT +${baseWinAmount.toLocaleString()} PTS! 🔥`);
-      await updateGlobalJackpotInDB({ ...jackpotsRef.current, minor: 15000 });
+      await updateGlobalJackpotInDB({ 
+        minor: 15000, 
+        major: jackpotsRef.current.major, 
+        grand: jackpotsRef.current.grand 
+      });
     } else if (isTriggerWin) {
       const gridColumns: { symbol: typeof DRAGON_SYMBOLS[0]; index: number }[][] = [];
       for (let c = 0; c < 6; c++) {

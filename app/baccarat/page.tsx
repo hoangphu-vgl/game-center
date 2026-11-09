@@ -20,7 +20,9 @@ const CHIP_LIST = [
   { amount: 10000, icon: "/assets/baccarat/dragon-ball-5.png", label: "10K" },
   { amount: 250000, icon: "/assets/baccarat/dragon-ball-6.png", label: "250K" },
   { amount: 500000, icon: "/assets/baccarat/dragon-ball-7.png", label: "500K" },
-  { amount: 1000000, icon: "/assets/baccarat/kiblue.png", label: "1M" },
+  { amount: 1000000, icon: "/assets/baccarat/kiyellow.png", label: "1M" },
+  { amount: 5000000, icon: "/assets/baccarat/kiblue.png", label: "5M" },
+  { amount: 10000000, icon: "/assets/baccarat/hakai.png", label: "10M" },
 ];
 
 const BACCARAT_SKILL_ITEMS = [
@@ -393,7 +395,7 @@ export default function BaccaratPage() {
 
       if (skillId === 'bc_1') {
         const peekCard = deckRef.current[deckRef.current.length - 1];
-        notificationText = `🌀 Nhãn Quan Whis thấu thị thành công! Lá tiếp theo: [ ${peekCard.rank} ${getSuitSymbol(peekCard.suit)} ]`;
+        notificationText = `🌀 Nhãn Quan Whis thấu thị lá tiếp theo: [ ${peekCard.rank} ${getSuitSymbol(peekCard.suit)} ]`;
       } else if (skillId === 'bc_2') {
         notificationText = `🛡️ Hộ Thân Ki đã sẵn sàng bảo vệ bạn (Giảm 50% thiệt hại khi thua ván này)!`;
       } else if (skillId === 'bc_3') {
