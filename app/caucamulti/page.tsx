@@ -859,7 +859,10 @@ export default function CauCa2NPage() {
       }
 
       holdStruggleTick() {
-        if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
+        if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
+          this.struggleIdleTime = 0;
+          this.applyStruggleDamage(0.5, true); // Giữ tay cũng tính dame nhưng nhẹ hơn
+        } else if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
           activeSkillState.sk1_holding = true;
           if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Mồi đứng yên 5s!";
           setTimeout(() => {
@@ -1018,13 +1021,14 @@ export default function CauCa2NPage() {
           this.lineTension = Math.max(0, this.lineTension - 0.35); 
           this.struggleIdleTime += 1;
 
-          // Cập nhật vị trí con cá bám theo đầu móc câu khi đang giằng co
+          // Cập nhật tọa độ con cá bơi lượn quanh đầu móc khi đang giằng co
           if (this.caughtFish) {
-            this.caughtFish.x = this.x - (this.caughtFish.direction === 1 ? this.caughtFish.size * 0.7 : -this.caughtFish.size * 0.7);
-            this.caughtFish.y = this.y - (-this.caughtFish.size * 0.15);
+            this.caughtFish.animFrame += 0.15;
+            this.caughtFish.x = this.x + Math.sin(this.caughtFish.animFrame) * 12;
+            this.caughtFish.y = this.y + Math.cos(this.caughtFish.animFrame * 0.8) * 8 - (this.caughtFish.size * 0.15);
           }
 
-          // Nếu để không tap quá 3.5 giây (210 frames) -> Cá quẫy đứt dây / sổng mất!
+          // Nếu ngưng tay quá 3.5 giây -> Cá đứt dây sổng mất!
           if (this.struggleIdleTime > 210) {
             this.state = "IDLE";
             if (statusEl) {
