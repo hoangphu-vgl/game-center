@@ -226,22 +226,22 @@ export default function CauCaPage() {
         }
       }
       draw() {
-        ctx.save();
-        ctx.translate(this.x, this.y);
+        ctx!.save();
+        ctx!.translate(this.x, this.y);
 
         const gentleSwim = Math.sin(this.animFrame) * 0.04;
-        ctx.rotate(gentleSwim);
+        ctx!.rotate(gentleSwim);
 
         if (this.direction === 1) {
-          ctx.scale(-1, 1);
+          ctx!.scale(-1, 1);
         }
         
         const img = this.fishObj.img;
         if (img && img.complete && img.naturalWidth !== 0) {
-          ctx.drawImage(img, -this.size, -this.size * 0.6, this.size * 2.2, this.size * 1.2);
+          ctx!.drawImage(img, -this.size, -this.size * 0.6, this.size * 2.2, this.size * 1.2);
         }
 
-        ctx.restore();
+        ctx!.restore();
       }
     }
 
@@ -488,10 +488,12 @@ export default function CauCaPage() {
           if (Math.abs(dy) < speed) {
             if (this.caughtFish) {
               let earnedPoints = this.caughtFish.points;
+              const currentCaughtFishData = this.caughtFish.fishData;
 
-              if (this.caughtFish.fishData.isRare) {
+              if (currentCaughtFishData.isRare) {
                 const randChance = Math.random();
                 if (randChance < 0.25) { 
+                  const currentBaitPrice = this.baitPrice;
                   async function triggerJackpotWin(baitCost: number) {
                     const { data } = await supabase.from('cauca_jackpot').select('*').eq('id', 'global').single();
                     if (data) {
@@ -515,17 +517,17 @@ export default function CauCaPage() {
                       earnedPoints += wonAmount;
                       window.dispatchEvent(new CustomEvent('showRarePopup', { 
                         detail: { 
-                          name: fish.fishData.vnName, 
+                          name: currentCaughtFishData.vnName, 
                           points: earnedPoints, 
                           jackpotMsg: `🎉 NỔ HŨ THÀNH CÔNG HŨ ${hũName}! +${wonAmount.toLocaleString()} 🪙` 
                         } 
                       }));
                     }
                   }
-                  triggerJackpotWin(this.baitPrice);
+                  triggerJackpotWin(currentBaitPrice);
                 } else {
                   window.dispatchEvent(new CustomEvent('showRarePopup', { 
-                    detail: { name: this.caughtFish.fishData.vnName, points: earnedPoints } 
+                    detail: { name: currentCaughtFishData.vnName, points: earnedPoints } 
                   }));
                 }
               }
@@ -559,11 +561,11 @@ export default function CauCaPage() {
         this.caughtFish = fish;
         fish.isCaught = true;
         
-        ctx.fillStyle = 'white';
+        ctx!.fillStyle = 'white';
         for(let i=0; i<10; i++) {
-          ctx.beginPath();
-          ctx.arc(this.x + (Math.random()-0.5)*20, this.y + (Math.random()-0.5)*20, Math.random()*4+2, 0, Math.PI*2);
-          ctx.fill();
+          ctx!.beginPath();
+          ctx!.arc(this.x + (Math.random()-0.5)*20, this.y + (Math.random()-0.5)*20, Math.random()*4+2, 0, Math.PI*2);
+          ctx!.fill();
         }
         
         const willStruggle = Math.random() <= fish.struggleChance;
@@ -599,45 +601,45 @@ export default function CauCaPage() {
           drawY += (Math.random() - 0.5) * 14;
         }
 
-        ctx.beginPath();
-        ctx.moveTo(rodTipX, rodTipY);
+        ctx!.beginPath();
+        ctx!.moveTo(rodTipX, rodTipY);
         if (this.state === 'IDLE' || this.state === 'CHARGING') {
           let extraBend = this.state === 'CHARGING' ? (this.power / 100) * 20 : 0;
-          ctx.quadraticCurveTo(rodTipX + 15 + extraBend, rodTipY + 45 + extraBend, rodTipX, rodTipY + 75);
-          ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
+          ctx!.quadraticCurveTo(rodTipX + 15 + extraBend, rodTipY + 45 + extraBend, rodTipX, rodTipY + 75);
+          ctx!.strokeStyle = 'rgba(255,255,255,0.75)';
+          ctx!.lineWidth = 1.2;
+          ctx!.stroke();
           this.drawHookAndBait(rodTipX, rodTipY + 75);
         } else {
           let controlX = (rodTipX + drawX) / 2;
           let controlY = Math.min(rodTipY, drawY) - 30;
-          ctx.quadraticCurveTo(controlX, controlY, drawX, drawY);
-          ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
+          ctx!.quadraticCurveTo(controlX, controlY, drawX, drawY);
+          ctx!.strokeStyle = 'rgba(255,255,255,0.9)';
+          ctx!.lineWidth = 1.5;
+          ctx!.stroke();
           this.drawHookAndBait(drawX, drawY);
         }
       }
 
       drawHookAndBait(hx: number, hy: number) {
-        ctx.fillStyle = '#FF9800'; 
-        ctx.beginPath(); 
-        ctx.arc(hx, hy - 6, 6, 0, Math.PI * 2); 
-        ctx.fill();
-        ctx.strokeStyle = '#E65100';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        ctx!.fillStyle = '#FF9800'; 
+        ctx!.beginPath(); 
+        ctx!.arc(hx, hy - 6, 6, 0, Math.PI * 2); 
+        ctx!.fill();
+        ctx!.strokeStyle = '#E65100';
+        ctx!.lineWidth = 1.5;
+        ctx!.stroke();
 
-        ctx.strokeStyle = '#B0BEC5';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(hx, hy + 6, 5, 0, Math.PI, false);
-        ctx.moveTo(hx + 5, hy + 6);
-        ctx.lineTo(hx + 5, hy);
-        ctx.stroke();
+        ctx!.strokeStyle = '#B0BEC5';
+        ctx!.lineWidth = 2.5;
+        ctx!.beginPath();
+        ctx!.arc(hx, hy + 6, 5, 0, Math.PI, false);
+        ctx!.moveTo(hx + 5, hy + 6);
+        ctx!.lineTo(hx + 5, hy);
+        ctx!.stroke();
 
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath(); ctx.arc(hx - 2, hy + 4, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx!.fillStyle = '#FFFFFF';
+        ctx!.beginPath(); ctx!.arc(hx - 2, hy + 4, 1.5, 0, Math.PI * 2); ctx!.fill();
       }
     }
 
@@ -705,70 +707,69 @@ export default function CauCaPage() {
     window.addEventListener('touchend', onTouchEnd);
 
     function drawBackground() {
-      ctx.fillStyle = '#87CEEB';
-      ctx.fillRect(0, 0, width, waterY);
+      ctx!.fillStyle = '#87CEEB';
+      ctx!.fillRect(0, 0, width, waterY);
       
-      ctx.fillStyle = '#FFEB3B';
-      ctx.beginPath(); ctx.arc(width*0.8, height*0.1, 40, 0, Math.PI*2); ctx.fill();
+      ctx!.fillStyle = '#FFEB3B';
+      ctx!.beginPath(); ctx!.arc(width*0.8, height*0.1, 40, 0, Math.PI*2); ctx!.fill();
 
-      ctx.fillStyle = '#5D4037';
-      ctx.fillRect(0, waterY - 35, width * 0.28, 35); 
-      ctx.fillStyle = '#3E2723';
-      ctx.fillRect(width * 0.22 - 12, waterY, 18, height - waterY); 
+      ctx!.fillStyle = '#5D4037';
+      ctx!.fillRect(0, waterY - 35, width * 0.28, 35); 
+      ctx!.fillStyle = '#3E2723';
+      ctx!.fillRect(width * 0.22 - 12, waterY, 18, height - waterY); 
 
-      ctx.fillStyle = '#212121'; 
-      ctx.fillRect(rodBaseX - 10, rodBaseY - 15, 22, 55); 
+      ctx!.fillStyle = '#212121'; 
+      ctx!.fillRect(rodBaseX - 10, rodBaseY - 15, 22, 55); 
       
-      // 🌟 HIỆN THÊM CÁI ĐẦU (AVATAR) NGAY TRÊN CẦN CÂU
       const avatarImg = new Image();
       avatarImg.src = userAvatar;
       if (avatarImg.complete && avatarImg.naturalWidth !== 0) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(rodBaseX + 1, rodBaseY + 12, 14, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(avatarImg, rodBaseX - 13, rodBaseY - 2, 28, 28);
-        ctx.restore();
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(rodBaseX + 1, rodBaseY + 12, 14, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx!.save();
+        ctx!.beginPath();
+        ctx!.arc(rodBaseX + 1, rodBaseY + 12, 14, 0, Math.PI * 2);
+        ctx!.closePath();
+        ctx!.clip();
+        ctx!.drawImage(avatarImg, rodBaseX - 13, rodBaseY - 2, 28, 28);
+        ctx!.restore();
+        ctx!.strokeStyle = '#FFD700';
+        ctx!.lineWidth = 2;
+        ctx!.beginPath();
+        ctx!.arc(rodBaseX + 1, rodBaseY + 12, 14, 0, Math.PI * 2);
+        ctx!.stroke();
       } else {
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath(); ctx.arc(rodBaseX + 1, rodBaseY + 12, 12, 0, Math.PI * 2); ctx.fill();
+        ctx!.fillStyle = '#FFD700';
+        ctx!.beginPath(); ctx!.arc(rodBaseX + 1, rodBaseY + 12, 12, 0, Math.PI * 2); ctx!.fill();
       }
 
       let bendOffset = hook.state === 'CHARGING' ? (hook.power / 100) * 18 : 0;
-      ctx.strokeStyle = '#8D6E63';
-      ctx.lineWidth = 7;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(rodBaseX, rodBaseY);
-      ctx.quadraticCurveTo(rodBaseX + 45 + bendOffset, rodBaseY - 45 - bendOffset, rodTipX, rodTipY);
-      ctx.stroke();
+      ctx!.strokeStyle = '#8D6E63';
+      ctx!.lineWidth = 7;
+      ctx!.lineCap = 'round';
+      ctx!.beginPath();
+      ctx!.moveTo(rodBaseX, rodBaseY);
+      ctx!.quadraticCurveTo(rodBaseX + 45 + bendOffset, rodBaseY - 45 - bendOffset, rodTipX, rodTipY);
+      ctx!.stroke();
 
-      ctx.strokeStyle = '#D7CCC8';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(rodBaseX, rodBaseY - 2);
-      ctx.quadraticCurveTo(rodBaseX + 45 + bendOffset, rodBaseY - 47 - bendOffset, rodTipX, rodTipY - 2);
-      ctx.stroke();
+      ctx!.strokeStyle = '#D7CCC8';
+      ctx!.lineWidth = 2;
+      ctx!.beginPath();
+      ctx!.moveTo(rodBaseX, rodBaseY - 2);
+      ctx!.quadraticCurveTo(rodBaseX + 45 + bendOffset, rodBaseY - 47 - bendOffset, rodTipX, rodTipY - 2);
+      ctx!.stroke();
 
-      let grad = ctx.createLinearGradient(0, waterY, 0, height);
+      let grad = ctx!.createLinearGradient(0, waterY, 0, height);
       grad.addColorStop(0, '#0288D1'); 
       grad.addColorStop(1, '#000A1F'); 
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, waterY, width, height - waterY);
+      ctx!.fillStyle = grad;
+      ctx!.fillRect(0, waterY, width, height - waterY);
       
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
-      ctx.fillRect(0, waterY, width, 4);
+      ctx!.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx!.fillRect(0, waterY, width, 4);
     }
 
     let animationFrameId: number;
     function gameLoop() {
-      ctx.clearRect(0, 0, width, height);
+      ctx!.clearRect(0, 0, width, height);
       drawBackground();
       
       for (let f of fishes) {
