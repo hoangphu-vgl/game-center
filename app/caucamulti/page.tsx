@@ -886,7 +886,7 @@ export default function CauCa2NPage() {
         // ĐỘ KHÓ CÁ LỚN: Cá lớn yêu cầu từ 15 đến 30+ lần tap tùy theo độ to/multi, có crit hỗ trợ nhẹ hơn
         const isBottomOrRare = this.caughtFish?.layer === "bottom" || this.caughtFish?.fishData?.isRare;
         const fishMulti = this.caughtFish?.fishData?.multi || 3.0;
-        const requiredTaps = isBottomOrRare ? Math.min(200, Math.max(25, Math.round(fishMulti * 2))) : 12;
+        const requiredTaps = isBottomOrRare ? Math.min(500, Math.max(40, Math.round(fishMulti * 3))) : 12;
         const gainPerTap = 100 / requiredTaps;
 
         this.lineTension += (isHold ? 0.5 : 1.0) * hitDamage * gainPerTap;
