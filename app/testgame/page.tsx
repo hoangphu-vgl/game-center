@@ -261,7 +261,9 @@ export default function CauCaPage() {
       return { img, filename: fname };
     });
 
-    let width: number, height: number, waterY: number;
+    let width: number = window.innerWidth;
+    let height: number = window.innerHeight;
+    let waterY: number = height * 0.3;
     let boatX: number = 200; 
     let boatSpeed: number = 0; 
     let bottomTimer: NodeJS.Timeout | null = null;
@@ -282,8 +284,8 @@ export default function CauCaPage() {
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
+      ctx!.setTransform(1, 0, 0, 1, 0, 0);
+      ctx!.scale(dpr, dpr);
 
       width = w;
       height = h;
@@ -1282,20 +1284,19 @@ export default function CauCaPage() {
   };
 
   const baitList = [
-    { cost: 10, filename: "dausenzu.png", label: "Mồi Sơ Cấp (10🪙)" },
-    { cost: 20, filename: "cagia.png", label: "Mồi Thường (20🪙)" },
-    { cost: 50, filename: "giun.png", label: "Mồi Tiêu Chuẩn (50🪙)" },
-    { cost: 100, filename: "moi.png", label: "Mồi Khá (100🪙)" },
-    { cost: 500, filename: "tom.jpg", label: "Mồi Thơm (500🪙)" },
-    { cost: 1000, filename: "dragon-ball-4.png", label: "Mồi Xịn (1,000🪙)" },
-    { cost: 5000, filename: "kiblue.png", label: "Mồi Cao Cấp (5,000🪙)" },
-    { cost: 10000, filename: "hakai.png", label: "Mồi Quái Vật (10,000🪙)" }
+    { cost: 1000, filename: "dausenzu.png", label: "Mồi Sơ Cấp (1,000🪙)" },
+    { cost: 2000, filename: "cagia.png", label: "Mồi Thường (2,000🪙)" },
+    { cost: 10000, filename: "giun.png", label: "Mồi Tiêu Chuẩn (100,000🪙)" },
+    { cost: 500000, filename: "moi.png", label: "Mồi Khá (500,000🪙)" },
+    { cost: 1000000, filename: "tom.png", label: "Mồi Thơm (1,000,000🪙)" },
+    { cost: 10000000, filename: "dragon-ball-4.png", label: "Mồi Xịn (10,0000,000🪙)" },
+    { cost: 50000000, filename: "kiblue.png", label: "Mồi Cao Cấp (50,000,000🪙)" },
+    { cost: 100000000, filename: "hakai.png", label: "Mồi Quái Vật (100,000,000🪙)" }
   ];
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none font-sans" style={{ touchAction: 'manipulation' }}>
       
-      {/* HEADER TOP COMPACT (GIỐNG GIAO DIỆN TIẾN LÊN) */}
       <div className="absolute top-2 left-2 right-2 flex justify-between items-start pointer-events-auto z-40">
         <div className="flex items-center space-x-1.5">
           <Link href="/" className="bg-slate-900/90 text-amber-400 hover:underline px-2.5 py-1.5 rounded-lg text-[9px] font-black border border-amber-500/40 shadow">
@@ -1331,7 +1332,6 @@ export default function CauCaPage() {
         </div>
       </div>
 
-      {/* JACKPOT BANNER TOP CENTER */}
       <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-slate-950/90 border border-amber-500/60 px-3 py-1 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none">
         <div className="text-center">
           <span className="text-[7px] font-bold text-slate-300 block">CÁ TRÁI ĐẤT</span>
@@ -1349,7 +1349,6 @@ export default function CauCaPage() {
         </div>
       </div>
 
-      {/* CHỌN MỒI CÂU TOP RIGHT */}
       <div className="absolute top-12 right-2 z-20 bg-slate-900/95 border border-amber-500/50 p-1.5 rounded-xl shadow-2xl flex flex-col items-center space-y-1 max-w-[260px]">
         <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1">
           🪱 CHỌN MỒI (<img src={`/assets/baits/${selectedBait.filename}`} className="w-3.5 h-3.5 inline object-contain" />)
@@ -1525,7 +1524,6 @@ export default function CauCaPage() {
         </div>
       )}
 
-      {/* ĐIỀU KHIỂN DI CHUYỂN THUYỀN GÓC DƯỚI TRÁI */}
       <div className="absolute bottom-3 left-3 z-30 flex items-center space-x-2 bg-black/60 p-1.5 rounded-xl border border-amber-500/40 shadow-xl backdrop-blur-md">
         <button
           onMouseDown={() => handleBoatMove(-4)}
@@ -1548,12 +1546,10 @@ export default function CauCaPage() {
         </button>
       </div>
 
-      {/* THANH GỒNG LỰC */}
       <div id="power-container" className="absolute bottom-12 left-1/2 -translate-x-1/2 w-[200px] h-[20px] bg-black/70 rounded-xl border-2 border-white hidden pointer-events-none overflow-hidden shadow-lg z-10">
         <div id="power-bar" className="w-[0%] h-full bg-gradient-to-r from-[#4CAF50] via-[#FFEB3B] to-[#F44336] transition-all duration-75"></div>
       </div>
 
-      {/* CANVAS CHÍNH */}
       <canvas id="gameCanvas" className="absolute inset-0 block w-full h-full"></canvas>
     </div>
   );

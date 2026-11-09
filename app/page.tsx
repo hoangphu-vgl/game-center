@@ -25,20 +25,20 @@ const AURA_QUOTES = [
   "🌀 'Nỗi sợ hãi khi đối đầu không có gì đáng xấu hổ, nó giúp ngươi biết được điểm yếu của mình!' - Goku",
   "🥋 'Võ thuật lôi đài không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
   "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là Bá Chủ Đại Hội Võ Thuật!' - Broly",
-  "⚡ 'Một chiến binh thực sự không bao giờ cúi頭 trước lôi đài số phận!' - Vegeta",
+  "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước lôi đài số phận!' - Vegeta",
   "🐉 'Bản Năng Vô Thượng... trạng thái khi 13 Ấn Ký tự động phản ứng!' - Whis",
 ];
 
 const getSaiyanLevel = (power: number) => {
-  if (power >= 1000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
-  if (power >= 500000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
-  if (power >= 250000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
-  if (power >= 100000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
-  if (power >= 50000000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
-  if (power >= 10000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
-  if (power >= 5000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
-  if (power >= 1000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/50 bg-yellow-950/30" };
-  if (power >= 500000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
+  if (power >= 1000000000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
+  if (power >= 500000000000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
+  if (power >= 250000000000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
+  if (power >= 10000000000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
+  if (power >= 5000000000000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
+  if (power >= 100000000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
+  if (power >= 50000000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
+  if (power >= 1000000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/50 bg-yellow-950/30" };
+  if (power >= 500000000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
   return { name: "🌍 Lv.1 - Người Trái Đất", color: "text-slate-300 border-slate-700 bg-slate-900/50" };
 };
 
@@ -490,6 +490,9 @@ export default function Home() {
           <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition text-[11px]">
             🏠 Trang Chủ
           </Link>
+          <Link href="/cauca" className="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
+            🎣 Cần Thủ Vũ Trụ
+          </Link>
           <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎲 Baccarat Thần Thánh
           </Link>
@@ -589,9 +592,9 @@ export default function Home() {
               <span className="text-[10px] text-amber-300/70">Ki</span>
             </div>
 
-            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-purple-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
-              <img src="/assets/home/capsule.png" alt="Ticket" className="w-4 h-4 object-contain" />
-              <span className="font-black text-purple-300">{luckySpins}</span>
+            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-purple-500/50 px-3.5 py-2 rounded-xl text-xs shadow-inner">
+              <img src="/assets/home/capsule.png" alt="Capsule" className="w-4 h-4 object-contain" />
+              <span className="font-black text-purple-300">{luckySpins} Lượt</span>
             </div>
 
             <button
@@ -670,7 +673,7 @@ export default function Home() {
           
           <div className="lg:col-span-2 space-y-5">
             
-            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỈ CHỨA CÁC GAME CHÍNH) */}
+            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỨA CÂU CÁ, JACKPOT, BACCARAT) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -678,46 +681,69 @@ export default function Home() {
                 </h2>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 
-                {/* 1. JACKPOT RỒNG THẦN */}
+                {/* 1. CẦN THỦ VŨ TRỤ */}
+                <Link
+                  href="/cauca"
+                  className="bg-slate-900/90 border-2 border-cyan-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-400 flex flex-col justify-between"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-15">
+                    <img src="/assets/cauca/Aetobatus_ocellatus.png" alt="Fish" className="w-20 h-20 object-contain" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-cyan-400 flex items-center gap-1.5">
+                      <span>🎣</span> Cần Thủ Vũ Trụ
+                    </h3>
+                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">✨ 'Hạ gục cá mập, giật nổ hũ Jackpot đại dương cực khủng!'</p>
+                  </div>
+                  <div className="mt-3 bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    CÂU CÁ 🌊
+                  </div>
+                </Link>
+
+                {/* 2. JACKPOT RỒNG THẦN */}
                 <Link
                   href="/jackpot"
-                  className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400"
+                  className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400 flex flex-col justify-between"
                 >
                   <div className="absolute right-2 -bottom-2 opacity-15">
                     <img src="/assets/home/dragonball.png" alt="Ball" className="w-20 h-20 object-contain" />
                   </div>
-                  <h3 className="text-sm sm:text-base font-black text-amber-400 flex items-center gap-2">
-                    <img src="/assets/home/dragon-ball-4.png" alt="Jackpot" className="w-6 h-6 object-contain" /> Jackpot Rồng Thần
-                  </h3>
-                  <p className="text-slate-300 text-xs mt-1 italic font-medium">✨ 'Vận Ki quay hũ tích lũy Điểm Sức Mạnh nổ hũ Chí Tôn!'</p>
+                  <div>
+                    <h3 className="text-sm font-black text-amber-400 flex items-center gap-1.5">
+                      <img src="/assets/home/dragon-ball-4.png" alt="Jackpot" className="w-5 h-5 object-contain" /> Jackpot Rồng Thần
+                    </h3>
+                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">✨ 'Vận Ki quay hũ tích lũy Điểm Sức Mạnh nổ hũ Chí Tôn!'</p>
+                  </div>
                   <div className="mt-3 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO NỔ HŨ 🔮
+                    NỔ HŨ 🔮
                   </div>
                 </Link>
 
-                {/* 2. BACCARAT THẦN THÁNH */}
+                {/* 3. BACCARAT THẦN THÁNH */}
                 <Link
                   href="/baccarat"
-                  className="bg-slate-900/90 border-2 border-cyan-400/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-300"
+                  className="bg-slate-900/90 border-2 border-indigo-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-indigo-400 flex flex-col justify-between"
                 >
                   <div className="absolute right-2 -bottom-2 opacity-15">
                     <img src="/assets/baccarat/champa.png" alt="Champa" className="w-20 h-20 object-contain" />
                   </div>
-                  <h3 className="text-sm sm:text-base font-black text-cyan-400 flex items-center gap-2">
-                    <img src="/assets/baccarat/dragon-ball-7.png" alt="Baccarat" className="w-6 h-6 object-contain" /> Baccarat Thần Thánh
-                  </h3>
-                  <p className="text-slate-300 text-xs mt-1 italic font-medium">⚡ 'Whis phẩy gậy định đoạt, lật bài baccarat phân định cao thấp, húp trọn Pot!'</p>
-                  <div className="mt-3 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO SẢNH BACCARAT 🎲
+                  <div>
+                    <h3 className="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+                      <img src="/assets/baccarat/champa.png" alt="Baccarat" className="w-5 h-5 object-contain" /> Baccarat Thần Thánh
+                    </h3>
+                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">⚡ 'Whis phẩy gậy định đoạt, lật bài baccarat phân định cao thấp!'</p>
+                  </div>
+                  <div className="mt-3 bg-gradient-to-r from-indigo-500 via-blue-500 to-purple-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
+                    BACCARAT 🎲
                   </div>
                 </Link>
 
               </div>
             </div>
 
-            {/* MỤC MỚI: THẦN ĐIỆN & KHO BẢO (CHỨA SHOP, SHOPSKILL, VÒNG QUAY, GACHA) */}
+            {/* MỤC: THẦN ĐIỆN & KHO BẢO */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-purple-400 tracking-wider uppercase flex items-center gap-2">
@@ -761,7 +787,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 3. GACHA THIÊN SỨ (/app/gacha/page.tsx) */}
+                {/* 3. GACHA THIÊN SỨ */}
                 <Link
                   href="/gacha"
                   className="bg-slate-900/90 border border-pink-500/50 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-pink-400"
@@ -798,6 +824,7 @@ export default function Home() {
               </div>
             </div>
 
+            {/* MỤC: LÔI ĐÀI VÕ ĐẠO SÁT PHẠT */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-emerald-400 tracking-wider uppercase flex items-center gap-2">
