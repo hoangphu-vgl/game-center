@@ -495,7 +495,7 @@ export default function Home() {
             🎣 Cần Thủ Vũ Trụ
           </Link>
           {/* NÚT CHUYỂN HƯỚNG CÂU CÁ 2 NGƯỜI */}
-          <Link href="/cauca2n" className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:brightness-110 text-slate-950 font-black border border-amber-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
+          <Link href="/caucamulti" className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:brightness-110 text-slate-950 font-black border border-amber-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
             👥 Câu Cá 2 Người
           </Link>
           <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
@@ -709,7 +709,7 @@ export default function Home() {
 
                 {/* 2. CÂU CÁ Multi (MULTIPLAYER MỚI CHÈN) */}
                 <Link
-                  href="/cauca2n"
+                  href="/caucamulti"
                   className="bg-slate-900/90 border-2 border-amber-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-yellow-300 flex flex-col justify-between ring-2 ring-amber-500/30"
                 >
                   <div className="absolute right-2 -bottom-2 opacity-20">
@@ -725,7 +725,7 @@ export default function Home() {
                     <p className="text-slate-300 text-[11px] mt-1 italic font-medium">🤝 'Săn cá cùng đồng đội, móc dây câu thả ga!'</p>
                   </div>
                   <div className="mt-3 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-lg animate-bounce">
-                    VÀO SẢNH 2N 👥
+                    VÀO SẢNH 👥
                   </div>
                 </Link>
 

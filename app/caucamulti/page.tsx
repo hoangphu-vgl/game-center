@@ -1613,7 +1613,7 @@ export default function CauCa2NPage() {
 
         <div className="max-w-md w-full bg-slate-900/80 border-2 border-amber-500/60 p-6 rounded-3xl shadow-2xl backdrop-blur-md">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-black text-amber-400 uppercase tracking-widest drop-shadow-lg">🎣 Sảnh Câu Cá (Tối đa 10 Người)</h1>
+            <h1 className="text-2xl font-black text-amber-400 uppercase tracking-widest drop-shadow-lg">🎣 Sảnh Câu Cá </h1>
             <p className="text-xs text-slate-400 mt-2">Chọn phòng và cùng anh em chiến đấu realtime!</p>
           </div>
 
