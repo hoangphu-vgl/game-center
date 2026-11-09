@@ -905,10 +905,13 @@ export default function CauCa2NPage() {
             }
           });
         } else {
-          this.state = "REELING_HORIZ";
-          if (statusEl) {
-            statusEl.innerText = `Đã kéo lên xuồng...`;
-            statusEl.style.color = "#FFEB3B";
+          // Kéo thành công cá lớn sau khi ghì đạt giới hạn sát thương
+          if (this.lineTension >= 80 || (Math.random() < 0.35 && !isHold)) {
+            this.state = "REELING_HORIZ";
+            if (statusEl) {
+              statusEl.innerText = `Đã khuất phục được cá lớn! Thu dây lên xuồng...`;
+              statusEl.style.color = "#FFEB3B";
+            }
           }
         }
       }
@@ -963,42 +966,24 @@ export default function CauCa2NPage() {
           }
 
           for (let f of fishes) {
-            if (f.isCaught || f.isWaitingForWave || Math.abs(this.y - f.y) > 40) continue;
+            if (f.isCaught || f.isWaitingForWave) continue;
 
             if (activeSkillState.sk5_ignoreSmall && f.layer === "top") {
               continue;
             }
 
-            const isBigFish = f.layer === "bottom" || f.fishData.isRare;
+            // --- HITBOX CHÍNH XÁC VÀO ĐẦU / MỎ CÁ (Thu hẹp chặt chẽ) ---
+            let headX = f.direction === 1 ? f.x + f.size * 0.6 : f.x - f.size * 0.6;
+            let headY = f.y - f.size * 0.1;
+            let hitRadius = Math.max(12, f.size * 0.22); // Hitbox nhỏ gọn, không lan rộng
 
-            if (isBigFish) {
-              if (this.baitPrice < 10000000) {
-                continue;
+            if (Math.sqrt(Math.pow(this.x - headX, 2) + Math.pow(this.y - headY, 2)) < hitRadius) {
+              const isBigFish = f.layer === "bottom" || f.fishData.isRare;
+
+              if (isBigFish && this.baitPrice < 10000000) {
+                continue; // Mồi nhỏ không bắt được cá lớn tầng đáy
               }
 
-              if (this.baitPrice === 10000000) {
-                let mouthX = f.direction === 1 ? f.x + f.size * 0.7 : f.x - f.size * 0.7;
-                let mouthY = f.y - f.size * 0.15;
-                if (Math.sqrt(Math.pow(this.x - mouthX, 2) + Math.pow(this.y - mouthY, 2)) < 22 + f.size * 0.3) {
-                  const pCount = (window as any).roomPlayerCount || 1;
-                  const dropChance = Math.max(0.05, 0.35 - (pCount - 1) * 0.05);
-
-                  if (Math.random() < dropChance) {
-                    this.state = "REELING_HORIZ";
-                    window.dispatchEvent(
-                      new CustomEvent("showPopupBanner", {
-                        detail: { title: "⚠️ TUỘT CÁ RỒI!", message: "Cá lớn giật quá mạnh làm sổng Mồi Xịn!", type: "beerus" },
-                      })
-                    );
-                    break;
-                  }
-                }
-              }
-            }
-
-            let mouthX = f.direction === 1 ? f.x + f.size * 0.7 : f.x - f.size * 0.7;
-            let mouthY = f.y - f.size * 0.15;
-            if (Math.sqrt(Math.pow(this.x - mouthX, 2) + Math.pow(this.y - mouthY, 2)) < 22 + f.size * 0.3) {
               this.catchFish(f);
               break;
             }
@@ -1077,7 +1062,7 @@ export default function CauCa2NPage() {
               const currentFish = this.caughtFish.fishData;
               if (selectedRod === "cancauvectorvang.png") earnedPoints *= 2;
 
-              // --- HỆ THỐNG NUÔI HŨ MỚI: TRÍCH TRỰC TIẾP TỪ ĐIỂM CÂU ĐƯỢC CÁ ---
+              // --- HỆ THỐNG NUÔI HŨ & NỔ HŨ ---
               async function processJackpotAndNutrient(fishLayer: string, fPoints: number) {
                 const { data } = await supabase.from("cauca_jackpot").select("*").eq("id", "global").single();
                 if (data) {
@@ -1092,23 +1077,17 @@ export default function CauCa2NPage() {
                   let wonAmount = 0;
                   let wonType = "";
 
-                  // Tỉ lệ nổ hũ khó hơn (giống game jackpot trước)
                   const randRoll = Math.random();
 
-                  // Hũ Trái Đất: Cá nhỏ & cá vừa (layer top hoặc mid) có tỉ lệ nổ
                   if ((fishLayer === "top" || fishLayer === "mid") && randRoll < 0.0035) {
                     wonAmount = newMinor;
                     wonType = "Cá Trái Đất";
                     newMinor = 100000;
-                  }
-                  // Hũ Namek: Cá vừa & cá lớn (layer mid hoặc bottom) có tỉ lệ nổ
-                  else if ((fishLayer === "mid" || fishLayer === "bottom") && randRoll < 0.0025) {
+                  } else if ((fishLayer === "mid" || fishLayer === "bottom") && randRoll < 0.0025) {
                     wonAmount = newMajor;
                     wonType = "Cá Namek";
                     newMajor = 500000;
-                  }
-                  // Hũ Siêu Cấp: Bất cứ cá nào cũng có tỉ lệ nổ
-                  else if (randRoll < 0.0012) {
+                  } else if (randRoll < 0.0012) {
                     wonAmount = newGrand;
                     wonType = "Cá Siêu Cấp";
                     newGrand = 2000000;
@@ -1205,18 +1184,20 @@ export default function CauCa2NPage() {
           ctx!.fill();
         }
 
-        const isSmallFish = fish.layer === "top" || (fish.layer === "mid" && !fish.fishData.isRare);
+        // --- PHÂN TẦNG: CÁ NHỎ/VỪA THÌ THU DÂY LIỀN, CÁ LỚN/QUÁI VẬT BẮT BUỘC GHÌ & TAP ---
+        const isSmallOrMidFish = fish.layer === "top" || (fish.layer === "mid" && !fish.fishData.isRare);
 
-        if (isSmallFish) {
+        if (isSmallOrMidFish) {
           this.state = "REELING_HORIZ";
           if (statusEl) {
             statusEl.innerText = `Câu được ${fish.fishData.vnName}! Thu dây tự động...`;
             statusEl.style.color = "#FFEB3B";
           }
         } else {
+          // Cá lớn / Quái vật tầng đáy: Bắt buộc vào trạng thái giật lực căng dây, ní phải tap / giữ liên tục
           this.state = "STRUGGLING";
           if (statusEl) {
-            statusEl.innerText = `Dính ${fish.fishData.vnName} lớn! Kéo ngay!`;
+            statusEl.innerText = `Dính ${fish.fishData.vnName} khổng lồ! Hãy tap/giữ liên tục để kéo!`;
             statusEl.style.color = "#FF5252";
           }
         }
