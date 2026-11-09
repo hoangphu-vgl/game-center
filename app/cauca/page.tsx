@@ -332,7 +332,9 @@ export default function CauCaPage() {
 
         this.size = (Math.random() * 8 + 14) * this.fishData.sizeScale;
         
-        const rawPoints = this.fishData.basePoints * this.fishData.multi;
+        // Ngẫu nhiên giá trị điểm cho cá (dao động từ 80% đến 150% giá trị gốc)
+        const randomPriceFactor = 0.8 + Math.random() * 0.7;
+        const rawPoints = this.fishData.basePoints * this.fishData.multi * randomPriceFactor;
         if (this.fishData.layer === 'bottom') {
           const randomMultiplier = 1 + Math.random() * 1.5;
           this.points = Math.round(rawPoints * randomMultiplier);
@@ -933,29 +935,26 @@ export default function CauCaPage() {
     const computedWaterY = canvas.height / (window.devicePixelRatio || 1) * 0.3;
     const waterHeight = (canvas.height / (window.devicePixelRatio || 1)) - computedWaterY;
 
-    // Phân bổ số lượng cá theo tầng: Cá nhỏ nhiều nhất, cá trung ít hơn, cá lớn ít nhất
-    const topSlots = 12;
-    for (let i = 0; i < topSlots; i++) {
-      let clusterY = computedWaterY + 20 + (waterHeight * 0.28 / topSlots) * i;
-      let clusterSize = Math.floor(Math.random() * 3) + 2; 
+    // Số lượng cá theo yêu cầu: Cá lớn 2-3 con, cá trung 2-6 con, cá nhỏ 4-8 con
+    const topCount = Math.floor(Math.random() * 5) + 4; // 4 - 8 con
+    for (let i = 0; i < topCount; i++) {
+      let clusterY = computedWaterY + 20 + (waterHeight * 0.28 / topCount) * i;
       let sharedDir = Math.random() > 0.5 ? 1 : -1;
-      for (let j = 0; j < clusterSize; j++) {
-        let f = new Fish("top", clusterY + (Math.random() - 0.5) * 15, sharedDir);
-        f.x = sharedDir === 1 ? (-Math.random() * 500 - j * 60) : (width + Math.random() * 500 + j * 60);
-        fishes.push(f);
-      }
+      let f = new Fish("top", clusterY + (Math.random() - 0.5) * 15, sharedDir);
+      f.x = sharedDir === 1 ? (-Math.random() * 500) : (width + Math.random() * 500);
+      fishes.push(f);
     }
 
-    const midSlots = 7;
-    for (let i = 0; i < midSlots; i++) {
-      let slotY = computedWaterY + (waterHeight * 0.32) + (waterHeight * 0.32 / midSlots) * i;
+    const midCount = Math.floor(Math.random() * 5) + 2; // 2 - 6 con
+    for (let i = 0; i < midCount; i++) {
+      let slotY = computedWaterY + (waterHeight * 0.32) + (waterHeight * 0.32 / midCount) * i;
       let f = new Fish("mid", slotY);
       fishes.push(f);
     }
 
-    const bottomSlots = 4;
-    for (let i = 0; i < bottomSlots; i++) {
-      let slotY = computedWaterY + (waterHeight * 0.68) + (waterHeight * 0.28 / bottomSlots) * i;
+    const bottomCount = Math.floor(Math.random() * 2) + 2; // 2 - 3 con
+    for (let i = 0; i < bottomCount; i++) {
+      let slotY = computedWaterY + (waterHeight * 0.68) + (waterHeight * 0.28 / bottomCount) * i;
       let f = new Fish("bottom", slotY);
       fishes.push(f);
     }
@@ -998,15 +997,12 @@ export default function CauCaPage() {
     const onMouseUp = () => handleUp();
 
     const onTouchStart = (e: TouchEvent) => {
-      e.preventDefault();
       handleDown(e.touches[0].clientX);
     };
     const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
       handleMove(e.touches[0].clientX);
     };
-    const onTouchEnd = (e: TouchEvent) => {
-      e.preventDefault();
+    const onTouchEnd = () => {
       handleUp();
     };
 
@@ -1014,8 +1010,8 @@ export default function CauCaPage() {
     canvas.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
 
-    canvas.addEventListener('touchstart', onTouchStart, {passive: false});
-    canvas.addEventListener('touchmove', onTouchMove, {passive: false});
+    canvas.addEventListener('touchstart', onTouchStart, {passive: true});
+    canvas.addEventListener('touchmove', onTouchMove, {passive: true});
     window.addEventListener('touchend', onTouchEnd);
 
     const placedDecorations: { 
@@ -1253,7 +1249,7 @@ export default function CauCaPage() {
       window.removeEventListener('mouseup', onMouseUp);
       canvas.removeEventListener('touchstart', onTouchStart);
       canvas.removeEventListener('touchmove', onTouchMove);
-      canvas.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchend', onTouchEnd);
       cancelAnimationFrame(animationFrameId);
     };
   }, [isMounted, userAvatar, selectedRod]);
@@ -1287,28 +1283,30 @@ export default function CauCaPage() {
   };
 
   const baitList = [
-    { cost: 1000, filename: "dausenzu.png", label: "Mồi Sơ Cấp (1,000🪙)" },
-    { cost: 2000, filename: "cagia.png", label: "Mồi Thường (2,000🪙)" },
-    { cost: 100000, filename: "giun.png", label: "Mồi Tiêu Chuẩn (100,000🪙)" },
-    { cost: 500000, filename: "moi.png", label: "Mồi Khá (500,000🪙)" },
-    { cost: 1000000, filename: "tom.png", label: "Mồi Thơm (1,000,000🪙)" },
-    { cost: 10000000, filename: "dragon-ball-4.png", label: "Mồi Xịn (10,000,000🪙)" },
-    { cost: 50000000, filename: "kiblue.png", label: "Mồi Cao Cấp (50,000,000🪙)" },
-    { cost: 100000000, filename: "hakai.png", label: "Mồi Quái Vật (100,000,000🪙)" }
+    { cost: 1000, filename: "dausenzu.png", label: "Mồi Sơ Cấp - 1,000🪙" },
+    { cost: 2000, filename: "cagia.png", label: "Mồi Thường - 2,000🪙" },
+    { cost: 100000, filename: "giun.png", label: "Mồi Tiêu Chuẩn - 100,000🪙" },
+    { cost: 500000, filename: "moi.png", label: "Mồi Khá - 500,000🪙" },
+    { cost: 1000000, filename: "tom.png", label: "Mồi Thơm - 1,000,000🪙" },
+    { cost: 10000000, filename: "dragon-ball-4.png", label: "Mồi Xịn - 10,000,000🪙" },
+    { cost: 50000000, filename: "kiblue.png", label: "Mồi Cao Cấp - 50,000,000🪙" },
+    { cost: 100000000, filename: "hakai.png", label: "Mồi Quái Vật - 100,000,000🪙" }
   ];
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none font-sans" style={{ touchAction: 'manipulation' }}>
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: 'manipulation' }}>
       
-      <div className="absolute top-2 left-2 right-2 flex justify-between items-start pointer-events-auto z-40">
+      {/* HEADER TOP BAR */}
+      <div className="absolute top-2 left-2 right-2 flex justify-between items-start z-50 pointer-events-auto">
         <div className="flex items-center space-x-1.5">
-          <Link href="/" className="bg-slate-900/90 text-amber-400 hover:underline px-2.5 py-1.5 rounded-lg text-[9px] font-black border border-amber-500/40 shadow">
+          <Link href="/" className="bg-slate-900/95 text-amber-400 hover:underline px-2.5 py-1.5 rounded-lg text-[9px] font-black border border-amber-500/40 shadow">
             ← Cổng Game
           </Link>
-          <div className="bg-black/80 text-white px-2.5 py-1.5 rounded-lg font-bold text-[9px] border border-amber-500/40 shadow flex items-center gap-1.5">
+          <div className="bg-black/85 text-white px-2.5 py-1.5 rounded-lg font-bold text-[9px] border border-amber-500/40 shadow flex items-center gap-1.5">
             <img src={userAvatar} alt="Avatar" className="w-4 h-4 rounded-full border border-amber-400 object-cover" />
             <span><span id="score" className="text-[#FFEB3B] font-black">{isMounted ? score.toLocaleString() : "..."}</span> 🪙</span>
           </div>
+          {/* Shop Cần đặt gọn bên trái, cách xa hũ */}
           <button
             onClick={() => setIsShopOpen(true)}
             className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-2.5 py-1.5 rounded-lg font-black text-[9px] shadow-lg active:scale-95 transition cursor-pointer flex items-center gap-1 border border-white/40"
@@ -1335,7 +1333,8 @@ export default function CauCaPage() {
         </div>
       </div>
 
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 bg-slate-950/90 border border-amber-500/60 px-3 py-1 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none">
+      {/* JACKPOT HŨ THẦN */}
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-slate-950/90 border border-amber-500/60 px-3 py-1 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-none">
         <div className="text-center">
           <span className="text-[7px] font-bold text-slate-300 block">CÁ TRÁI ĐẤT</span>
           <span className="text-[10px] sm:text-xs font-black text-amber-300">{isMounted ? jackpot.minor.toLocaleString('en-US') : "..."} 🪙</span>
@@ -1352,36 +1351,34 @@ export default function CauCaPage() {
         </div>
       </div>
 
-      {/* THANH CHỌN MỒI DROPDOWN GỌN GÀNG GÓC PHẢI */}
-      <div className="absolute top-12 right-2 z-40">
+      {/* THANH CHỌN MỒI DROPDOWN THUẦN TEXT RẤT GỌN Ở GÓC PHẢI DƯỚI MẶT TRỜI */}
+      <div className="absolute top-12 right-2 z-50 pointer-events-auto">
         <div className="relative">
           <button
             onClick={() => setIsBaitDropdownOpen(!isBaitDropdownOpen)}
-            className="bg-slate-900/95 hover:bg-slate-800 border border-amber-500/60 px-2.5 py-1.5 rounded-xl shadow-xl flex items-center space-x-1.5 text-amber-300 text-[9px] font-black cursor-pointer transition"
+            className="bg-slate-900/95 hover:bg-slate-800 border border-amber-500/70 px-3 py-1.5 rounded-xl shadow-2xl flex items-center space-x-2 text-amber-300 text-[10px] font-black cursor-pointer transition select-none"
           >
             <span>🪱</span>
-            <img src={`/assets/baits/${selectedBait.filename}`} alt="Bait" className="w-3.5 h-3.5 object-contain" />
-            <span className="truncate max-w-[110px]">{selectedBait.name}</span>
-            <span className="text-[8px] ml-0.5">{isBaitDropdownOpen ? "▲" : "▼"}</span>
+            <span className="truncate max-w-[140px]">{selectedBait.name}</span>
+            <span className="text-[9px]">{isBaitDropdownOpen ? "▲" : "▼"}</span>
           </button>
 
           {isBaitDropdownOpen && (
-            <div className="absolute right-0 mt-1 w-52 bg-slate-950/95 border-2 border-amber-500/70 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
+            <div className="absolute right-0 mt-1 w-52 bg-slate-950/98 border-2 border-amber-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
               <div className="px-2 py-1 text-[8px] font-black text-amber-400 uppercase border-b border-slate-800">
-                Danh Sách Mồi Câu
+                Chọn Mồi Câu (Chạm để đổi)
               </div>
               <div className="max-h-56 overflow-y-auto space-y-1 pr-0.5">
                 {baitList.map((bait) => (
                   <button
                     key={bait.cost}
                     onClick={() => handleBaitChange({ cost: bait.cost, filename: bait.filename, name: bait.label })}
-                    className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center gap-2 ${
+                    className={`w-full text-left px-2.5 py-2 rounded-lg text-[10px] font-black transition cursor-pointer flex items-center justify-between ${
                       selectedBait.cost === bait.cost
                         ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 shadow"
-                        : "bg-slate-900/80 text-slate-200 hover:bg-slate-800"
+                        : "bg-slate-900 text-slate-200 hover:bg-slate-800"
                     }`}
                   >
-                    <img src={`/assets/baits/${bait.filename}`} alt={bait.label} className="w-4 h-4 object-contain shrink-0" />
                     <span className="truncate">{bait.label}</span>
                   </button>
                 ))}
@@ -1391,8 +1388,9 @@ export default function CauCaPage() {
         </div>
       </div>
 
+      {/* SHOP CẦN MODAL */}
       {isShopOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
           <div className="bg-slate-950 border-2 border-amber-500/60 w-full max-w-4xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden">
             
             <div className="flex justify-between items-center pb-3 border-b border-slate-800">
@@ -1531,8 +1529,9 @@ export default function CauCaPage() {
         </div>
       )}
 
+      {/* POPUP BANNER THÔNG BÁO */}
       {popupData && popupData.show && (
-        <div className={`absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none animate-bounce text-center bg-slate-950/95 border-4 px-5 py-3 rounded-2xl shadow-2xl space-y-1 max-w-sm ${
+        <div className={`absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-bounce text-center bg-slate-950/95 border-4 px-5 py-3 rounded-2xl shadow-2xl space-y-1 max-w-sm ${
           popupData.type === 'beerus' ? 'border-rose-500 shadow-[0_0_40px_rgba(244,67,54,0.6)]' : 'border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.6)]'
         }`}>
           <p className={`font-black text-[10px] sm:text-xs tracking-widest uppercase ${popupData.type === 'beerus' ? 'text-rose-400' : 'text-amber-300'}`}>
@@ -1544,15 +1543,15 @@ export default function CauCaPage() {
         </div>
       )}
 
-      {/* NÚT CHÈO THUYỀN TỐI ƯU CẢ MOUSE VÀ TOUCH */}
-      <div className="absolute bottom-3 left-3 z-30 flex items-center space-x-2 bg-black/70 p-2 rounded-xl border border-amber-500/50 shadow-2xl backdrop-blur-md pointer-events-auto">
+      {/* NÚT CHÈO THUYỀN TỐI ƯU CHO IPHONE */}
+      <div className="absolute bottom-3 left-3 z-40 flex items-center space-x-2 bg-black/80 p-2 rounded-xl border border-amber-500/60 shadow-2xl backdrop-blur-md pointer-events-auto">
         <button
           onMouseDown={(e) => { e.stopPropagation(); handleBoatMove(-4); }}
           onMouseUp={(e) => { e.stopPropagation(); handleBoatMove(0); }}
           onMouseLeave={(e) => { e.stopPropagation(); handleBoatMove(0); }}
           onTouchStart={(e) => { e.stopPropagation(); handleBoatMove(-4); }}
           onTouchEnd={(e) => { e.stopPropagation(); handleBoatMove(0); }}
-          className="w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-base rounded-lg active:scale-95 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
+          className="w-11 h-11 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-lg rounded-xl active:scale-90 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
         >
           ◀
         </button>
@@ -1563,17 +1562,17 @@ export default function CauCaPage() {
           onMouseLeave={(e) => { e.stopPropagation(); handleBoatMove(0); }}
           onTouchStart={(e) => { e.stopPropagation(); handleBoatMove(4); }}
           onTouchEnd={(e) => { e.stopPropagation(); handleBoatMove(0); }}
-          className="w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-base rounded-lg active:scale-95 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
+          className="w-11 h-11 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-lg rounded-xl active:scale-90 transition shadow-lg cursor-pointer flex items-center justify-center select-none"
         >
           ▶
         </button>
       </div>
 
-      <div id="power-container" className="absolute bottom-12 left-1/2 -translate-x-1/2 w-[200px] h-[20px] bg-black/70 rounded-xl border-2 border-white hidden pointer-events-none overflow-hidden shadow-lg z-10">
+      <div id="power-container" className="absolute bottom-12 left-1/2 -translate-x-1/2 w-[200px] h-[20px] bg-black/70 rounded-xl border-2 border-white hidden pointer-events-none overflow-hidden shadow-lg z-30">
         <div id="power-bar" className="w-[0%] h-full bg-gradient-to-r from-[#4CAF50] via-[#FFEB3B] to-[#F44336] transition-all duration-75"></div>
       </div>
 
-      <canvas id="gameCanvas" className="absolute inset-0 block w-full h-full"></canvas>
+      <canvas id="gameCanvas" className="absolute inset-0 block w-full h-full pointer-events-auto"></canvas>
     </div>
   );
 }
