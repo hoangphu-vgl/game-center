@@ -75,7 +75,7 @@ export default function WheelPage() {
         .eq("id", userId);
       
       setWonToday(true);
-      return { label: "JACKPOT 1.000K Ki!", type: "pts", val: 1000000 };
+      return { label: "JACKPOT 1 tỷ Ki!", type: "pts", val: 1000000000 };
     }
 
     // 2. Kiểm tra xác suất trúng "Chai nước đặc biệt" (Chỉ cho phép trúng 1 lần/ngày)
