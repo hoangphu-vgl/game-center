@@ -20,18 +20,17 @@ export default function WheelPage() {
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<LocalHistory[]>([]);
 
-  // 🌟 HÀM ĐỒNG BỘ DỮ LIỆU CỰC MẠNH (ÉP TẢI LẠI TỪ DB KHI CÓ THAY ĐỔI)
-  const syncData = async () => {
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (currentUser) {
-      setUser(currentUser);
-      const todayStr = new Date().toISOString().split("T")[0];
+  useEffect(() => {
+    async function fetchUserData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        const todayStr = new Date().toISOString().split("T")[0];
 
-      try {
         const { data: profile } = await supabase
           .from("profiles")
           .select("balance, lucky_spins, last_jackpot_date, won_jackpot_today")
-          .eq("id", currentUser.id)
+          .eq("id", user.id)
           .single();
         
         if (profile) {
@@ -46,65 +45,26 @@ export default function WheelPage() {
             await supabase
               .from("profiles")
               .update({ last_jackpot_date: todayStr, won_jackpot_today: false })
-              .eq("id", currentUser.id);
+              .eq("id", user.id);
             setWonToday(false);
           }
         }
 
-        const saved = localStorage.getItem(`wheel_history_${currentUser.id}`);
+        const saved = localStorage.getItem(`wheel_history_${user.id}`);
         if (saved) {
           try { setHistory(JSON.parse(saved)); } catch (e) {}
         }
-      } catch (err) {
-        console.error("Lỗi đồng bộ Vòng Quay:", err);
       }
-    } else {
-      setUser(null);
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    // Gọi tải dữ liệu lần đầu
-    syncData();
-
-    // 1. ĐỒNG BỘ KHI CHUYỂN TAB HOẶC QUAY LẠI TRANG
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        syncData();
-      }
-    };
-    window.addEventListener("focus", syncData);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    // 2. ĐỒNG BỘ REAL-TIME SUPABASE (Lắng nghe từ tab Shop bắn qua)
-    const channel = supabase.channel("public:profiles_wheel_sync")
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload: any) => {
-        if (user && payload.new && payload.new.id === user.id) {
-          setPoints(payload.new.balance ?? 0);
-          setLuckySpins(payload.new.lucky_spins ?? 0);
-          const todayStr = new Date().toISOString().split("T")[0];
-          if (payload.new.last_jackpot_date === todayStr) {
-            setWonToday(payload.new.won_jackpot_today ?? false);
-          }
-        } else if (!user) {
-          syncData(); // Tải lại nếu state bị rỗng
-        }
-      })
-      .subscribe();
-
-    return () => {
-      window.removeEventListener("focus", syncData);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]); // Theo dõi user.id để real-time chuẩn xác nhất
+    fetchUserData();
+  }, []);
 
   // 🌟 THUẬT TOÁN XÁC SUẤT ĐỘC LẬP GIỐNG JACKPOT (KHÔNG DÙNG WEIGHT)
   const getRandomReward = async (userId: string, alreadyWonToday: boolean) => {
     const todayStr = new Date().toISOString().split("T")[0];
 
-    // 1. Kiểm tra xác suất trúng JACKPOT 5.000.000 Ki (Chỉ xét nếu hôm nay chưa ai trúng)
+    // 1. Kiểm tra xác suất trúng JACKPOT 1.000.000 Ki (Chỉ xét nếu hôm nay chưa ai trúng)
     const jackpotHit = !alreadyWonToday && Math.random() < 0.005; // Xác suất 0.5%
 
     if (jackpotHit) {
@@ -160,9 +120,6 @@ export default function WheelPage() {
     setResultMessage(null);
 
     const remainingSpins = luckySpins - 1;
-    // Cập nhật lượt liền trên giao diện cho mượt
-    setLuckySpins(remainingSpins);
-    
     const chosenReward = await getRandomReward(user.id, wonToday);
 
     setTimeout(async () => {
@@ -199,7 +156,6 @@ export default function WheelPage() {
       } else {
         setSpinning(false);
         alert("Lỗi vòng quay: " + error.message);
-        syncData(); // Nếu có lỗi thì ép gọi tải lại data từ DB
       }
     }, 1800);
   };
@@ -220,15 +176,23 @@ export default function WheelPage() {
           ← Về Cổng Game
         </Link>
         <div className="flex gap-2 items-center">
-          <Link href="/shop" className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-3 py-1 rounded-xl text-xs font-black transition shadow">
+          <Link href="/shop" className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-black transition shadow flex items-center">
             🛒 Đổi Lượt
           </Link>
-          <div className="bg-slate-900 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-black text-amber-400 shadow">
-            ⚡ {points.toLocaleString()} Ki
+          
+          {/* ĐÃ ĐỒNG BỘ UI KI VÀ LƯỢT QUAY TỪ TRANG CHỦ */}
+          <div className="flex items-center gap-1.5 bg-slate-800/90 border border-amber-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
+            <img src="/assets/home/dausenzu.png" alt="Ki" className="w-4 h-4 object-contain" />
+            <span className="font-black text-amber-400">{points.toLocaleString()}</span>
+            <span className="text-[10px] text-amber-300/70">Ki</span>
           </div>
-          <div className="bg-slate-900 border border-purple-500/40 px-3 py-1 rounded-xl text-xs font-black text-purple-300 shadow">
-            🎟️ {luckySpins} Lượt
+
+          <div className="flex items-center gap-1.5 bg-slate-800/90 border border-purple-500/50 px-3 py-1.5 rounded-xl text-xs shadow-inner">
+            <img src="/assets/home/capsule.png" alt="Ticket" className="w-4 h-4 object-contain" />
+            <span className="font-black text-purple-300">{luckySpins}</span>
           </div>
+          {/* KẾT THÚC ĐỒNG BỘ UI */}
+
         </div>
       </div>
 
@@ -242,7 +206,7 @@ export default function WheelPage() {
                 Sự Kiện Đặc Biệt (1 lần/ngày)
               </span>
               <h2 className="text-sm sm:text-base font-black text-yellow-300 mt-1">
-                JACKPOT 1 TỶ KI & CHAI NƯỚC THẦN THÁNH!
+                JACKPOT 1M KI & CHAI NƯỚC THẦN THÁNH!
               </h2>
             </div>
           </div>
@@ -293,12 +257,12 @@ export default function WheelPage() {
           </div>
           <div className="space-y-1.5 text-xs text-slate-300 leading-relaxed">
             <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-              <span className="text-yellow-400 font-bold block mb-0.5">👑 Jackpot 1 Tỷ Ki & Chai Nước:</span>
+              <span className="text-yellow-400 font-bold block mb-0.5">👑 Jackpot 1M Ki & Chai Nước:</span>
               <p className="text-[10px] text-slate-400">Giới hạn tối đa <b className="text-amber-300">1 lần/ngày</b> cho mỗi tài khoản. Hụt trong ngày là mất, không cộng dồn qua ngày sau!</p>
             </div>
             <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
               <span className="text-cyan-400 font-bold block mb-0.5">⚡ Thưởng Ki & Lượt:</span>
-              <p className="text-[10px] text-slate-400">Các mốc Ki cực khủng lên đến +2 Triệu Ki và hoàn lượt quay diễn ra liên tục theo nhân phẩm.</p>
+              <p className="text-[10px] text-slate-400">Các mốc +20K, +50K, +100K, +200K Ki và hoàn lượt quay diễn ra liên tục theo nhân phẩm.</p>
             </div>
           </div>
         </div>
