@@ -155,11 +155,11 @@ export default function ShopPage() {
       return;
     }
     if (globalStock <= 0) {
-      alert("💨 CHẬM CHÂN RỒI ĐẠI GIA! Kho tổng gói 1 củ tuần này đã bị anh em húp sạch bách 20/20 vé flex. Đợi tuần sau reset kho nhé!");
+      alert("💨 CHẬM CHÂN RỒI ĐẠI GIA! Kho tổng gói 5 củ tuần này đã bị anh em húp sạch bách 20/20 vé flex. Đợi tuần sau reset kho nhé!");
       return;
     }
 
-    if (confirm(`Xác nhận Flex Siêu Gói 1 Củ (5.000 VNĐ / 5.000.000 Ki) để lưu danh sử sách vũ trụ?`)) {
+    if (confirm(`Xác nhận Flex Siêu Gói 5 Củ (5.000 VNĐ / 5.000.000 Ki) để lưu danh sử sách vũ trụ?`)) {
       const newGlobal = globalStock - 1;
       const newUserCount = userBuyCount + 1;
       setGlobalStock(newGlobal);
@@ -216,7 +216,7 @@ export default function ShopPage() {
           <p className="text-slate-400 text-xs mt-1">Nơi trao đổi chiến lực và flex đẳng cấp vượt mọi giới hạn vũ trụ!</p>
         </div>
 
-        {/* --- SIÊU GÓI 1 CỦ (FLEX TƯỢNG TRƯNG) --- */}
+        {/* --- SIÊU GÓI 5 CỦ --- */}
         <div className="relative bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 p-[3px] rounded-3xl shadow-[0_0_35px_rgba(245,158,11,0.6)] animate-pulse">
           <div className="bg-slate-950 rounded-[22px] p-5 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="space-y-1.5 text-center sm:text-left">
@@ -246,7 +246,7 @@ export default function ShopPage() {
                     : "bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 text-slate-950 hover:brightness-110 active:scale-95 cursor-pointer shadow-amber-500/40"
                 }`}
               >
-                {userBuyCount >= MEGA_VIP_PACK.maxUserLimit ? "ĐÃ FLEX TỐI ĐA (KHÓA)" : globalStock <= 0 ? "HẾT KHO TỔNG" : "FLEX NGAY 1 CỦ 👑"}
+                {userBuyCount >= MEGA_VIP_PACK.maxUserLimit ? "ĐÃ FLEX TỐI ĐA (KHÓA)" : globalStock <= 0 ? "HẾT KHO TỔNG" : "FLEX NGAY 👑"}
               </button>
             </div>
           </div>
