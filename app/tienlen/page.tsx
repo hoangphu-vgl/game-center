@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
 const BET_OPTIONS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
