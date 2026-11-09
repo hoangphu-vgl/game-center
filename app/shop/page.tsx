@@ -18,8 +18,8 @@ const MEGA_VIP_PACK = {
   name: "👑 SIÊU GÓI 5.000.000 KI",
   costText: "5.000.000 Ki / 5.000 VNĐ",
   desc: "Gói flex danh dự vũ trụ!",
-  maxGlobalStock: 20, // Kho chung còn lại mỗi tuần
-  maxUserLimit: 5,    // Giới hạn cá nhân mỗi user/tuần
+  maxGlobalStock: 20, 
+  maxUserLimit: 5,    
 };
 
 interface LocalHistory {
@@ -45,83 +45,68 @@ export default function ShopPage() {
     return `${now.getFullYear()}-W${week}`;
   };
 
-  useEffect(() => {
-    let channel: any;
-
-    async function loadUserProfile(currentUser: any) {
-      if (!currentUser) {
-        setUser(null);
-        setPoints(0);
-        setLuckySpins(0);
-        setLoading(false);
-        return;
-      }
-
+  // 🌟 HÀM ĐỒNG BỘ DỮ LIỆU CỰC MẠNH (ÉP TẢI LẠI TỪ DB)
+  const syncData = async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
       setUser(currentUser);
-
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("balance, lucky_spins")
-          .eq("id", currentUser.id)
-          .single();
-        
-        if (profile) {
-          setPoints(profile.balance || 0);
-          setLuckySpins(profile.lucky_spins || 0);
-        }
-
-        const savedHistory = localStorage.getItem(`shop_history_${currentUser.id}`);
-        if (savedHistory) {
-          try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
-        }
-
-        const currentWeekKey = getWeekKey();
-        const storedStock = localStorage.getItem(`mega_global_stock_${currentWeekKey}`);
-        if (storedStock !== null) {
-          setGlobalStock(parseInt(storedStock));
-        } else {
-          localStorage.setItem(`mega_global_stock_${currentWeekKey}`, "20");
-          setGlobalStock(20);
-        }
-
-        const storedUserCount = localStorage.getItem(`mega_user_count_${currentUser.id}_${currentWeekKey}`);
-        if (storedUserCount !== null) {
-          setUserBuyCount(parseInt(storedUserCount));
-        }
-
-        // ĐỒNG BỘ REAL-TIME (Lắng nghe thay đổi từ các tab/trang khác)
-        if (channel) supabase.removeChannel(channel);
-        channel = supabase.channel(`public:profiles_shop_${currentUser.id}`)
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${currentUser.id}` }, (payload) => {
-            if (payload.new) {
-              setPoints(payload.new.balance ?? 0);
-              setLuckySpins(payload.new.lucky_spins ?? 0);
-            }
-          })
-          .subscribe();
-
-      } catch (e) {
-        console.error("Lỗi đồng bộ Shop:", e);
-      } finally {
-        setLoading(false);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("balance, lucky_spins")
+        .eq("id", currentUser.id)
+        .single();
+      
+      if (profile) {
+        setPoints(profile.balance ?? 0);
+        setLuckySpins(profile.lucky_spins ?? 0);
       }
+
+      const currentWeekKey = getWeekKey();
+      const storedStock = localStorage.getItem(`mega_global_stock_${currentWeekKey}`);
+      setGlobalStock(storedStock !== null ? parseInt(storedStock) : 20);
+
+      const storedUserCount = localStorage.getItem(`mega_user_count_${currentUser.id}_${currentWeekKey}`);
+      if (storedUserCount !== null) setUserBuyCount(parseInt(storedUserCount));
+
+      const savedHistory = localStorage.getItem(`shop_history_${currentUser.id}`);
+      if (savedHistory) {
+        try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
+      }
+    } else {
+      setUser(null);
     }
+    setLoading(false);
+  };
 
-    // ĐỒNG BỘ AUTH GIỐNG PAGE TEST
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      loadUserProfile(session?.user || null);
-    });
+  useEffect(() => {
+    syncData();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      loadUserProfile(session?.user || null);
-    });
+    // 1. ĐỒNG BỘ KHI CHUYỂN TAB HOẶC QUAY LẠI TRANG
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") syncData();
+    };
+    window.addEventListener("focus", syncData);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // 2. ĐỒNG BỘ REAL-TIME SUPABASE
+    const channel = supabase.channel("public:profiles_shop_sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload: any) => {
+        // Chỉ lấy data mới nếu đúng ID người chơi
+        if (user && payload.new && payload.new.id === user.id) {
+          setPoints(payload.new.balance ?? 0);
+          setLuckySpins(payload.new.lucky_spins ?? 0);
+        } else if (!user) {
+          syncData(); // Tải lại nếu chưa có user state
+        }
+      })
+      .subscribe();
 
     return () => {
-      authListener.subscription.unsubscribe();
-      if (channel) supabase.removeChannel(channel);
+      window.removeEventListener("focus", syncData);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user?.id]); // Lắng nghe thêm user.id để Realtime chuẩn xác
 
   const handleBuySpins = async (packName: string, cost: number, spins: number) => {
     if (!user) return;
@@ -134,7 +119,6 @@ export default function ShopPage() {
       const newPts = points - cost;
       const newSpins = luckySpins + spins;
 
-      // Cập nhật giao diện trước cho mượt
       setPoints(newPts);
       setLuckySpins(newSpins);
 
@@ -157,6 +141,7 @@ export default function ShopPage() {
         alert(`🎉 ĐỔI THÀNH CÔNG! Nhận ngay +${spins} Lượt Quay Vòng May Mắn!`);
       } else {
         alert("Có lỗi xảy ra: " + error.message);
+        syncData(); // Khôi phục nếu lỗi
       }
     }
   };
@@ -231,7 +216,7 @@ export default function ShopPage() {
           <p className="text-slate-400 text-xs mt-1">Nơi trao đổi chiến lực và flex đẳng cấp vượt mọi giới hạn vũ trụ!</p>
         </div>
 
-        {/* --- SIÊU GÓI 1 CỦ (FLEX TƯỢNG TRƯNG - KHÔNG CỘNG LƯỢT) --- */}
+        {/* --- SIÊU GÓI 1 CỦ (FLEX TƯỢNG TRƯNG) --- */}
         <div className="relative bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 p-[3px] rounded-3xl shadow-[0_0_35px_rgba(245,158,11,0.6)] animate-pulse">
           <div className="bg-slate-950 rounded-[22px] p-5 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="space-y-1.5 text-center sm:text-left">

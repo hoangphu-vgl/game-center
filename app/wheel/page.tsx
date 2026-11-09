@@ -14,24 +14,16 @@ export default function WheelPage() {
   const [user, setUser] = useState<any>(null);
   const [points, setPoints] = useState<number>(0);
   const [luckySpins, setLuckySpins] = useState<number>(0);
-  const [wonToday, setWonToday] = useState<boolean>(false);
+  const [wonToday, setWonToday] = useState<boolean>(false); // Kiểm tra xem hôm nay đã húp đặc biệt chưa
   const [spinning, setSpinning] = useState<boolean>(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<LocalHistory[]>([]);
 
-  useEffect(() => {
-    let channel: any;
-
-    async function loadUserProfile(currentUser: any) {
-      if (!currentUser) {
-        setUser(null);
-        setPoints(0);
-        setLuckySpins(0);
-        setLoading(false);
-        return;
-      }
-
+  // 🌟 HÀM ĐỒNG BỘ DỮ LIỆU CỰC MẠNH (ÉP TẢI LẠI TỪ DB KHI CÓ THAY ĐỔI)
+  const syncData = async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
       setUser(currentUser);
       const todayStr = new Date().toISOString().split("T")[0];
 
@@ -46,9 +38,11 @@ export default function WheelPage() {
           setPoints(profile.balance || 0);
           setLuckySpins(profile.lucky_spins || 0);
 
+          // Kiểm tra reset ngày mới cho giải đặc biệt/Jackpot
           if (profile.last_jackpot_date === todayStr) {
             setWonToday(profile.won_jackpot_today || false);
           } else {
+            // Qua ngày mới, reset trạng thái trúng giải đặc biệt trong ngày về false
             await supabase
               .from("profiles")
               .update({ last_jackpot_date: todayStr, won_jackpot_today: false })
@@ -61,67 +55,83 @@ export default function WheelPage() {
         if (saved) {
           try { setHistory(JSON.parse(saved)); } catch (e) {}
         }
-
-        // ĐỒNG BỘ REAL-TIME (Lắng nghe thay đổi từ Shop hoặc trang khác)
-        if (channel) supabase.removeChannel(channel);
-        channel = supabase.channel(`public:profiles_wheel_${currentUser.id}`)
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${currentUser.id}` }, (payload) => {
-            if (payload.new) {
-              setPoints(payload.new.balance ?? 0);
-              setLuckySpins(payload.new.lucky_spins ?? 0);
-              if (payload.new.last_jackpot_date === todayStr) {
-                setWonToday(payload.new.won_jackpot_today ?? false);
-              }
-            }
-          })
-          .subscribe();
-
-      } catch (e) {
-        console.error("Lỗi đồng bộ Vòng Quay:", e);
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.error("Lỗi đồng bộ Vòng Quay:", err);
       }
+    } else {
+      setUser(null);
     }
+    setLoading(false);
+  };
 
-    // ĐỒNG BỘ AUTH GIỐNG PAGE TEST
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      loadUserProfile(session?.user || null);
-    });
+  useEffect(() => {
+    // Gọi tải dữ liệu lần đầu
+    syncData();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      loadUserProfile(session?.user || null);
-    });
+    // 1. ĐỒNG BỘ KHI CHUYỂN TAB HOẶC QUAY LẠI TRANG
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncData();
+      }
+    };
+    window.addEventListener("focus", syncData);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // 2. ĐỒNG BỘ REAL-TIME SUPABASE (Lắng nghe từ tab Shop bắn qua)
+    const channel = supabase.channel("public:profiles_wheel_sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload: any) => {
+        if (user && payload.new && payload.new.id === user.id) {
+          setPoints(payload.new.balance ?? 0);
+          setLuckySpins(payload.new.lucky_spins ?? 0);
+          const todayStr = new Date().toISOString().split("T")[0];
+          if (payload.new.last_jackpot_date === todayStr) {
+            setWonToday(payload.new.won_jackpot_today ?? false);
+          }
+        } else if (!user) {
+          syncData(); // Tải lại nếu state bị rỗng
+        }
+      })
+      .subscribe();
 
     return () => {
-      authListener.subscription.unsubscribe();
-      if (channel) supabase.removeChannel(channel);
+      window.removeEventListener("focus", syncData);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user?.id]); // Theo dõi user.id để real-time chuẩn xác nhất
 
   // 🌟 THUẬT TOÁN XÁC SUẤT ĐỘC LẬP GIỐNG JACKPOT (KHÔNG DÙNG WEIGHT)
   const getRandomReward = async (userId: string, alreadyWonToday: boolean) => {
     const todayStr = new Date().toISOString().split("T")[0];
 
-    const jackpotHit = !alreadyWonToday && Math.random() < 0.005; // 0.5%
+    // 1. Kiểm tra xác suất trúng JACKPOT 5.000.000 Ki (Chỉ xét nếu hôm nay chưa ai trúng)
+    const jackpotHit = !alreadyWonToday && Math.random() < 0.005; // Xác suất 0.5%
+
     if (jackpotHit) {
+      // Đánh dấu tài khoản này đã húp giải đặc biệt trong ngày
       await supabase
         .from("profiles")
         .update({ won_jackpot_today: true, last_jackpot_date: todayStr })
         .eq("id", userId);
+      
       setWonToday(true);
       return { label: "JACKPOT 1 tỷ Ki!", type: "pts", val: 1000000000 };
     }
 
-    const waterBottleHit = !alreadyWonToday && Math.random() < 0.01; // 1%
+    // 2. Kiểm tra xác suất trúng "Chai nước đặc biệt" (Chỉ cho phép trúng 1 lần/ngày)
+    const waterBottleHit = !alreadyWonToday && Math.random() < 0.01; // Xác suất 1%
+
     if (waterBottleHit) {
       await supabase
         .from("profiles")
         .update({ won_jackpot_today: true, last_jackpot_date: todayStr })
         .eq("id", userId);
+
       setWonToday(true);
       return { label: "1 chai nước thần thánh", type: "item", val: 1 };
     }
 
+    // 3. Các mốc thưởng thông thường dựa trên random rẽ nhánh
     const rand = Math.random();
     if (rand < 0.35) {
       return { label: "+200.000 Ki", type: "pts", val: 200000 };
@@ -150,7 +160,7 @@ export default function WheelPage() {
     setResultMessage(null);
 
     const remainingSpins = luckySpins - 1;
-    // Tạm giảm lượt quay trên UI cho mượt
+    // Cập nhật lượt liền trên giao diện cho mượt
     setLuckySpins(remainingSpins);
     
     const chosenReward = await getRandomReward(user.id, wonToday);
@@ -164,6 +174,7 @@ export default function WheelPage() {
       } else if (chosenReward.type === "spins") {
         newSpins += chosenReward.val;
       }
+      // Nếu là "1 chai nước thần thánh", tùy ní muốn cộng quà gì vào profiles (ở đây tạm giữ nguyên hoặc cộng item nếu có bảng item riêng)
 
       const { error } = await supabase
         .from("profiles")
@@ -188,6 +199,7 @@ export default function WheelPage() {
       } else {
         setSpinning(false);
         alert("Lỗi vòng quay: " + error.message);
+        syncData(); // Nếu có lỗi thì ép gọi tải lại data từ DB
       }
     }, 1800);
   };
