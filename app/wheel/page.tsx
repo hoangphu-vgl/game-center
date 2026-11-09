@@ -4,18 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-// BẢNG PHẦN THƯỞNG MỚI THEO Ý NÍ (CÓ JACKPOT 1.000.000 KI)
-const WHEEL_REWARDS = [
-  { label: "+5.000 Ki", type: "pts", val: 5000, weight: 30 },
-  { label: "+100.000 Ki", type: "pts", val: 100000, weight: 10 },
-  { label: "+200.000 Ki", type: "pts", val: 200000, weight: 5 },
-  { label: "+1 Lượt Quay", type: "spins", val: 1, weight: 10 },
-  { label: "+2 Lượt Quay", type: "spins", val: 2, weight: 5 },
-  { label: "Mất Ki! (0 PTS)", type: "pts", val: 0, weight: 30 },
-  { label: "1 chai nước", type: "spins", val: 1, weight: 1 },
-  { label: "JACKPOT 1000K Ki!", type: "pts", val: 1000000, weight: 2 },
-];
-
 interface LocalHistory {
   id: number;
   text: string;
@@ -26,6 +14,7 @@ export default function WheelPage() {
   const [user, setUser] = useState<any>(null);
   const [points, setPoints] = useState<number>(0);
   const [luckySpins, setLuckySpins] = useState<number>(0);
+  const [wonToday, setWonToday] = useState<boolean>(false); // Kiểm tra xem hôm nay đã húp đặc biệt chưa
   const [spinning, setSpinning] = useState<boolean>(false);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,15 +25,29 @@ export default function WheelPage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       if (user) {
+        const todayStr = new Date().toISOString().split("T")[0];
+
         const { data: profile } = await supabase
           .from("profiles")
-          .select("balance, lucky_spins")
+          .select("balance, lucky_spins, last_jackpot_date, won_jackpot_today")
           .eq("id", user.id)
           .single();
         
         if (profile) {
           setPoints(profile.balance || 0);
           setLuckySpins(profile.lucky_spins || 0);
+
+          // Kiểm tra reset ngày mới cho giải đặc biệt/Jackpot
+          if (profile.last_jackpot_date === todayStr) {
+            setWonToday(profile.won_jackpot_today || false);
+          } else {
+            // Qua ngày mới, reset trạng thái trúng giải đặc biệt trong ngày về false
+            await supabase
+              .from("profiles")
+              .update({ last_jackpot_date: todayStr, won_jackpot_today: false })
+              .eq("id", user.id);
+            setWonToday(false);
+          }
         }
 
         const saved = localStorage.getItem(`wheel_history_${user.id}`);
@@ -57,37 +60,58 @@ export default function WheelPage() {
     fetchUserData();
   }, []);
 
-  // THUẬT TOÁN QUAY THƯỞNG TRỌNG SỐ & CHỐNG LẶP JACKPOT 1 CỦ LIÊN TIẾP
-  const getRandomReward = (userId: string) => {
-    let availableRewards = [...WHEEL_REWARDS];
+  // 🌟 THUẬT TOÁN XÁC SUẤT ĐỘC LẬP GIỐNG JACKPOT (KHÔNG DÙNG WEIGHT)
+  const getRandomReward = async (userId: string, alreadyWonToday: boolean) => {
+    const todayStr = new Date().toISOString().split("T")[0];
 
-    const savedHistory = localStorage.getItem(`wheel_history_${userId}`);
-    if (savedHistory) {
-      try {
-        const parsedHistory = JSON.parse(savedHistory);
-        if (parsedHistory.length > 0 && parsedHistory[0].text.includes("JACKPOT")) {
-          availableRewards = WHEEL_REWARDS.filter(r => !r.label.includes("JACKPOT"));
-        }
-      } catch (e) {}
+    // 1. Kiểm tra xác suất trúng JACKPOT 1.000.000 Ki (Chỉ xét nếu hôm nay chưa ai trúng)
+    const jackpotHit = !alreadyWonToday && Math.random() < 0.005; // Xác suất 0.5%
+
+    if (jackpotHit) {
+      // Đánh dấu tài khoản này đã húp giải đặc biệt trong ngày
+      await supabase
+        .from("profiles")
+        .update({ won_jackpot_today: true, last_jackpot_date: todayStr })
+        .eq("id", userId);
+      
+      setWonToday(true);
+      return { label: "JACKPOT 1.000K Ki!", type: "pts", val: 1000000 };
     }
 
-    const totalWeight = availableRewards.reduce((sum, item) => sum + item.weight, 0);
-    let randomNum = Math.random() * totalWeight;
+    // 2. Kiểm tra xác suất trúng "Chai nước đặc biệt" (Chỉ cho phép trúng 1 lần/ngày)
+    const waterBottleHit = !alreadyWonToday && Math.random() < 0.01; // Xác suất 1%
 
-    for (let reward of availableRewards) {
-      if (randomNum < reward.weight) {
-        return reward;
-      }
-      randomNum -= reward.weight;
+    if (waterBottleHit) {
+      await supabase
+        .from("profiles")
+        .update({ won_jackpot_today: true, last_jackpot_date: todayStr })
+        .eq("id", userId);
+
+      setWonToday(true);
+      return { label: "1 chai nước thần thánh", type: "item", val: 1 };
     }
 
-    return availableRewards[0];
+    // 3. Các mốc thưởng thông thường dựa trên random rẽ nhánh
+    const rand = Math.random();
+    if (rand < 0.35) {
+      return { label: "+200.000 Ki", type: "pts", val: 200000 };
+    } else if (rand < 0.45) {
+      return { label: "+500.000 Ki", type: "pts", val: 500000 };
+    } else if (rand < 0.55) {
+      return { label: "+1.000.000 Ki", type: "pts", val: 1000000 };
+    } else if (rand < 0.30) {
+      return { label: "+2.000.000 Ki", type: "pts", val: 2000000 };
+    } else if (rand < 0.25) {
+      return { label: "+1 Lượt Quay", type: "spins", val: 1 };
+    } else {
+      return { label: "Mất Ki! (0 PTS)", type: "pts", val: 0 };
+    }
   };
 
   const handleSpin = async () => {
     if (!user) return;
     if (luckySpins <= 0) {
-      alert("⚡ Hết lượt quay rồi chiến binh! Hãy vào Shop Võ Đạo đổi thêm lượt hoặc Tụ Ki mỗi ngày nhé!");
+      alert("⚡ Hết lượt quay rồi chiến binh! Hãy vào Shop Võ Đạo đổi thêm lượt hoặc điểm danh hằng ngày nhé!");
       return;
     }
     if (spinning) return;
@@ -96,7 +120,7 @@ export default function WheelPage() {
     setResultMessage(null);
 
     const remainingSpins = luckySpins - 1;
-    const chosenReward = getRandomReward(user.id);
+    const chosenReward = await getRandomReward(user.id, wonToday);
 
     setTimeout(async () => {
       let newPts = points;
@@ -104,9 +128,10 @@ export default function WheelPage() {
 
       if (chosenReward.type === "pts") {
         newPts += chosenReward.val;
-      } else {
+      } else if (chosenReward.type === "spins") {
         newSpins += chosenReward.val;
       }
+      // Nếu là "1 chai nước thần thánh", tùy ní muốn cộng quà gì vào profiles (ở đây tạm giữ nguyên hoặc cộng item nếu có bảng item riêng)
 
       const { error } = await supabase
         .from("profiles")
@@ -120,7 +145,7 @@ export default function WheelPage() {
           time: new Date().toLocaleTimeString(),
         };
 
-        const updatedHistory = [newItem, [...history]].slice(0, 15);
+        const updatedHistory = [newItem, ...history].slice(0, 15);
         setHistory(updatedHistory as any);
         localStorage.setItem(`wheel_history_${user.id}`, JSON.stringify(updatedHistory));
 
@@ -163,22 +188,22 @@ export default function WheelPage() {
         </div>
       </div>
 
-      {/* BANNER QUẢNG CÁO JACKPOT 1 TRIỆU KI (ĐẶC SẮC Ở GIỮA) */}
+      {/* BANNER QUẢNG CÁO JACKPOT 1 TRIỆU KI */}
       <div className="w-full max-w-2xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 p-[2px] rounded-3xl shadow-[0_0_25px_rgba(245,158,11,0.4)] animate-pulse">
         <div className="bg-slate-950 rounded-[22px] p-4 text-center flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-3xl sm:text-4xl">👑</span>
             <div className="text-left">
               <span className="text-[10px] bg-amber-500/20 text-amber-400 font-black px-2 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-widest">
-                Sự Kiện Đặc Biệt
+                Sự Kiện Đặc Biệt (1 lần/ngày)
               </span>
               <h2 className="text-sm sm:text-base font-black text-yellow-300 mt-1">
-                JACKPOT SIÊU KHỦNG 1.000.000 KI ĐANG CHỜ!
+                JACKPOT 1M KI & CHAI NƯỚC THẦN THÁNH!
               </h2>
             </div>
           </div>
           <div className="text-xs text-slate-300 font-medium bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 text-center sm:text-right">
-            Quay ngay vận may đổi đời thành Thần Hủy Diệt! ⚡
+            {wonToday ? "✨ Hôm nay bạn đã nhận giải đặc biệt rồi!" : "🔥 Hôm nay chưa ai trúng, quay ngay kẻo lỡ!"}
           </div>
         </div>
       </div>
@@ -186,7 +211,7 @@ export default function WheelPage() {
       {/* KHUNG CHÍNH: VÒNG QUAY + GÓC XEM PHẦN THƯỞNG */}
       <div className="w-full max-w-2xl grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        {/* Vòng quay chính (Chiếm 2 cột) */}
+        {/* Vòng quay chính */}
         <div className="md:col-span-2 bg-slate-900 border-2 border-purple-500/50 rounded-3xl p-5 shadow-2xl flex flex-col items-center text-center space-y-4">
           <div>
             <h1 className="text-lg sm:text-xl font-black text-purple-400">🎡 VÒNG QUAY RỒNG THẦN</h1>
@@ -215,24 +240,23 @@ export default function WheelPage() {
           </button>
         </div>
 
-        {/* GÓC THUẬN TIỆN: BẢNG TÓM TẮT GIẢI THƯỞNG (Chiếm 1 cột) */}
+        {/* BẢNG THÔNG TIN MỐC THƯỞNG */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl flex flex-col space-y-3">
-          <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-2">
+          <div className="flex items-center justify-between border-l-4 border-amber-500 pl-2">
             <h3 className="text-xs font-black text-amber-400 uppercase tracking-wider">
-              🎁 Kho Phần Thưởng
+              🎁 Mốc Thưởng Săn Hũ
             </h3>
           </div>
-          <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
-            {WHEEL_REWARDS.map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-slate-950/80 border border-slate-800 px-2.5 py-1.5 rounded-xl text-[11px]">
-                <span className="text-slate-300 font-medium truncate max-w-[100px]">{item.label}</span>
-                <span className={`font-black ${item.val >= 1000000 ? 'text-yellow-400 animate-pulse' : item.val >= 100000 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  {item.val >= 1000000 ? '👑 1M Ki' : item.val >= 100000 ? `${item.val / 1000}K Ki` : item.type === 'spins' ? '🎟️ Lượt' : `${item.val} Ki`}
-                </span>
-              </div>
-            ))}
+          <div className="space-y-1.5 text-xs text-slate-300 leading-relaxed">
+            <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <span className="text-yellow-400 font-bold block mb-0.5">👑 Jackpot 1M Ki & Chai Nước:</span>
+              <p className="text-[10px] text-slate-400">Giới hạn tối đa <b className="text-amber-300">1 lần/ngày</b> cho mỗi tài khoản. Hụt trong ngày là mất, không cộng dồn qua ngày sau!</p>
+            </div>
+            <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <span className="text-cyan-400 font-bold block mb-0.5">⚡ Thưởng Ki & Lượt:</span>
+              <p className="text-[10px] text-slate-400">Các mốc +20K, +50K, +100K, +200K Ki và hoàn lượt quay diễn ra liên tục theo nhân phẩm.</p>
+            </div>
           </div>
-          <p className="text-[10px] text-slate-500 text-center italic">Tỷ lệ công khai theo nhân phẩm!</p>
         </div>
 
       </div>
