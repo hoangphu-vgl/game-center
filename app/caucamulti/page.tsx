@@ -1014,10 +1014,17 @@ export default function CauCa2NPage() {
             }
           }
         } else if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
+          // Tụt thanh nhẹ nhàng khi ngưng tay
           this.lineTension = Math.max(0, this.lineTension - 0.35); 
           this.struggleIdleTime += 1;
 
-          // Nếu ngưng tap quá 3.5 giây -> Cá đứt dây sổng mất!
+          // Cập nhật vị trí con cá bám theo đầu móc câu khi đang giằng co
+          if (this.caughtFish) {
+            this.caughtFish.x = this.x - (this.caughtFish.direction === 1 ? this.caughtFish.size * 0.7 : -this.caughtFish.size * 0.7);
+            this.caughtFish.y = this.y - (-this.caughtFish.size * 0.15);
+          }
+
+          // Nếu để không tap quá 3.5 giây (210 frames) -> Cá quẫy đứt dây / sổng mất!
           if (this.struggleIdleTime > 210) {
             this.state = "IDLE";
             if (statusEl) {
