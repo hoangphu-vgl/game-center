@@ -45,16 +45,17 @@ export default function CauCa2NPage() {
   const roomChannelRef = useRef<any>(null);
   const [oppAlert, setOppAlert] = useState<string | null>(null);
 
-  // --- HỆ THỐNG KHO SKILL & COOLDOWN (5 Phút) ---
+  // --- HỆ THỐNG KHO SKILL & COOLDOWN (5 Phút) & DROPDOWN ---
   const [inventory, setInventory] = useState<{ [key: string]: number }>({});
   const [skillCooldowns, setSkillCooldowns] = useState<{ [key: string]: number }>({});
   const [isSkillShopOpen, setIsSkillShopOpen] = useState<boolean>(false);
+  const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState<boolean>(false);
 
   // Danh sách 6 Skill Câu Cá Dragon Ball
   const fishingSkills = [
-    { id: "fish_sk1", name: "Chân Không Trấn Hải", icon: "🌀", desc: "Cần câu đứng yên 1 chỗ trong 5s khi thả dây rồi mới tuột lên.", price: 200000 },
-    { id: "fish_sk2", name: "Bản Năng Vô Cực", icon: "⚡", desc: "Đóng băng thời gian và đứng yên cá lớn/trung bình để giật.", price: 350000 },
-    { id: "fish_sk3", name: "Giáp Sắt Kachi Katchin", icon: "🛡️", desc: "Tăng 30% khả năng chống đứt dây khi ghì cá lớn.", price: 150000 },
+    { id: "fish_sk1", name: "Chân Không Trấn Hải", icon: "🌀", desc: "Mồi chìm đến độ sâu mong muốn, chạm giữ để giữ mồi đứng yên 5s.", price: 200000 },
+    { id: "fish_sk2", name: "Bản Năng Vô Cực", icon: "⚡", desc: "Đóng băng thời gian toàn hồ trong 5s (Cá lớn có % kháng).", price: 350000 },
+    { id: "fish_sk3", name: "Giáp Sắt Kachi Katchin", icon: "🛡️", desc: "Tăng 30% kháng đứt dây khi ghì cá trong 10 giây.", price: 150000 },
     { id: "fish_sk4", name: "Thời Gian Ngoại Lệ", icon: "⏳", desc: "Làm chậm toàn bộ cá dưới nước 30% trong vòng 5 giây.", price: 250000 },
     { id: "fish_sk5", name: "Hào Quang Biến Mất", icon: "👻", desc: "Cá nhỏ phớt lờ bạn trong lượt kế, cá lớn cắn câu sẽ dẫy mạnh hơn.", price: 300000 },
     { id: "fish_sk6", name: "Nhãn Quan Thần Linh", icon: "🔮", desc: "Soi chính xác giá trị tiền thưởng của 1 con cá lớn ngẫu nhiên trong hồ.", price: 400000 },
@@ -185,7 +186,6 @@ export default function CauCa2NPage() {
     setTimeout(() => setShopNotification(null), 3000);
   };
 
-  // Mua Skill từ Shop Popup trong game
   const handleBuySkillInGame = async (skill: any) => {
     if (!user) { alert("Vui lòng đăng nhập!"); return; }
     if (score < skill.price) {
@@ -205,7 +205,6 @@ export default function CauCa2NPage() {
     alert(`🎉 Lĩnh ngộ thành công kỹ năng [${skill.name}]!`);
   };
 
-  // Sử dụng Skill trong Game (Cooldown 5 phút = 300,000ms)
   const handleUseSkill = (skillId: string) => {
     const now = Date.now();
     const coolEnd = skillCooldowns[skillId] || 0;
@@ -230,6 +229,7 @@ export default function CauCa2NPage() {
 
     setSkillCooldowns({ ...skillCooldowns, [skillId]: now + 300000 });
     window.dispatchEvent(new CustomEvent("triggerFishingSkill", { detail: { skillId } }));
+    setIsSkillDropdownOpen(false);
   };
 
   const handleRentRod = async (rod: typeof shopRods[0], days: number) => {
@@ -453,14 +453,14 @@ export default function CauCa2NPage() {
       { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 1.7, basePoints: 10800000, multi: 8.0, layer: "mid", struggleWeight: 0.65, isRare: false },
 
       // --- TẦNG ĐÁY / SÂU (Cá lớn & Quái vật) ---
-      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 2.6, basePoints: 18000000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true, maxHp: 15 },
-      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 2.8, basePoints: 42000000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true, maxHp: 22 },
-      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 3.2, basePoints: 96000000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true, maxHp: 30 },
-      { filename: "Mola_mola.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 3.4, basePoints: 180000000, multi: 20.0, layer: "bottom", struggleWeight: 0.88, isRare: true, maxHp: 38 },
-      { filename: "Sphyrna_zygaena.png", vnName: "Cá mập đầu búa", sizeScale: 3.0, basePoints: 300000000, multi: 25.0, layer: "bottom", struggleWeight: 0.9, isRare: true, maxHp: 45 },
-      { filename: "Xiphias_gladius.png", vnName: "Cá kiếm đại dương", sizeScale: 3.4, basePoints: 540000000, multi: 30.0, layer: "bottom", struggleWeight: 0.93, isRare: true, maxHp: 52 },
-      { filename: "Mobula_alfredi.png", vnName: "Cá đuối manta khổng lồ", sizeScale: 3.6, basePoints: 900000000, multi: 40.0, layer: "bottom", struggleWeight: 0.95, isRare: true, maxHp: 60 },
-      { filename: "Gymnothorax_javanicus.png", vnName: "Cá trình khổng lồ Java", sizeScale: 3.3, basePoints: 1200000000, multi: 50.0, layer: "bottom", struggleWeight: 0.96, isRare: true, maxHp: 70 }
+      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 2.6, basePoints: 18000000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true },
+      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 2.8, basePoints: 42000000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true },
+      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 3.2, basePoints: 96000000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true },
+      { filename: "Mola_mola.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 3.4, basePoints: 180000000, multi: 20.0, layer: "bottom", struggleWeight: 0.88, isRare: true },
+      { filename: "Sphyrna_zygaena.png", vnName: "Cá mập đầu búa", sizeScale: 3.0, basePoints: 300000000, multi: 25.0, layer: "bottom", struggleWeight: 0.9, isRare: true },
+      { filename: "Xiphias_gladius.png", vnName: "Cá kiếm đại dương", sizeScale: 3.4, basePoints: 540000000, multi: 30.0, layer: "bottom", struggleWeight: 0.93, isRare: true },
+      { filename: "Mobula_alfredi.png", vnName: "Cá đuối manta khổng lồ", sizeScale: 3.6, basePoints: 900000000, multi: 40.0, layer: "bottom", struggleWeight: 0.95, isRare: true },
+      { filename: "Gymnothorax_javanicus.png", vnName: "Cá trình khổng lồ Java", sizeScale: 3.3, basePoints: 1200000000, multi: 50.0, layer: "bottom", struggleWeight: 0.96, isRare: true }
     ];
 
     const loadedFishObjects = fishDatabase.map((item) => {
@@ -492,30 +492,32 @@ export default function CauCa2NPage() {
 
     // --- TRẠNG THÁI ACTIVE SKILLS TRONG GAME ---
     let activeSkillState = {
-      sk1_freezeStand: false,
+      sk1_armed: false,         // Đã kích hoạt Skill 1 (Chờ quăng dây)
+      sk1_holding: false,       // Đang giữ mồi đứng yên
       sk1_timer: null as any,
-      sk2_timeFreeze: false,
-      sk3_armorBuff: false,
-      sk4_slowDown: false,
-      sk5_ignoreSmall: false,
-      sk6_active: false,
+      sk2_timeFreeze: false,    // Đóng băng 5s
+      sk3_armorBuff: false,     // Giáp sắt 10s
+      sk3_timer: null as any,
+      sk4_slowDown: false,      // Làm chậm 5s
+      sk5_ignoreSmall: false,   // Bỏ qua cá nhỏ lượt tới
     };
 
     const fishingSkillListener = (e: any) => {
       const { skillId } = e.detail;
       if (skillId === "fish_sk1") {
-        activeSkillState.sk1_freezeStand = true;
-        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🌀 CHÂN KHÔNG TRẤN HẢI", message: "Cần câu sẽ đứng yên 5 giây!", type: "coop" } }));
-        if (activeSkillState.sk1_timer) clearTimeout(activeSkillState.sk1_timer);
-        activeSkillState.sk1_timer = setTimeout(() => {
-          activeSkillState.sk1_freezeStand = false;
-        }, 5000);
+        activeSkillState.sk1_armed = true;
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🌀 CHÂN KHÔNG TRẤN HẢI", message: "Hãy thả mồi đến độ sâu bạn muốn rồi chạm giữ để giữ mồi 5s!", type: "coop" } }));
       } else if (skillId === "fish_sk2") {
         activeSkillState.sk2_timeFreeze = true;
-        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "⚡ BẢN NĂNG VÔ CỰC", message: "Đã kích hoạt đóng băng cá lớn/trung bình trong lượt tới!", type: "rare" } }));
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "⚡ BẢN NĂNG VÔ CỰC", message: "Đã đóng băng thời gian toàn hồ trong 5 giây (Cá lớn có % kháng)!", type: "rare" } }));
+        setTimeout(() => { activeSkillState.sk2_timeFreeze = false; }, 5000);
       } else if (skillId === "fish_sk3") {
         activeSkillState.sk3_armorBuff = true;
-        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🛡️ GIÁP SẮT KACHI KATCHIN", message: "Tăng 30% kháng đứt dây khi kéo cá lớn!", type: "coop" } }));
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🛡️ GIÁP SẮT KACHI KATCHIN", message: "Tăng 30% kháng đứt dây trong 10 giây!", type: "coop" } }));
+        if (activeSkillState.sk3_timer) clearTimeout(activeSkillState.sk3_timer);
+        activeSkillState.sk3_timer = setTimeout(() => {
+          activeSkillState.sk3_armorBuff = false;
+        }, 10000);
       } else if (skillId === "fish_sk4") {
         activeSkillState.sk4_slowDown = true;
         window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "⏳ THỜI GIAN NGOẠI LỆ", message: "Toàn bộ cá dưới nước bị làm chậm 30% trong 5 giây!", type: "beerus" } }));
@@ -564,7 +566,6 @@ export default function CauCa2NPage() {
       points!: number;
       speed!: number;
       struggleChance!: number;
-      maxHp!: number;
       x!: number;
       isCaught!: boolean;
       fishData!: typeof fishDatabase[0];
@@ -608,9 +609,6 @@ export default function CauCa2NPage() {
         }
 
         this.struggleChance = (this.fishData as any).struggleWeight ?? 0.2;
-        const baseHp = (this.fishData as any).maxHp ?? 18;
-        this.maxHp = Math.round(baseHp * (1 + (pCount - 1) * 0.08));
-
         this.animFrame = r() * 100;
         this.notifiedRare = false;
         this.isWaitingForWave = false;
@@ -639,8 +637,14 @@ export default function CauCa2NPage() {
         if (activeSkillState.sk4_slowDown) {
           currentSpeed *= 0.7;
         }
-        if (activeSkillState.sk2_timeFreeze && (this.layer === "bottom" || this.layer === "mid")) {
-          currentSpeed = 0;
+        if (activeSkillState.sk2_timeFreeze) {
+          if (this.layer === "top") {
+            currentSpeed = 0; // Cá nhỏ đóng băng hoàn toàn
+          } else {
+            // Cá lớn/quái vật tầng đáy có 40% kháng đóng băng
+            const isResisted = this.layer === "bottom" && this.rngFunc() < 0.4;
+            if (!isResisted) currentSpeed = 0;
+          }
         }
 
         this.x += currentSpeed;
@@ -754,8 +758,6 @@ export default function CauCa2NPage() {
       castStartY!: number;
       castProgress!: number;
       caughtFish: Fish | null = null;
-      currentFishHp!: number;
-      maxFishHp!: number;
       baitPrice!: number;
       
       lineTension: number = 0;          
@@ -783,11 +785,10 @@ export default function CauCa2NPage() {
         this.castStartY = 0;
         this.castProgress = 0;
         this.caughtFish = null;
-        this.currentFishHp = 0;
-        this.maxFishHp = 0;
         this.lineTension = 0;
         this.isJointPulling = false;
         this.isAssistingOpponent = false;
+        activeSkillState.sk1_holding = false;
 
         if (bottomTimer) {
           clearTimeout(bottomTimer);
@@ -872,6 +873,14 @@ export default function CauCa2NPage() {
       holdStruggleTick() {
         if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
           this.applyStruggleDamage(0.08, true);
+        } else if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
+          // Skill 1: Chạm giữ để mồi đứng yên 5 giây tại chỗ
+          activeSkillState.sk1_holding = true;
+          if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Mồi đứng yên 5s!";
+          setTimeout(() => {
+            activeSkillState.sk1_armed = false;
+            activeSkillState.sk1_holding = false;
+          }, 5000);
         }
       }
 
@@ -894,7 +903,7 @@ export default function CauCa2NPage() {
 
         let tensionGain = isHold ? (0.6 / currentRodDamageBuff) : (0.25 / currentRodDamageBuff);
         if (activeSkillState.sk3_armorBuff) {
-          tensionGain *= 0.7; // Skill 3: Giảm 30% tăng tension (kháng đứt dây)
+          tensionGain *= 0.7; // Giảm 30% tăng tension (kháng đứt dây khi có giáp sắt)
         }
 
         if (this.isJointPulling || this.isAssistingOpponent) tensionGain *= 0.5;
@@ -912,13 +921,11 @@ export default function CauCa2NPage() {
             }
           });
         } else {
-          this.currentFishHp -= hitDamage;
-          if (this.currentFishHp <= 0) {
-            this.state = "REELING_HORIZ";
-            if (statusEl) {
-              statusEl.innerText = `Đã RỈT CẠN MÁU ${this.caughtFish?.fishData.vnName}! Kéo lên xuồng...`;
-              statusEl.style.color = "#FFEB3B";
-            }
+          // Lập tức kéo lên ngay khi dính cá (bỏ hoàn toàn thanh máu ảo)
+          this.state = "REELING_HORIZ";
+          if (statusEl) {
+            statusEl.innerText = `Đã dính cá ${this.caughtFish?.fishData.vnName}! Kéo lên xuồng...`;
+            statusEl.style.color = "#FFEB3B";
           }
         }
       }
@@ -950,10 +957,8 @@ export default function CauCa2NPage() {
           this.x = this.castStartX + (this.targetWaterX - this.castStartX) * t;
           this.y = this.castStartY + (waterY - this.castStartY) * t - Math.sin(t * Math.PI) * 60;
         } else if (this.state === "SINKING") {
-          if (!activeSkillState.sk1_freezeStand) {
+          if (!activeSkillState.sk1_holding) {
             this.y += Math.min(2.5, 1.2 + this.baitPrice / 20000000);
-          } else {
-            if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Cần đứng yên!";
           }
 
           for (let opp of Object.values(oppStates) as any[]) {
@@ -1043,24 +1048,6 @@ export default function CauCa2NPage() {
           }
         } else if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
           this.lineTension = Math.max(0, this.lineTension - 0.08); 
-          
-          if (this.caughtFish) {
-            this.currentFishHp += (activeSkillState.sk2_timeFreeze ? 0 : 0.035); 
-            if (this.currentFishHp > this.maxFishHp) {
-              this.caughtFish.isCaught = false;
-              this.caughtFish = null;
-              this.state = "REELING_HORIZ";
-              window.dispatchEvent(
-                new CustomEvent("showPopupBanner", {
-                  detail: { title: "😼 THẦN BEERUS BĨU MÔI", message: "Cá sổng mất!", type: "beerus" },
-                })
-              );
-              if (statusEl) {
-                statusEl.innerText = "Sổng cá!";
-                statusEl.style.color = "#F44336";
-              }
-            }
-          }
 
           if (this.lineTension >= 100) {
             if (this.caughtFish) this.caughtFish.isCaught = false;
@@ -1212,21 +1199,11 @@ export default function CauCa2NPage() {
           ctx!.fill();
         }
 
-        if (fish.points >= 5000000 || fish.layer === "bottom") {
-          this.state = "STRUGGLING";
-          let hpMultiplier = activeSkillState.sk5_ignoreSmall ? 1.5 : 1.0;
-          this.maxFishHp = Math.round(fish.maxHp * hpMultiplier);
-          this.currentFishHp = this.maxFishHp;
-          if (statusEl) {
-            statusEl.innerText = `Dính ${fish.fishData.vnName}! ĐÈ GIỮ HOẶC NHẤP ĐỂ KÉO!`;
-            statusEl.style.color = "#FF5252";
-          }
-        } else {
-          this.state = "REELING_HORIZ";
-          if (statusEl) {
-            statusEl.innerText = `Dính ${fish.fishData.vnName}! Kéo lên xuồng...`;
-            statusEl.style.color = "#FFEB3B";
-          }
+        // Vào trạng thái giật trực tiếp thu dây luôn, không dùng thanh máu cá nữa
+        this.state = "STRUGGLING";
+        if (statusEl) {
+          statusEl.innerText = `Dính ${fish.fishData.vnName}! Kéo lên xuồng ngay!`;
+          statusEl.style.color = "#FFEB3B";
         }
       }
 
@@ -1321,11 +1298,8 @@ export default function CauCa2NPage() {
 
     const coopDamageListener = (e: any) => {
       if (hook.state === "STRUGGLING") {
-        hook.currentFishHp -= e.detail.damage;
         hook.isJointPulling = true;
-        if (hook.currentFishHp <= 0) {
-          hook.state = "REELING_HORIZ";
-        }
+        hook.state = "REELING_HORIZ";
       }
     };
     window.addEventListener("receivedCoopDamage", coopDamageListener);
@@ -1341,6 +1315,9 @@ export default function CauCa2NPage() {
         isHolding = true;
         holdClientX = clientX;
         hook.startCharging(activeBaitCost);
+      } else if (hook.state === "SINKING" && activeSkillState.sk1_armed) {
+        isHolding = true;
+        hook.holdStruggleTick();
       }
     };
 
@@ -1853,7 +1830,87 @@ export default function CauCa2NPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        {/* --- THANH SKILLS DROPDOWN NẰM Ở KHOẢNG TRỐNG GIỮA HŨ VÀ MỒI CÂU --- */}
+        <div className="flex items-center space-x-1">
+          <div className="relative">
+            <button
+              onClick={() => setIsSkillDropdownOpen(!isSkillDropdownOpen)}
+              className="bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/70 px-2.5 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-cyan-300 text-[8px] sm:text-[9px] font-black cursor-pointer transition select-none"
+            >
+              <span>⚡</span>
+              <span>Kỹ Năng</span>
+              <span>{isSkillDropdownOpen ? "▲" : "▼"}</span>
+            </button>
+            {isSkillDropdownOpen && (
+              <div className="absolute right-0 mt-1 w-52 bg-slate-950/98 border-2 border-cyan-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1.5 space-y-1 backdrop-blur-md">
+                <div className="px-2 py-1 text-[8px] font-black text-cyan-400 uppercase border-b border-slate-800 flex justify-between">
+                  <span>Kho Kỹ Năng</span>
+                  <span>Chọn để dùng</span>
+                </div>
+                <div className="max-h-52 overflow-y-auto space-y-1 pr-0.5">
+                  {fishingSkills.map((sk) => {
+                    const count = inventory[sk.id] || 0;
+                    const coolEnd = skillCooldowns[sk.id] || 0;
+                    const isCooling = Date.now() < coolEnd;
+                    return (
+                      <button
+                        key={sk.id}
+                        onClick={() => handleUseSkill(sk.id)}
+                        className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center justify-between ${
+                          count > 0 && !isCooling ? "bg-slate-900 text-cyan-300 hover:bg-slate-800" : "bg-slate-950 text-slate-500"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-1.5 truncate">
+                          <span>{sk.icon}</span>
+                          <span className="truncate">{sk.name}</span>
+                        </div>
+                        <span className="text-[8px] bg-slate-800 text-amber-300 px-1.5 py-0.5 rounded-full">
+                          {isCooling ? "⌛" : `x${count}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setIsBaitDropdownOpen(!isBaitDropdownOpen)}
+              className="bg-slate-900/95 hover:bg-slate-800 border border-amber-500/70 px-2 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-amber-300 text-[8px] sm:text-[9px] font-black cursor-pointer transition select-none"
+            >
+              <span>🪱</span>
+              <span className="truncate max-w-[90px] sm:max-w-[120px]">{selectedBait.name}</span>
+              <span>{isBaitDropdownOpen ? "▲" : "▼"}</span>
+            </button>
+            {isBaitDropdownOpen && (
+              <div className="absolute right-0 mt-1 w-48 bg-slate-950/98 border-2 border-amber-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
+                <div className="px-2 py-1 text-[8px] font-black text-amber-400 uppercase border-b border-slate-800">Chọn Mồi Câu</div>
+                <div className="max-h-48 overflow-y-auto space-y-1 pr-0.5">
+                  {baitList.map((bait) => (
+                    <button
+                      key={bait.cost}
+                      onClick={() => {
+                        setSelectedBait({ cost: bait.cost, filename: bait.filename, name: bait.label });
+                        setIsBaitDropdownOpen(false);
+                        window.dispatchEvent(new CustomEvent("changeBait", { detail: bait.cost }));
+                        window.dispatchEvent(new CustomEvent("changeBaitImg", { detail: bait }));
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center justify-between ${
+                        selectedBait.cost === bait.cost
+                          ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 shadow"
+                          : "bg-slate-900 text-slate-200 hover:bg-slate-800"
+                      }`}
+                    >
+                      <span className="truncate">{bait.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => {
               if (!document.fullscreenElement) {
@@ -1866,39 +1923,36 @@ export default function CauCa2NPage() {
             }}
             className="bg-slate-800/90 text-white font-bold py-1 px-2 rounded-md text-[8px] sm:text-[9px] border border-slate-700 shadow hidden sm:block"
           >
-            {isFullscreen ? "🗗 Thu Nhỏ" : "🖵 Full"}
+            {isFullscreen ? "🗗" : "🖵"}
           </button>
         </div>
       </div>
 
-      {/* QUICK SKILL BAR */}
-      <div className="absolute bottom-16 left-2 z-40 flex items-center space-x-1 bg-black/80 p-1.5 rounded-xl border border-cyan-500/60 shadow-xl backdrop-blur-md pointer-events-auto">
-        {fishingSkills.map((sk) => {
-          const count = inventory[sk.id] || 0;
-          const coolEnd = skillCooldowns[sk.id] || 0;
-          const isCooling = Date.now() < coolEnd;
-          return (
-            <button
-              key={sk.id}
-              onClick={() => handleUseSkill(sk.id)}
-              title={`${sk.name}: ${sk.desc} (Kho: ${count})`}
-              className={`relative w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black border transition cursor-pointer ${
-                count > 0 ? "bg-slate-900 border-cyan-400 text-cyan-300 hover:scale-105" : "bg-slate-950 border-slate-800 text-slate-600"
-              }`}
-            >
-              <span>{sk.icon}</span>
-              <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-black px-1 rounded-full">
-                {count}
-              </span>
-              {isCooling && (
-                <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center text-[8px] text-red-400 font-bold">
-                  ⌛
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {oppAlert && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-white px-3 py-1 rounded-lg font-black text-[10px] shadow-lg animate-bounce border border-emerald-300 pointer-events-none">
+          {oppAlert}
+        </div>
+      )}
+
+      {myCatchNotice && myCatchNotice.show && (
+        <div className="absolute top-12 left-2 z-40 bg-slate-900/95 border-2 border-amber-400 px-2 py-1 rounded-xl shadow-2xl pointer-events-none flex items-center gap-1.5 animate-fadeIn">
+          <span className="text-xs">🎣</span>
+          <div>
+            <p className="text-[8px] font-bold text-slate-300">{myCatchNotice.text}</p>
+            <p className="text-xs font-black text-amber-300">{myCatchNotice.amount}</p>
+          </div>
+        </div>
+      )}
+
+      {oppCatchNotice && oppCatchNotice.show && (
+        <div className="absolute top-12 right-2 z-40 bg-slate-900/95 border-2 border-cyan-400 px-2 py-1 rounded-xl shadow-2xl pointer-events-none flex items-center gap-1.5 animate-fadeIn text-right">
+          <div>
+            <p className="text-[8px] font-bold text-slate-300">Đồng đội: {oppCatchNotice.text}</p>
+            <p className="text-xs font-black text-cyan-300">{oppCatchNotice.amount}</p>
+          </div>
+          <span className="text-xs">🐟</span>
+        </div>
+      )}
 
       {/* POPUP SHOP SKILL TRONG GAME */}
       {isSkillShopOpen && (
@@ -1937,70 +1991,6 @@ export default function CauCa2NPage() {
               })}
             </div>
           </div>
-        </div>
-      )}
-
-      <div className="absolute top-1 right-1 z-50 pointer-events-auto">
-        <div className="relative">
-          <button
-            onClick={() => setIsBaitDropdownOpen(!isBaitDropdownOpen)}
-            className="bg-slate-900/95 hover:bg-slate-800 border border-amber-500/70 px-2 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-amber-300 text-[8px] sm:text-[9px] font-black cursor-pointer transition select-none"
-          >
-            <span>🪱</span>
-            <span className="truncate max-w-[100px] sm:max-w-[130px]">{selectedBait.name}</span>
-            <span>{isBaitDropdownOpen ? "▲" : "▼"}</span>
-          </button>
-          {isBaitDropdownOpen && (
-            <div className="absolute right-0 mt-1 w-48 bg-slate-950/98 border-2 border-amber-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
-              <div className="px-2 py-1 text-[8px] font-black text-amber-400 uppercase border-b border-slate-800">Chọn Mồi Câu</div>
-              <div className="max-h-48 overflow-y-auto space-y-1 pr-0.5">
-                {baitList.map((bait) => (
-                  <button
-                    key={bait.cost}
-                    onClick={() => {
-                      setSelectedBait({ cost: bait.cost, filename: bait.filename, name: bait.label });
-                      setIsBaitDropdownOpen(false);
-                      window.dispatchEvent(new CustomEvent("changeBait", { detail: bait.cost }));
-                      window.dispatchEvent(new CustomEvent("changeBaitImg", { detail: bait }));
-                    }}
-                    className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center justify-between ${
-                      selectedBait.cost === bait.cost
-                        ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 shadow"
-                        : "bg-slate-900 text-slate-200 hover:bg-slate-800"
-                    }`}
-                  >
-                    <span className="truncate">{bait.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {oppAlert && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-white px-3 py-1 rounded-lg font-black text-[10px] shadow-lg animate-bounce border border-emerald-300 pointer-events-none">
-          {oppAlert}
-        </div>
-      )}
-
-      {myCatchNotice && myCatchNotice.show && (
-        <div className="absolute top-12 left-2 z-40 bg-slate-900/95 border-2 border-amber-400 px-2 py-1 rounded-xl shadow-2xl pointer-events-none flex items-center gap-1.5 animate-fadeIn">
-          <span className="text-xs">🎣</span>
-          <div>
-            <p className="text-[8px] font-bold text-slate-300">{myCatchNotice.text}</p>
-            <p className="text-xs font-black text-amber-300">{myCatchNotice.amount}</p>
-          </div>
-        </div>
-      )}
-
-      {oppCatchNotice && oppCatchNotice.show && (
-        <div className="absolute top-12 right-2 z-40 bg-slate-900/95 border-2 border-cyan-400 px-2 py-1 rounded-xl shadow-2xl pointer-events-none flex items-center gap-1.5 animate-fadeIn text-right">
-          <div>
-            <p className="text-[8px] font-bold text-slate-300">Đồng đội: {oppCatchNotice.text}</p>
-            <p className="text-xs font-black text-cyan-300">{oppCatchNotice.amount}</p>
-          </div>
-          <span className="text-xs">🐟</span>
         </div>
       )}
 
