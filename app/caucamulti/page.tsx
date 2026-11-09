@@ -762,6 +762,7 @@ export default function CauCa2NPage() {
       lineTension: number = 0;          
       isJointPulling: boolean = false;  
       isAssistingOpponent: boolean = false; 
+      struggleIdleTime: number = 0;
 
       constructor() {
         this.reset();
@@ -787,6 +788,7 @@ export default function CauCa2NPage() {
         this.lineTension = 0;
         this.isJointPulling = false;
         this.isAssistingOpponent = false;
+        this.struggleIdleTime = 0;
         activeSkillState.sk1_holding = false;
 
         if (bottomTimer) {
@@ -851,6 +853,7 @@ export default function CauCa2NPage() {
 
       tapStruggle() {
         if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
+          this.struggleIdleTime = 0;
           this.applyStruggleDamage(1.0);
         }
       }
@@ -883,13 +886,13 @@ export default function CauCa2NPage() {
           critPopups.push({ x: this.x + (Math.random() - 0.5) * 40, y: this.y - 30, alpha: 1.0, scale: 1.2 });
         }
 
-        // ĐỘ KHÓ CÁ LỚN: Cá lớn yêu cầu từ 15 đến 30+ lần tap tùy theo độ to/multi, có crit hỗ trợ nhẹ hơn
+        // ĐỘ KHÓ CÁ LỚN: Scale theo multi cá để cá 5 tỷ đòi hỏi số nhấp cực khủng
         const isBottomOrRare = this.caughtFish?.layer === "bottom" || this.caughtFish?.fishData?.isRare;
         const fishMulti = this.caughtFish?.fishData?.multi || 3.0;
-        const requiredTaps = isBottomOrRare ? Math.min(500, Math.max(40, Math.round(fishMulti * 3))) : 12;
+        const requiredTaps = isBottomOrRare ? Math.min(150, Math.max(40, Math.round(fishMulti * 2.5))) : Math.min(30, Math.max(12, Math.round(fishMulti * 1.5)));
         const gainPerTap = 100 / requiredTaps;
 
-        this.lineTension += (isHold ? 0.5 : 1.0) * hitDamage * gainPerTap;
+        this.lineTension += (isHold ? 0.5 : 1.0) * gainPerTap;
 
         if (this.isAssistingOpponent) {
           Object.values(oppStates).forEach((opp: any) => {
@@ -902,7 +905,6 @@ export default function CauCa2NPage() {
             }
           });
         } else {
-          // Bắt buộc nhấp/giữ liên tục cho đến khi lineTension đạt 100 mới kéo cá lớn lên thành công!
           if (this.lineTension >= 100) {
             this.state = "REELING_HORIZ";
             this.lineTension = 0;
@@ -970,7 +972,6 @@ export default function CauCa2NPage() {
               continue;
             }
 
-            // --- HITBOX CHÍNH XÁC VÀO ĐẦU / MỎ CÁ (Thu hẹp chặt chẽ) ---
             let headX = f.direction === 1 ? f.x + f.size * 0.6 : f.x - f.size * 0.6;
             let headY = f.y - f.size * 0.1;
             let hitRadius = Math.max(12, f.size * 0.22);
@@ -1013,10 +1014,24 @@ export default function CauCa2NPage() {
             }
           }
         } else if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
-          // Tụt thanh nhẹ nhàng khi ngưng tay để thanh không bị kẹt ở 0
-          this.lineTension = Math.max(0, this.lineTension - 0.25); 
+          this.lineTension = Math.max(0, this.lineTension - 0.35); 
+          this.struggleIdleTime += 1;
 
-          // Có thể thêm cơ chế đứt dây nếu không tap trong thời gian quá lâu (ví dụ lineTension tụt về 0 hoặc có thanh quá tải riêng). Ở đây giữ nhịp chuẩn để ní tap/giữ.
+          // Nếu ngưng tap quá 3.5 giây -> Cá đứt dây sổng mất!
+          if (this.struggleIdleTime > 210) {
+            this.state = "IDLE";
+            if (statusEl) {
+              statusEl.innerText = "💥 Cá quẫy quá mạnh làm đứt dây mất tiêu!";
+              statusEl.style.color = "#F44336";
+            }
+            window.dispatchEvent(
+              new CustomEvent("showPopupBanner", {
+                detail: { title: "💥 ĐỨT DÂY MẤT TIÊU!", message: "Ní ngưng tay quá lâu nên cá đã sổng mất!", type: "beerus" },
+              })
+            );
+            this.reset();
+            return;
+          }
         } else if (this.state === "REELING_HORIZ") {
           if (bottomTimer) {
             clearTimeout(bottomTimer);
@@ -1044,7 +1059,6 @@ export default function CauCa2NPage() {
               const currentFish = this.caughtFish.fishData;
               if (selectedRod === "cancauvectorvang.png") earnedPoints *= 2;
 
-              // --- HỆ THỐNG NUÔI HŨ & NỔ HŨ ---
               async function processJackpotAndNutrient(fishLayer: string, fPoints: number) {
                 const { data } = await supabase.from("cauca_jackpot").select("*").eq("id", "global").single();
                 if (data) {
@@ -1166,7 +1180,6 @@ export default function CauCa2NPage() {
           ctx!.fill();
         }
 
-        // --- PHÂN TẦNG: CÁ NHỎ/VỪA THÌ THU DÂY LIỀN, CÁ LỚN/QUÁI VẬT BẮT BUỘC TAP LIÊN TỤC ---
         const isSmallOrMidFish = fish.layer === "top" || (fish.layer === "mid" && !fish.fishData.isRare);
 
         if (isSmallOrMidFish) {
@@ -1176,9 +1189,8 @@ export default function CauCa2NPage() {
             statusEl.style.color = "#FFEB3B";
           }
         } else {
-          // Cá lớn / Quái vật: Bắt buộc vào trạng thái giật lực, yêu cầu tap/giữ liên tục
           this.state = "STRUGGLING";
-          this.lineTension = 0; // Thanh tiến độ kéo bắt đầu từ 0
+          this.lineTension = 0;
           if (statusEl) {
             statusEl.innerText = `Dính ${fish.fishData.vnName} khổng lồ! Hãy TAP liên tục để kéo lên!`;
             statusEl.style.color = "#FF5252";
