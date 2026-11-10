@@ -53,15 +53,15 @@ const FISH_SPECIES = [
 
   // --- NHÓM CÁ LỚN (100 kg - 1 Tấn) ---
   { file: "Carcharhinus_melanopterus", name: "Cá Mập Vây Đen", group: "large", radius: 104, speedRange: [0.2, 0.5], baseReward: 150000000 },
-  { file: "Carcharias_taurus", name: "Cá Mập Cát Khổng Lồ", group: "large", radius: 112, speedRange: [0.2, 0.3], baseReward: 2000000000 },
-  { file: "Cheilinus_undulatus", name: "Cá M Napoleon", group: "large", radius: 124, speedRange: [0.2, 0.3], baseReward: 2000000000 },
-  { file: "Hypanus_americanus", name: "Cá Đuối Gai Độc", group: "large", radius: 96, speedRange: [0.2, 0.5], baseReward: 1000000000 },
-  { file: "Hypanus_sabinus", name: "Cá Đuối Mượt", group: "large", radius: 90, speedRange: [0.2, 0.5], baseReward: 1000000000 },
-  { file: "Lepisosteus_oculatus", name: "Cá Hỏa Tiễn Miền Nam", group: "large", radius: 90, speedRange: [0.35, 0.55], baseReward: 950000000 },
-  { file: "Lepisosteus_osseus", name: "Cá Hỏa Tiễn Mõm Dài", group: "large", radius: 94, speedRange: [0.2, 0.55], baseReward: 1050000000 },
-  { file: "Micropterus_salmoides", name: "Cá Vược Đen Khổng Lồ", group: "large", radius: 84, speedRange: [0.2, 0.6], baseReward: 840000000 },
-  { file: "Micropterus_treculii", name: "Cá Vược Sông Guadalupe", group: "large", radius: 80, speedRange: [0.2, 0.6], baseReward: 7400000000 },
-  { file: "Triaenodon_obesus", name: "Cá Mập Vây Trắng", group: "large", radius: 100, speedRange: [0.2, 0.3], baseReward: 1400000000 }
+  { file: "Carcharias_taurus", name: "Cá Mập Cát Khổng Lồ", group: "large", radius: 112, speedRange: [0.2, 0.3], baseReward: 200000000 },
+  { file: "Cheilinus_undulatus", name: "Cá M Napoleon", group: "large", radius: 124, speedRange: [0.2, 0.3], baseReward: 250000000 },
+  { file: "Hypanus_americanus", name: "Cá Đuối Gai Độc", group: "large", radius: 96, speedRange: [0.2, 0.5], baseReward: 120000000 },
+  { file: "Hypanus_satinus", name: "Cá Đuối Mượt", group: "large", radius: 90, speedRange: [0.2, 0.5], baseReward: 100000000 },
+  { file: "Lepisosteus_oculatus", name: "Cá Hỏa Tiễn Miền Nam", group: "large", radius: 90, speedRange: [0.35, 0.55], baseReward: 95000000 },
+  { file: "Lepisosteus_osseus", name: "Cá Hỏa Tiễn Mõm Dài", group: "large", radius: 94, speedRange: [0.2, 0.55], baseReward: 105000000 },
+  { file: "Micropterus_salmoides", name: "Cá Vược Đen Khổng Lồ", group: "large", radius: 84, speedRange: [0.2, 0.6], baseReward: 80000000 },
+  { file: "Micropterus_treculii", name: "Cá Vược Sông Guadalupe", group: "large", radius: 80, speedRange: [0.2, 0.6], baseReward: 75000000 },
+  { file: "Triaenodon_obesus", name: "Cá Mập Vây Trắng", group: "large", radius: 100, speedRange: [0.2, 0.3], baseReward: 140000000 }
 ];
 
 // --- 2 SIÊU BOSS ---
@@ -91,6 +91,9 @@ export default function FishShooterGame() {
   const [user, setUser] = useState<any>(null);
   const [score, setScore] = useState<number>(1000);
   const [userAvatar, setUserAvatar] = useState<string>("/assets/avatar/xtra1.ico");
+
+  // --- HỆ SỐ ZOOM (MẶC ĐỊNH 0.7 ĐỂ HỒ RỘNG THÊNH THANG) ---
+  const ZOOM_SCALE = 0.7;
 
   // --- SẢNH CHỜ & PHÒNG BẮN CÁ ---
   const [rooms, setRooms] = useState<any[]>([]);
@@ -375,14 +378,20 @@ export default function FishShooterGame() {
       canvas.height = h * dpr;
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
     };
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
     let animationFrameId: number;
     let syncTimer = 0;
+
+    // Chiều rộng & cao logic trong hệ tọa độ zoom
+    const getVirtualDimensions = () => {
+      return {
+        w: window.innerWidth / ZOOM_SCALE,
+        h: window.innerHeight / ZOOM_SCALE
+      };
+    };
 
     const getCannonTransform = (progress: number, w: number, h: number) => {
       const margin = 40;
@@ -473,8 +482,7 @@ export default function FishShooterGame() {
     const spawnFish = () => {
       if (!gameState.current.isHost) return;
       const fishes = gameState.current.fishes;
-      const currentWidth = window.innerWidth;
-      const currentHeight = window.innerHeight;
+      const { w: currentWidth, h: currentHeight } = getVirtualDimensions();
 
       const hasBoss = fishes.some(f => f.group === "boss");
 
@@ -556,10 +564,11 @@ export default function FishShooterGame() {
     };
 
     const spawnBubble = () => {
+      const { w } = getVirtualDimensions();
       if (Math.random() < 0.1) {
         gameState.current.bubbles.push({
-          x: Math.random() * window.innerWidth,
-          y: window.innerHeight + 10,
+          x: Math.random() * w,
+          y: window.innerHeight / ZOOM_SCALE + 10,
           radius: Math.random() * 5 + 2,
           speed: Math.random() * 2 + 1,
           opacity: Math.random() * 0.4 + 0.1
@@ -572,12 +581,15 @@ export default function FishShooterGame() {
       const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
       
-      const targetX = clientX - rect.left;
-      const targetY = clientY - rect.top;
+      // Quy đổi tọa độ click màn hình sang tọa độ ảo trong thế giới Zoom
+      const targetX = (clientX - rect.left) / ZOOM_SCALE;
+      const targetY = (clientY - rect.top) / ZOOM_SCALE;
+
+      const { w, h } = getVirtualDimensions();
 
       if (clientY < 75 || (clientY > window.innerHeight - 110 && clientX < 160) || (clientY < 100 && clientX > window.innerWidth - 280)) return;
 
-      const transform = getCannonTransform(gameState.current.cannonProgress, window.innerWidth, window.innerHeight);
+      const transform = getCannonTransform(gameState.current.cannonProgress, w, h);
       const cannonX = transform.x;
       const cannonY = transform.y;
 
@@ -637,14 +649,24 @@ export default function FishShooterGame() {
     canvas.addEventListener("pointerdown", handleCanvasClick);
 
     const gameLoop = () => {
-      const currentWidth = window.innerWidth;
-      const currentHeight = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      const { w: currentWidth, h: currentHeight } = getVirtualDimensions();
 
       const bgGradient = ctx.createLinearGradient(0, 0, 0, currentHeight);
       bgGradient.addColorStop(0, "#011e3d");
       bgGradient.addColorStop(1, "#000814");
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, currentWidth, currentHeight);
+
+      // --- ÁP DỤNG ZOOM TOÀN BỘ KHÔNG GIAN HỒ ---
+      ctx.save();
+      ctx.scale(ZOOM_SCALE, ZOOM_SCALE);
+
+      const realWidth = currentWidth;
+      const realHeight = currentHeight;
 
       spawnBubble();
       gameState.current.bubbles.forEach((b, index) => {
@@ -658,7 +680,7 @@ export default function FishShooterGame() {
       });
 
       const moveSpeed = 6;
-      const tempTransform = getCannonTransform(0, currentWidth, currentHeight);
+      const tempTransform = getCannonTransform(0, realWidth, realHeight);
       const maxPerimeter = tempTransform.perimeter;
 
       if (isMovingLeft.current) gameState.current.cannonProgress -= moveSpeed;
@@ -705,7 +727,7 @@ export default function FishShooterGame() {
           }
 
           fish.x += fish.vx;
-          if (fish.x < 250 || fish.x > currentWidth - 250) {
+          if (fish.x < 250 || fish.x > realWidth - 250) {
             fish.vx *= -1;
           }
           fish.y += Math.sin(fish.x / 100) * 0.4;
@@ -750,7 +772,7 @@ export default function FishShooterGame() {
           ctx.restore();
         }
 
-        if (fish.group !== "boss" && (fish.x > currentWidth + 250 || fish.x < -250 || fish.y > currentHeight + 250 || fish.y < -250)) {
+        if (fish.group !== "boss" && (fish.x > realWidth + 250 || fish.x < -250 || fish.y > realHeight + 250 || fish.y < -250)) {
           gameState.current.fishes.splice(fIndex, 1);
         }
       });
@@ -768,7 +790,7 @@ export default function FishShooterGame() {
         setActiveLargeFishUI(null);
       }
 
-      const transform = getCannonTransform(gameState.current.cannonProgress, currentWidth, currentHeight);
+      const transform = getCannonTransform(gameState.current.cannonProgress, realWidth, realHeight);
       const renderCannon = (tx: number, ty: number, angle: number, isSelf = true) => {
         ctx.save();
         ctx.translate(tx, ty);
@@ -806,7 +828,7 @@ export default function FishShooterGame() {
         Object.keys(gameState.current.peerCannons).forEach((peerId) => {
           const peer = gameState.current.peerCannons[peerId];
           if (peer) {
-            const peerTrans = getCannonTransform(peer.progress, currentWidth, currentHeight);
+            const peerTrans = getCannonTransform(peer.progress, realWidth, realHeight);
             renderCannon(peerTrans.x, peerTrans.y, peer.angle, false);
           }
         });
@@ -832,7 +854,7 @@ export default function FishShooterGame() {
           }
           ctx.restore();
 
-          if (bullet.x < 0 || bullet.x > currentWidth || bullet.y < 0 || bullet.y > currentHeight) {
+          if (bullet.x < 0 || bullet.x > realWidth || bullet.y < 0 || bullet.y > realHeight) {
             bullet.isExploding = true;
           }
 
@@ -909,6 +931,9 @@ export default function FishShooterGame() {
           }
         }
       });
+
+      // Phục hồi lại context sau khi vẽ canvas zoom
+      ctx.restore();
 
       animationFrameId = requestAnimationFrame(gameLoop);
     };
@@ -1107,7 +1132,7 @@ export default function FishShooterGame() {
         </div>
       )}
 
-      {/* --- THANH MÁU CÁ LỚN / BOSS ĐÃ ĐƯỢC ĐẨY LÊN GÓC PHẢI DƯỚI HÀNG VỚI CỤM TIER/SKILL --- */}
+      {/* --- THANH MÁU CÁ LỚN / BOSS Ở GÓC PHẢI TRÊN --- */}
       {activeLargeFishUI && (
         <div className={`absolute top-12 right-2 w-52 sm:w-60 bg-slate-950/95 border-2 p-2 rounded-xl backdrop-blur-md z-30 shadow-xl animate-fade-in ${activeLargeFishUI.isBoss ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'border-amber-500'}`}>
           <div className="flex justify-between items-center text-[9px] sm:text-[10px] font-black mb-1 text-white">
