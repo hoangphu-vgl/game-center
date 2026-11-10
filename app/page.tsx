@@ -482,7 +482,7 @@ export default function Home() {
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
       
-      {/* 1. THANH CHUYỂN SẢNH HEADER (ĐÃ CHÈN CÂU CÁ TEAM 7) */}
+      {/* 1. THANH CHUYỂN SẢNH HEADER */}
       <div className="bg-slate-900/95 border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-bold shrink-0 backdrop-blur-md z-30">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-amber-400">⚡ Chuyển Sảnh:</span>
@@ -491,12 +491,8 @@ export default function Home() {
           <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition text-[11px]">
             🏠 Trang Chủ
           </Link>
-          <Link href="/cauca" className="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            🎣 Cần Thủ Vũ Trụ
-          </Link>
-          {/* NÚT CHUYỂN HƯỚNG CÂU CÁ MULTI */}
           <Link href="/caucamulti" className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:brightness-110 text-slate-950 font-black border border-amber-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
-            👥 Câu Cá Team 7
+            👥 Cần Thủ Vũ Trụ
           </Link>
           <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎲 Baccarat Thần Thánh
@@ -512,9 +508,6 @@ export default function Home() {
           </Link>
           <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎟️ Vòng Quay
-          </Link>
-          <Link href="/gacha" className="bg-pink-950 hover:bg-pink-900 text-pink-300 border border-pink-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            🎁 Gacha Thiên Sứ
           </Link>
         </div>
       </div>
@@ -678,7 +671,7 @@ export default function Home() {
           
           <div className="lg:col-span-2 space-y-5">
             
-            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỨA CÂU CÁ 1 NGƯỜI, CÂU CÁ Multi, JACKPOT, BACCARAT) */}
+            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỨA CẦN THỦ VŨ TRỤ, JACKPOT, BACCARAT) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -686,28 +679,9 @@ export default function Home() {
                 </h2>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                
-                {/* 1. CẦN THỦ VŨ TRỤ (1 NGƯỜI) */}
-                <Link
-                  href="/cauca"
-                  className="bg-slate-900/90 border-2 border-cyan-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-400 flex flex-col justify-between"
-                >
-                  <div className="absolute right-2 -bottom-2 opacity-15">
-                    <img src="/assets/cauca/Aetobatus_ocellatus.png" alt="Fish" className="w-20 h-20 object-contain" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-cyan-400 flex items-center gap-1.5">
-                      <span>🎣</span> Cần Thủ Vũ Trụ
-                    </h3>
-                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">✨ 'Hạ gục cá mập đơn thư hùng, giật nổ hũ đại dương!'</p>
-                  </div>
-                  <div className="mt-3 bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    CÂU CÁ 🌊
-                  </div>
-                </Link>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
 
-                {/* 2. CÂU CÁ Multi (MULTIPLAYER MỚI CHÈN) */}
+                {/* 1. CẦN THỦ VŨ TRỤ (ĐÃ ĐỔI TÊN TỪ CÂU CÁ TEAM 7) */}
                 <Link
                   href="/caucamulti"
                   className="bg-slate-900/90 border-2 border-amber-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-yellow-300 flex flex-col justify-between ring-2 ring-amber-500/30"
@@ -720,7 +694,7 @@ export default function Home() {
                       2 Player
                     </span>
                     <h3 className="text-sm font-black text-amber-300 flex items-center gap-1.5">
-                      <span>👥</span> Câu Cá Team 7
+                      <span>👥</span> Cần Thủ Vũ Trụ
                     </h3>
                     <p className="text-slate-300 text-[11px] mt-1 italic font-medium">🤝 'Săn cá cùng đồng đội, móc dây câu thả ga!'</p>
                   </div>
@@ -729,7 +703,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 3. JACKPOT RỒNG THẦN */}
+                {/* 2. JACKPOT RỒNG THẦN */}
                 <Link
                   href="/jackpot"
                   className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400 flex flex-col justify-between"
@@ -748,7 +722,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 4. BACCARAT THẦN THÁNH */}
+                {/* 3. BACCARAT THẦN THÁNH */}
                 <Link
                   href="/baccarat"
                   className="bg-slate-900/90 border-2 border-indigo-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-indigo-400 flex flex-col justify-between"
@@ -770,7 +744,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* MỤC: THẦN ĐIỆN & KHO BẢO */}
+            {/* MỤC: THẦN ĐIỆN & KHO BẢO (ĐÃ GỎI BỎ GACHA THIÊN SỨ) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-purple-400 tracking-wider uppercase flex items-center gap-2">
@@ -778,7 +752,7 @@ export default function Home() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 
                 {/* 1. VÒNG QUAY CAPSULE */}
                 <Link
@@ -814,24 +788,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 3. GACHA THIÊN SỨ */}
-                <Link
-                  href="/gacha"
-                  className="bg-slate-900/90 border border-pink-500/50 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-pink-400"
-                >
-                  <div className="absolute right-2 -bottom-2 opacity-15">
-                    <img src="/assets/gacha/ruongvang.png" alt="Gacha" className="w-20 h-20 object-contain" />
-                  </div>
-                  <h3 className="text-sm sm:text-base font-black text-pink-400 flex items-center gap-2">
-                    <span>🎁</span> Vận Mệnh của Thiên Sứ (Gacha)
-                  </h3>
-                  <p className="text-slate-300 text-xs mt-1 italic font-medium">✨ 'Mở Rương Bạc An Toàn hoặc Rương Vàng Anh Dũng nhận kỹ năng độc quyền!'</p>
-                  <div className="mt-3 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    MỞ RƯƠNG GACHA 🌟
-                  </div>
-                </Link>
-
-                {/* 4. SHOP VÕ ĐẠO SAIYAN */}
+                {/* 3. SHOP VÕ ĐẠO SAIYAN */}
                 <Link
                   href="/shop"
                   className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"
