@@ -30,15 +30,15 @@ const AURA_QUOTES = [
 ];
 
 const getSaiyanLevel = (power: number) => {
-  if (power >= 1000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
-  if (power >= 500000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
-  if (power >= 250000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
-  if (power >= 100000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
-  if (power >= 50000000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
-  if (power >= 10000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
-  if (power >= 5000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
-  if (power >= 1000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/50 bg-yellow-950/30" };
-  if (power >= 500000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
+  if (power >= 1000000000000000) return { name: "⚡ Lv.10 - Thần Hủy Diệt", color: "text-purple-400 border-purple-500/50 bg-purple-950/40" };
+  if (power >= 500000000000000) return { name: "🔥 Lv.9 - Bản Năng Hoàn Thiện", color: "text-rose-400 border-rose-500/50 bg-rose-950/40" };
+  if (power >= 250000000000000) return { name: "⚪ Lv.8 - Bản Năng Vô Thượng", color: "text-cyan-300 border-cyan-500/50 bg-cyan-950/40" };
+  if (power >= 10000000000000) return { name: "🔵 Lv.7 - Siêu Saiyan Blue", color: "text-blue-400 border-blue-500/50 bg-blue-950/40" };
+  if (power >= 5000000000000) return { name: "🔴 Lv.6 - Siêu Saiyan God", color: "text-red-400 border-red-500/50 bg-red-950/40" };
+  if (power >= 100000000000) return { name: "💥 Lv.5 - Siêu Saiyan 3", color: "text-amber-400 border-amber-500/50 bg-amber-950/40" };
+  if (power >= 50000000000) return { name: "⚡ Lv.4 - Siêu Saiyan 2", color: "text-yellow-400 border-yellow-500/50 bg-yellow-950/40" };
+  if (power >= 1000000000) return { name: "🟡 Lv.3 - Siêu Saiyan 1", color: "text-yellow-300 border-yellow-500/50 bg-yellow-950/30" };
+  if (power >= 500000000) return { name: "🛡️ Lv.2 - Saiyan Hạ Đẳng", color: "text-orange-400 border-orange-500/40 bg-orange-950/30" };
   return { name: "🌍 Lv.1 - Người Trái Đất", color: "text-slate-300 border-slate-700 bg-slate-900/50" };
 };
 
@@ -482,6 +482,7 @@ export default function Home() {
   return (
     <div className="fixed inset-0 overflow-hidden bg-slate-950 text-white font-sans select-none flex flex-col justify-between" style={{ touchAction: 'manipulation' }}>
       
+      {/* 1. THANH CHUYỂN SẢNH HEADER */}
       <div className="bg-slate-900/95 border-b border-amber-500/30 px-3 py-1.5 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-bold shrink-0 backdrop-blur-md z-30">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="text-amber-400">⚡ Chuyển Sảnh:</span>
@@ -490,8 +491,11 @@ export default function Home() {
           <Link href="/" className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition text-[11px]">
             🏠 Trang Chủ
           </Link>
-          <Link href="/cauca" className="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            🎣 Cần Thủ Vũ Trụ
+          <Link href="/caucamulti" className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:brightness-110 text-slate-950 font-black border border-amber-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
+            👥 Cần Thủ Vũ Trụ
+          </Link>
+          <Link href="/banca" className="bg-gradient-to-r from-cyan-600 to-blue-500 hover:brightness-110 text-slate-950 font-black border border-cyan-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
+            🔫 Đại Chiến Bắn Cá
           </Link>
           <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎲 Baccarat Thần Thánh
@@ -507,9 +511,6 @@ export default function Home() {
           </Link>
           <Link href="/wheel" className="bg-orange-950 hover:bg-orange-900 text-orange-300 border border-orange-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎟️ Vòng Quay
-          </Link>
-          <Link href="/gacha" className="bg-pink-950 hover:bg-pink-900 text-pink-300 border border-pink-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            🎁 Gacha Thiên Sứ
           </Link>
         </div>
       </div>
@@ -673,7 +674,7 @@ export default function Home() {
           
           <div className="lg:col-span-2 space-y-5">
             
-            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỨA CÂU CÁ, JACKPOT, BACCARAT) */}
+            {/* SẢNH NỔI BẬT VŨ TRỤ (CẦN THỦ VŨ TRỤ & ĐẠI CHIẾN BẮN CÁ ĐẶT KẾ BÊN NHAU) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -681,28 +682,53 @@ export default function Home() {
                 </h2>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+
                 {/* 1. CẦN THỦ VŨ TRỤ */}
                 <Link
-                  href="/cauca"
-                  className="bg-slate-900/90 border-2 border-cyan-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-cyan-400 flex flex-col justify-between"
+                  href="/caucamulti"
+                  className="bg-slate-900/90 border-2 border-amber-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-yellow-300 flex flex-col justify-between ring-2 ring-amber-500/30"
                 >
-                  <div className="absolute right-2 -bottom-2 opacity-15">
-                    <img src="/assets/cauca/Aetobatus_ocellatus.png" alt="Fish" className="w-20 h-20 object-contain" />
+                  <div className="absolute right-2 -bottom-2 opacity-20">
+                    <img src="/assets/cauca/Carcharhinus_melanopterus.png" alt="Fish Coop" className="w-20 h-20 object-contain" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-cyan-400 flex items-center gap-1.5">
-                      <span>🎣</span> Cần Thủ Vũ Trụ
+                    <span className="absolute top-2 right-2 bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase animate-pulse">
+                      2 Player
+                    </span>
+                    <h3 className="text-sm font-black text-amber-300 flex items-center gap-1.5">
+                      <span>👥</span> Cần Thủ Vũ Trụ
                     </h3>
-                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">✨ 'Hạ gục cá mập, giật nổ hũ Jackpot đại dương cực khủng!'</p>
+                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">🤝 'Săn cá cùng đồng đội, móc dây câu thả ga!'</p>
                   </div>
-                  <div className="mt-3 bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    CÂU CÁ 🌊
+                  <div className="mt-3 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-lg animate-bounce">
+                    VÀO SẢNH 👥
                   </div>
                 </Link>
 
-                {/* 2. JACKPOT RỒNG THẦN */}
+                {/* 2. ĐẠI CHIẾN BẮN CÁ (NẰM NGAY KẾ BÊN CẦN THỦ VŨ TRỤ) */}
+                <Link
+                  href="/banca"
+                  className="bg-slate-900/90 border-2 border-cyan-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-cyan-300 flex flex-col justify-between ring-2 ring-cyan-500/30"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-20">
+                    <img src="/assets/cauca/Mola_mola.png" alt="Bắn Cá" className="w-20 h-20 object-contain" />
+                  </div>
+                  <div>
+                    <span className="absolute top-2 right-2 bg-cyan-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase animate-pulse">
+                      Arcade
+                    </span>
+                    <h3 className="text-sm font-black text-cyan-300 flex items-center gap-1.5">
+                      <span>🔫</span> Đại Chiến Bắn Cá
+                    </h3>
+                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">⚡ 'Xả đạn đại bác, kích hoạt hào quang Saiyan săn cá lớn!'</p>
+                  </div>
+                  <div className="mt-3 bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-lg animate-bounce">
+                    BẮN CÁ NGAY 🔫
+                  </div>
+                </Link>
+
+                {/* 3. JACKPOT RỒNG THẦN */}
                 <Link
                   href="/jackpot"
                   className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400 flex flex-col justify-between"
@@ -721,7 +747,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 3. BACCARAT THẦN THÁNH */}
+                {/* 4. BACCARAT THẦN THÁNH */}
                 <Link
                   href="/baccarat"
                   className="bg-slate-900/90 border-2 border-indigo-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-indigo-400 flex flex-col justify-between"
@@ -751,7 +777,7 @@ export default function Home() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 
                 {/* 1. VÒNG QUAY CAPSULE */}
                 <Link
@@ -787,24 +813,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 3. GACHA THIÊN SỨ */}
-                <Link
-                  href="/gacha"
-                  className="bg-slate-900/90 border border-pink-500/50 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-pink-400"
-                >
-                  <div className="absolute right-2 -bottom-2 opacity-15">
-                    <img src="/assets/gacha/ruongvang.png" alt="Gacha" className="w-20 h-20 object-contain" />
-                  </div>
-                  <h3 className="text-sm sm:text-base font-black text-pink-400 flex items-center gap-2">
-                    <span>🎁</span> Vận Mệnh của Thiên Sứ (Gacha)
-                  </h3>
-                  <p className="text-slate-300 text-xs mt-1 italic font-medium">✨ 'Mở Rương Bạc An Toàn hoặc Rương Vàng Anh Dũng nhận kỹ năng độc quyền!'</p>
-                  <div className="mt-3 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    MỞ RƯƠNG GACHA 🌟
-                  </div>
-                </Link>
-
-                {/* 4. SHOP VÕ ĐẠO SAIYAN */}
+                {/* 3. SHOP VÕ ĐẠO SAIYAN */}
                 <Link
                   href="/shop"
                   className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"

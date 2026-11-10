@@ -16,28 +16,14 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-function createSeededRandom(seedStr: string) {
-  let seed = 0;
-  for (let i = 0; i < seedStr.length; i++) {
-    seed = (seed << 5) - seed + seedStr.charCodeAt(i);
-    seed |= 0;
-  }
-  return function () {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-export default function CauCa2NPage() {
+export default function CauCaMultiPage() {
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
   const [score, setScore] = useState<number>(1000);
   const [userAvatar, setUserAvatar] = useState<string>("/assets/avatar/xtra1.ico");
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
-  // --- MULTIPLAYER ROOM STATES (Hỗ trợ tối đa 10 người) ---
+  // --- MULTIPLAYER ROOM STATES ---
   const [rooms, setRooms] = useState<any[]>([]);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const [currentSlot, setCurrentSlot] = useState<string | null>(null);
@@ -45,13 +31,12 @@ export default function CauCa2NPage() {
   const roomChannelRef = useRef<any>(null);
   const [oppAlert, setOppAlert] = useState<string | null>(null);
 
-  // --- HỆ THỐNG KHO SKILL & COOLDOWN (5 Phút) & DROPDOWN ---
+  // --- HỆ THỐNG KHO SKILL & COOLDOWN ---
   const [inventory, setInventory] = useState<{ [key: string]: number }>({});
   const [skillCooldowns, setSkillCooldowns] = useState<{ [key: string]: number }>({});
   const [isSkillShopOpen, setIsSkillShopOpen] = useState<boolean>(false);
   const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState<boolean>(false);
 
-  // Danh sách 6 Skill Câu Cá Dragon Ball
   const fishingSkills = [
     { id: "fish_sk1", name: "Chân Không Trấn Hải", icon: "🌀", desc: "Mồi chìm đến độ sâu mong muốn, chạm giữ để giữ mồi đứng yên 5s.", price: 200000 },
     { id: "fish_sk2", name: "Bản Năng Vô Cực", icon: "⚡", desc: "Đóng băng thời gian toàn hồ trong 5s (Cá lớn có % kháng).", price: 350000 },
@@ -61,9 +46,11 @@ export default function CauCa2NPage() {
     { id: "fish_sk6", name: "Nhãn Quan Thần Linh", icon: "🔮", desc: "Soi chính xác giá trị tiền thưởng của 1 con cá lớn ngẫu nhiên trong hồ.", price: 400000 },
   ];
 
-  // --- HỆ THỐNG THÔNG BÁO ---
+  // --- HỆ THỐNG THÔNG BÁO NHỎ GỌN Ở GIỮA TRÊN ---
+  const [centerCatchNotice, setCenterCatchNotice] = useState<{ text: string; show: boolean } | null>(null);
   const [myCatchNotice, setMyCatchNotice] = useState<{ text: string; amount: string; show: boolean } | null>(null);
   const [oppCatchNotice, setOppCatchNotice] = useState<{ text: string; amount: string; show: boolean } | null>(null);
+  const [bossUI, setBossUI] = useState<{ name: string; hpPercent: number; weightText: string; } | null>(null);
 
   const [selectedBait, setSelectedBait] = useState<{ cost: number; filename: string; name: string }>({
     cost: 100000,
@@ -94,11 +81,9 @@ export default function CauCa2NPage() {
     { filename: "cancaumaychuyennghiep.png", name: "Cần Câu Máy Chuyên Nghiệp", price3Days: 1500000000, price5Days: 2400000000, price7Days: 3300000000, desc: "Tích hợp máy câu hiện đại", damageBuff: 2.2, critChance: 0.22, buff: "Sát thương x2.2" },
     { filename: "cancaucatrenbang.png", name: "Cần Câu Cá Trên Băng", price3Days: 5000000000, price5Days: 8000000000, price7Days: 11000000000, desc: "Dòng cần độc đáo tầng sâu", damageBuff: 2.6, critChance: 0.25, buff: "Tăng cá hiếm" },
     { filename: "cancauvectogo.png", name: "Cần Câu Véc-tơ Gỗ", price3Days: 10000000000, price5Days: 16000000000, price7Days: 22000000000, desc: "Công nghệ véc-tơ kết hợp gỗ", damageBuff: 3.2, critChance: 0.3, buff: "Săn cá lớn" },
-    { filename: "cancauvectordo.png", name: "Cần Câu Véc-tơ Đỏ", price3Days: 50000000000, price5Days: 80000000000, price7Days: 110000000000, desc: "Siêu phẩm phối màu đỏ rực", damageBuff: 4.0, critChance: 0.35, buff: "Tăng Nổ Hũ" },
+    { filename: "cancauvectordo.png", name: "Cần Câu Véc-tơ Đỏ", price3Days: 50000000000, price5Days: 80000000000, price7Days: 110000000000, desc: "Siêu phẩm phối màu đỏ rực", damageBuff: 4.0, critChance: 0.35, buff: "Kéo nhanh" },
     { filename: "cancauvectorvang.png", name: "Cần Câu Véc-tơ Vàng", price3Days: 1000000000000, price5Days: 1600000000000, price7Days: 2200000000000, desc: "Cực phẩm tối thượng dát vàng", damageBuff: 5.5, critChance: 0.45, buff: "X2 Sát Thương & Điểm" }
   ];
-
-  const [jackpot, setJackpot] = useState({ minor: 100000, major: 500000, grand: 2000000 });
 
   useEffect(() => {
     setIsMounted(true);
@@ -267,25 +252,6 @@ export default function CauCa2NPage() {
     showShopNotice(`✨ Đã trang bị cần câu mới!`);
   };
 
-  useEffect(() => {
-    async function fetchInitialJackpot() {
-      const { data } = await supabase.from("cauca_jackpot").select("*").eq("id", "global").single();
-      if (data) setJackpot({ minor: data.minor, major: data.major, grand: data.grand });
-    }
-    fetchInitialJackpot();
-
-    const channel = supabase
-      .channel("public:cauca_jackpot")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "cauca_jackpot" }, (payload) => {
-        if (payload.new) setJackpot({ minor: payload.new.minor, major: payload.new.major, grand: payload.new.grand });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
   const leaveRoom = async () => {
     if (activeRoom && currentSlot && user) {
       await supabase.from("cauca_rooms").update({ [currentSlot]: null }).eq("id", activeRoom);
@@ -347,9 +313,25 @@ export default function CauCa2NPage() {
 
     channel.on("presence", { event: "sync" }, () => {
       const state = channel.presenceState();
-      const count = Math.max(1, Object.keys(state).length);
+      const players: any[] = [];
+      Object.keys(state).forEach((key) => {
+        players.push((state[key] as any)[0]);
+      });
+
+      const count = Math.max(1, players.length);
       setRoomPlayerCount(count);
       (window as any).roomPlayerCount = count;
+
+      if (players.length > 0) {
+        players.sort((a, b) => {
+          const slotA = parseInt(a.slot?.replace("player_", "") || "99");
+          const slotB = parseInt(b.slot?.replace("player_", "") || "99");
+          return slotA - slotB;
+        });
+        const topPlayer = players[0];
+        (window as any).isHost = (topPlayer.user_id === user.id);
+      }
+
       if (count > 1) {
         setOppAlert(`🤝 Có ${count} người chơi trong phòng! Lực kéo & chống hụt tăng +${(count - 1) * 2}% mỗi người!`);
         setTimeout(() => setOppAlert(null), 4000);
@@ -376,19 +358,23 @@ export default function CauCa2NPage() {
           show: true,
         });
         setTimeout(() => setOppCatchNotice(null), 3500);
+
+        setCenterCatchNotice({
+          text: `${payload.payload.fishName} (${payload.payload.weightText || ""})`,
+          show: true,
+        });
+        setTimeout(() => setCenterCatchNotice(null), 3500);
       }
     });
 
-    channel.on("broadcast", { event: "rare_fish_spawn" }, (payload) => {
-      window.dispatchEvent(
-        new CustomEvent("showPopupBanner", {
-          detail: {
-            title: "🔥 QUÁI VẬT KHỔNG LỒ XUẤT HIỆN! 🔥",
-            message: `${payload.payload.fishName} bơi từ ngoài vào đáy biển trị giá ${payload.payload.points.toLocaleString()} 🪙!`,
-            type: "rare",
-          },
-        })
-      );
+    channel.on("broadcast", { event: "sync_fishes" }, (payload) => {
+      if (!(window as any).isHost && payload.payload.fishes) {
+        window.dispatchEvent(new CustomEvent("receivedSyncFishes", { detail: payload.payload.fishes }));
+      }
+    });
+    
+    channel.on("broadcast", { event: "boss_damage" }, (payload) => {
+      window.dispatchEvent(new CustomEvent("syncBossDamage", { detail: payload.payload }));
     });
 
     channel.subscribe(async (status) => {
@@ -422,45 +408,45 @@ export default function CauCa2NPage() {
     const powerContainer = document.getElementById("power-container");
     const powerBar = document.getElementById("power-bar");
 
-    const roomRng = createSeededRandom(activeRoom || "room_1");
-
     const fishDatabase = [
-      // --- TẦNG TRÊN (Cá nhỏ) ---
-      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 600, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn sọc", sizeScale: 0.7, basePoints: 960, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 720, multi: 1.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 1200, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 900, multi: 1.3, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 1440, multi: 1.5, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abramis_brama.png", vnName: "Cá vền nước ngọt", sizeScale: 0.85, basePoints: 2400, multi: 1.8, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Abudefduf_sexfasciatus.png", vnName: "Cá thia sáu sọc", sizeScale: 0.7, basePoints: 1800, multi: 1.6, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Platax_boersii.png", vnName: "Cá bướm vàng cam", sizeScale: 0.8, basePoints: 3600, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chaetodon_lunula.png", vnName: "Cá bướm mặt trăng", sizeScale: 0.85, basePoints: 6000, multi: 2.2, layer: "top", struggleWeight: 0, isRare: false },
-      { filename: "Chromis_viridis.png", vnName: "Cá thia lục bảo", sizeScale: 0.6, basePoints: 4800, multi: 2.0, layer: "top", struggleWeight: 0, isRare: false },
+      // Nhỏ (1-10kg)
+      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 500, weightRange: [1, 5], multi: 2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn sọc", sizeScale: 0.7, basePoints: 500, weightRange: [3, 8], multi: 3, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 500, weightRange: [2, 6], multi: 2.5, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 600, weightRange: [4, 10], multi: 4, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 500, weightRange: [1, 5], multi: 2, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 600, weightRange: [5, 10], multi: 4.5, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abramis_brama.png", vnName: "Cá vền nước ngọt", sizeScale: 0.85, basePoints: 700, weightRange: [6, 10], multi: 5, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Abudefduf_sexfasciatus.png", vnName: "Cá thia sáu sọc", sizeScale: 0.7, basePoints: 600, weightRange: [4, 9], multi: 4, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Platax_boersii.png", vnName: "Cá bướm vàng cam", sizeScale: 0.8, basePoints: 800, weightRange: [5, 10], multi: 6, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chaetodon_lunula.png", vnName: "Cá bướm mặt trăng", sizeScale: 0.85, basePoints: 1000, weightRange: [7, 10], multi: 8, layer: "top", struggleWeight: 0, isRare: false },
+      { filename: "Chromis_viridis.png", vnName: "Cá thia lục bảo", sizeScale: 0.6, basePoints: 800, weightRange: [4, 9], multi: 6, layer: "top", struggleWeight: 0, isRare: false },
 
-      // --- TẦNG GIỮA (Cá trung bình) ---
-      { filename: "Acanthurus_coerulus.png", vnName: "Cá đuôi gai xanh", sizeScale: 1.1, basePoints: 60000, multi: 2.5, layer: "mid", struggleWeight: 0.25, isRare: false },
-      { filename: "Oreochromis_niloticus.png", vnName: "Cá rô phi vằn", sizeScale: 1.25, basePoints: 96000, multi: 2.8, layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "Micropterus_salmoides.png", vnName: "Cá vược miệng rộng", sizeScale: 1.3, basePoints: 180000, multi: 3.0, layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "Amphiprion_clarkii.png", vnName: "Cá chẽm lớn", sizeScale: 1.6, basePoints: 360000, multi: 3.5, layer: "mid", struggleWeight: 0.4, isRare: false },
-      { filename: "Perca_flavescens.png", vnName: "Cá vược vàng", sizeScale: 1.1, basePoints: 240000, multi: 3.2, layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "Cyprinus_carpio.png", vnName: "Cá chép vàng", sizeScale: 1.5, basePoints: 600000, multi: 4.0, layer: "mid", struggleWeight: 0.45, isRare: false },
-      { filename: "Morone_saxatilis.png", vnName: "Cá rô phi", sizeScale: 1.15, basePoints: 144000, multi: 2.9, layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "Bodianus_diplotaenia.png", vnName: "Cá nhám", sizeScale: 1.4, basePoints: 960000, multi: 4.5, layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "Arothron_meleagris.png", vnName: "Cá nóc đốm sao", sizeScale: 1.25, basePoints: 120000, multi: 5.0, layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "Caranx_ignobilis.png", vnName: "Cá khế khổng lồ", sizeScale: 1.8, basePoints: 360000, multi: 6.0, layer: "mid", struggleWeight: 0.55, isRare: false },
-      { filename: "Echeneis_naucrates.png", vnName: "Cá cờ xanh Mahi-Mahi", sizeScale: 1.9, basePoints: 720000, multi: 7.0, layer: "mid", struggleWeight: 0.6, isRare: false },
-      { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 1.7, basePoints: 1080000, multi: 8.0, layer: "mid", struggleWeight: 0.65, isRare: false },
-
-      // --- TẦNG ĐÁY / SÂU (Cá lớn & Quái vật) ---
-      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 2.6, basePoints: 1800000, multi: 10.0, layer: "bottom", struggleWeight: 0.75, isRare: true },
-      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 2.8, basePoints: 4200000, multi: 12.0, layer: "bottom", struggleWeight: 0.8, isRare: true },
-      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 3.2, basePoints: 9600000, multi: 15.0, layer: "bottom", struggleWeight: 0.85, isRare: true },
-      { filename: "Mola_mola.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 3.4, basePoints: 18000000, multi: 20.0, layer: "bottom", struggleWeight: 0.88, isRare: true },
-      { filename: "Triaenodon_obesus.png", vnName: "Cá mập đầu búa", sizeScale: 3.0, basePoints: 30000000, multi: 25.0, layer: "bottom", struggleWeight: 0.9, isRare: true },
-      { filename: "Pterois_miles.png", vnName: "Cá kiếm đại dương", sizeScale: 3.4, basePoints: 54000000, multi: 30.0, layer: "bottom", struggleWeight: 0.93, isRare: true },
-      { filename: "Mobula_alfredi.png", vnName: "Cá đuối manta khổng lồ", sizeScale: 3.6, basePoints: 90000000, multi: 40.0, layer: "bottom", struggleWeight: 0.95, isRare: true },
-      { filename: "Gymnothorax_javanicus.png", vnName: "Cá trình khổng lồ Java", sizeScale: 3.3, basePoints: 120000000, multi: 50.0, layer: "bottom", struggleWeight: 0.96, isRare: true }
+      // Trung (10-100kg)
+      { filename: "Acanthurus_coerulus.png", vnName: "Cá đuôi gai xanh", sizeScale: 2.1, basePoints: 200000, weightRange: [10, 30], multi: 10, layer: "mid", struggleWeight: 0.25, isRare: false },
+      { filename: "Oreochromis_niloticus.png", vnName: "Cá rô phi vằn", sizeScale: 2.25, basePoints: 200000, weightRange: [20, 45], multi: 12, layer: "mid", struggleWeight: 0.3, isRare: false },
+      { filename: "Micropterus_salmoides.png", vnName: "Cá vược miệng rộng", sizeScale: 2.3, basePoints: 300000, weightRange: [30, 60], multi: 15, layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "cachep.png", vnName: "Cá chép lớn", sizeScale: 2.6, basePoints: 400000, weightRange: [40, 80], multi: 20, layer: "mid", struggleWeight: 0.4, isRare: false },
+      { filename: "cachimbien.png", vnName: "Cá chim biển", sizeScale: 2.1, basePoints: 300000, weightRange: [25, 55], multi: 15, layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "carolon.png", vnName: "Cá rô lớn", sizeScale: 2.5, basePoints: 500000, weightRange: [50, 100], multi: 25, layer: "mid", struggleWeight: 0.45, isRare: false },
+      { filename: "cabasa.png", vnName: "Cá basa", sizeScale: 2.3, basePoints: 200000, weightRange: [15, 40], multi: 12, layer: "mid", struggleWeight: 0.3, isRare: false },
+      { filename: "Bodianus_diplotaenia.png", vnName: "Cá nhám", sizeScale: 2.6, basePoints: 600000, weightRange: [60, 100], multi: 30, layer: "mid", struggleWeight: 0.5, isRare: false },
+      { filename: "Arothron_meleagris.png", vnName: "Cá nóc đốm sao", sizeScale: 2.25, basePoints: 200000, weightRange: [10, 35], multi: 10, layer: "mid", struggleWeight: 0.5, isRare: false },
+      { filename: "cangubo.png", vnName: "Cá ngừ", sizeScale: 2.4, basePoints: 700000, weightRange: [45, 95], multi: 35, layer: "mid", struggleWeight: 0.55, isRare: false },
+      { filename: "catra.png", vnName: "Cá tra", sizeScale: 2.7, basePoints: 800000, weightRange: [70, 100], multi: 40, layer: "mid", struggleWeight: 0.6, isRare: false },
+      { filename: "Epinephelus_marginatus.png", vnName: "Cá mú đen đại dương", sizeScale: 2.7, basePoints: 500000, weightRange: [80, 100], multi: 50, layer: "mid", struggleWeight: 0.65, isRare: false },
+      // Lớn (100 - 1000kg)
+      { filename: "Aetobatus_ocellatus.png", vnName: "Cá đuối đốm đại dương", sizeScale: 4.6, basePoints: 2000000, weightRange: [100, 300], multi: 100, layer: "bottom", struggleWeight: 0.75, isRare: true },
+      { filename: "Carcharhinus_melanopterus.png", vnName: "Cá mập vây đen", sizeScale: 4.8, basePoints: 3000000, weightRange: [200, 500], multi: 150, layer: "bottom", struggleWeight: 0.8, isRare: true },
+      { filename: "Carcharias_taurus.png", vnName: "Cá mập cát khổng lồ", sizeScale: 4.2, basePoints: 5000000, weightRange: [400, 800], multi: 250, layer: "bottom", struggleWeight: 0.85, isRare: true },
+      { filename: "camaptrang.png", vnName: "Cá mặt trăng khổng lồ", sizeScale: 5.4, basePoints: 6000000, weightRange: [600, 1000], multi: 450, layer: "bottom", struggleWeight: 0.88, isRare: true },
+      { filename: "camapdaubua.png", vnName: "Cá mập đầu búa", sizeScale: 5.0, basePoints: 4000000, weightRange: [150, 450], multi: 200, layer: "bottom", struggleWeight: 0.9, isRare: true },
+      { filename: "Pterois_miles.png", vnName: "Cá kiếm đại dương", sizeScale: 5.4, basePoints: 6000000, weightRange: [700, 1000], multi: 500, layer: "bottom", struggleWeight: 0.93, isRare: true },
+      { filename: "cavoisatthu.png", vnName: "Cá voi sát thủ", sizeScale: 6.6, basePoints: 5000000, weightRange: [500, 900], multi: 350, layer: "bottom", struggleWeight: 0.95, isRare: true },
+      { filename: "cavoixanh.png", vnName: "Cá voi xanh khổng lồ", sizeScale: 8.3, basePoints: 9000000, weightRange: [800, 1000], multi: 650, layer: "bottom", struggleWeight: 0.96, isRare: true },
+      
+      // Boss Khổng Lồ
+      { filename: "livyatan.png", vnName: "Livyatan Thượng Cổ", sizeScale: 13.5, basePoints: 500000000, weightRange: [1, 50], multi: 1000, layer: "boss", struggleWeight: 1.0, isRare: true }
     ];
 
     const loadedFishObjects = fishDatabase.map((item) => {
@@ -488,9 +474,8 @@ export default function CauCa2NPage() {
     let bottomTimer: NodeJS.Timeout | null = null;
 
     let oppStates: { [userId: string]: any } = {};
-    const critPopups: { x: number; y: number; alpha: number; scale: number }[] = [];
+    const critPopups: { x: number; y: number; alpha: number; scale: number; text: string }[] = [];
 
-    // --- TRẠNG THÁI ACTIVE SKILLS TRONG GAME ---
     let activeSkillState = {
       sk1_armed: false,
       sk1_holding: false,
@@ -506,7 +491,7 @@ export default function CauCa2NPage() {
       const { skillId } = e.detail;
       if (skillId === "fish_sk1") {
         activeSkillState.sk1_armed = true;
-        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🌀 CHÂN KHÔNG TRẤN HẢI", message: "Hãy thả mồi đến độ sâu bạn muốn rồi chạm giữ để giữ mồi 5s!", type: "coop" } }));
+        window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🌀 CHÂN KHÔNG TRẤN HẢI", message: "Hãy thả mồi đến độ sâu bạn muốn rồi chạm giữ để giữ mồi đứng yên 5s!", type: "coop" } }));
       } else if (skillId === "fish_sk2") {
         activeSkillState.sk2_timeFreeze = true;
         window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "⚡ BẢN NĂNG VÔ CỰC", message: "Đã đóng băng thời gian toàn hồ trong 5 giây (Cá lớn có % kháng)!", type: "rare" } }));
@@ -526,7 +511,7 @@ export default function CauCa2NPage() {
         activeSkillState.sk5_ignoreSmall = true;
         window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "👻 HÀO QUANG BIẾN MẤT", message: "Cá nhỏ sẽ phớt lờ mồi câu trong lần thả tới!", type: "coop" } }));
       } else if (skillId === "fish_sk6") {
-        const bottomFishes = fishes.filter(f => f.layer === "bottom" && !f.isCaught);
+        const bottomFishes = fishes.filter(f => (f.layer === "bottom" || f.layer === "boss") && !f.isCaught);
         if (bottomFishes.length > 0) {
           const randFish = bottomFishes[Math.floor(Math.random() * bottomFishes.length)];
           window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🔮 SOI THẤU TƯƠNG LAI", message: `Phát hiện ${randFish.fishData.vnName} trị giá ${randFish.points.toLocaleString()} 🪙!`, type: "rare" } }));
@@ -559,13 +544,16 @@ export default function CauCa2NPage() {
     resize();
 
     class Fish {
+      id: string;
       direction!: number;
       size!: number;
       y!: number;
       basePoints!: number;
       points!: number;
+      weight!: number;
+      hp!: number;
+      maxHp!: number;
       speed!: number;
-      struggleChance!: number;
       x!: number;
       isCaught!: boolean;
       fishData!: typeof fishDatabase[0];
@@ -573,58 +561,85 @@ export default function CauCa2NPage() {
       fishObj!: typeof loadedFishObjects[0];
       layer!: string;
       notifiedRare?: boolean;
-      rngFunc: () => number;
       isWaitingForWave?: boolean;
 
-      constructor(forcedLayer?: string, forcedY?: number, forcedDirection?: number, customRng?: () => number) {
-        this.rngFunc = customRng || roomRng;
-        this.spawn(forcedLayer, forcedY, forcedDirection);
+      constructor(forcedLayer?: string, forcedY?: number, forcedDirection?: number, syncData?: any) {
+        this.id = Math.random().toString(36).substring(2, 9);
+        if (syncData) {
+            this.id = syncData.id;
+            this.x = syncData.x;
+            this.y = syncData.y;
+            this.speed = syncData.vx;
+            this.direction = syncData.direction;
+            this.size = syncData.size;
+            this.points = syncData.points;
+            this.weight = syncData.weight;
+            this.hp = syncData.hp;
+            this.maxHp = syncData.maxHp;
+            this.layer = syncData.layer;
+            const chosenInfo = fishDatabase.find(fd => fd.filename === syncData.filename) || fishDatabase[0];
+            this.fishObj = loadedFishObjects.find((fo) => fo.info.filename === chosenInfo.filename) || loadedFishObjects[0];
+            this.fishData = this.fishObj.info;
+            this.isCaught = false;
+            this.animFrame = Math.random() * 100;
+        } else {
+            this.spawn(forcedLayer, forcedY, forcedDirection);
+        }
       }
 
       spawn(forcedLayer?: string, forcedY?: number, forcedDirection?: number) {
-        const r = this.rngFunc;
-        this.direction = forcedDirection !== undefined ? forcedDirection : (r() > 0.5 ? 1 : -1);
-        let availableFish = fishDatabase;
-        if (forcedLayer) {
+        this.direction = forcedDirection !== undefined ? forcedDirection : (Math.random() > 0.5 ? 1 : -1);
+        let availableFish = fishDatabase.filter(f => f.layer !== "boss");
+        
+        if (forcedLayer === "boss") {
+            availableFish = fishDatabase.filter(f => f.layer === "boss");
+        } else if (forcedLayer) {
           availableFish = fishDatabase.filter((f) => f.layer === forcedLayer);
-          if (availableFish.length === 0) availableFish = fishDatabase;
+          if (availableFish.length === 0) availableFish = fishDatabase.filter(f => f.layer !== "boss");
         }
 
-        const chosenInfo = availableFish[Math.floor(r() * availableFish.length)];
+        const chosenInfo = availableFish[Math.floor(Math.random() * availableFish.length)];
         this.fishObj = loadedFishObjects.find((f) => f.info.filename === chosenInfo.filename) || loadedFishObjects[0];
         this.fishData = this.fishObj.info;
         this.layer = this.fishData.layer;
-        this.size = (r() * 8 + 16) * this.fishData.sizeScale;
-
-        const randomPriceFactor = 0.8 + r() * 0.7;
-        const rawPoints = this.fishData.basePoints * this.fishData.multi * randomPriceFactor;
+        this.size = (Math.random() * 8 + 16) * this.fishData.sizeScale;
         
+        const wRange = this.fishData.weightRange;
+        let weightVal = Math.floor(Math.random() * (wRange[1] - wRange[0] + 1)) + wRange[0];
+        this.weight = weightVal;
+
         const pCount = (window as any).roomPlayerCount || 1;
         const bonusMultiplier = 1 + (pCount - 1) * 0.05;
 
-        if (this.fishData.layer === "bottom") {
-          this.points = Math.round(rawPoints * (1 + r() * 1.5) * bonusMultiplier);
+        this.points = Math.round(this.weight * this.fishData.multi * this.fishData.basePoints * bonusMultiplier);
+        
+        if (this.layer === "boss") {
+            this.hp = this.weight * 100;
+        } else if (this.layer === "bottom") {
+            this.hp = this.weight * 2.0; 
+        } else if (this.layer === "mid" && this.weight >= 30) {
+            this.hp = this.weight * 0.8; 
         } else {
-          this.points = Math.round(rawPoints * bonusMultiplier);
+            this.hp = 0;
         }
+        this.maxHp = this.hp;
 
-        this.struggleChance = (this.fishData as any).struggleWeight ?? 0.2;
-        this.animFrame = r() * 100;
+        this.animFrame = Math.random() * 100;
         this.notifiedRare = false;
         this.isWaitingForWave = false;
 
         const waterHeight = height - waterY;
         if (this.layer === "top") {
-          this.y = forcedY !== undefined ? forcedY : waterY + 20 + r() * (waterHeight * 0.28);
-          this.speed = (r() * 1.5 + 1.0) * this.direction;
+          this.y = forcedY !== undefined ? forcedY : waterY + 20 + Math.random() * (waterHeight * 0.28);
+          this.speed = (Math.random() * 1.5 + 1.0) * this.direction;
           this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         } else if (this.layer === "mid") {
-          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + r() * (waterHeight * 0.35);
-          this.speed = (r() * 0.9 + 0.5) * this.direction;
+          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + Math.random() * (waterHeight * 0.35);
+          this.speed = (Math.random() * 0.9 + 0.5) * this.direction;
           this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         } else {
-          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + r() * (waterHeight * 0.22);
-          this.speed = (r() * 0.4 + 0.2) * this.direction;
+          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + Math.random() * (waterHeight * 0.22);
+          this.speed = (Math.random() * 0.4 + 0.2) * this.direction;
           this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         }
         this.isCaught = false;
@@ -641,7 +656,7 @@ export default function CauCa2NPage() {
           if (this.layer === "top") {
             currentSpeed = 0;
           } else {
-            const isResisted = this.layer === "bottom" && this.rngFunc() < 0.4;
+            const isResisted = (this.layer === "bottom" || this.layer === "boss") && Math.random() < 0.4;
             if (!isResisted) currentSpeed = 0;
           }
         }
@@ -649,19 +664,11 @@ export default function CauCa2NPage() {
         this.x += currentSpeed;
         this.animFrame += 0.08;
 
-        if (this.layer === "bottom" && !this.notifiedRare && this.x > width * 0.2 && this.x < width * 0.8) {
+        if ((this.layer === "bottom" || this.layer === "boss") && !this.notifiedRare && this.x > width * 0.2 && this.x < width * 0.8) {
           this.notifiedRare = true;
-          window.dispatchEvent(
-            new CustomEvent("showPopupBanner", {
-              detail: {
-                title: "🔥 QUÁI VẬT KHỔNG LỒ XUẤT HIỆN! 🔥",
-                message: `${this.fishData.vnName} đang bơi tới dưới đáy! Trị giá ${this.points.toLocaleString()} 🪙!`,
-                type: "rare",
-              },
-            })
-          );
+          let wText = this.layer === "boss" ? `${this.weight} Tấn` : `${this.weight}kg`;
 
-          if (roomChannelRef.current) {
+          if ((window as any).isHost && roomChannelRef.current) {
             roomChannelRef.current.send({
               type: "broadcast",
               event: "rare_fish_spawn",
@@ -672,16 +679,22 @@ export default function CauCa2NPage() {
 
         if ((this.direction === 1 && this.x > width + this.size * 3) || 
             (this.direction === -1 && this.x < -this.size * 3)) {
-          if (this.layer === "bottom") {
-            this.isWaitingForWave = true;
-            const delayMs = Math.floor(Math.random() * (60000 - 15000 + 1)) + 15000;
-            setTimeout(() => {
-              if (isMounted) {
-                this.spawn("bottom");
-              }
-            }, delayMs);
-          } else {
-            this.spawn(this.layer);
+          if ((window as any).isHost) {
+            if (this.layer === "boss") {
+                const idx = fishes.indexOf(this);
+                if (idx > -1) fishes.splice(idx, 1);
+            }
+            else if (this.layer === "bottom") {
+              this.isWaitingForWave = true;
+              const delayMs = Math.floor(Math.random() * (60000 - 15000 + 1)) + 15000;
+              setTimeout(() => {
+                if (isMounted && fishes.includes(this)) {
+                  this.spawn("bottom");
+                }
+              }, delayMs);
+            } else {
+              this.spawn(this.layer);
+            }
           }
         }
       }
@@ -745,6 +758,18 @@ export default function CauCa2NPage() {
       }
     };
     window.addEventListener("updateOpponentState", oppStateListener);
+    
+    const syncBossDamageListener = (e: any) => {
+        const { fishId, damage } = e.detail;
+        const targetFish = fishes.find(f => f.id === fishId);
+        if (targetFish && targetFish.hp > 0) {
+            targetFish.hp -= damage;
+            if (targetFish.hp <= 0 && !(window as any).isHost) {
+                targetFish.hp = 0;
+            }
+        }
+    }
+    window.addEventListener("syncBossDamage", syncBossDamageListener);
 
     class Hook {
       x!: number;
@@ -763,6 +788,7 @@ export default function CauCa2NPage() {
       isJointPulling: boolean = false;  
       isAssistingOpponent: boolean = false; 
       struggleIdleTime: number = 0;
+      tapProgress: number = 0;
 
       constructor() {
         this.reset();
@@ -786,10 +812,12 @@ export default function CauCa2NPage() {
         this.castProgress = 0;
         this.caughtFish = null;
         this.lineTension = 0;
+        this.tapProgress = 0;
         this.isJointPulling = false;
         this.isAssistingOpponent = false;
         this.struggleIdleTime = 0;
         activeSkillState.sk1_holding = false;
+        setBossUI(null);
 
         if (bottomTimer) {
           clearTimeout(bottomTimer);
@@ -822,12 +850,11 @@ export default function CauCa2NPage() {
         syncScoreToSupabase(currentActiveScore - this.baitPrice);
 
         let maxAllowedDepthRatio = 0.35;
-        if (this.baitPrice >= 10000000) maxAllowedDepthRatio = 1.0;
-        else if (this.baitPrice >= 1000000) maxAllowedDepthRatio = 0.88;
-        else if (this.baitPrice >= 500000) maxAllowedDepthRatio = 0.75;
+        if (this.baitPrice >= 100000000) maxAllowedDepthRatio = 1.0;
+        else if (this.baitPrice >= 10000000) maxAllowedDepthRatio = 0.92;
+        else if (this.baitPrice >= 1000000) maxAllowedDepthRatio = 0.78;
         else if (this.baitPrice >= 100000) maxAllowedDepthRatio = 0.6;
-        else if (this.baitPrice >= 2000) maxAllowedDepthRatio = 0.48;
-        else maxAllowedDepthRatio = 0.38;
+        else maxAllowedDepthRatio = 0.48;
 
         this.maxDepthY = waterY + (height - waterY) * maxAllowedDepthRatio;
 
@@ -858,41 +885,86 @@ export default function CauCa2NPage() {
         }
       }
 
-      holdStruggleTick() {
-        if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
+      holdStruggleTick(isHoldingDown: boolean) {
+        if (this.state === "SINKING" && activeSkillState.sk1_armed) {
           activeSkillState.sk1_holding = true;
-          if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Mồi đứng yên 5s!";
-          setTimeout(() => {
-            activeSkillState.sk1_armed = false;
-            activeSkillState.sk1_holding = false;
-          }, 5000);
+          if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Mồi đứng yên ẩn mình!";
+        } else if (this.state === "STRUGGLING" && this.caughtFish && this.caughtFish.hp > 0) {
+            if (isHoldingDown) {
+                this.lineTension += (activeSkillState.sk3_armorBuff ? 0.3 : 0.6);
+                this.struggleIdleTime = 0;
+                if (statusEl) {
+                    statusEl.innerText = `⚠️ Đang ghì chặt cá! Căng dây: ${Math.round(this.lineTension)}% (Nhớ TAP để giật!)`;
+                    statusEl.style.color = "#FF9800";
+                }
+            } else {
+                this.lineTension = Math.max(0, this.lineTension - 0.8);
+                this.struggleIdleTime += 1.5;
+                if (statusEl) {
+                    statusEl.innerText = `🎣 Cá đang bơi kéo trôi đi! Hãy ghì giữ và TAP!`;
+                    statusEl.style.color = "#F44336";
+                }
+            }
         }
       }
 
-      applyStruggleDamage(multiplier: number, isHold: boolean = false) {
+      applyStruggleDamage(multiplier: number) {
         const pCount = (window as any).roomPlayerCount || 1;
         const playerBuffBonus = 1 + (pCount - 1) * 0.05;
 
-        let hitDamage = multiplier * currentRodDamageBuff * playerBuffBonus;
+        // --- PHÂN BỔ TỈ LỆ ROLL SỐ (1-3: 70%, 4: 20%, 5: 10%) ---
+        const rollWeight = Math.random() * 100;
+        let randomTapVal = 1;
+        if (rollWeight < 70) {
+          randomTapVal = Math.floor(Math.random() * 3) + 1; // Ra 1, 2 hoặc 3 (70%)
+        } else if (rollWeight < 90) {
+          randomTapVal = 4; // Ra 4 (20%)
+        } else {
+          randomTapVal = 5; // Ra 5 (10%)
+        }
+
+        let hitDamage = multiplier * currentRodDamageBuff * playerBuffBonus * randomTapVal;
         
-        if (this.isJointPulling || this.isAssistingOpponent) {
+        // Mồi quái vật x2 damage
+        if (this.baitPrice >= 1000000000) {
           hitDamage *= 2.0;
         }
 
-        let actualCritChance = currentRodCritChance + ((pCount > 1) ? 0.05 * (pCount - 1) : 0);
-        const isCrit = !isHold && Math.random() < actualCritChance;
-        if (isCrit) {
-          hitDamage *= 2.5;
-          critPopups.push({ x: this.x + (Math.random() - 0.5) * 40, y: this.y - 30, alpha: 1.0, scale: 1.2 });
+        // Nếu là kéo phụ (assisting/joint), giảm 50% dame
+        if (this.isJointPulling || this.isAssistingOpponent) {
+          hitDamage *= 0.5;
         }
 
-        // ĐỘ KHÓ CÁ LỚN: Scale theo multi cá để cá 5 tỷ đòi hỏi số nhấp cực khủng
-        const isBottomOrRare = this.caughtFish?.layer === "bottom" || this.caughtFish?.fishData?.isRare;
-        const fishMulti = this.caughtFish?.fishData?.multi || 3.0;
-        const requiredTaps = isBottomOrRare ? Math.min(150, Math.max(40, Math.round(fishMulti * 2.5))) : Math.min(30, Math.max(12, Math.round(fishMulti * 1.5)));
-        const gainPerTap = 100 / requiredTaps;
+        let actualCritChance = 0.10 + ((pCount > 1) ? 0.05 * (pCount - 1) : 0); // Cố định 10% crit (+5% mỗi người chơi thêm)
+        const isCrit = Math.random() < actualCritChance;
 
-        this.lineTension += (isHold ? 0.5 : 1.0) * gainPerTap;
+        if (isCrit) {
+          hitDamage *= 2; // X2 sát thương khi chí mạng
+        }
+
+        if (this.caughtFish && this.caughtFish.hp > 0) {
+            this.caughtFish.hp -= hitDamage;
+            if (this.caughtFish.hp < 0) this.caughtFish.hp = 0;
+            this.tapProgress = 100 - (this.caughtFish.hp / this.caughtFish.maxHp) * 100;
+            
+            if (roomChannelRef.current) {
+                roomChannelRef.current.send({
+                  type: "broadcast",
+                  event: "boss_damage",
+                  payload: { fishId: this.caughtFish.id, damage: hitDamage },
+                });
+            }
+
+            if (this.caughtFish.hp <= 0 && !this.isAssistingOpponent) {
+                this.state = "REELING_HORIZ";
+                this.lineTension = 0;
+                setBossUI(null);
+                if (statusEl) {
+                  statusEl.innerText = `Đã khuất phục được cá! Thu dây lên xuồng...`;
+                  statusEl.style.color = "#FFEB3B";
+                }
+            }
+        }
 
         if (this.isAssistingOpponent) {
           Object.values(oppStates).forEach((opp: any) => {
@@ -904,15 +976,6 @@ export default function CauCa2NPage() {
               });
             }
           });
-        } else {
-          if (this.lineTension >= 100) {
-            this.state = "REELING_HORIZ";
-            this.lineTension = 0;
-            if (statusEl) {
-              statusEl.innerText = `Đã khuất phục được cá lớn! Thu dây lên xuồng...`;
-              statusEl.style.color = "#FFEB3B";
-            }
-          }
         }
       }
 
@@ -931,7 +994,7 @@ export default function CauCa2NPage() {
         if (this.state === "CHARGING") {
           this.power += 1.8;
           if (this.power > 100) this.power = 100;
-          if (powerBar) powerBar.style.width = this.power + "%";
+          if (powerContainer) powerContainer.style.width = this.power + "%";
         } else if (this.state === "CASTING") {
           this.castProgress += this.baitPrice >= 1000 ? 0.025 : 0.04;
           if (this.castProgress >= 1) {
@@ -944,7 +1007,8 @@ export default function CauCa2NPage() {
           this.y = this.castStartY + (waterY - this.castStartY) * t - Math.sin(t * Math.PI) * 60;
         } else if (this.state === "SINKING") {
           if (!activeSkillState.sk1_holding) {
-            this.y += Math.min(2.5, 1.2 + this.baitPrice / 20000000);
+            const baitSpeedBonus = 1.0 + (Math.log10(this.baitPrice + 1) * 0.18);
+            this.y += Math.min(4.2, (1.2 + this.baitPrice / 15000000) * baitSpeedBonus);
           }
 
           for (let opp of Object.values(oppStates) as any[]) {
@@ -957,7 +1021,7 @@ export default function CauCa2NPage() {
                 this.y = opp.hookY;
                 window.dispatchEvent(
                   new CustomEvent("showPopupBanner", {
-                    detail: { title: "🤝 KÉO CHUNG NỐI DÂY!", message: "Bạn đã móc câu trợ giúp đồng đội! Dame x2.0!", type: "coop" },
+                    detail: { title: "🤝 KÉO CHUNG NỐI DÂY!", message: "Bạn đã móc câu trợ giúp đồng đội (Chia 7/3 hoặc đều Boss, Dame -50%)!", type: "coop" },
                   })
                 );
                 break;
@@ -972,15 +1036,45 @@ export default function CauCa2NPage() {
               continue;
             }
 
-            let headX = f.direction === 1 ? f.x + f.size * 0.6 : f.x - f.size * 0.6;
-            let headY = f.y - f.size * 0.1;
-            let hitRadius = Math.max(12, f.size * 0.22);
+            // --- QUY LUẬT ĂN MỒI CHUẨN XÁC ---
+            const isBoss = f.layer === "boss";
+            const isBigFish = f.layer === "bottom" || f.fishData.isRare;
 
-            if (Math.sqrt(Math.pow(this.x - headX, 2) + Math.pow(this.y - headY, 2)) < hitRadius) {
-              const isBigFish = f.layer === "bottom" || f.fishData.isRare;
+            if (isBoss) {
+              if (this.baitPrice < 1000000000) continue; // Boss chỉ ăn Mồi Quái Vật
+            } else if (isBigFish) {
+              if (this.baitPrice < 100000000) continue; // Cá lớn chỉ ăn từ Mồi Xịn trở lên
+            }
+            // Cá nhỏ ăn tất cả loại mồi
 
-              if (isBigFish && this.baitPrice < 10000000) {
-                continue;
+            // --- HITBOX & TỈ LỆ HỤT MỒI THEO VỊ TRÍ ---
+            let fishCenterX = f.x;
+            let fishCenterY = f.y;
+            let fishRadius = Math.max(16, f.size * 0.45);
+
+            let dist = Math.sqrt(Math.pow(this.x - fishCenterX, 2) + Math.pow(this.y - fishCenterY, 2));
+            if (dist < fishRadius) {
+              let mouthX = f.direction === 1 ? f.x + f.size * 0.7 : f.x - f.size * 0.7;
+              let headX = f.direction === 1 ? f.x + f.size * 0.4 : f.x - f.size * 0.4;
+
+              let distToMouth = Math.abs(this.x - mouthX);
+              let distToHead = Math.abs(this.x - headX);
+
+              let missChance = 0.10; // Mặc định miệng/thân: 10% hụt
+              if (distToMouth < 14) {
+                missChance = 0.10; // Ngay miệng: 10% hụt
+              } else if (distToHead < 18) {
+                missChance = 0.50; // Trúng đầu: 50% hụt
+              }
+
+              if (Math.random() < missChance) {
+                window.dispatchEvent(
+                  new CustomEvent("showPopupBanner", {
+                    detail: { title: "💨 MỒI BỊ ĂN MẤT!", message: `Mồi bị ${f.fishData.vnName} ăn mất r! Rút dây lên thôi!`, type: "beerus" },
+                  })
+                );
+                this.state = "REELING_HORIZ";
+                break;
               }
 
               this.catchFish(f);
@@ -1014,24 +1108,46 @@ export default function CauCa2NPage() {
             }
           }
         } else if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
-          this.lineTension = Math.max(0, this.lineTension - 0.35); 
-          this.struggleIdleTime += 1;
-
-          // Nếu ngưng tap quá 3.5 giây -> Cá đứt dây sổng mất!
-          if (this.struggleIdleTime > 210) {
+          if (this.lineTension >= 100) {
             this.state = "IDLE";
             if (statusEl) {
-              statusEl.innerText = "💥 Cá quẫy quá mạnh làm đứt dây mất tiêu!";
+              statusEl.innerText = "💥 Ghì quá căng làm đứt dây mất tiêu!";
               statusEl.style.color = "#F44336";
             }
             window.dispatchEvent(
               new CustomEvent("showPopupBanner", {
-                detail: { title: "💥 ĐỨT DÂY MẤT TIÊU!", message: "Ní ngưng tay quá lâu nên cá đã sổng mất!", type: "beerus" },
+                detail: { title: "💥 ĐỨT DÂY MẤT TIÊU!", message: "Ní ghì quá căng khiến dây câu chịu không nổi!", type: "beerus" },
               })
             );
+            if (this.caughtFish) this.caughtFish.isCaught = false;
             this.reset();
             return;
           }
+
+          if (this.struggleIdleTime > 250) {
+            this.state = "IDLE";
+            if (statusEl) {
+              statusEl.innerText = "💨 Không ghì giữ nên cá đã bơi tuột mất!";
+              statusEl.style.color = "#F44336";
+            }
+            window.dispatchEvent(
+              new CustomEvent("showPopupBanner", {
+                detail: { title: "💨 TUỘT MẤT CÁ!", message: "Ní bỏ lỏng không ghì giữ nên cá đã sổng mất tiêu!", type: "beerus" },
+              })
+            );
+            if (this.caughtFish) this.caughtFish.isCaught = false;
+            this.reset();
+            return;
+          }
+          
+          if (this.caughtFish) {
+             setBossUI({
+                 name: this.caughtFish.fishData.vnName,
+                 hpPercent: Math.max(0, (this.caughtFish.hp / this.caughtFish.maxHp) * 100),
+                 weightText: this.caughtFish.layer === "boss" ? `${this.caughtFish.weight} Tấn` : `${this.caughtFish.weight}kg`
+             });
+          }
+
         } else if (this.state === "REELING_HORIZ") {
           if (bottomTimer) {
             clearTimeout(bottomTimer);
@@ -1057,64 +1173,14 @@ export default function CauCa2NPage() {
             if (this.caughtFish) {
               let earnedPoints = this.caughtFish.points;
               const currentFish = this.caughtFish.fishData;
+              let wTxt = currentFish.layer === "boss" ? `${this.caughtFish.weight} Tấn` : `${this.caughtFish.weight}kg`;
               if (selectedRod === "cancauvectorvang.png") earnedPoints *= 2;
-
-              async function processJackpotAndNutrient(fishLayer: string, fPoints: number) {
-                const { data } = await supabase.from("cauca_jackpot").select("*").eq("id", "global").single();
-                if (data) {
-                  let addMinor = fishLayer === "top" ? Math.round(fPoints * 0.7) : 0;
-                  let addMajor = fishLayer === "mid" ? Math.round(fPoints * 0.5) : 0;
-                  let addGrand = Math.round(fPoints * 0.3);
-
-                  let newMinor = data.minor + addMinor;
-                  let newMajor = data.major + addMajor;
-                  let newGrand = data.grand + addGrand;
-
-                  let wonAmount = 0;
-                  let wonType = "";
-
-                  const randRoll = Math.random();
-
-                  if ((fishLayer === "top" || fishLayer === "mid") && randRoll < 0.0035) {
-                    wonAmount = newMinor;
-                    wonType = "Cá Trái Đất";
-                    newMinor = 100000;
-                  } else if ((fishLayer === "mid" || fishLayer === "bottom") && randRoll < 0.0025) {
-                    wonAmount = newMajor;
-                    wonType = "Cá Namek";
-                    newMajor = 500000;
-                  } else if (randRoll < 0.0012) {
-                    wonAmount = newGrand;
-                    wonType = "Cá Siêu Cấp";
-                    newGrand = 2000000;
-                  }
-
-                  await supabase
-                    .from("cauca_jackpot")
-                    .update({ minor: newMinor, major: newMajor, grand: newGrand })
-                    .eq("id", "global");
-
-                  if (wonAmount > 0) {
-                    earnedPoints += wonAmount;
-                    window.dispatchEvent(
-                      new CustomEvent("showPopupBanner", {
-                        detail: {
-                          title: `🎉 NỔ HŨ ${wonType.toUpperCase()}! 🎉`,
-                          message: `Chúc mừng ní nổ hũ nhận thêm +${wonAmount.toLocaleString()} 🪙!`,
-                          type: "rare",
-                        },
-                      })
-                    );
-                  }
-                }
-              }
-              processJackpotAndNutrient(currentFish.layer, earnedPoints);
 
               if (roomChannelRef.current) {
                 roomChannelRef.current.send({
                   type: "broadcast",
                   event: "catch_alert",
-                  payload: { user_id: user.id, fishName: currentFish.vnName, points: earnedPoints },
+                  payload: { user_id: user.id, fishName: currentFish.vnName, weightText: wTxt, points: earnedPoints },
                 });
               }
 
@@ -1125,12 +1191,18 @@ export default function CauCa2NPage() {
               });
               setTimeout(() => setMyCatchNotice(null), 3500);
 
-              if (currentFish.isRare) {
+              setCenterCatchNotice({
+                text: `${currentFish.vnName} (${wTxt})`,
+                show: true,
+              });
+              setTimeout(() => setCenterCatchNotice(null), 3500);
+
+              if (currentFish.isRare || currentFish.layer === "boss") {
                 window.dispatchEvent(
                   new CustomEvent("showPopupBanner", {
                     detail: {
                       title: `🏆 KÉO ĐƯỢC ${currentFish.vnName.toUpperCase()}!`,
-                      message: `+${earnedPoints.toLocaleString()} Điểm!`,
+                      message: `Nặng ${wTxt} | +${earnedPoints.toLocaleString()} Điểm!`,
                       type: "rare",
                     },
                   })
@@ -1141,7 +1213,9 @@ export default function CauCa2NPage() {
               let idx = fishes.indexOf(this.caughtFish);
               if (idx > -1) {
                 fishes.splice(idx, 1);
-                fishes.push(new Fish(undefined, undefined, undefined, roomRng));
+                if (currentFish.layer !== "boss") {
+                    fishes.push(new Fish());
+                }
               }
             }
             this.reset();
@@ -1165,7 +1239,8 @@ export default function CauCa2NPage() {
         }
         this.caughtFish = fish;
         fish.isCaught = true;
-        this.lineTension = 0;
+        this.lineTension = 20;
+        this.tapProgress = 0;
 
         if (activeSkillState.sk5_ignoreSmall && fish.layer === "top") {
           fish.isCaught = false;
@@ -1180,21 +1255,24 @@ export default function CauCa2NPage() {
           ctx!.fill();
         }
 
-        const isSmallOrMidFish = fish.layer === "top" || (fish.layer === "mid" && !fish.fishData.isRare);
-
-        if (isSmallOrMidFish) {
+        if (fish.hp === 0) {
           this.state = "REELING_HORIZ";
           if (statusEl) {
-            statusEl.innerText = `Câu được ${fish.fishData.vnName}! Thu dây tự động...`;
+            statusEl.innerText = `Câu được ${fish.fishData.vnName} (${fish.weight}kg)! Thu dây tự động...`;
             statusEl.style.color = "#FFEB3B";
           }
         } else {
           this.state = "STRUGGLING";
-          this.lineTension = 0;
+          let wTxt = fish.layer === "boss" ? `${fish.weight} Tấn` : `${fish.weight}kg`;
           if (statusEl) {
-            statusEl.innerText = `Dính ${fish.fishData.vnName} khổng lồ! Hãy TAP liên tục để kéo lên!`;
+            statusEl.innerText = `Dính ${fish.fishData.vnName} (${wTxt})! GIỮ (GHÌ) để không trôi - TAP để giật!`;
             statusEl.style.color = "#FF5252";
           }
+          setBossUI({
+             name: fish.fishData.vnName,
+             hpPercent: 100,
+             weightText: wTxt
+          });
         }
       }
 
@@ -1221,7 +1299,13 @@ export default function CauCa2NPage() {
           this.drawHookAndBait(rodTipX, rodTipY + 20);
         } else {
           ctx!.quadraticCurveTo((rodTipX + drawX) / 2, Math.min(rodTipY, drawY) - 30, drawX, drawY);
-          ctx!.strokeStyle = this.state === "STRUGGLING" ? "#FF9800" : "rgba(255,255,255,0.95)";
+          
+          if (this.state === "STRUGGLING") {
+              ctx!.strokeStyle = isHolding ? "#FFEB3B" : "#FF5252";
+          } else {
+              ctx!.strokeStyle = "rgba(255,255,255,0.95)";
+          }
+          
           ctx!.lineWidth = 1.5;
           ctx!.stroke();
           this.drawHookAndBait(drawX, drawY);
@@ -1231,18 +1315,26 @@ export default function CauCa2NPage() {
           const barW = 60;
           const barH = 6;
           const barX = drawX - barW / 2;
-          const barY = drawY - 35;
-
+          
+          const tensionY = drawY - 45;
           ctx!.fillStyle = "rgba(0,0,0,0.6)";
-          ctx!.fillRect(barX, barY, barW, barH);
-
-          const progressRatio = Math.min(1, this.lineTension / 100);
-          ctx!.fillStyle = "#00E676";
-          ctx!.fillRect(barX, barY, barW * progressRatio, barH);
-
+          ctx!.fillRect(barX, tensionY, barW, barH);
+          const tensionRatio = Math.min(1, this.lineTension / 100);
+          ctx!.fillStyle = this.lineTension > 80 ? "#F44336" : "#FFEB3B";
+          ctx!.fillRect(barX, tensionY, barW * tensionRatio, barH);
           ctx!.strokeStyle = "#FFFFFF";
           ctx!.lineWidth = 1;
-          ctx!.strokeRect(barX, barY, barW, barH);
+          ctx!.strokeRect(barX, tensionY, barW, barH);
+          
+          const progY = drawY - 35;
+          ctx!.fillStyle = "rgba(0,0,0,0.6)";
+          ctx!.fillRect(barX, progY, barW, barH);
+          const progRatio = Math.min(1, this.tapProgress / 100);
+          ctx!.fillStyle = "#4CAF50";
+          ctx!.fillRect(barX, progY, barW * progRatio, barH);
+          ctx!.strokeStyle = "#FFFFFF";
+          ctx!.lineWidth = 1;
+          ctx!.strokeRect(barX, progY, barW, barH);
         }
       }
 
@@ -1270,15 +1362,49 @@ export default function CauCa2NPage() {
     const computedWaterY = (canvas.height / (window.devicePixelRatio || 1)) * 0.22;
     const waterHeight = canvas.height / (window.devicePixelRatio || 1) - computedWaterY;
 
-    for (let i = 0; i < 20; i++) {
-      fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 20) * i, undefined, roomRng));
+    if ((window as any).isHost) {
+      for (let i = 0; i < 20; i++) {
+        fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 20) * i));
+      }
+      for (let i = 0; i < 10; i++) {
+        fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 10) * i));
+      }
+      for (let i = 0; i < 2; i++) {
+        fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 2) * i));
+      }
+      
+      setInterval(() => {
+          if (Math.random() < 0.1 && !fishes.some(f => f.layer === "boss")) {
+              fishes.push(new Fish("boss", computedWaterY + waterHeight * 0.5));
+          }
+      }, 60000);
     }
-    for (let i = 0; i < 10; i++) {
-      fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 10) * i, undefined, roomRng));
-    }
-    for (let i = 0; i < 2; i++) {
-      fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 2) * i, undefined, roomRng));
-    }
+
+    const syncFishesListener = (e: any) => {
+      if (!(window as any).isHost && e.detail) {
+        const rawList = e.detail;
+        const updatedIds = new Set();
+        rawList.forEach((data: any) => {
+            updatedIds.add(data.id);
+            const existingFish = fishes.find(f => f.id === data.id);
+            if (existingFish) {
+                existingFish.x = data.x;
+                existingFish.y = data.y;
+                existingFish.direction = data.direction;
+                if (!existingFish.isCaught) existingFish.hp = data.hp;
+            } else {
+                fishes.push(new Fish(undefined, undefined, undefined, data));
+            }
+        });
+        
+        for (let i = fishes.length - 1; i >= 0; i--) {
+            if (!updatedIds.has(fishes[i].id) && !fishes[i].isCaught) {
+                fishes.splice(i, 1);
+            }
+        }
+      }
+    };
+    window.addEventListener("receivedSyncFishes", syncFishesListener);
 
     const hook = new Hook();
     let activeBaitCost = selectedBait.cost;
@@ -1290,7 +1416,6 @@ export default function CauCa2NPage() {
     const coopDamageListener = (e: any) => {
       if (hook.state === "STRUGGLING") {
         hook.isJointPulling = true;
-        hook.state = "REELING_HORIZ";
       }
     };
     window.addEventListener("receivedCoopDamage", coopDamageListener);
@@ -1299,16 +1424,12 @@ export default function CauCa2NPage() {
     let holdClientX = canvas.width / 2;
 
     const handleDown = (clientX: number) => {
+      isHolding = true;
       if (hook.state === "STRUGGLING" || hook.isAssistingOpponent) {
-        isHolding = true;
         hook.tapStruggle();
       } else if (hook.state === "IDLE") {
-        isHolding = true;
         holdClientX = clientX;
         hook.startCharging(activeBaitCost);
-      } else if (hook.state === "SINKING" && activeSkillState.sk1_armed) {
-        isHolding = true;
-        hook.holdStruggleTick();
       }
     };
 
@@ -1317,12 +1438,10 @@ export default function CauCa2NPage() {
     };
 
     const handleUp = () => {
-      if (isHolding && hook.state === "CHARGING") {
-        isHolding = false;
+      isHolding = false;
+      if (hook.state === "CHARGING") {
         if (powerContainer) powerContainer.style.display = "none";
         hook.releaseCharging(holdClientX);
-      } else {
-        isHolding = false;
       }
     };
 
@@ -1353,31 +1472,25 @@ export default function CauCa2NPage() {
       if (loadedDecorImages.length === 0) return;
       let clusterCenters = [60, 150, 280, width - 320, width - 180, width - 70, width / 2 - 80, width / 2 + 90];
       for (let cx of clusterCenters) {
-        let countInCluster = Math.floor(roomRng() * 2) + 1;
+        let countInCluster = Math.floor(Math.random() * 2) + 1;
         for (let i = 0; i < countInCluster; i++) {
-          const randomDecor = loadedDecorImages[Math.floor(roomRng() * loadedDecorImages.length)];
+          const randomDecor = loadedDecorImages[Math.floor(Math.random() * loadedDecorImages.length)];
           let isWeed = randomDecor.filename.includes("rongbien") || randomDecor.filename.includes("taobien");
-          let w = 45 + roomRng() * 45;
-          let h = 40 + roomRng() * 40;
-          if (randomDecor.filename.includes("sanho")) {
-            w = 70;
-            h = 55;
-          }
-          if (randomDecor.filename.includes("dabien")) {
-            w = 65;
-            h = 50;
-          }
-          let offsetX = cx + (roomRng() - 0.5) * 50;
-          let itemY = height - h - roomRng() * 10;
-          placedDecorations.push({ imgObj: randomDecor, x: offsetX, y: itemY, width: w, height: h, isWeed, swayOffset: roomRng() * Math.PI * 2 });
+          let w = 45 + Math.random() * 45;
+          let h = 40 + Math.random() * 40;
+          if (randomDecor.filename.includes("sanho")) { w = 70; h = 55; }
+          if (randomDecor.filename.includes("dabien")) { w = 65; h = 50; }
+          let offsetX = cx + (Math.random() - 0.5) * 50;
+          let itemY = height - h - Math.random() * 10;
+          placedDecorations.push({ imgObj: randomDecor, x: offsetX, y: itemY, width: w, height: h, isWeed, swayOffset: Math.random() * Math.PI * 2 });
           if (randomDecor.filename.includes("dabien")) {
             for (let b = 0; b < 3; b++) {
               bubbles.push({
-                x: offsetX + w * 0.5 + (roomRng() - 0.5) * 20,
-                y: itemY + roomRng() * 15,
-                radius: roomRng() * 2.5 + 1,
-                speed: roomRng() * 0.5 + 0.2,
-                alpha: roomRng() * 0.5 + 0.3,
+                x: offsetX + w * 0.5 + (Math.random() - 0.5) * 20,
+                y: itemY + Math.random() * 15,
+                radius: Math.random() * 2.5 + 1,
+                speed: Math.random() * 0.5 + 0.2,
+                alpha: Math.random() * 0.5 + 0.3,
               });
             }
           }
@@ -1618,29 +1731,56 @@ export default function CauCa2NPage() {
         ctx!.save();
         ctx!.globalAlpha = p.alpha;
         ctx!.font = `900 ${Math.round(18 * p.scale)}px sans-serif`;
-        ctx!.fillStyle = "#FFD700";
+        ctx!.fillStyle = p.text === "⚡ CRIT!" ? "#FFD700" : "#FFF";
         ctx!.strokeStyle = "#000000";
-        ctx!.lineWidth = 3;
-        ctx!.strokeText("⚡ CRIT!", p.x, p.y);
-        ctx!.fillText("⚡ CRIT!", p.x, p.y);
+        ctx!.lineWidth = p.text === "⚡ CRIT!" ? 3 : 2;
+        ctx!.strokeText(p.text, p.x, p.y);
+        ctx!.fillText(p.text, p.x, p.y);
         ctx!.restore();
       }
     }
 
     let lastBroadcastTime = 0;
+    let syncTimer = 0;
     let animationFrameId: number;
+
     function gameLoop() {
       ctx!.clearRect(0, 0, width, height);
       drawBackground();
 
-      if (isHolding) {
-        hook.holdStruggleTick();
+      if ((window as any).isHost && roomChannelRef.current) {
+        syncTimer++;
+        if (syncTimer > 30) {
+          syncTimer = 0;
+          const fishPayload = fishes.map(f => ({
+            id: f.id,
+            x: f.x,
+            y: f.y,
+            vx: f.speed,
+            direction: f.direction,
+            size: f.size,
+            points: f.points,
+            weight: f.weight,
+            hp: f.hp,
+            maxHp: f.maxHp,
+            layer: f.layer,
+            filename: f.fishData.filename
+          }));
+          roomChannelRef.current.send({
+            type: "broadcast",
+            event: "sync_fishes",
+            payload: { fishes: fishPayload }
+          });
+        }
       }
 
       for (let f of fishes) {
         f.update();
         f.draw();
       }
+      
+      hook.holdStruggleTick(isHolding);
+      
       hook.update();
       hook.draw();
 
@@ -1676,6 +1816,8 @@ export default function CauCa2NPage() {
       window.removeEventListener("updateOpponentState", oppStateListener);
       window.removeEventListener("receivedCoopDamage", coopDamageListener);
       window.removeEventListener("triggerFishingSkill", fishingSkillListener);
+      window.removeEventListener("receivedSyncFishes", syncFishesListener);
+      window.removeEventListener("syncBossDamage", syncBossDamageListener);
       canvas.removeEventListener("mousedown", onMouseDown);
       canvas.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -1699,13 +1841,13 @@ export default function CauCa2NPage() {
 
   const baitList = [
     { cost: 1000, filename: "dausenzu.png", label: "Mồi Sơ Cấp - 1,000🪙" },
-    { cost: 2000, filename: "cagia.png", label: "Mồi Thường - 2,000🪙" },
-    { cost: 100000, filename: "giun.png", label: "Mồi Tiêu Chuẩn - 100,000🪙" },
-    { cost: 500000, filename: "moi.png", label: "Mồi Khá - 500,000🪙" },
-    { cost: 1000000, filename: "tom.png", label: "Mồi Thơm - 1,000,000🪙" },
-    { cost: 10000000, filename: "dragon-ball-4.png", label: "Mồi Xịn - 10,000,000🪙" },
-    { cost: 50000050, filename: "kiblue.png", label: "Mồi Cao Cấp - 50,000,000🪙" },
-    { cost: 100000000, filename: "hakai.png", label: "Mồi Quái Vật - 100,000,000🪙" },
+    { cost: 200000, filename: "cagia.png", label: "Mồi Thường - 200,000🪙" },
+    { cost: 1000000, filename: "giun.png", label: "Mồi Tiêu Chuẩn - 1,000,000🪙" },
+    { cost: 5000000, filename: "moi.png", label: "Mồi Khá - 5,000,000🪙" },
+    { cost: 10000000, filename: "tom.png", label: "Mồi Thơm - 10,000,000🪙" },
+    { cost: 100000000, filename: "dragon-ball-4.png", label: "Mồi Xịn - 100,000,000🪙" },
+    { cost: 500000000, filename: "kiblue.png", label: "Mồi Cao Cấp - 500,000,000🪙" },
+    { cost: 1000000000, filename: "hakai.png", label: "Mồi Quái Vật - 1,000,000,000🪙" },
   ];
 
   if (!activeRoom) {
@@ -1803,25 +1945,14 @@ export default function CauCa2NPage() {
           </button>
         </div>
 
-        {/* --- KHUNG HŨ (JACKPOT) --- */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center space-x-2 bg-slate-950/90 border border-amber-500/60 px-3 py-1 rounded-xl shadow-2xl pointer-events-none scale-90 sm:scale-100">
-          <div className="text-center">
-            <span className="text-[5px] font-bold text-slate-300 block">CÁ TRÁI ĐẤT</span>
-            <span className="text-[9px] font-black text-amber-300">{isMounted ? jackpot.minor.toLocaleString("en-US") : "..."}🪙</span>
+        {/* THÔNG BÁO CÁ NHỎ GỌN Ở GIỮA TRÊN */}
+        {centerCatchNotice && centerCatchNotice.show && (
+          <div className="absolute left-1/2 -translate-x-1/2 top-1.5 z-40 bg-slate-900/90 border border-amber-400/60 px-2.5 py-0.5 rounded-md shadow-lg pointer-events-none flex items-center gap-1 animate-fadeIn">
+            <span className="text-[9px]">🎣</span>
+            <span className="text-[9px] font-black text-amber-300">{centerCatchNotice.text}</span>
           </div>
-          <div className="h-4 w-[1px] bg-amber-500/30"></div>
-          <div className="text-center">
-            <span className="text-[5px] font-bold text-red-400 block">CÁ SIÊU CẤP</span>
-            <span className="text-[9px] font-black text-red-500 animate-pulse">{isMounted ? jackpot.grand.toLocaleString("en-US") : "..."}🪙</span>
-          </div>
-          <div className="h-4 w-[1px] bg-amber-500/30"></div>
-          <div className="text-center">
-            <span className="text-[5px] font-bold text-blue-400 block">CÁ NAMEK</span>
-            <span className="text-[9px] font-black text-cyan-400">{isMounted ? jackpot.major.toLocaleString("en-US") : "..."}🪙</span>
-          </div>
-        </div>
+        )}
 
-        {/* --- THANH SKILLS DROPDOWN NẰM Ở KHOẢNG TRỐNG GIỮA HŨ VÀ MỒI CÂU --- */}
         <div className="flex items-center space-x-1">
           <div className="relative">
             <button
@@ -1924,6 +2055,19 @@ export default function CauCa2NPage() {
           {oppAlert}
         </div>
       )}
+      
+      {bossUI && (
+        <div className={`absolute bottom-20 right-4 w-64 sm:w-72 bg-slate-950/95 border-2 p-3 rounded-2xl backdrop-blur-md z-30 shadow-xl animate-fade-in ${bossUI.name.includes("Thượng Cổ") ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.5)]' : 'border-amber-500'}`}>
+          <div className="flex justify-between items-center text-[10px] sm:text-xs font-black mb-1.5 text-white">
+            <span className="truncate max-w-[120px]">{bossUI.name.includes("Thượng Cổ") ? '👑' : '⚠️'} {bossUI.name}</span>
+            <span className="text-yellow-300">{bossUI.weightText}</span>
+          </div>
+          <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden border border-slate-600">
+            <div className={`h-full transition-all duration-200 ${bossUI.name.includes("Thượng Cổ") ? 'bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400' : 'bg-gradient-to-r from-amber-500 to-yellow-300'}`} style={{ width: `${bossUI.hpPercent}%` }} />
+          </div>
+          <div className="text-right text-[9px] text-slate-400 mt-1 font-bold">{Math.round(bossUI.hpPercent)}% HP</div>
+        </div>
+      )}
 
       {myCatchNotice && myCatchNotice.show && (
         <div className="absolute top-12 left-2 z-40 bg-slate-900/95 border-2 border-amber-400 px-2 py-1 rounded-xl shadow-2xl pointer-events-none flex items-center gap-1.5 animate-fadeIn">
@@ -1945,7 +2089,6 @@ export default function CauCa2NPage() {
         </div>
       )}
 
-      {/* POPUP SHOP SKILL TRONG GAME */}
       {isSkillShopOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
           <div className="bg-slate-950 border-2 border-cyan-500/60 w-full max-w-2xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden">

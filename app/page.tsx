@@ -494,6 +494,9 @@ export default function Home() {
           <Link href="/caucamulti" className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:brightness-110 text-slate-950 font-black border border-amber-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
             👥 Cần Thủ Vũ Trụ
           </Link>
+          <Link href="/banca" className="bg-gradient-to-r from-cyan-600 to-blue-500 hover:brightness-110 text-slate-950 font-black border border-cyan-300 px-3 py-1 rounded-lg transition text-[11px] shadow">
+            🔫 Đại Chiến Bắn Cá
+          </Link>
           <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎲 Baccarat Thần Thánh
           </Link>
@@ -671,7 +674,7 @@ export default function Home() {
           
           <div className="lg:col-span-2 space-y-5">
             
-            {/* SẢNH NỔI BẬT VŨ TRỤ (CHỨA CẦN THỦ VŨ TRỤ, JACKPOT, BACCARAT) */}
+            {/* SẢNH NỔI BẬT VŨ TRỤ (CẦN THỦ VŨ TRỤ & ĐẠI CHIẾN BẮN CÁ ĐẶT KẾ BÊN NHAU) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -681,7 +684,7 @@ export default function Home() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
 
-                {/* 1. CẦN THỦ VŨ TRỤ (ĐÃ ĐỔI TÊN TỪ CÂU CÁ TEAM 7) */}
+                {/* 1. CẦN THỦ VŨ TRỤ */}
                 <Link
                   href="/caucamulti"
                   className="bg-slate-900/90 border-2 border-amber-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-yellow-300 flex flex-col justify-between ring-2 ring-amber-500/30"
@@ -703,7 +706,29 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 2. JACKPOT RỒNG THẦN */}
+                {/* 2. ĐẠI CHIẾN BẮN CÁ (NẰM NGAY KẾ BÊN CẦN THỦ VŨ TRỤ) */}
+                <Link
+                  href="/banca"
+                  className="bg-slate-900/90 border-2 border-cyan-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-cyan-300 flex flex-col justify-between ring-2 ring-cyan-500/30"
+                >
+                  <div className="absolute right-2 -bottom-2 opacity-20">
+                    <img src="/assets/cauca/Mola_mola.png" alt="Bắn Cá" className="w-20 h-20 object-contain" />
+                  </div>
+                  <div>
+                    <span className="absolute top-2 right-2 bg-cyan-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase animate-pulse">
+                      Arcade
+                    </span>
+                    <h3 className="text-sm font-black text-cyan-300 flex items-center gap-1.5">
+                      <span>🔫</span> Đại Chiến Bắn Cá
+                    </h3>
+                    <p className="text-slate-300 text-[11px] mt-1 italic font-medium">⚡ 'Xả đạn đại bác, kích hoạt hào quang Saiyan săn cá lớn!'</p>
+                  </div>
+                  <div className="mt-3 bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow-lg animate-bounce">
+                    BẮN CÁ NGAY 🔫
+                  </div>
+                </Link>
+
+                {/* 3. JACKPOT RỒNG THẦN */}
                 <Link
                   href="/jackpot"
                   className="bg-slate-900/90 border-2 border-amber-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-amber-400 flex flex-col justify-between"
@@ -722,7 +747,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 3. BACCARAT THẦN THÁNH */}
+                {/* 4. BACCARAT THẦN THÁNH */}
                 <Link
                   href="/baccarat"
                   className="bg-slate-900/90 border-2 border-indigo-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-indigo-400 flex flex-col justify-between"
@@ -744,7 +769,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* MỤC: THẦN ĐIỆN & KHO BẢO (ĐÃ GỎI BỎ GACHA THIÊN SỨ) */}
+            {/* MỤC: THẦN ĐIỆN & KHO BẢO */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-purple-400 tracking-wider uppercase flex items-center gap-2">
