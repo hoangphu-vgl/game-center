@@ -13,16 +13,16 @@ interface Card {
 }
 
 const CHIP_LIST = [
-    { amount: 100, icon: "/assets/baccarat/dragon-ball-1.png", label: "100" },
-    { amount: 500, icon: "/assets/baccarat/dragon-ball-2.png", label: "500" },
-    { amount: 1000, icon: "/assets/baccarat/dragon-ball-3.png", label: "1K" },
-    { amount: 5000, icon: "/assets/baccarat/dragon-ball-4.png", label: "5K" },
-    { amount: 10000, icon: "/assets/baccarat/dragon-ball-5.png", label: "10K" },
-    { amount: 250000, icon: "/assets/baccarat/dragon-ball-6.png", label: "250K" },
-    { amount: 500000, icon: "/assets/baccarat/dragon-ball-7.png", label: "500K" },
-    { amount: 1000000, icon: "/assets/baccarat/kiblue.png", label: "1M" },
-    { amount: 10000000, icon: "/assets/baccarat/kiyellow.png", label: "10M" },
-    { amount: 50000000, icon: "/assets/baccarat/hakai.png", label: "50M" }
+    { amount: 1000, icon: "/assets/baccarat/dragon-ball-1.png", label: "1000" },
+    { amount: 50000, icon: "/assets/baccarat/dragon-ball-2.png", label: "5000" },
+    { amount: 100000, icon: "/assets/baccarat/dragon-ball-3.png", label: "10k" },
+    { amount: 500000, icon: "/assets/baccarat/dragon-ball-4.png", label: "50K" },
+    { amount: 100000, icon: "/assets/baccarat/dragon-ball-5.png", label: "100K" },
+    { amount: 500000, icon: "/assets/baccarat/dragon-ball-6.png", label: "500k" },
+    { amount: 1000000, icon: "/assets/baccarat/dragon-ball-7.png", label: "1M" },
+    { amount: 100000000, icon: "/assets/baccarat/kiblue.png", label: "100M" },
+    { amount: 500000000, icon: "/assets/baccarat/kiyellow.png", label: "500M" },
+    { amount: 1000000000, icon: "/assets/baccarat/hakai.png", label: "1B" }
 ];
 
 const BACCARAT_SKILL_ITEMS = [
