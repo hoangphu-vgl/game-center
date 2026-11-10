@@ -368,8 +368,15 @@ export default function FishShooterGame() {
     if (!ctx) return;
 
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
     };
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
@@ -466,6 +473,8 @@ export default function FishShooterGame() {
     const spawnFish = () => {
       if (!gameState.current.isHost) return;
       const fishes = gameState.current.fishes;
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
 
       const hasBoss = fishes.some(f => f.group === "boss");
 
@@ -474,8 +483,8 @@ export default function FishShooterGame() {
           gameState.current.bossSpawnTimer--;
         } else {
           const bossTemplate = BOSS_SPECIES[Math.floor(Math.random() * BOSS_SPECIES.length)];
-          const bossX = canvas.width / 2;
-          const bossY = canvas.height / 2;
+          const bossX = currentWidth / 2;
+          const bossY = currentHeight / 2;
           const newBoss = createFishInstance(bossTemplate, bossX, bossY, bossTemplate.speed, 0, true);
           
           fishes.push(newBoss);
@@ -499,7 +508,7 @@ export default function FishShooterGame() {
           const largeTemplates = FISH_SPECIES.filter(f => f.group === "large");
           const template = largeTemplates[Math.floor(Math.random() * largeTemplates.length)];
           const speed = template.speedRange[0] + Math.random() * (template.speedRange[1] - template.speedRange[0]);
-          const x = -150, y = Math.random() * (canvas.height - 200) + 100;
+          const x = -150, y = Math.random() * (currentHeight - 200) + 100;
           
           const newLargeFish = createFishInstance(template, x, y, speed, (Math.random() - 0.5) * 0.1);
           fishes.push(newLargeFish);
@@ -522,10 +531,10 @@ export default function FishShooterGame() {
         const type = Math.floor(Math.random() * 4);
         let x = 0, y = 0, vx = 0, vy = 0;
 
-        if (type === 0) { x = -100; y = Math.random() * (canvas.height - 200) + 100; vx = speed; vy = (Math.random() - 0.5) * 0.1; }
-        else if (type === 1) { x = canvas.width + 100; y = Math.random() * (canvas.height - 200) + 100; vx = -speed; vy = (Math.random() - 0.5) * 0.1; }
-        else if (type === 2) { x = Math.random() * (canvas.width - 200) + 100; y = -100; vx = (Math.random() - 0.5) * 0.1; vy = speed; }
-        else { x = Math.random() * (canvas.width - 200) + 100; y = canvas.height + 100; vx = (Math.random() - 0.5) * 0.1; vy = -speed; }
+        if (type === 0) { x = -100; y = Math.random() * (currentHeight - 200) + 100; vx = speed; vy = (Math.random() - 0.5) * 0.1; }
+        else if (type === 1) { x = currentWidth + 100; y = Math.random() * (currentHeight - 200) + 100; vx = -speed; vy = (Math.random() - 0.5) * 0.1; }
+        else if (type === 2) { x = Math.random() * (currentWidth - 200) + 100; y = -100; vx = (Math.random() - 0.5) * 0.1; vy = speed; }
+        else { x = Math.random() * (currentWidth - 200) + 100; y = currentHeight + 100; vx = (Math.random() - 0.5) * 0.1; vy = -speed; }
 
         fishes.push(createFishInstance(template, x, y, vx, vy));
       }
@@ -537,10 +546,10 @@ export default function FishShooterGame() {
         const type = Math.floor(Math.random() * 4);
         let x = 0, y = 0, vx = 0, vy = 0;
 
-        if (type === 0) { x = -80; y = Math.random() * (canvas.height - 200) + 100; vx = speed; vy = (Math.random() - 0.5) * 0.15; }
-        else if (type === 1) { x = canvas.width + 80; y = Math.random() * (canvas.height - 200) + 100; vx = -speed; vy = (Math.random() - 0.5) * 0.15; }
-        else if (type === 2) { x = Math.random() * (canvas.width - 200) + 100; y = -80; vx = (Math.random() - 0.5) * 0.15; vy = speed; }
-        else { x = Math.random() * (canvas.width - 200) + 100; y = canvas.height + 80; vx = (Math.random() - 0.5) * 0.15; vy = -speed; }
+        if (type === 0) { x = -80; y = Math.random() * (currentHeight - 200) + 100; vx = speed; vy = (Math.random() - 0.5) * 0.15; }
+        else if (type === 1) { x = currentWidth + 80; y = Math.random() * (currentHeight - 200) + 100; vx = -speed; vy = (Math.random() - 0.5) * 0.15; }
+        else if (type === 2) { x = Math.random() * (currentWidth - 200) + 100; y = -80; vx = (Math.random() - 0.5) * 0.15; vy = speed; }
+        else { x = Math.random() * (currentWidth - 200) + 100; y = currentHeight + 80; vx = (Math.random() - 0.5) * 0.15; vy = -speed; }
 
         fishes.push(createFishInstance(template, x, y, vx, vy));
       }
@@ -549,8 +558,8 @@ export default function FishShooterGame() {
     const spawnBubble = () => {
       if (Math.random() < 0.1) {
         gameState.current.bubbles.push({
-          x: Math.random() * canvas.width,
-          y: canvas.height + 10,
+          x: Math.random() * window.innerWidth,
+          y: window.innerHeight + 10,
           radius: Math.random() * 5 + 2,
           speed: Math.random() * 2 + 1,
           opacity: Math.random() * 0.4 + 0.1
@@ -566,9 +575,9 @@ export default function FishShooterGame() {
       const targetX = clientX - rect.left;
       const targetY = clientY - rect.top;
 
-      if (clientY < 90 || (clientY > canvas.height - 130 && clientX < 180) || (clientY < 120 && clientX > canvas.width - 320)) return;
+      if (clientY < 75 || (clientY > window.innerHeight - 110 && clientX < 160) || (clientY < 100 && clientX > window.innerWidth - 280)) return;
 
-      const transform = getCannonTransform(gameState.current.cannonProgress, canvas.width, canvas.height);
+      const transform = getCannonTransform(gameState.current.cannonProgress, window.innerWidth, window.innerHeight);
       const cannonX = transform.x;
       const cannonY = transform.y;
 
@@ -628,11 +637,14 @@ export default function FishShooterGame() {
     canvas.addEventListener("pointerdown", handleCanvasClick);
 
     const gameLoop = () => {
-      const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
+
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, currentHeight);
       bgGradient.addColorStop(0, "#011e3d");
       bgGradient.addColorStop(1, "#000814");
       ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, currentWidth, currentHeight);
 
       spawnBubble();
       gameState.current.bubbles.forEach((b, index) => {
@@ -646,7 +658,7 @@ export default function FishShooterGame() {
       });
 
       const moveSpeed = 6;
-      const tempTransform = getCannonTransform(0, canvas.width, canvas.height);
+      const tempTransform = getCannonTransform(0, currentWidth, currentHeight);
       const maxPerimeter = tempTransform.perimeter;
 
       if (isMovingLeft.current) gameState.current.cannonProgress -= moveSpeed;
@@ -693,7 +705,7 @@ export default function FishShooterGame() {
           }
 
           fish.x += fish.vx;
-          if (fish.x < 250 || fish.x > canvas.width - 250) {
+          if (fish.x < 250 || fish.x > currentWidth - 250) {
             fish.vx *= -1;
           }
           fish.y += Math.sin(fish.x / 100) * 0.4;
@@ -738,7 +750,7 @@ export default function FishShooterGame() {
           ctx.restore();
         }
 
-        if (fish.group !== "boss" && (fish.x > canvas.width + 250 || fish.x < -250 || fish.y > canvas.height + 250 || fish.y < -250)) {
+        if (fish.group !== "boss" && (fish.x > currentWidth + 250 || fish.x < -250 || fish.y > currentHeight + 250 || fish.y < -250)) {
           gameState.current.fishes.splice(fIndex, 1);
         }
       });
@@ -756,7 +768,7 @@ export default function FishShooterGame() {
         setActiveLargeFishUI(null);
       }
 
-      const transform = getCannonTransform(gameState.current.cannonProgress, canvas.width, canvas.height);
+      const transform = getCannonTransform(gameState.current.cannonProgress, currentWidth, currentHeight);
       const renderCannon = (tx: number, ty: number, angle: number, isSelf = true) => {
         ctx.save();
         ctx.translate(tx, ty);
@@ -794,7 +806,7 @@ export default function FishShooterGame() {
         Object.keys(gameState.current.peerCannons).forEach((peerId) => {
           const peer = gameState.current.peerCannons[peerId];
           if (peer) {
-            const peerTrans = getCannonTransform(peer.progress, canvas.width, canvas.height);
+            const peerTrans = getCannonTransform(peer.progress, currentWidth, currentHeight);
             renderCannon(peerTrans.x, peerTrans.y, peer.angle, false);
           }
         });
@@ -820,7 +832,7 @@ export default function FishShooterGame() {
           }
           ctx.restore();
 
-          if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+          if (bullet.x < 0 || bullet.x > currentWidth || bullet.y < 0 || bullet.y > currentHeight) {
             bullet.isExploding = true;
           }
 
@@ -974,227 +986,221 @@ export default function FishShooterGame() {
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black select-none touch-none font-sans">
-      <canvas ref={canvasRef} className="block w-full h-full cursor-crosshair" />
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: "manipulation" }}>
+      {/* HEADER TỐI ƯU MOBILE GIỐNG CẦN THỦ VŨ TRỤ */}
+      <div className="absolute top-1 left-1 right-1 flex justify-between items-center z-50 pointer-events-auto gap-1">
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={leaveRoom}
+            className="bg-rose-900/95 text-rose-200 hover:bg-rose-800 px-2 py-1 rounded-md text-[8px] sm:text-[9px] font-black border border-rose-500/40 shadow cursor-pointer"
+          >
+            ← Rời
+          </button>
+          <div className="bg-black/85 text-white px-2 py-1 rounded-md font-bold text-[8px] sm:text-[9px] border border-cyan-500/40 shadow flex items-center gap-1">
+            <img src={userAvatar} alt="Avatar" className="w-3.5 h-3.5 rounded-full border border-cyan-400 object-cover" />
+            <span>
+              <span id="score" className="text-[#FFEB3B] font-black">
+                {isMounted ? score.toLocaleString() : "..."}
+              </span>🪙
+            </span>
+          </div>
+          <button
+            onClick={() => setIsShopOpen(true)}
+            className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-2 py-1 rounded-md font-black text-[8px] sm:text-[9px] shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40"
+          >
+            🛍️ Shop
+          </button>
+          <button
+            onClick={() => setIsInventoryOpen(true)}
+            className="bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 px-2 py-1 rounded-md font-black text-[8px] sm:text-[9px] shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40"
+          >
+            🎒 Súng
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-1">
+          <div className="relative">
+            <button
+              onClick={() => { setIsBulletMenuOpen(!isBulletMenuOpen); setIsSkillMenuOpen(false); }}
+              className="bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/70 px-2 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-cyan-300 text-[8px] sm:text-[9px] font-black cursor-pointer transition select-none"
+            >
+              <span>🎯</span>
+              <span>Tier {currentBulletIndex + 1}: {bulletLevels[currentBulletIndex].toLocaleString()}</span>
+              <span>{isBulletMenuOpen ? "▲" : "▼"}</span>
+            </button>
+            {isBulletMenuOpen && (
+              <div className="absolute right-0 mt-1 w-44 bg-slate-950/98 border-2 border-cyan-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
+                <div className="px-2 py-1 text-[8px] font-black text-cyan-400 uppercase border-b border-slate-800">Chọn Cấp Đạn</div>
+                <div className="max-h-48 overflow-y-auto space-y-1 pr-0.5">
+                  {bulletLevels.map((lvl, index) => (
+                    <button
+                      key={lvl}
+                      onClick={() => {
+                        setCurrentBulletIndex(index);
+                        setIsBulletMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center justify-between ${
+                        currentBulletIndex === index
+                          ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 shadow"
+                          : "bg-slate-900 text-slate-200 hover:bg-slate-800"
+                      }`}
+                    >
+                      <span className="truncate">Tier {index + 1}: {lvl.toLocaleString()}🪙</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => { setIsSkillMenuOpen(!isSkillMenuOpen); setIsBulletMenuOpen(false); }}
+              className="bg-slate-900/95 hover:bg-slate-800 border border-purple-500/70 px-2 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-purple-300 text-[8px] sm:text-[9px] font-black cursor-pointer transition select-none"
+            >
+              <span>⚡</span>
+              <span className="truncate max-w-[80px]">{skillsList[currentSkillIndex].name}</span>
+              <span>{isSkillMenuOpen ? "▲" : "▼"}</span>
+            </button>
+            {isSkillMenuOpen && (
+              <div className="absolute right-0 mt-1 w-44 bg-slate-950/98 border-2 border-purple-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md">
+                <div className="px-2 py-1 text-[8px] font-black text-purple-400 uppercase border-b border-slate-800">Kỹ Năng Săn Cá</div>
+                <div className="space-y-1">
+                  {skillsList.map((sk, index) => (
+                    <button
+                      key={sk.name}
+                      onClick={() => {
+                        setCurrentSkillIndex(index);
+                        setIsSkillMenuOpen(false);
+                        setActiveSkillNotice(sk.name);
+                        setTimeout(() => setActiveSkillNotice(null), 2500);
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg text-[9px] font-black transition cursor-pointer flex items-center justify-between ${
+                        currentSkillIndex === index
+                          ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow"
+                          : "bg-slate-900 text-slate-200 hover:bg-slate-800"
+                      }`}
+                    >
+                      <span className="truncate">{sk.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* --- ĐỒNG ĐỘI --- */}
-      <div className="absolute top-16 left-4 flex items-center gap-2 z-25 bg-slate-950/80 border border-cyan-500/40 px-3 py-1.5 rounded-xl backdrop-blur-md">
-        <span className="text-[10px] font-bold text-slate-300 uppercase">Đồng đội ({onlinePlayers.length}/4):</span>
-        <div className="flex -space-x-2">
+      <div className="absolute top-11 left-1.5 flex items-center gap-1 z-25 bg-slate-950/80 border border-cyan-500/40 px-2 py-1 rounded-lg backdrop-blur-md text-[8px]">
+        <span className="font-bold text-slate-300 uppercase">Đội ({onlinePlayers.length}/4):</span>
+        <div className="flex -space-x-1.5">
           {onlinePlayers.map((p, idx) => (
-            <img key={idx} src={p.avatar || userAvatar} className="w-6 h-6 rounded-full border border-cyan-400 object-cover" title={`Slot: ${p.slot}`} />
+            <img key={idx} src={p.avatar || userAvatar} className="w-4 h-4 rounded-full border border-cyan-400 object-cover" title={`Slot: ${p.slot}`} />
           ))}
         </div>
       </div>
 
+      {activeSkillNotice && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-purple-900/90 border border-purple-400 text-purple-200 px-4 py-1 rounded-full font-bold text-[9px] shadow-[0_0_20px_rgba(168,85,247,0.8)] z-30 animate-bounce pointer-events-none">
+          ✨ Đã kích hoạt: {activeSkillNotice}!
+        </div>
+      )}
+
       {/* --- THANH MÁU CÁ LỚN / BOSS Ở GÓC PHẢI DƯỚI --- */}
       {activeLargeFishUI && (
-        <div className={`absolute bottom-20 right-4 w-72 bg-slate-950/95 border-2 p-3 rounded-2xl backdrop-blur-md z-30 shadow-xl animate-fade-in ${activeLargeFishUI.isBoss ? 'border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.5)]' : 'border-amber-500'}`}>
-          <div className="flex justify-between items-center text-xs font-black mb-1.5 text-white">
-            <span className="truncate max-w-[120px]">{activeLargeFishUI.isBoss ? '👑' : '⚠️'} {activeLargeFishUI.name}</span>
+        <div className={`absolute bottom-16 right-2 w-56 sm:w-64 bg-slate-950/95 border-2 p-2 rounded-xl backdrop-blur-md z-30 shadow-xl animate-fade-in ${activeLargeFishUI.isBoss ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'border-amber-500'}`}>
+          <div className="flex justify-between items-center text-[9px] sm:text-[10px] font-black mb-1 text-white">
+            <span className="truncate max-w-[100px]">{activeLargeFishUI.isBoss ? '👑' : '⚠️'} {activeLargeFishUI.name}</span>
             <span className="text-yellow-300">{activeLargeFishUI.weightText}</span>
             {activeLargeFishUI.timeLeft !== undefined && (
               <span className="text-cyan-300">⏱️ {Math.floor(activeLargeFishUI.timeLeft / 60)}:{(activeLargeFishUI.timeLeft % 60).toString().padStart(2, '0')}</span>
             )}
           </div>
-          <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden border border-slate-600">
+          <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-600">
             <div className={`h-full transition-all duration-200 ${activeLargeFishUI.isBoss ? 'bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400' : 'bg-gradient-to-r from-amber-500 to-yellow-300'}`} style={{ width: `${activeLargeFishUI.hpPercent}%` }} />
           </div>
-          <div className="text-right text-[9px] text-slate-400 mt-1 font-bold">{Math.round(activeLargeFishUI.hpPercent)}% HP</div>
+          <div className="text-right text-[8px] text-slate-400 mt-0.5 font-bold">{Math.round(activeLargeFishUI.hpPercent)}% HP</div>
         </div>
       )}
 
       {/* --- POPUP THÔNG BÁO --- */}
       {largeFishPopup && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-red-600/95 via-amber-600/95 to-red-600/95 border-4 border-yellow-300 px-8 py-5 rounded-3xl shadow-[0_0_60px_rgba(239,68,68,0.9)] z-40 text-center animate-bounce">
-          <h2 className="text-white font-black text-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] my-1">{largeFishPopup.name}</h2>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-red-600/95 via-amber-600/95 to-red-600/95 border-2 border-yellow-300 px-4 py-3 rounded-2xl shadow-[0_0_40px_rgba(239,68,68,0.9)] z-40 text-center animate-bounce pointer-events-none max-w-xs">
+          <h2 className="text-white font-black text-sm sm:text-base drop-shadow my-0.5">{largeFishPopup.name}</h2>
           {largeFishPopup.weightText && (
-            <p className="text-yellow-200 font-bold text-sm bg-black/50 px-4 py-1 rounded-full inline-block mt-1">
-              ⚖️ Trọng lượng: {largeFishPopup.weightText} {largeFishPopup.reward > 0 ? `| 🪙 Thưởng: +${largeFishPopup.reward.toLocaleString()} Vàng` : ""}
+            <p className="text-yellow-200 font-bold text-[9px] sm:text-xs bg-black/50 px-3 py-0.5 rounded-full inline-block mt-0.5">
+              ⚖️ Trọng lượng: {largeFishPopup.weightText} {largeFishPopup.reward > 0 ? `| +${largeFishPopup.reward.toLocaleString()}🪙` : ""}
             </p>
           )}
         </div>
       )}
 
-      {/* --- NÚT ĐIỀU HƯỚNG --- */}
-      <div className="absolute top-4 left-4 flex items-center gap-2 z-25">
-        <button 
-          onClick={leaveRoom}
-          className="bg-red-600/90 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-xl border border-red-400 shadow transition-all text-xs cursor-pointer"
-        >
-          🚪 Rời Phòng
-        </button>
-
-        <Link 
-          href="/"
-          className="bg-slate-900/90 hover:bg-slate-800 text-cyan-300 font-bold px-3 py-1.5 rounded-xl border border-cyan-400/50 shadow transition-all text-xs flex items-center gap-1 cursor-pointer"
-        >
-          🏠 Sảnh Chính
-        </Link>
-
-        <button 
-          onClick={() => setIsProfileOpen(true)}
-          className="bg-slate-900/85 hover:bg-slate-800 text-cyan-300 font-bold px-3 py-1.5 rounded-xl border border-cyan-400/50 backdrop-blur-md shadow transition-all text-xs cursor-pointer"
-        >
-          👤 Profile
-        </button>
-
-        <button 
-          onClick={() => setIsInventoryOpen(true)}
-          className="bg-slate-900/85 hover:bg-slate-800 text-cyan-300 font-bold px-3 py-1.5 rounded-xl border border-cyan-400/50 backdrop-blur-md shadow transition-all text-xs cursor-pointer"
-        >
-          🎒 Súng
-        </button>
-      </div>
-
-      <div className="absolute top-4 right-4 flex items-center gap-2.5 z-25">
-        <div className="bg-gradient-to-r from-amber-500 to-yellow-300 rounded-full p-[2px] shadow-[0_0_20px_rgba(251,191,36,0.4)]">
-          <div className="bg-black/90 rounded-full px-4 py-1.5">
-            <span className="text-amber-400 font-black text-xs flex items-center gap-1.5">
-              🪙 {isMounted ? score.toLocaleString() : "0"}
-            </span>
-          </div>
-        </div>
-
-        <div className="relative">
-          <button 
-            onClick={() => { setIsBulletMenuOpen(!isBulletMenuOpen); setIsSkillMenuOpen(false); }}
-            className="bg-slate-900/90 border border-cyan-400 text-cyan-300 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow backdrop-blur-md cursor-pointer"
-          >
-            🎯 Đạn Tier {currentBulletIndex + 1}: {isMounted ? bulletLevels[currentBulletIndex].toLocaleString() : "0"} ▼
-          </button>
-
-          {isBulletMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-slate-900/95 border border-cyan-400/60 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden z-30">
-              {bulletLevels.map((lvl, index) => (
-                <button
-                  key={lvl}
-                  onClick={() => {
-                    setCurrentBulletIndex(index);
-                    setIsBulletMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${
-                    currentBulletIndex === index 
-                      ? 'bg-cyan-500/30 text-cyan-300 border-l-4 border-cyan-400' 
-                      : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  Tier {index + 1}: {lvl.toLocaleString()} 🪙
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="relative">
-          <button 
-            onClick={() => { setIsSkillMenuOpen(!isSkillMenuOpen); setIsBulletMenuOpen(false); }}
-            className="bg-slate-900/90 border border-purple-400 text-purple-300 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow backdrop-blur-md cursor-pointer"
-          >
-            {skillsList[currentSkillIndex].name} ▼
-          </button>
-
-          {isSkillMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-slate-900/95 border border-purple-400/60 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden z-30">
-              {skillsList.map((sk, index) => (
-                <button
-                  key={sk.name}
-                  onClick={() => {
-                    setCurrentSkillIndex(index);
-                    setIsSkillMenuOpen(false);
-                    setActiveSkillNotice(sk.name);
-                    setTimeout(() => setActiveSkillNotice(null), 2500);
-                  }}
-                  className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${
-                    currentSkillIndex === index 
-                      ? 'bg-purple-500/30 text-purple-300 border-l-4 border-purple-400' 
-                      : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  {sk.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <button 
-          onClick={() => setIsShopOpen(true)}
-          className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-black font-black px-3.5 py-2 rounded-xl border border-yellow-300 shadow text-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-        >
-          🛒 Mua
-        </button>
-      </div>
-
-      {activeSkillNotice && (
-        <div className="absolute top-20 right-1/2 translate-x-1/2 bg-purple-900/90 border border-purple-400 text-purple-200 px-6 py-2 rounded-full font-bold text-sm shadow-[0_0_30px_rgba(168,85,247,0.8)] z-30 animate-bounce">
-          ✨ Đã kích hoạt: {activeSkillNotice}!
-        </div>
-      )}
-
-      <div className="absolute bottom-6 left-6 flex gap-3 z-20">
-        <button 
-          className="w-16 h-16 rounded-full bg-slate-900/85 border-2 border-cyan-400 text-cyan-400 font-bold text-xl shadow active:scale-95 active:bg-cyan-950 transition-all flex items-center justify-center backdrop-blur-md cursor-pointer"
+      {/* --- NÚT ĐIỀU HƯỚNG TRÁI PHẢI (CHÈO SÚNG) GỐC DƯỚI TRÁI --- */}
+      <div className="absolute bottom-2 left-2 z-40 flex items-center space-x-1.5 bg-black/80 p-1.5 rounded-xl border border-cyan-500/60 shadow-xl backdrop-blur-md pointer-events-auto">
+        <button
           onPointerDown={() => isMovingLeft.current = true}
           onPointerUp={() => isMovingLeft.current = false}
           onPointerLeave={() => isMovingLeft.current = false}
+          className="w-9 h-9 bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-sm rounded-lg active:scale-90 transition shadow cursor-pointer flex items-center justify-center select-none"
         >
           ◀
         </button>
-        <button 
-          className="w-16 h-16 rounded-full bg-slate-900/85 border-2 border-cyan-400 text-cyan-400 font-bold text-xl shadow active:scale-95 active:bg-cyan-950 transition-all flex items-center justify-center backdrop-blur-md cursor-pointer"
+        <span className="text-[9px] font-black text-cyan-300 uppercase px-0.5">Súng</span>
+        <button
           onPointerDown={() => isMovingRight.current = true}
           onPointerUp={() => isMovingRight.current = false}
           onPointerLeave={() => isMovingRight.current = false}
+          className="w-9 h-9 bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-sm rounded-lg active:scale-90 transition shadow cursor-pointer flex items-center justify-center select-none"
         >
           ▶
         </button>
       </div>
 
       {isProfileOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-cyan-400/60 p-6 rounded-2xl w-80 text-cyan-100 shadow">
-            <h3 className="text-lg font-black text-cyan-400 mb-4 flex items-center gap-2">👤 Thông Tin Người Chơi</h3>
-            <div className="space-y-2 text-sm mb-6">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-cyan-400/60 p-5 rounded-2xl w-full max-w-xs text-cyan-100 shadow">
+            <h3 className="text-base font-black text-cyan-400 mb-3 flex items-center gap-2">👤 Thông Tin Người Chơi</h3>
+            <div className="space-y-2 text-xs mb-4">
               <p>🎯 Cấp độ: <span className="text-yellow-400 font-bold">Thợ Săn Thượng Thừa</span></p>
               <p>🪙 Vàng hiện có: <span className="text-amber-400 font-bold">{score.toLocaleString()}</span></p>
             </div>
-            <button onClick={() => setIsProfileOpen(false)} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-xl transition-all cursor-pointer">Đóng</button>
+            <button onClick={() => setIsProfileOpen(false)} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-xl text-xs transition-all cursor-pointer">Đóng</button>
           </div>
         </div>
       )}
 
       {isInventoryOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-cyan-400/60 p-6 rounded-2xl w-96 text-cyan-100 shadow">
-            <h3 className="text-lg font-black text-cyan-400 mb-4 flex items-center gap-2">🎒 Kho Súng Đã Mua</h3>
-            <div className="space-y-3 text-sm mb-6 max-h-60 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-cyan-400/60 p-5 rounded-2xl w-full max-w-sm text-cyan-100 shadow">
+            <h3 className="text-base font-black text-cyan-400 mb-3 flex items-center gap-2">🎒 Kho Súng Đã Mua</h3>
+            <div className="space-y-2.5 text-xs mb-4 max-h-52 overflow-y-auto">
               {ownedGuns.map((gun, idx) => (
-                <div key={gun.id} className="bg-slate-800/80 p-3 rounded-xl border border-cyan-500/30 flex justify-between items-center">
+                <div key={gun.id} className="bg-slate-800/80 p-2.5 rounded-xl border border-cyan-500/30 flex justify-between items-center">
                   <div>
                     <p className="font-bold text-cyan-300">{gun.name}</p>
-                    <p className="text-xs text-slate-400">Đã sở hữu vĩnh viễn</p>
+                    <p className="text-[10px] text-slate-400">Đã sở hữu vĩnh viễn</p>
                   </div>
-                  <button onClick={() => setOwnedGuns(ownedGuns.map((g, i) => ({ ...g, active: i === idx })))} className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${gun.active ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+                  <button onClick={() => setOwnedGuns(ownedGuns.map((g, i) => ({ ...g, active: i === idx })))} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer ${gun.active ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
                     {gun.active ? 'Đang dùng' : 'Trang bị'}
                   </button>
                 </div>
               ))}
             </div>
-            <button onClick={() => setIsInventoryOpen(false)} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-xl transition-all cursor-pointer">Đóng</button>
+            <button onClick={() => setIsInventoryOpen(false)} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-xl text-xs transition-all cursor-pointer">Đóng</button>
           </div>
         </div>
       )}
 
       {isShopOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-amber-400/60 p-6 rounded-2xl w-96 text-amber-100 shadow">
-            <h3 className="text-lg font-black text-amber-400 mb-4 flex items-center gap-2">🛒 Cửa Hàng Nhanh</h3>
-            <div className="space-y-3 text-sm mb-6 max-h-60 overflow-y-auto">
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-amber-500/30 flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-amber-400/60 p-5 rounded-2xl w-full max-w-sm text-amber-100 shadow">
+            <h3 className="text-base font-black text-amber-400 mb-3 flex items-center gap-2">🛒 Cửa Hàng Nhanh</h3>
+            <div className="space-y-2.5 text-xs mb-4 max-h-52 overflow-y-auto">
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-amber-500/30 flex justify-between items-center">
                 <div>
                   <p className="font-bold text-amber-300">🚀 Đại Bác Tứ Phương V,2</p>
-                  <p className="text-xs text-slate-400">Giá: 5.000.000 🪙</p>
+                  <p className="text-[10px] text-slate-400">Giá: 5.000.000 🪙</p>
                 </div>
                 <button onClick={() => {
                   const currentActiveScore = (window as any).currentGameScore ?? score;
@@ -1203,13 +1209,15 @@ export default function FishShooterGame() {
                     setOwnedGuns([...ownedGuns, { id: 3, name: "🚀 Đại Bác Tứ Phương V,2", active: false }]);
                     alert("Mua thành công súng mới!");
                   } else { alert("Không đủ vàng!"); }
-                }} className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs cursor-pointer">Mua Ngay</button>
+                }} className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-2.5 py-1 rounded-lg text-[10px] cursor-pointer">Mua Ngay</button>
               </div>
             </div>
-            <button onClick={() => setIsShopOpen(false)} className="w-full bg-amber-600 hover:bg-amber-500 text-black font-bold py-2 rounded-xl transition-all cursor-pointer">Đóng</button>
+            <button onClick={() => setIsShopOpen(false)} className="w-full bg-amber-600 hover:bg-amber-500 text-black font-bold py-2 rounded-xl text-xs transition-all cursor-pointer">Đóng</button>
           </div>
         </div>
       )}
+
+      <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full pointer-events-auto"></canvas>
     </div>
   );
 }
