@@ -53,15 +53,15 @@ const FISH_SPECIES = [
 
   // --- NHÓM CÁ LỚN (100 kg - 1 Tấn) ---
   { file: "Carcharhinus_melanopterus", name: "Cá Mập Vây Đen", group: "large", radius: 104, speedRange: [0.2, 0.5], baseReward: 150000000 },
-  { file: "Carcharias_taurus", name: "Cá Mập Cát Khổng Lồ", group: "large", radius: 112, speedRange: [0.2, 0.3], baseReward: 200000000 },
-  { file: "Cheilinus_undulatus", name: "Cá M Napoleon", group: "large", radius: 124, speedRange: [0.2, 0.3], baseReward: 250000000 },
-  { file: "Hypanus_americanus", name: "Cá Đuối Gai Độc", group: "large", radius: 96, speedRange: [0.2, 0.5], baseReward: 120000000 },
-  { file: "Hypanus_satinus", name: "Cá Đuối Mượt", group: "large", radius: 90, speedRange: [0.2, 0.5], baseReward: 100000000 },
-  { file: "Lepisosteus_oculatus", name: "Cá Hỏa Tiễn Miền Nam", group: "large", radius: 90, speedRange: [0.35, 0.55], baseReward: 95000000 },
-  { file: "Lepisosteus_osseus", name: "Cá Hỏa Tiễn Mõm Dài", group: "large", radius: 94, speedRange: [0.2, 0.55], baseReward: 105000000 },
-  { file: "Micropterus_salmoides", name: "Cá Vược Đen Khổng Lồ", group: "large", radius: 84, speedRange: [0.2, 0.6], baseReward: 80000000 },
-  { file: "Micropterus_treculii", name: "Cá Vược Sông Guadalupe", group: "large", radius: 80, speedRange: [0.2, 0.6], baseReward: 75000000 },
-  { file: "Triaenodon_obesus", name: "Cá Mập Vây Trắng", group: "large", radius: 100, speedRange: [0.2, 0.3], baseReward: 140000000 }
+  { file: "Carcharias_taurus", name: "Cá Mập Cát Khổng Lồ", group: "large", radius: 112, speedRange: [0.2, 0.3], baseReward: 2000000000 },
+  { file: "Cheilinus_undulatus", name: "Cá M Napoleon", group: "large", radius: 124, speedRange: [0.2, 0.3], baseReward: 2000000000 },
+  { file: "Hypanus_americanus", name: "Cá Đuối Gai Độc", group: "large", radius: 96, speedRange: [0.2, 0.5], baseReward: 1000000000 },
+  { file: "Hypanus_sabinus", name: "Cá Đuối Mượt", group: "large", radius: 90, speedRange: [0.2, 0.5], baseReward: 1000000000 },
+  { file: "Lepisosteus_oculatus", name: "Cá Hỏa Tiễn Miền Nam", group: "large", radius: 90, speedRange: [0.35, 0.55], baseReward: 950000000 },
+  { file: "Lepisosteus_osseus", name: "Cá Hỏa Tiễn Mõm Dài", group: "large", radius: 94, speedRange: [0.2, 0.55], baseReward: 1050000000 },
+  { file: "Micropterus_salmoides", name: "Cá Vược Đen Khổng Lồ", group: "large", radius: 84, speedRange: [0.2, 0.6], baseReward: 840000000 },
+  { file: "Micropterus_treculii", name: "Cá Vược Sông Guadalupe", group: "large", radius: 80, speedRange: [0.2, 0.6], baseReward: 7400000000 },
+  { file: "Triaenodon_obesus", name: "Cá Mập Vây Trắng", group: "large", radius: 100, speedRange: [0.2, 0.3], baseReward: 1400000000 }
 ];
 
 // --- 2 SIÊU BOSS ---
@@ -71,7 +71,7 @@ const BOSS_SPECIES = [
     name: "Megalodon Siêu Cấp",
     radius: 190,
     baseReward: 500000000,
-    weightRange: [15, 40],       // 15 - 40 Tấn
+    weightRange: [15, 40],
     baseHp: 2000000,
     speed: 0.9
   },
@@ -80,7 +80,7 @@ const BOSS_SPECIES = [
     name: "Mosasaurus Thượng Cổ",
     radius: 210,
     baseReward: 1000000000,
-    weightRange: [30, 80],      // 30 - 80 Tấn
+    weightRange: [30, 80],
     baseHp: 5000000,
     speed: 0.8
   }
@@ -924,7 +924,7 @@ export default function FishShooterGame() {
 
   if (!activeRoom) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans text-white">
+      <div className="fixed inset-0 w-screen h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans text-white overflow-hidden">
         <div className="absolute top-4 left-4">
           <Link href="/" className="bg-slate-900 border border-cyan-500/40 text-cyan-400 px-4 py-2 rounded-xl font-black text-sm shadow hover:bg-slate-800 transition">
             ← Quay Lại
@@ -986,9 +986,9 @@ export default function FishShooterGame() {
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: "manipulation" }}>
-      {/* HEADER TỐI ƯU MOBILE GIỐNG CẦN THỦ VŨ TRỤ */}
-      <div className="absolute top-1 left-1 right-1 flex justify-between items-center z-50 pointer-events-auto gap-1">
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: "manipulation", margin: 0, padding: 0 }}>
+      {/* HEADER TỐI ƯU MOBILE MỞ RỘNG TỐI ĐA */}
+      <div className="absolute top-1.5 left-1.5 right-1.5 flex justify-between items-center z-50 pointer-events-auto gap-1">
         <div className="flex items-center space-x-1">
           <button
             onClick={leaveRoom}
@@ -1092,7 +1092,7 @@ export default function FishShooterGame() {
       </div>
 
       {/* --- ĐỒNG ĐỘI --- */}
-      <div className="absolute top-11 left-1.5 flex items-center gap-1 z-25 bg-slate-950/80 border border-cyan-500/40 px-2 py-1 rounded-lg backdrop-blur-md text-[8px]">
+      <div className="absolute top-12 left-2 flex items-center gap-1 z-25 bg-slate-950/80 border border-cyan-500/40 px-2 py-1 rounded-lg backdrop-blur-md text-[8px]">
         <span className="font-bold text-slate-300 uppercase">Đội ({onlinePlayers.length}/4):</span>
         <div className="flex -space-x-1.5">
           {onlinePlayers.map((p, idx) => (
@@ -1102,16 +1102,16 @@ export default function FishShooterGame() {
       </div>
 
       {activeSkillNotice && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-purple-900/90 border border-purple-400 text-purple-200 px-4 py-1 rounded-full font-bold text-[9px] shadow-[0_0_20px_rgba(168,85,247,0.8)] z-30 animate-bounce pointer-events-none">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-purple-900/90 border border-purple-400 text-purple-200 px-4 py-1 rounded-full font-bold text-[9px] shadow-[0_0_20px_rgba(168,85,247,0.8)] z-30 animate-bounce pointer-events-none">
           ✨ Đã kích hoạt: {activeSkillNotice}!
         </div>
       )}
 
-      {/* --- THANH MÁU CÁ LỚN / BOSS Ở GÓC PHẢI DƯỚI --- */}
+      {/* --- THANH MÁU CÁ LỚN / BOSS ĐÃ ĐƯỢC ĐẨY LÊN GÓC PHẢI DƯỚI HÀNG VỚI CỤM TIER/SKILL --- */}
       {activeLargeFishUI && (
-        <div className={`absolute bottom-16 right-2 w-56 sm:w-64 bg-slate-950/95 border-2 p-2 rounded-xl backdrop-blur-md z-30 shadow-xl animate-fade-in ${activeLargeFishUI.isBoss ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'border-amber-500'}`}>
+        <div className={`absolute top-12 right-2 w-52 sm:w-60 bg-slate-950/95 border-2 p-2 rounded-xl backdrop-blur-md z-30 shadow-xl animate-fade-in ${activeLargeFishUI.isBoss ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'border-amber-500'}`}>
           <div className="flex justify-between items-center text-[9px] sm:text-[10px] font-black mb-1 text-white">
-            <span className="truncate max-w-[100px]">{activeLargeFishUI.isBoss ? '👑' : '⚠️'} {activeLargeFishUI.name}</span>
+            <span className="truncate max-w-[90px]">{activeLargeFishUI.isBoss ? '👑' : '⚠️'} {activeLargeFishUI.name}</span>
             <span className="text-yellow-300">{activeLargeFishUI.weightText}</span>
             {activeLargeFishUI.timeLeft !== undefined && (
               <span className="text-cyan-300">⏱️ {Math.floor(activeLargeFishUI.timeLeft / 60)}:{(activeLargeFishUI.timeLeft % 60).toString().padStart(2, '0')}</span>
@@ -1217,7 +1217,7 @@ export default function FishShooterGame() {
         </div>
       )}
 
-      <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full pointer-events-auto"></canvas>
+      <canvas ref={canvasRef} className="absolute inset-0 w-screen h-screen block pointer-events-auto" style={{ width: "100vw", height: "100vh" }}></canvas>
     </div>
   );
 }
