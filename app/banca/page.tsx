@@ -52,16 +52,16 @@ const FISH_SPECIES = [
   { file: "Zebrasoma_velifer", name: "Cá Bướm Sọc Vằn", group: "medium", radius: 28, speedRange: [0.8, 1.2], baseReward: 63000, aggressive: false },
 
   // --- NHÓM CÁ LỚN (100 kg - 1 Tấn) ---
-  { file: "Carcharhinus_melanopterus", name: "Cá Mập Vây Đen", group: "large", radius: 104, speedRange: [0.2, 0.5], baseReward: 150000000 },
-  { file: "Carcharias_taurus", name: "Cá Mập Cát Khổng Lồ", group: "large", radius: 112, speedRange: [0.2, 0.3], baseReward: 200000000 },
-  { file: "Cheilinus_undulatus", name: "Cá M Napoleon", group: "large", radius: 124, speedRange: [0.2, 0.3], baseReward: 250000000 },
-  { file: "Hypanus_americanus", name: "Cá Đuối Gai Độc", group: "large", radius: 96, speedRange: [0.2, 0.5], baseReward: 120000000 },
-  { file: "Hypanus_satinus", name: "Cá Đuối Mượt", group: "large", radius: 90, speedRange: [0.2, 0.5], baseReward: 100000000 },
-  { file: "Lepisosteus_oculatus", name: "Cá Hỏa Tiễn Miền Nam", group: "large", radius: 90, speedRange: [0.35, 0.55], baseReward: 95000000 },
-  { file: "Lepisosteus_osseus", name: "Cá Hỏa Tiễn Mõm Dài", group: "large", radius: 94, speedRange: [0.2, 0.55], baseReward: 105000000 },
-  { file: "Micropterus_salmoides", name: "Cá Vược Đen Khổng Lồ", group: "large", radius: 84, speedRange: [0.2, 0.6], baseReward: 80000000 },
-  { file: "Micropterus_treculii", name: "Cá Vược Sông Guadalupe", group: "large", radius: 80, speedRange: [0.2, 0.6], baseReward: 75000000 },
-  { file: "Triaenodon_obesus", name: "Cá Mập Vây Trắng", group: "large", radius: 100, speedRange: [0.2, 0.3], baseReward: 140000000 }
+  { file: "Carcharhinus_melanopterus", name: "Cá Mập Vây Đen", group: "large", radius: 104, speedRange: [0.2, 0.5], baseReward: 1500000000 },
+  { file: "Carcharias_taurus", name: "Cá Mập Cát Khổng Lồ", group: "large", radius: 112, speedRange: [0.2, 0.3], baseReward: 2000000000 },
+  { file: "Cheilinus_undulatus", name: "Cá M Napoleon", group: "large", radius: 124, speedRange: [0.2, 0.3], baseReward: 2500000000 },
+  { file: "Hypanus_americanus", name: "Cá Đuối Gai Độc", group: "large", radius: 96, speedRange: [0.2, 0.5], baseReward: 1200000000 },
+  { file: "Hypanus_satinus", name: "Cá Đuối Mượt", group: "large", radius: 90, speedRange: [0.2, 0.5], baseReward: 1000000000 },
+  { file: "Lepisosteus_oculatus", name: "Cá Hỏa Tiễn Miền Nam", group: "large", radius: 90, speedRange: [0.35, 0.55], baseReward: 950000000 },
+  { file: "Lepisosteus_osseus", name: "Cá Hỏa Tiễn Mõm Dài", group: "large", radius: 94, speedRange: [0.2, 0.55], baseReward: 1050000000 },
+  { file: "Micropterus_salmoides", name: "Cá Vược Đen Khổng Lồ", group: "large", radius: 84, speedRange: [0.2, 0.6], baseReward: 800000000 },
+  { file: "Micropterus_treculii", name: "Cá Vược Sông Guadalupe", group: "large", radius: 80, speedRange: [0.2, 0.6], baseReward: 750000000 },
+  { file: "Triaenodon_obesus", name: "Cá Mập Vây Trắng", group: "large", radius: 100, speedRange: [0.2, 0.3], baseReward: 1400000000 }
 ];
 
 // --- 2 SIÊU BOSS ---
