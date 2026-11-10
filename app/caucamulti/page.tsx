@@ -784,13 +784,7 @@ export default function CauCa2NPage() {
         this.castStartX = 0;
         this.castStartY = 0;
         this.castProgress = 0;
-        
-        // GIẢI PHÓNG CON CÁ NẾU ĐANG DÍNH HOẶC ĐỨT DÂY ĐỂ NÓ KHÔNG BỊ ĐỨNG CỨNG
-        if (this.caughtFish) {
-          this.caughtFish.isCaught = false;
-          this.caughtFish = null;
-        }
-
+        this.caughtFish = null;
         this.lineTension = 0;
         this.isJointPulling = false;
         this.isAssistingOpponent = false;
@@ -865,10 +859,7 @@ export default function CauCa2NPage() {
       }
 
       holdStruggleTick() {
-        if (this.state === "STRUGGLING" || this.isAssistingOpponent) {
-          this.struggleIdleTime = 0;
-          this.applyStruggleDamage(0.5, true); // Giữ tay cũng tính dame nhưng nhẹ hơn
-        } else if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
+        if (this.state === "SINKING" && activeSkillState.sk1_armed && !activeSkillState.sk1_holding) {
           activeSkillState.sk1_holding = true;
           if (statusEl) statusEl.innerText = "🌀 Chân Không Trấn Hải: Mồi đứng yên 5s!";
           setTimeout(() => {
@@ -1026,25 +1017,8 @@ export default function CauCa2NPage() {
           this.lineTension = Math.max(0, this.lineTension - 0.35); 
           this.struggleIdleTime += 1;
 
-          // Cập nhật vị trí con cá bơi theo đầu móc khi đang giằng co
-          if (this.caughtFish) {
-            this.caughtFish.animFrame += 0.15;
-            this.caughtFish.x = this.x + Math.sin(this.caughtFish.animFrame) * 12;
-            this.caughtFish.y = this.y + Math.cos(this.caughtFish.animFrame * 0.8) * 8 - (this.caughtFish.size * 0.15);
-          }
-
-          // Nếu ngưng tay quá 3.5 giây -> Cá đứt dây sổng mất!
+          // Nếu ngưng tap quá 3.5 giây -> Cá đứt dây sổng mất!
           if (this.struggleIdleTime > 210) {
-            if (this.caughtFish) {
-              // Trả con cá về trạng thái bơi tự do hoặc xóa khỏi mảng để sinh cá mới
-              this.caughtFish.isCaught = false;
-              let idx = fishes.indexOf(this.caughtFish);
-              if (idx > -1) {
-                fishes.splice(idx, 1);
-                fishes.push(new Fish(undefined, undefined, undefined, roomRng));
-              }
-            }
-
             this.state = "IDLE";
             if (statusEl) {
               statusEl.innerText = "💥 Cá quẫy quá mạnh làm đứt dây mất tiêu!";
