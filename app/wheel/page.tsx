@@ -23,7 +23,7 @@ const WHEEL_CONFIG = {
     id: "namek",
     name: "RỒNG THẦN NAMEK",
     icon: "/assets/wheel/shenronnamek.png",
-    jackpotKi: 10000000000,
+    jackpotKi: 1000000,
     beverage: "nuoc_ngot",
     beverageName: "Chai Nước Ngọt",
     taunts: [
@@ -180,7 +180,7 @@ export default function WheelPage() {
     if (rand < 0.03 && !hasWonJackpotToday) {
       return { type: "jackpot", label: "JACKPOT", value: activeWheel.jackpotKi, index: 7 };
     }
-    if (rand >= 0.03 && rand < 0.032 && !hasWonBeverageThisWeek) {
+    if (rand >= 0.003 && rand < 0.032 && !hasWonBeverageThisWeek) {
       return { type: "beverage", label: activeWheel.beverageName, value: 1, index: 6 };
     }
     if (rand >= 5 && rand < 15) {
