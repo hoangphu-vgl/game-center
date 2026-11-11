@@ -94,7 +94,7 @@ export default function RootLayout({
             return [...prev, newMsg];
           });
 
-          // 🔴 Nếu khung chat đang đóng, tăng biến đếm tin nhắn chưa đọc lên cho tất cả mọi người
+          // Nếu khung chat đang đóng, tăng biến đếm tin nhắn chưa đọc lên cho tất cả mọi người
           setChatOpen((isOpen) => {
             if (!isOpen) {
               setUnreadCount((count) => count + 1);
@@ -222,15 +222,15 @@ export default function RootLayout({
             {!chatOpen ? (
               <button
                 onClick={() => toggleChatOpen(true)}
-                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black p-3.5 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.5)] flex items-center gap-2 cursor-pointer active:scale-95 border-2 border-amber-300 hover:scale-110 transition relative"
+                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black px-2.5 py-1.5 rounded-full shadow-lg flex items-center gap-1 cursor-pointer active:scale-95 border border-amber-300 hover:scale-105 transition relative"
                 title="Mở Chat"
               >
-                <span className="text-xl">💬</span>
-                <span className="text-xs tracking-wider">CHAT</span>
+                <span className="text-sm">💬</span>
+                <span className="text-[10px] tracking-wider">CHAT</span>
 
-                {/* 🔴 BADGE HIỂN THỊ SỐ LƯỢNG TIN NHẮN CHƯA ĐỌC */}
+                {/* 🔴 BADGE HIỂN THỊ SỐ LƯỢNG TIN NHẮN CHƯA ĐỌC NHỎ GỌN */}
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-950 animate-bounce shadow-md">
+                  <span className="absolute -top-1 -right-1 bg-rose-600 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center border border-slate-950 animate-bounce shadow">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}

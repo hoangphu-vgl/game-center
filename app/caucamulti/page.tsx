@@ -1522,19 +1522,26 @@ export default function CauCaMultiPage() {
     const computedWaterY = (canvas.height / (window.devicePixelRatio || 1)) * 0.22;
     const waterHeight = canvas.height / (window.devicePixelRatio || 1) - computedWaterY;
 
-    if ((window as any).isHost) {
-      for (let i = 0; i < 20; i++) fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 20) * i));
-      for (let i = 0; i < 10; i++) fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 10) * i));
-      for (let i = 0; i < 2; i++) fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 2) * i));
-      
-      setInterval(() => {
-          const now = Date.now();
-          const cooldownPassed = now - lastBossKillTime >= 300000;
-          const hasBoss = fishes.some(f => f.layer === "boss");
-          if (cooldownPassed && !hasBoss && Math.random() < 0.25) {
-              fishes.push(new Fish("boss", computedWaterY + waterHeight * 0.5));
-          }
-      }, 15000); 
+    let hasSpawnedInitialFishes = false;
+    let bossInterval: NodeJS.Timeout | null = null;
+
+    function checkAndSpawnInitialFishes() {
+      if ((window as any).isHost && !hasSpawnedInitialFishes) {
+        hasSpawnedInitialFishes = true;
+        
+        for (let i = 0; i < 20; i++) fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 20) * i));
+        for (let i = 0; i < 10; i++) fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 10) * i));
+        for (let i = 0; i < 2; i++) fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 2) * i));
+        
+        bossInterval = setInterval(() => {
+            const now = Date.now();
+            const cooldownPassed = now - lastBossKillTime >= 300000;
+            const hasBoss = fishes.some(f => f.layer === "boss");
+            if (cooldownPassed && !hasBoss && Math.random() < 0.25) {
+                fishes.push(new Fish("boss", computedWaterY + waterHeight * 0.5));
+            }
+        }, 15000); 
+      }
     }
 
     const syncFishesListener = (e: any) => {
@@ -1737,21 +1744,12 @@ export default function CauCaMultiPage() {
         ctx!.restore(); ctx!.strokeStyle = "#FFD700"; ctx!.lineWidth = 2; ctx!.beginPath(); ctx!.arc(0, 0, 13, 0, Math.PI * 2); ctx!.stroke();
       } else { ctx!.fillStyle = "#FFD700"; ctx!.beginPath(); ctx!.arc(0, 0, 11, 0, Math.PI * 2); ctx!.fill(); }
       ctx!.restore();
-
-      // --- SƯƠNG MÙ CHE KHUẤT TOÀN BỘ VÙNG NƯỚC HỒ CÁ ---
-      if (currentWeatherType === "fog") {
-          ctx!.fillStyle = "rgba(180, 195, 205, 0.92)";
-          ctx!.fillRect(0, waterY, width, height - waterY);
-
-          ctx!.fillStyle = "rgba(220, 230, 240, 0.45)";
-          let fogDrift = (Date.now() * 0.025) % width;
-          ctx!.fillRect(-fogDrift, waterY, width * 2, height - waterY);
-      }
     }
 
     let lastBroadcastTime = 0; let syncTimer = 0; let animationFrameId: number;
 
     function gameLoop() {
+      checkAndSpawnInitialFishes();
       ctx!.clearRect(0, 0, width, height); drawBackground();
 
       if ((window as any).isHost && roomChannelRef.current) {
@@ -1763,7 +1761,20 @@ export default function CauCaMultiPage() {
         }
       }
 
+      // 1. VẼ CÁ TRƯỚC
       for (let f of fishes) { f.update(); f.draw(); }
+      
+      // 2. VẼ SƯƠNG MÙ CHE LÊN ĐÀN CÁ
+      if (currentWeatherType === "fog") {
+          ctx!.fillStyle = "rgba(180, 195, 205, 0.92)";
+          ctx!.fillRect(0, waterY, width, height - waterY);
+
+          ctx!.fillStyle = "rgba(220, 230, 240, 0.45)";
+          let fogDrift = (Date.now() * 0.025) % width;
+          ctx!.fillRect(-fogDrift, waterY, width * 2, height - waterY);
+      }
+
+      // 3. VẼ CẦN CÂU (LÊN TRÊN CÙNG ĐỂ NGƯỜI CHƠI THẤY ĐƯỜNG CÂU)
       hook.holdStruggleTick(isHolding); hook.update(); hook.draw();
 
       const now = Date.now();
@@ -1788,6 +1799,7 @@ export default function CauCaMultiPage() {
       window.removeEventListener("cancelFishingAction", cancelFishingListener);
       window.removeEventListener("receivedCancelFishing", oppCancelFishingListener);
       cancelAnimationFrame(animationFrameId);
+      if (bossInterval) clearInterval(bossInterval);
     };
   }, [isMounted, activeRoom, userAvatar, selectedRod]);
 
