@@ -355,7 +355,7 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
                         ⚽ BẤM CĂN VẠCH!
                     </button>
                 ) : (
-                    <div className={`p-3 rounded-xl font-black text-xs uppercase animate-bounce ${resultMsg?.includes('FIFA') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500' : 'bg-amber-500/20 text-amber-300 border border-amber-500'}`}>
+                    <div className={`p-3 rounded-xl font-black text-xs uppercase animate-bounce ${resultMsg?.includes('FIFA') || resultMsg?.includes('CHUẨN') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500' : 'bg-amber-500/20 text-amber-300 border border-amber-500'}`}>
                         {resultMsg}
                     </div>
                 )}
@@ -405,9 +405,29 @@ export default function CauCaMultiPage() {
 
   const [isFindBaitMenuOpen, setIsFindBaitMenuOpen] = useState<boolean>(false);
   const [activeFindGame, setActiveFindGame] = useState<"insect" | "shrimp" | "bread" | null>(null);
-  const [lastInsectTime, setLastInsectTime] = useState<number>(0);
-  const [lastShrimpTime, setLastShrimpTime] = useState<number>(0);
-  const [lastBreadTime, setLastBreadTime] = useState<number>(0);
+  
+  // Dùng state lưu thời gian hồi chiêu tìm mồi & đồng bộ localStorage tránh việc F5/refresh là mất hồi chiêu 5 phút
+  const [lastInsectTime, setLastInsectTime] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("lastInsectTime");
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    return 0;
+  });
+  const [lastShrimpTime, setLastShrimpTime] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("lastShrimpTime");
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    return 0;
+  });
+  const [lastBreadTime, setLastBreadTime] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("lastBreadTime");
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    return 0;
+  });
 
   const [isAuctionOpen, setIsAuctionOpen] = useState<boolean>(false);
   const [auctionTab, setAuctionTab] = useState<"browse" | "sell">("browse");
@@ -691,7 +711,6 @@ export default function CauCaMultiPage() {
       const minNextBid = Math.floor(auction.current_bid * 1.1);
       if (score < minNextBid) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "THIẾU XU", message: `Cần ít nhất ${minNextBid.toLocaleString()}🪙 để ra giá tiếp theo!`, type: "beerus" } })); return; }
 
-      // Bỏ luôn xác nhận confirm để Host ko bao giờ bị pause thread 
       const newScore = score - minNextBid;
       syncScoreToSupabase(newScore);
 
@@ -1823,9 +1842,16 @@ export default function CauCaMultiPage() {
       if (activeUser?.id) await supabase.from("profiles").update({ inventory: newInv }).eq("id", activeUser.id);
 
       const now = Date.now();
-      if (activeFindGame === "insect") setLastInsectTime(now);
-      else if (activeFindGame === "shrimp") setLastShrimpTime(now);
-      else if (activeFindGame === "bread") setLastBreadTime(now);
+      if (activeFindGame === "insect") {
+          setLastInsectTime(now);
+          localStorage.setItem("lastInsectTime", now.toString());
+      } else if (activeFindGame === "shrimp") {
+          setLastShrimpTime(now);
+          localStorage.setItem("lastShrimpTime", now.toString());
+      } else if (activeFindGame === "bread") {
+          setLastBreadTime(now);
+          localStorage.setItem("lastBreadTime", now.toString());
+      }
 
       setActiveFindGame(null);
       showShopNotice(`✨ Thu hoạch thành công +${earnedQty} mồi!`);
@@ -1962,9 +1988,9 @@ export default function CauCaMultiPage() {
                       {(() => {
                           const now = Date.now();
                           const diff = now - lastInsectTime;
-                          const cooldown = 300000;
+                          const cooldown = 300000; // 5 phút
                           const canDo = diff >= cooldown;
-                          const leftSec = Math.ceil((cooldown - diff) / 1000);
+                          const leftSec = Math.max(0, Math.ceil((cooldown - diff) / 1000));
                           return (
                               <button disabled={!canDo} onClick={() => setActiveFindGame("insect")} className={`w-full p-3 rounded-xl font-black text-xs uppercase flex items-center justify-between border transition ${canDo ? 'bg-amber-600/30 border-amber-500 text-amber-300 hover:bg-amber-600/50 cursor-pointer' : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'}`}>
                                   <span>⛏️ Đào Côn Trùng (Giun, Dế)</span>
@@ -1978,7 +2004,7 @@ export default function CauCaMultiPage() {
                           const diff = now - lastShrimpTime;
                           const cooldown = 300000;
                           const canDo = diff >= cooldown;
-                          const leftSec = Math.ceil((cooldown - diff) / 1000);
+                          const leftSec = Math.max(0, Math.ceil((cooldown - diff) / 1000));
                           return (
                               <button disabled={!canDo} onClick={() => setActiveFindGame("shrimp")} className={`w-full p-3 rounded-xl font-black text-xs uppercase flex items-center justify-between border transition ${canDo ? 'bg-teal-600/30 border-teal-500 text-teal-300 hover:bg-teal-600/50 cursor-pointer' : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'}`}>
                                   <span>🦐 Bắt Tôm (Tép Ô Xi Hóa)</span>
@@ -1992,7 +2018,7 @@ export default function CauCaMultiPage() {
                           const diff = now - lastBreadTime;
                           const cooldown = 300000;
                           const canDo = diff >= cooldown;
-                          const leftSec = Math.ceil((cooldown - diff) / 1000);
+                          const leftSec = Math.max(0, Math.ceil((cooldown - diff) / 1000));
                           return (
                               <button disabled={!canDo} onClick={() => setActiveFindGame("bread")} className={`w-full p-3 rounded-xl font-black text-xs uppercase flex items-center justify-between border transition ${canDo ? 'bg-purple-600/30 border-purple-500 text-purple-300 hover:bg-purple-600/50 cursor-pointer' : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed'}`}>
                                   <span>🥖 Làm Bánh Mì Dụ Cá</span>
@@ -2296,7 +2322,6 @@ export default function CauCaMultiPage() {
 
       {oppAlert && <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-white px-3 py-1 rounded-lg font-black text-[10px] shadow-lg animate-bounce border border-emerald-300 pointer-events-none">{oppAlert}</div>}
       
-      {/* THÔNG BÁO CÁ - ĐÃ ĐẨY XUỐNG TOP-16 HOẶC TOP-20 ĐỂ KO ĐÈ MENU */}
       {centerCatchNotice && centerCatchNotice.show && (
         <div className="absolute left-1/2 -translate-x-1/2 top-16 z-40 bg-slate-900/90 border border-amber-400/60 px-2.5 py-0.5 rounded-md shadow-lg pointer-events-none flex items-center gap-1 animate-fadeIn">
           <span className="text-[9px]">🎣</span><span className="text-[9px] font-black text-amber-300">{centerCatchNotice.text}</span>
