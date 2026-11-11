@@ -327,7 +327,7 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
         const isSuccess = pos >= zoneStart && pos <= zoneEnd;
         const finalQty = isSuccess ? totalSuccess : 3;
 
-        setResultMsg(isSuccess ? `⚽ CĂN CHUẨN FIFA! (+${totalSuccess} MỒI)` : `⚠️ TRƯỢT VẠCH VÀNG! (NHẬN 3 MỒI CƠ BẢN)`);
+        setResultMsg(isSuccess ? `⚽ CĂN CHUẨN NÈ! (+${totalSuccess} MỒI)` : `⚠️ TRƯỢT VẠCH VÀNG! (NHẬN 3 MỒI CƠ BẢN)`);
         setTimeout(() => {
             onFinish(finalQty);
         }, 1800);
@@ -352,7 +352,7 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
 
                 {!stopped ? (
                     <button onClick={handleShoot} className="w-full bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black py-4 rounded-xl text-base uppercase active:scale-95 shadow-xl transition cursor-pointer">
-                        ⚽ BẤM CĂN VẠCH FIFA!
+                        ⚽ BẤM CĂN VẠCH!
                     </button>
                 ) : (
                     <div className={`p-3 rounded-xl font-black text-xs uppercase animate-bounce ${resultMsg?.includes('FIFA') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500' : 'bg-amber-500/20 text-amber-300 border border-amber-500'}`}>
