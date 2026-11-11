@@ -23,15 +23,16 @@ export default function RootLayout({
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [unreadCount, setUnreadCount] = useState<number>(0); // 🔴 Đếm tin nhắn chưa đọc
+  const [unreadCount, setUnreadCount] = useState<number>(0); 
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Tọa độ kéo thả khung chat nổi
+  // Tọa độ kéo thả & Trạng thái Drag
   const [chatPosition, setChatPosition] = useState({ x: 20, y: 100 });
   const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false); // Phân biệt giữa "Click" và "Drag"
+  const startPosRef = useRef({ x: 0, y: 0 });
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
-  // Kiểm tra user hiện tại & lấy tên hiển thị
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -63,7 +64,6 @@ export default function RootLayout({
     };
   }, []);
 
-  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ và đếm tin nhắn chưa đọc
   useEffect(() => {
     if (!user) return;
 
@@ -94,7 +94,6 @@ export default function RootLayout({
             return [...prev, newMsg];
           });
 
-          // Nếu khung chat đang đóng, tăng biến đếm tin nhắn chưa đọc lên cho tất cả mọi người
           setChatOpen((isOpen) => {
             if (!isOpen) {
               setUnreadCount((count) => count + 1);
@@ -112,7 +111,6 @@ export default function RootLayout({
     };
   }, [user]);
 
-  // Xử lý khi bấm mở khung chat thì reset số tin nhắn chưa đọc về 0
   const toggleChatOpen = (openState: boolean) => {
     setChatOpen(openState);
     if (openState) {
@@ -121,53 +119,42 @@ export default function RootLayout({
     }
   };
 
-  // Hàm dịch chuyển khung chat linh hoạt bằng nút bấm trên iPhone
-  const moveChat = (direction: 'up' | 'down' | 'left' | 'right') => {
-    const step = 60;
-    setChatPosition((prev) => {
-      let newX = prev.x;
-      let newY = prev.y;
-      if (direction === 'up') newY = Math.max(10, prev.y - step);
-      if (direction === 'down') newY = Math.min(window.innerHeight - 150, prev.y + step);
-      if (direction === 'left') newX = Math.max(10, prev.x - step);
-      if (direction === 'right') newX = Math.min(window.innerWidth - 100, prev.x + step);
-      return { x: newX, y: newY };
-    });
-  };
-
-  // Xử lý kéo thả chuột trên máy tính
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // --- LOGIC KÉO THẢ (DRAG & DROP) TỐI ƯU CHO MOBILE & PC ---
+  const handlePointerDown = (clientX: number, clientY: number) => {
     isDraggingRef.current = true;
+    hasMovedRef.current = false; // Reset trạng thái di chuyển
+    startPosRef.current = { x: clientX, y: clientY };
     dragOffsetRef.current = {
-      x: e.clientX - chatPosition.x,
-      y: e.clientY - chatPosition.y,
+      x: clientX - chatPosition.x,
+      y: clientY - chatPosition.y,
     };
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      isDraggingRef.current = true;
-      dragOffsetRef.current = {
-        x: e.touches[0].clientX - chatPosition.x,
-        y: e.touches[0].clientY - chatPosition.y,
-      };
-    }
-  };
+  const handleMouseDown = (e: React.MouseEvent) => handlePointerDown(e.clientX, e.clientY);
+  const handleTouchStart = (e: React.TouchEvent) => handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
+      if (Math.abs(e.clientX - startPosRef.current.x) > 5 || Math.abs(e.clientY - startPosRef.current.y) > 5) {
+        hasMovedRef.current = true; // Nếu rê chuột quá 5px, đánh dấu là đang drag (chứ ko phải click)
+      }
       setChatPosition({
-        x: Math.max(5, Math.min(window.innerWidth - 320, e.clientX - dragOffsetRef.current.x)),
-        y: Math.max(5, Math.min(window.innerHeight - 400, e.clientY - dragOffsetRef.current.y)),
+        x: Math.max(0, Math.min(window.innerWidth - 45, e.clientX - dragOffsetRef.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 45, e.clientY - dragOffsetRef.current.y)),
       });
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDraggingRef.current || e.touches.length === 0) return;
+      const clientX = e.touches[0].clientX;
+      const clientY = e.touches[0].clientY;
+      if (Math.abs(clientX - startPosRef.current.x) > 5 || Math.abs(clientY - startPosRef.current.y) > 5) {
+        hasMovedRef.current = true;
+      }
       setChatPosition({
-        x: Math.max(5, Math.min(window.innerWidth - 320, e.touches[0].clientX - dragOffsetRef.current.x)),
-        y: Math.max(5, Math.min(window.innerHeight - 400, e.touches[0].clientY - dragOffsetRef.current.y)),
+        x: Math.max(0, Math.min(window.innerWidth - 45, clientX - dragOffsetRef.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 45, clientY - dragOffsetRef.current.y)),
       });
     };
 
@@ -177,7 +164,7 @@ export default function RootLayout({
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
     window.addEventListener("touchend", handleMouseUp);
 
     return () => {
@@ -188,25 +175,17 @@ export default function RootLayout({
     };
   }, []);
 
-  // Gửi tin nhắn siêu tốc
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
     const textToSend = newMessage.trim();
     setNewMessage("");
-
     const userIdentifier = displayName || user.email || "Chiến Binh";
 
     try {
-      const { error } = await supabase.from("global_chat").insert([
-        {
-          user_email: userIdentifier,
-          message: textToSend,
-        },
-      ]);
+      const { error } = await supabase.from("global_chat").insert([{ user_email: userIdentifier, message: textToSend }]);
       if (error) throw error;
     } catch (err: any) {
-      console.error("Lỗi chat:", err.message);
       alert("Không thể gửi tin nhắn: " + err.message);
     }
   };
@@ -221,16 +200,24 @@ export default function RootLayout({
           <div className="fixed z-50 select-none" style={{ left: `${chatPosition.x}px`, top: `${chatPosition.y}px` }}>
             {!chatOpen ? (
               <button
-                onClick={() => toggleChatOpen(true)}
-                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black px-2.5 py-1.5 rounded-full shadow-lg flex items-center gap-1 cursor-pointer active:scale-95 border border-amber-300 hover:scale-105 transition relative"
-                title="Mở Chat"
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
+                onClick={(e) => {
+                  if (hasMovedRef.current) {
+                    e.preventDefault(); // Nếu vừa kéo thả xong thì KHÔNG mở chat
+                    return;
+                  }
+                  toggleChatOpen(true); // Còn nếu chỉ chạm nhẹ thì mở chat
+                }}
+                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 w-12 h-12 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)] flex items-center justify-center cursor-pointer active:scale-95 border-2 border-amber-300 transition-transform relative"
+                style={{ touchAction: "none" }} // QUAN TRỌNG: Chống cuộn trang khi kéo trên iPhone
+                title="Mở Chat (Kéo để di chuyển)"
               >
-                <span className="text-sm">💬</span>
-                <span className="text-[10px] tracking-wider">CHAT</span>
+                <span className="text-2xl mt-0.5">💬</span>
 
-                {/* 🔴 BADGE HIỂN THỊ SỐ LƯỢNG TIN NHẮN CHƯA ĐỌC NHỎ GỌN */}
+                {/* BADGE SỐ LƯỢNG TIN NHẮN CHƯA ĐỌC */}
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-rose-600 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center border border-slate-950 animate-bounce shadow">
+                  <span className="absolute -top-1 -right-1 bg-rose-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-950 animate-bounce shadow">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
@@ -238,32 +225,25 @@ export default function RootLayout({
             ) : (
               <div className="bg-slate-900/95 border-2 border-amber-500/70 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] w-[300px] sm:w-[350px] h-[380px] sm:h-[420px] flex flex-col overflow-hidden backdrop-blur-xl">
                 
-                {/* THANH TIÊU ĐỀ TÍCH HỢP NÚT ĐIỀU HƯỚNG DỄ DÀNG TRÊN IPHONE */}
+                {/* THANH TIÊU ĐỀ - DÙNG ĐỂ KÉO KHUNG CHAT */}
                 <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
-                  className="bg-slate-800/95 border-b border-amber-500/30 p-2 flex justify-between items-center cursor-move select-none"
-                  title="Nhấn và kéo để di chuyển khung chat"
+                  className="bg-slate-800/95 border-b border-amber-500/30 p-2.5 flex justify-between items-center cursor-move select-none"
+                  title="Nhấn và kéo để di chuyển"
+                  style={{ touchAction: "none" }}
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2 pointer-events-none">
                     <span className="font-black text-xs text-amber-400 tracking-wider uppercase">
                       💬 CHAT TOÀN CỤC
                     </span>
                   </div>
 
-                  {/* NÚT ĐIỀU HƯỚNG DI CHUYỂN NHANH TRÊN MOBILE */}
-                  <div className="flex items-center gap-0.5 bg-slate-900/80 px-1 py-0.5 rounded-lg border border-slate-700">
-                    <button onClick={() => moveChat('left')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Sang trái">◀</button>
-                    <button onClick={() => moveChat('up')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Lên trên">▲</button>
-                    <button onClick={() => moveChat('down')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Xuống dưới">▼</button>
-                    <button onClick={() => moveChat('right')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Sang phải">▶</button>
-                  </div>
-
                   <button
                     onClick={() => toggleChatOpen(false)}
-                    className="text-slate-400 hover:text-white font-bold text-xs px-1.5 py-0.5 rounded cursor-pointer"
+                    className="text-slate-400 hover:bg-slate-700/50 hover:text-white font-bold text-sm w-7 h-7 flex items-center justify-center rounded cursor-pointer transition"
                   >
-                    ✖
+                    ✕
                   </button>
                 </div>
 
