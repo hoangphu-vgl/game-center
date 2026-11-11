@@ -401,8 +401,6 @@ export default function CauCaMultiPage() {
   const [isBasicShopOpen, setIsBasicShopOpen] = useState<boolean>(false);
   const [isCraftingOpen, setIsCraftingOpen] = useState<boolean>(false);
   const [craftingTab, setCraftingTab] = useState<"normal" | "advanced">("normal");
-
-  // Nút điều khiển Bảng Luật
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
 
   const [isFindBaitMenuOpen, setIsFindBaitMenuOpen] = useState<boolean>(false);
@@ -562,7 +560,10 @@ export default function CauCaMultiPage() {
 
   const handleBuyBasicBait = async (baitId: string, unitPrice: number, qty: number) => {
       const totalPrice = unitPrice * qty;
-      if (score < totalPrice) { alert("Không đủ xu để mua mồi cơ bản này!"); return; }
+      if (score < totalPrice) { 
+          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "THIẾU XU", message: "Không đủ xu để mua mồi cơ bản này!", type: "beerus" } }));
+          return; 
+      }
       const newScore = score - totalPrice;
       const newInv = { ...inventory, [baitId]: (inventory[baitId] || 0) + qty };
       setScore(newScore);
@@ -575,12 +576,18 @@ export default function CauCaMultiPage() {
   }
 
   const prepareCraftBait = (recipe: any) => {
-      if (score < recipe.fee) { alert("Không đủ xu chế tạo!"); return; }
+      if (score < recipe.fee) { 
+          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "THIẾU XU", message: "Không đủ xu chế tạo!", type: "beerus" } }));
+          return; 
+      }
       let canCraft = true;
       for (let req of recipe.req) {
           if ((inventory[req.id] || 0) < req.qty) canCraft = false;
       }
-      if (!canCraft) { alert("Thiếu nguyên liệu pha chế!"); return; }
+      if (!canCraft) { 
+          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "THIẾU NGUYÊN LIỆU", message: "Thiếu nguyên liệu pha chế!", type: "beerus" } }));
+          return; 
+      }
       setActiveCraftingRecipe(recipe);
   }
 
@@ -614,13 +621,16 @@ export default function CauCaMultiPage() {
 
   const handleCreateAuction = async () => {
       const activeUser = (window as any).currentUser || user;
-      if (!activeUser?.id) { alert("Đăng nhập để đấu giá!"); return; }
-      if (!sellForm.itemId) { alert("Vui lòng chọn món đồ muốn đăng bán!"); return; }
+      if (!activeUser?.id) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Đăng nhập để đấu giá!", type: "beerus" } })); return; }
+      if (!sellForm.itemId) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Vui lòng chọn món đồ muốn đăng bán!", type: "beerus" } })); return; }
       
       const isBait = sellForm.itemType === "bait";
       if (isBait) {
           const currentQty = inventory[sellForm.itemId] || 0;
-          if (currentQty < sellForm.amount) { alert("Ní không đủ mồi này trong kho để đăng bán!"); return; }
+          if (currentQty < sellForm.amount) { 
+              window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Ní không đủ mồi này trong kho để đăng bán!", type: "beerus" } })); 
+              return; 
+          }
           
           const newInv = { ...inventory, [sellForm.itemId]: currentQty - sellForm.amount };
           setInventory(newInv);
@@ -648,7 +658,7 @@ export default function CauCaMultiPage() {
           if (!error) {
               showShopNotice("Đăng vật phẩm đấu giá thành công lên sàn!");
               setAuctionTab("browse");
-          } else { alert("Có lỗi tạo phiên đấu giá!"); }
+          } else { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Có lỗi tạo phiên đấu giá!", type: "beerus" } })); }
       } else {
           const rodObj = shopRods.find(r => r.filename === sellForm.itemId);
           if (!rodObj) return;
@@ -669,21 +679,19 @@ export default function CauCaMultiPage() {
           if (!error) {
               showShopNotice("Đăng cần câu lên sàn thành công!");
               setAuctionTab("browse");
-          } else { alert("Lỗi đăng bán cần!"); }
+          } else { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Lỗi đăng bán cần!", type: "beerus" } })); }
       }
   }
 
   const handleBidRealtime = async (auction: any) => {
       const activeUser = (window as any).currentUser || user;
-      if (!activeUser?.id) { alert("Vui lòng đăng nhập!"); return; }
-      if (auction.seller_id === activeUser.id) { alert("Không thể tự đấu giá món của chính mình!"); return; }
+      if (!activeUser?.id) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Vui lòng đăng nhập!", type: "beerus" } })); return; }
+      if (auction.seller_id === activeUser.id) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Không thể tự đấu giá món của chính mình!", type: "beerus" } })); return; }
 
       const minNextBid = Math.floor(auction.current_bid * 1.1);
-      if (score < minNextBid) { alert(`Cần ít nhất ${minNextBid.toLocaleString()}🪙 để ra giá tiếp theo!`); return; }
+      if (score < minNextBid) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "THIẾU XU", message: `Cần ít nhất ${minNextBid.toLocaleString()}🪙 để ra giá tiếp theo!`, type: "beerus" } })); return; }
 
-      const confirm = window.confirm(`Bạn muốn ra giá ${minNextBid.toLocaleString()}🪙 cho ${auction.item_name}?`);
-      if (!confirm) return;
-
+      // Bỏ luôn xác nhận confirm để Host ko bao giờ bị pause thread 
       const newScore = score - minNextBid;
       syncScoreToSupabase(newScore);
 
@@ -696,7 +704,7 @@ export default function CauCaMultiPage() {
       if (!error) {
           showShopNotice("Ní đã trở thành người ra giá cao nhất!");
       } else {
-          alert("Lỗi đấu giá, kiểm tra kết nối!");
+          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Lỗi đấu giá, kiểm tra kết nối!", type: "beerus" } }));
       }
   }
 
@@ -709,9 +717,9 @@ export default function CauCaMultiPage() {
 
   const joinRoom = async (roomId: string) => {
     const activeUser = (window as any).currentUser || user;
-    if (!activeUser?.id) { alert("Vui lòng đăng nhập để tham gia!"); return; }
+    if (!activeUser?.id) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Vui lòng đăng nhập để tham gia!", type: "beerus" } })); return; }
     const { data: targetRoom } = await supabase.from("cauca_rooms").select("*").eq("id", roomId).single();
-    if (!targetRoom) { alert("Không tìm thấy phòng!"); return; }
+    if (!targetRoom) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Không tìm thấy phòng!", type: "beerus" } })); return; }
 
     let slotToTake: string | null = null;
     for (let i = 1; i <= 10; i++) {
@@ -725,7 +733,7 @@ export default function CauCaMultiPage() {
       }
     }
 
-    if (!slotToTake) { alert("Phòng này đã đầy (10/10)!"); return; }
+    if (!slotToTake) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "ĐẦY", message: "Phòng này đã đầy (10/10)!", type: "beerus" } })); return; }
 
     if (targetRoom[slotToTake] !== activeUser.id) {
       await supabase.from("cauca_rooms").update({ [slotToTake]: activeUser.id }).eq("id", roomId);
@@ -1123,7 +1131,8 @@ export default function CauCaMultiPage() {
         const inv = (window as any).currentInventory || {};
         
         if (!inv[currentSelectedBait.id] || inv[currentSelectedBait.id] <= 0) {
-            alert("Ní đã hết mồi này rồi! Hãy chọn mồi khác trong kho!"); return;
+            window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "HẾT MỒI!", message: "Ní đã hết mồi này rồi! Hãy chọn mồi khác trong kho!", type: "beerus" } }));
+            return;
         }
 
         const newInv = { ...inv, [currentSelectedBait.id]: inv[currentSelectedBait.id] - 1 };
@@ -2118,59 +2127,50 @@ export default function CauCaMultiPage() {
         </div>
       )}
 
-      <div className="absolute top-2 left-2 right-2 flex justify-between items-center z-50 pointer-events-auto gap-1">
-        <div className="flex items-center space-x-1">
-          <button onClick={leaveRoom} className="bg-rose-900/95 text-rose-200 hover:bg-rose-800 px-2.5 py-1.5 rounded-md text-[10px] sm:text-xs font-black border border-rose-500/40 shadow cursor-pointer active:scale-95 transition">← Rời</button>
-          <div className="bg-black/85 text-white px-2 py-1.5 rounded-md font-bold text-[10px] sm:text-xs border border-amber-500/40 shadow flex items-center gap-1">
-            <img src={userAvatar} alt="Avatar" className="w-4 h-4 rounded-full border border-amber-400 object-cover" />
+      {/* --- NÚT MENU Ở TRÊN (CẢI TIẾN GỌN NHẸ HƠN) --- */}
+      <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-50 pointer-events-auto gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <button onClick={leaveRoom} className="bg-rose-900/95 text-rose-200 hover:bg-rose-800 px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black border border-rose-500/40 shadow cursor-pointer active:scale-95 transition">← Rời</button>
+          
+          <div className="bg-black/85 text-white px-2 py-1 rounded-md font-bold text-[9px] sm:text-[10px] border border-amber-500/40 shadow flex items-center gap-1">
+            <img src={userAvatar} alt="Avatar" className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-amber-400 object-cover" />
             <span><span id="score" className="text-[#FFEB3B] font-black">{isMounted ? score.toLocaleString() : "..."}</span>🪙</span>
           </div>
-          <button onClick={() => setIsShopOpen(true)} className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-2.5 py-1.5 rounded-md font-black text-[10px] sm:text-xs shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40">
+
+          <button onClick={() => setIsShopOpen(true)} className="bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
             🛍️ Cần
           </button>
-          <button onClick={() => setIsBasicShopOpen(true)} className="bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 px-2.5 py-1.5 rounded-md font-black text-[10px] sm:text-xs shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40">
+          <button onClick={() => setIsBasicShopOpen(true)} className="bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
             🪱 Shop
           </button>
-          <button onClick={() => setIsCraftingOpen(true)} className="bg-gradient-to-r from-purple-500 to-pink-400 text-white px-2.5 py-1.5 rounded-md font-black text-[10px] sm:text-xs shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40">
+          <button onClick={() => setIsCraftingOpen(true)} className="bg-gradient-to-r from-purple-500 to-pink-400 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
             🔮 Trộn Mồi
           </button>
           
-          {/* NÚT MỚI: LUẬT & HƯỚNG DẪN */}
-          <button onClick={() => setIsGuideOpen(true)} className="bg-gradient-to-r from-sky-500 to-blue-400 text-white px-2.5 py-1.5 rounded-md font-black text-[10px] sm:text-xs shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40">
+          <button onClick={() => setIsGuideOpen(true)} className="bg-gradient-to-r from-sky-500 to-blue-400 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
             📜 Luật
           </button>
 
-          <button onClick={() => setIsFindBaitMenuOpen(true)} className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-2.5 py-1.5 rounded-md font-black text-[10px] sm:text-xs shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40">
+          <button onClick={() => setIsFindBaitMenuOpen(true)} className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
             🏕️ Tìm Mồi
           </button>
-          <button onClick={() => setIsAuctionOpen(true)} className="bg-gradient-to-r from-blue-600 to-indigo-500 text-white px-2.5 py-1.5 rounded-md font-black text-[10px] sm:text-xs shadow active:scale-95 transition cursor-pointer flex items-center gap-0.5 border border-white/40">
+          <button onClick={() => setIsAuctionOpen(true)} className="bg-gradient-to-r from-blue-600 to-indigo-500 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
             ⚖️ Đấu Giá
           </button>
         </div>
 
-        {weatherState.active && (
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-rose-600/90 text-white px-4 py-1.5 rounded-lg font-black text-[10px] shadow-lg animate-pulse border border-white pointer-events-none z-40">
-                {weatherState.warningText}
-            </div>
-        )}
-
-        {centerCatchNotice && centerCatchNotice.show && (
-          <div className="absolute left-1/2 -translate-x-1/2 top-1.5 z-40 bg-slate-900/90 border border-amber-400/60 px-2.5 py-0.5 rounded-md shadow-lg pointer-events-none flex items-center gap-1 animate-fadeIn">
-            <span className="text-[9px]">🎣</span><span className="text-[9px] font-black text-amber-300">{centerCatchNotice.text}</span>
-          </div>
-        )}
-
-        <div className="flex items-center space-x-1.5">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Mồi Cơ Bản Dropdown */}
           <div className="relative">
             <button 
               onClick={() => {
                 setIsBasicBaitDropdownOpen(!isBasicBaitDropdownOpen);
                 setIsSpecialBaitDropdownOpen(false);
               }} 
-              className={`px-2.5 py-1.5 rounded-md shadow-2xl flex items-center space-x-1 text-[10px] sm:text-xs font-black cursor-pointer transition select-none active:scale-95 border ${selectedBait.id.startsWith("basic_") ? "bg-amber-950/90 border-amber-400 text-amber-300 ring-1 ring-amber-400/50" : "bg-slate-900/95 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
+              className={`px-2 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-[9px] sm:text-[10px] font-black cursor-pointer transition select-none active:scale-95 border ${selectedBait.id.startsWith("basic_") ? "bg-amber-950/90 border-amber-400 text-amber-300 ring-1 ring-amber-400/50" : "bg-slate-900/95 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
             >
               <span>{selectedBait.id.startsWith("basic_") ? (selectedBait.emoji || "🪱") : "🪱"}</span>
-              <span className="truncate max-w-[75px] sm:max-w-[100px]">
+              <span className="truncate max-w-[70px] sm:max-w-[85px]">
                 {selectedBait.id.startsWith("basic_") ? selectedBait.name : "Mồi Cơ Bản"}
               </span>
               <span>{isBasicBaitDropdownOpen ? "▲" : "▼"}</span>
@@ -2213,16 +2213,17 @@ export default function CauCaMultiPage() {
             )}
           </div>
 
+          {/* Mồi Trộn Dropdown */}
           <div className="relative">
             <button 
               onClick={() => {
                 setIsSpecialBaitDropdownOpen(!isSpecialBaitDropdownOpen);
                 setIsBasicBaitDropdownOpen(false);
               }} 
-              className={`px-2.5 py-1.5 rounded-md shadow-2xl flex items-center space-x-1 text-[10px] sm:text-xs font-black cursor-pointer transition select-none active:scale-95 border ${!selectedBait.id.startsWith("basic_") ? "bg-purple-950/90 border-purple-400 text-purple-300 ring-1 ring-purple-400/50" : "bg-slate-900/95 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
+              className={`px-2 py-1 rounded-md shadow-2xl flex items-center space-x-1 text-[9px] sm:text-[10px] font-black cursor-pointer transition select-none active:scale-95 border ${!selectedBait.id.startsWith("basic_") ? "bg-purple-950/90 border-purple-400 text-purple-300 ring-1 ring-purple-400/50" : "bg-slate-900/95 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
             >
               <span>🔮</span>
-              <span className="truncate max-w-[75px] sm:max-w-[100px]">
+              <span className="truncate max-w-[70px] sm:max-w-[85px]">
                 {!selectedBait.id.startsWith("basic_") ? selectedBait.name : "Mồi Trộn"}
               </span>
               <span>{isSpecialBaitDropdownOpen ? "▲" : "▼"}</span>
@@ -2269,16 +2270,35 @@ export default function CauCaMultiPage() {
             )}
           </div>
 
-          <button onClick={() => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); setIsFullscreen(true); } else { document.exitFullscreen(); setIsFullscreen(false); } }} className="bg-slate-800/90 text-white font-bold py-1.5 px-2.5 rounded-md text-[10px] sm:text-xs border border-slate-700 shadow hidden sm:block active:scale-95 cursor-pointer">
+          <button onClick={() => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); setIsFullscreen(true); } else { document.exitFullscreen(); setIsFullscreen(false); } }} className="bg-slate-800/90 text-white font-bold py-1 px-2 rounded-md text-[9px] sm:text-[10px] border border-slate-700 shadow hidden sm:block active:scale-95 cursor-pointer">
             {isFullscreen ? "🗗" : "🖵"}
           </button>
         </div>
       </div>
 
-      {oppAlert && <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-white px-3 py-1 rounded-lg font-black text-[10px] shadow-lg animate-bounce border border-emerald-300 pointer-events-none">{oppAlert}</div>}
+      {weatherState.active && (
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-rose-600/90 text-white px-4 py-1.5 rounded-lg font-black text-[10px] shadow-lg animate-pulse border border-white pointer-events-none z-40">
+              {weatherState.warningText}
+          </div>
+      )}
+
+      {oppAlert && <div className="absolute top-20 left-1/2 -translate-x-1/2 z-40 bg-emerald-500/90 text-white px-3 py-1 rounded-lg font-black text-[10px] shadow-lg animate-bounce border border-emerald-300 pointer-events-none">{oppAlert}</div>}
       
+      {/* THÔNG BÁO CÁ - ĐÃ ĐẨY XUỐNG TOP-16 HOẶC TOP-20 ĐỂ KO ĐÈ MENU */}
+      {centerCatchNotice && centerCatchNotice.show && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-16 z-40 bg-slate-900/90 border border-amber-400/60 px-2.5 py-0.5 rounded-md shadow-lg pointer-events-none flex items-center gap-1 animate-fadeIn">
+          <span className="text-[9px]">🎣</span><span className="text-[9px] font-black text-amber-300">{centerCatchNotice.text}</span>
+        </div>
+      )}
+
+      {myCatchNotice && myCatchNotice.show && (
+        <div className="absolute top-20 left-3 z-40 bg-slate-900/95 border-2 border-amber-400 px-2 py-1 rounded-xl shadow-2xl pointer-events-none flex items-center gap-1.5 animate-fadeIn">
+          <span className="text-xs">🎣</span><div><p className="text-[8px] font-bold text-slate-300">{myCatchNotice.text}</p><p className="text-xs font-black text-amber-300">{myCatchNotice.amount}</p></div>
+        </div>
+      )}
+
       {bossUI && (
-        <div className={`absolute top-16 right-4 w-40 sm:w-48 bg-slate-950/90 border-2 p-2 rounded-xl backdrop-blur-md z-30 shadow-xl animate-fade-in pointer-events-none border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]`}>
+        <div className={`absolute top-20 right-4 w-40 sm:w-48 bg-slate-950/90 border-2 p-2 rounded-xl backdrop-blur-md z-30 shadow-xl animate-fade-in pointer-events-none border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]`}>
           <div className="flex justify-between items-center text-[8px] sm:text-[9px] font-black mb-1 text-white">
             <span className="truncate max-w-[80px]">👑 {bossUI.name}</span><span className="text-yellow-300">{bossUI.weightText}</span>
           </div>
@@ -2286,12 +2306,6 @@ export default function CauCaMultiPage() {
             <div className="h-full bg-gradient-to-r from-red-600 via-amber-500 to-yellow-400 transition-all duration-200" style={{ width: `${bossUI.hpPercent}%` }} />
           </div>
           <div className="text-right text-[7px] text-slate-400 mt-0.5 font-bold">{Math.round(bossUI.hpPercent)}% HP</div>
-        </div>
-      )}
-
-      {myCatchNotice && myCatchNotice.show && (
-        <div className="absolute top-14 left-2 z-40 bg-slate-900/95 border-2 border-amber-400 px-2 py-1 rounded-xl shadow-2xl pointer-events-none flex items-center gap-1.5 animate-fadeIn">
-          <span className="text-xs">🎣</span><div><p className="text-[8px] font-bold text-slate-300">{myCatchNotice.text}</p><p className="text-xs font-black text-amber-300">{myCatchNotice.amount}</p></div>
         </div>
       )}
 
