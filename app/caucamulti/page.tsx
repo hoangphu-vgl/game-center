@@ -2469,28 +2469,38 @@ export default function CauCaMultiPage() {
         </div>
       )}
 
-      <div className="absolute bottom-6 left-4 z-40 flex items-center space-x-2 bg-black/80 p-2 rounded-xl border border-amber-500/60 shadow-xl backdrop-blur-md pointer-events-auto">
-        <button onMouseDown={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: -4 })); }}
-          onMouseUp={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
-          onMouseLeave={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
-          onTouchStart={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: -4 })); }}
-          onTouchEnd={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+      <div 
+        className="absolute bottom-6 left-4 z-40 flex items-center space-x-2 bg-black/80 p-2 rounded-xl border border-amber-500/60 shadow-xl backdrop-blur-md pointer-events-auto"
+        style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
+      >
+        <button 
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: -4 })); }}
+          onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+          onMouseLeave={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+          onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: -4 })); }}
+          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+          style={{ WebkitTouchCallout: "none" }}
           className="w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-lg rounded-lg active:scale-90 transition shadow cursor-pointer flex items-center justify-center select-none"
         >◀</button>
-        <span className="text-[10px] font-black text-amber-300 uppercase px-1">Chèo</span>
-        <button onMouseDown={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 4 })); }}
-          onMouseUp={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
-          onMouseLeave={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
-          onTouchStart={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 4 })); }}
-          onTouchEnd={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+        <span className="text-[10px] font-black text-amber-300 uppercase px-1 select-none pointer-events-none" style={{ WebkitTouchCallout: "none" }}>Chèo</span>
+        <button 
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 4 })); }}
+          onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+          onMouseLeave={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+          onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 4 })); }}
+          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("moveBoat", { detail: 0 })); }}
+          style={{ WebkitTouchCallout: "none" }}
           className="w-10 h-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-lg rounded-lg active:scale-90 transition shadow cursor-pointer flex items-center justify-center select-none"
         >▶</button>
       </div>
       
       {isStrugglingUI && (
-          <div className="absolute bottom-6 right-4 z-40">
-             <button onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("cancelFishingAction")); }}
-                className="bg-rose-600 hover:bg-rose-500 text-white font-black px-4 py-3 rounded-xl border border-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.6)] active:scale-95 transition-all text-xs cursor-pointer"
+          <div className="absolute bottom-6 right-4 z-40" style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}>
+             <button 
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("cancelFishingAction")); }}
+                onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("cancelFishingAction")); }}
+                style={{ WebkitTouchCallout: "none" }}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-black px-4 py-3 rounded-xl border border-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.6)] active:scale-95 transition-all text-xs cursor-pointer select-none"
              >
                 🔪 CẮT DÂY (HỦY)
              </button>
