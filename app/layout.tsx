@@ -23,7 +23,7 @@ export default function RootLayout({
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [unreadCount, setUnreadCount] = useState<number>(0); // 🔴 Đếm tin nhắn chưa đọc
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Tọa độ kéo thả khung chat nổi
@@ -63,7 +63,7 @@ export default function RootLayout({
     };
   }, []);
 
-  // Lắng nghe Chat Realtime toàn cục tối ưu tốc độ và đếm tin nhắn chưa đọc
+  // Lắng nghe Chat Realtime toàn cục
   useEffect(() => {
     if (!user) return;
 
@@ -94,7 +94,6 @@ export default function RootLayout({
             return [...prev, newMsg];
           });
 
-          // Nếu khung chat đang đóng, tăng biến đếm tin nhắn chưa đọc lên cho tất cả mọi người
           setChatOpen((isOpen) => {
             if (!isOpen) {
               setUnreadCount((count) => count + 1);
@@ -112,7 +111,6 @@ export default function RootLayout({
     };
   }, [user]);
 
-  // Xử lý khi bấm mở khung chat thì reset số tin nhắn chưa đọc về 0
   const toggleChatOpen = (openState: boolean) => {
     setChatOpen(openState);
     if (openState) {
@@ -121,7 +119,6 @@ export default function RootLayout({
     }
   };
 
-  // Hàm dịch chuyển khung chat linh hoạt bằng nút bấm trên iPhone
   const moveChat = (direction: 'up' | 'down' | 'left' | 'right') => {
     const step = 60;
     setChatPosition((prev) => {
@@ -135,7 +132,7 @@ export default function RootLayout({
     });
   };
 
-  // Xử lý kéo thả chuột trên máy tính
+  // Xử lý kéo thả chuột
   const handleMouseDown = (e: React.MouseEvent) => {
     isDraggingRef.current = true;
     dragOffsetRef.current = {
@@ -175,10 +172,11 @@ export default function RootLayout({
       isDraggingRef.current = false;
     };
 
+    // Thêm passive: true để không gián đoạn cảm ứng mượt trên iOS
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("touchmove", handleTouchMove);
-    window.addEventListener("touchend", handleMouseUp);
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleMouseUp, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
@@ -188,7 +186,6 @@ export default function RootLayout({
     };
   }, []);
 
-  // Gửi tin nhắn siêu tốc
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
@@ -222,12 +219,11 @@ export default function RootLayout({
             {!chatOpen ? (
               <button
                 onClick={() => toggleChatOpen(true)}
-                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black w-10 h-10 rounded-full shadow-lg flex items-center justify-center cursor-pointer active:scale-95 border border-amber-300 hover:scale-105 transition relative"
-                title="Mở Chat"
+                style={{ WebkitTapHighlightColor: "transparent" }}
+                className="bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-black w-10 h-10 rounded-full shadow-lg flex items-center justify-center cursor-pointer active:scale-95 border border-amber-300 transition relative"
               >
                 <span className="text-lg mt-0.5">💬</span>
 
-                {/* 🔴 BADGE HIỂN THỊ SỐ LƯỢNG TIN NHẮN CHƯA ĐỌC NHỎ GỌN */}
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-rose-600 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center border border-slate-950 animate-bounce shadow">
                     {unreadCount > 99 ? "99+" : unreadCount}
@@ -237,12 +233,11 @@ export default function RootLayout({
             ) : (
               <div className="bg-slate-900/95 border-2 border-amber-500/70 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] w-[300px] sm:w-[350px] h-[380px] sm:h-[420px] flex flex-col overflow-hidden backdrop-blur-xl">
                 
-                {/* THANH TIÊU ĐỀ TÍCH HỢP NÚT ĐIỀU HƯỚNG DỄ DÀNG TRÊN IPHONE */}
+                {/* THANH TIÊU ĐỀ */}
                 <div
                   onMouseDown={handleMouseDown}
                   onTouchStart={handleTouchStart}
                   className="bg-slate-800/95 border-b border-amber-500/30 p-2 flex justify-between items-center cursor-move select-none"
-                  title="Nhấn và kéo để di chuyển khung chat"
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="font-black text-xs text-amber-400 tracking-wider uppercase">
@@ -252,15 +247,15 @@ export default function RootLayout({
 
                   {/* NÚT ĐIỀU HƯỚNG DI CHUYỂN NHANH TRÊN MOBILE */}
                   <div className="flex items-center gap-0.5 bg-slate-900/80 px-1 py-0.5 rounded-lg border border-slate-700">
-                    <button onClick={() => moveChat('left')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Sang trái">◀</button>
-                    <button onClick={() => moveChat('up')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Lên trên">▲</button>
-                    <button onClick={() => moveChat('down')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Xuống dưới">▼</button>
-                    <button onClick={() => moveChat('right')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold hover:bg-slate-800 rounded text-[10px]" title="Sang phải">▶</button>
+                    <button onClick={() => moveChat('left')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold rounded text-[10px]">◀</button>
+                    <button onClick={() => moveChat('up')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold rounded text-[10px]">▲</button>
+                    <button onClick={() => moveChat('down')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold rounded text-[10px]">▼</button>
+                    <button onClick={() => moveChat('right')} className="w-5 h-5 flex items-center justify-center text-amber-400 font-bold rounded text-[10px]">▶</button>
                   </div>
 
                   <button
                     onClick={() => toggleChatOpen(false)}
-                    className="text-slate-400 hover:text-white font-bold text-xs px-1.5 py-0.5 rounded cursor-pointer"
+                    className="text-slate-400 font-bold text-xs px-1.5 py-0.5 rounded cursor-pointer"
                   >
                     ✖
                   </button>
@@ -307,7 +302,7 @@ export default function RootLayout({
                   />
                   <button
                     type="submit"
-                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] px-3 py-2 rounded-xl cursor-pointer active:scale-95 shadow"
+                    className="bg-amber-400 text-slate-950 font-black text-[11px] px-3 py-2 rounded-xl cursor-pointer active:scale-95 shadow"
                   >
                     Gửi
                   </button>
