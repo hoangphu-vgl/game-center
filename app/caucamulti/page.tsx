@@ -77,6 +77,20 @@ const baitDictionary: { [key: string]: { name: string; filename?: string; emoji?
   bait_moi_xac_song_poor: { name: "Mồi Xác Sống (Kém)", filename: "06_ba_xac_song.png", desc: "⚠️ Lỗi trộn, 50% hụt mồi.", type: "normal_poor" },
 };
 
+// --- DATA DANH HIỆU DRAGON BALL ---
+const ACHIEVEMENTS_CONFIG = [
+  { id: "ach_1", name: "Tân Binh Trái Đất", aura: "Trắng ngà", desc: "Thu thập đủ 5 loại cá Tầng Mặt", rewardText: "50,000🪙 + x10 Mồi Trùng Thượng Hạng" },
+  { id: "ach_2", name: "Sức Mạnh Kaio-ken", aura: "Đỏ rực bốc hỏa", desc: "Thu thập đủ 5 loại cá Tầng Trung", rewardText: "150,000🪙 + x10 Mồi Tép Ô Xi Hóa" },
+  { id: "ach_3", name: "Siêu Saiyan Cấp 1", aura: "Vàng chớp điện", desc: "Thu thập đủ 5 loại cá Tầng Đáy", rewardText: "300,000🪙 + x5 Bả Độc Tố" },
+  { id: "ach_4", name: "Siêu Saiyan Cấp 2", aura: "Vàng điện từ", desc: "Bắt và đưa vào hồ 1 Rương bất kỳ", rewardText: "500,000🪙 + 1 Cần Câu Máy (3 Ngày)" },
+  { id: "ach_5", name: "Siêu Saiyan Cấp 3", aura: "Vàng tóc dài, chấn động", desc: "Thu thập đủ bộ cá Mập", rewardText: "1,000,000🪙 + x5 Mồi Sấm Sét" },
+  { id: "ach_6", name: "Super Saiyan God", aura: "Đỏ rực thần thánh", desc: "Nuôi 2 con cá bất kỳ sinh sản lứa đầu", rewardText: "2,500,000🪙 + x1 Mồi Hoàng Gia" },
+  { id: "ach_7", name: "Super Saiyan Blue", aura: "Xanh dương hạt sao", desc: "Thu thập thành công 1 Boss bất kỳ", rewardText: "5,000,000🪙 + 1 Cần Véc-tơ Gỗ (3N)" },
+  { id: "ach_8", name: "Bản Năng Vô Cực - Dấu Hiệu", aura: "Bạc lấp lánh", desc: "Sở hữu 5 con cá đạt kích thước max", rewardText: "10,000,000🪙 + x10 Mồi Cơ Khí" },
+  { id: "ach_9", name: "Bản Năng Vô Cực - Hoàn Thiện", aura: "Bạc chói lóa", desc: "Thu thập đủ 3 loại Boss Thượng Cổ", rewardText: "20,000,000🪙 + 1 Cần Câu Băng (7N)" },
+  { id: "ach_10", name: "Cần Thủ Vũ Trụ", aura: "Đa Sắc Hào Quang", desc: "Thu thập FULL tất cả các loại cá (Pokedex)", rewardText: "50,000,000🪙 + Cần Cực Phẩm Mạ Vàng" },
+];
+
 function resolveBaitInfo(id: string) {
   if (baitDictionary[id]) return baitDictionary[id];
   const basic = basicBaitsConfig.find(b => b.id === id);
@@ -360,7 +374,7 @@ export default function CauCaMultiPage() {
   const [userAvatar, setUserAvatar] = useState<string>("/assets/avatar/xtra1.ico");
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   
-  const [inventory, setInventory] = useState<{ [key: string]: number }>({ basic_worm: 10, bait_thuong_1: 5 });
+  const [inventory, setInventory] = useState<any>({ basic_worm: 10, bait_thuong_1: 5, fish_inventory: [], aquarium: [], unlocked_fishes: [], claimed_achievements: [] });
 
   const [rooms, setRooms] = useState<any[]>([]);
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -391,6 +405,11 @@ export default function CauCaMultiPage() {
   const [isCraftingOpen, setIsCraftingOpen] = useState<boolean>(false);
   const [craftingTab, setCraftingTab] = useState<"normal" | "advanced">("normal");
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
+
+  // --- UI MỚI: KHO CÁ & DANH HIỆU ---
+  const [isFishBagOpen, setIsFishBagOpen] = useState<boolean>(false);
+  const [isAchievementOpen, setIsAchievementOpen] = useState<boolean>(false);
+  const [selectedFishes, setSelectedFishes] = useState<string[]>([]);
 
   const [isFindBaitMenuOpen, setIsFindBaitMenuOpen] = useState<boolean>(false);
   const [activeFindGame, setActiveFindGame] = useState<"insect" | "shrimp" | "bread" | null>(null);
@@ -443,6 +462,17 @@ export default function CauCaMultiPage() {
     { filename: "cancauvectordo.png", name: "Cần Câu Véc-tơ Đỏ", price3Days: 50000000000, price5Days: 80000000000, price7Days: 110000000000, desc: "Màu đỏ rực rỡ", damageBuff: 4.0, critChance: 0.35, buff: "Kéo nhanh" },
     { filename: "cancauvectorvang.png", name: "Cực Phẩm Mạ Vàng", price3Days: 1000000000000, price5Days: 1600000000000, price7Days: 2200000000000, desc: "Cực phẩm mạ vàng", damageBuff: 5.5, critChance: 0.45, buff: "X2 Điểm" }
   ];
+
+  // HÀM TÍNH ĐỘ ƯƠN CÁ
+  const getFishCurrentValue = (fish: any) => {
+    const ageMs = Date.now() - fish.caughtAt;
+    const ageDays = ageMs / (1000 * 60 * 60 * 24);
+    const degradation = Math.min(0.35, Math.floor(ageDays) * 0.05); // Max 7 ngày = mất 35% giá trị, sau đó chết
+    return Math.floor(fish.baseValue * (1 - degradation));
+  };
+  const isFishDead = (fish: any) => {
+    return (Date.now() - fish.caughtAt) / (1000 * 60 * 60 * 24) >= 7;
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -510,10 +540,23 @@ export default function CauCaMultiPage() {
         if (data.equipped_rod) setSelectedRod(data.equipped_rod);
         
         if (data.inventory && typeof data.inventory === "object") {
-            setInventory(data.inventory);
-            (window as any).currentInventory = data.inventory;
+            // Lọc cá chết
+            let inv = { ...data.inventory };
+            if (!inv.fish_inventory) inv.fish_inventory = [];
+            if (!inv.aquarium) inv.aquarium = [];
+            if (!inv.unlocked_fishes) inv.unlocked_fishes = [];
+            if (!inv.claimed_achievements) inv.claimed_achievements = [];
+
+            const initialCount = inv.fish_inventory.length;
+            inv.fish_inventory = inv.fish_inventory.filter((f: any) => !isFishDead(f));
+            if (initialCount !== inv.fish_inventory.length) {
+                await supabase.from("profiles").update({ inventory: inv }).eq("id", currentUser.id);
+            }
+
+            setInventory(inv);
+            (window as any).currentInventory = inv;
         } else {
-            const defaultInv = { basic_worm: 10, bait_thuong_1: 5 };
+            const defaultInv = { basic_worm: 10, bait_thuong_1: 5, fish_inventory: [], aquarium: [], unlocked_fishes: [], claimed_achievements: [] };
             setInventory(defaultInv);
             (window as any).currentInventory = defaultInv;
             await supabase.from("profiles").update({ inventory: defaultInv }).eq("id", currentUser.id);
@@ -633,6 +676,8 @@ export default function CauCaMultiPage() {
       if (!sellForm.itemId) { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Vui lòng chọn món đồ muốn đăng bán!", type: "beerus" } })); return; }
       
       const isBait = sellForm.itemType === "bait";
+      const isFish = sellForm.itemType === "fish";
+      
       if (isBait) {
           const currentQty = inventory[sellForm.itemId] || 0;
           if (currentQty < sellForm.amount) { 
@@ -667,6 +712,34 @@ export default function CauCaMultiPage() {
               showShopNotice("Đăng vật phẩm đấu giá thành công lên sàn!");
               setAuctionTab("browse");
           } else { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Có lỗi tạo phiên đấu giá!", type: "beerus" } })); }
+      } else if (isFish) {
+          const fishObj = inventory.fish_inventory?.find((f: any) => f.id === sellForm.itemId);
+          if (!fishObj) return;
+
+          // Xóa cá khỏi kho
+          const newInv = { ...inventory, fish_inventory: inventory.fish_inventory.filter((f: any) => f.id !== sellForm.itemId) };
+          setInventory(newInv);
+          (window as any).currentInventory = newInv;
+          await supabase.from("profiles").update({ inventory: newInv }).eq("id", activeUser.id);
+
+          const endsAt = new Date(Date.now() + sellForm.durationMins * 60000).toISOString();
+          const { error } = await supabase.from("auctions").insert({
+              seller_id: activeUser.id,
+              seller_name: activeUser.email?.split("@")[0] || "Cần thủ",
+              item_id: sellForm.itemId,
+              item_name: `${fishObj.vnName} (${fishObj.weight}kg)`,
+              item_type: "fish",
+              item_image: `/assets/cauca/${fishObj.filename}`,
+              amount: 1,
+              start_bid: sellForm.startBid,
+              current_bid: sellForm.startBid,
+              ends_at: endsAt
+          });
+
+          if (!error) {
+              showShopNotice("Đăng cá lên sàn đấu giá thành công!");
+              setAuctionTab("browse");
+          } else { window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Lỗi đăng bán cá!", type: "beerus" } })); }
       } else {
           const rodObj = shopRods.find(r => r.filename === sellForm.itemId);
           if (!rodObj) return;
@@ -714,6 +787,46 @@ export default function CauCaMultiPage() {
           window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "LỖI", message: "Lỗi đấu giá, kiểm tra kết nối!", type: "beerus" } }));
       }
   }
+
+  // --- HÀM XỬ LÝ KHO CÁ ---
+  const handleSellFishes = async (fishIds: string[]) => {
+      const activeUser = (window as any).currentUser || user;
+      if (!activeUser?.id || fishIds.length === 0) return;
+
+      const fishesToSell = inventory.fish_inventory.filter((f: any) => fishIds.includes(f.id));
+      let totalEarned = 0;
+      fishesToSell.forEach((f: any) => totalEarned += getFishCurrentValue(f));
+
+      const newFishInv = inventory.fish_inventory.filter((f: any) => !fishIds.includes(f.id));
+      const newInv = { ...inventory, fish_inventory: newFishInv };
+      
+      const newScore = score + totalEarned;
+      setScore(newScore);
+      setInventory(newInv);
+      (window as any).currentGameScore = newScore;
+      (window as any).currentInventory = newInv;
+
+      await supabase.from("profiles").update({ balance: newScore, inventory: newInv }).eq("id", activeUser.id);
+      setSelectedFishes([]);
+      window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "BÁN THÀNH CÔNG", message: `Đã bán ${fishesToSell.length} con cá nhận ${totalEarned.toLocaleString()}🪙`, type: "rare" } }));
+  };
+
+  const handleMoveToAquarium = async (fishIds: string[]) => {
+      const activeUser = (window as any).currentUser || user;
+      if (!activeUser?.id || fishIds.length === 0) return;
+
+      const fishesToMove = inventory.fish_inventory.filter((f: any) => fishIds.includes(f.id));
+      const newFishInv = inventory.fish_inventory.filter((f: any) => !fishIds.includes(f.id));
+      const newAquarium = [...(inventory.aquarium || []), ...fishesToMove];
+
+      const newInv = { ...inventory, fish_inventory: newFishInv, aquarium: newAquarium };
+      setInventory(newInv);
+      (window as any).currentInventory = newInv;
+
+      await supabase.from("profiles").update({ inventory: newInv }).eq("id", activeUser.id);
+      setSelectedFishes([]);
+      window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "THẢ HỒ CÁ THÀNH CÔNG", message: `Đã thả ${fishesToMove.length} con vào Hồ Cá riêng!`, type: "rare" } }));
+  };
 
   const leaveRoom = async () => {
     const activeUser = (window as any).currentUser || user;
@@ -1474,19 +1587,48 @@ export default function CauCaMultiPage() {
                   setCenterCatchNotice({ text: `${currentFish.vnName} (${popupMsg})`, show: true });
                   setTimeout(() => setCenterCatchNotice(null), 4000);
               } else {
+                  // --- LOGIC LƯU CÁ VÀO KHO (MỚI) ---
                   let earnedPoints = this.caughtFish.points; 
                   let wTxt = `${this.caughtFish.weight}kg`;
                   if (selectedRod === "cancauvectorvang.png") earnedPoints *= 2;
 
                   const activeUser = (window as any).currentUser || user;
-                  if (roomChannelRef.current && activeUser?.id) roomChannelRef.current.send({ type: "broadcast", event: "catch_alert", payload: { user_id: activeUser.id, fishName: currentFish.vnName, weightText: wTxt, points: earnedPoints } });
+                  
+                  // Tạo object cá để lưu kho
+                  const caughtFishData = {
+                      id: `fish_inv_${Math.random().toString(36).substring(2, 9)}`,
+                      filename: currentFish.filename,
+                      vnName: currentFish.vnName,
+                      weight: this.caughtFish.weight,
+                      basePoints: currentFish.basePoints, 
+                      baseValue: earnedPoints, 
+                      caughtAt: Date.now() 
+                  };
 
-                  setMyCatchNotice({ text: currentFish.vnName, amount: `+${earnedPoints.toLocaleString()}🪙`, show: true });
-                  setTimeout(() => setMyCatchNotice(null), 3500);
-                  setCenterCatchNotice({ text: `${currentFish.vnName} (${wTxt})`, show: true });
-                  setTimeout(() => setCenterCatchNotice(null), 3500);
+                  if (activeUser?.id) {
+                      setMyCatchNotice({ text: currentFish.vnName, amount: `Đã cất vào kho cá!`, show: true });
+                      setTimeout(() => setMyCatchNotice(null), 3500);
+                      
+                      if (roomChannelRef.current) roomChannelRef.current.send({ type: "broadcast", event: "catch_alert", payload: { user_id: activeUser.id, fishName: currentFish.vnName, weightText: wTxt, points: earnedPoints } });
+                      setCenterCatchNotice({ text: `${currentFish.vnName} (${wTxt})`, show: true });
+                      setTimeout(() => setCenterCatchNotice(null), 3500);
 
-                  syncScoreToSupabase(((window as any).currentGameScore ?? 1000) + earnedPoints);
+                      const currentInv = (window as any).currentInventory || inventory;
+                      const currentFishInventory = currentInv.fish_inventory || [];
+                      const newFishInventory = [...currentFishInventory, caughtFishData];
+                      
+                      const currentUnlockedFishes = currentInv.unlocked_fishes || [];
+                      let newUnlocked = [...currentUnlockedFishes];
+                      if (!newUnlocked.includes(currentFish.filename)) {
+                          newUnlocked.push(currentFish.filename);
+                      }
+                      
+                      const newInv = { ...currentInv, fish_inventory: newFishInventory, unlocked_fishes: newUnlocked };
+                      setInventory(newInv);
+                      (window as any).currentInventory = newInv;
+                      
+                      supabase.from("profiles").update({ inventory: newInv }).eq("id", activeUser.id);
+                  }
               }
 
               let idx = fishes.indexOf(this.caughtFish);
@@ -1945,6 +2087,114 @@ export default function CauCaMultiPage() {
          />
       )}
 
+      {/* --- KHO CÁ (MỚI) --- */}
+      {isFishBagOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
+          <div className="bg-slate-950 border-2 border-sky-500/60 w-full max-w-4xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(14,165,233,0.3)] flex flex-col relative overflow-hidden">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+              <h2 className="text-base sm:text-xl font-black text-sky-400 uppercase tracking-wider flex items-center gap-2">🐟 Kho Cá (Còn tươi)</h2>
+              <button onClick={() => { setIsFishBagOpen(false); setSelectedFishes([]); }} className="bg-slate-800 hover:bg-rose-600 text-white font-black w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer shadow text-xs">✕</button>
+            </div>
+            
+            <div className="my-2 text-[10px] text-slate-400 font-bold border-b border-slate-800 pb-2 flex justify-between items-center">
+                <span>⚠️ Cá sẽ bị giảm 5% giá trị mỗi ngày. Hết 7 ngày cá sẽ chết. Thả vào Hồ Cá để nuôi sinh sản!</span>
+                <span className="text-emerald-400">Đang chọn: {selectedFishes.length} con</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto my-2 pr-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {(!inventory.fish_inventory || inventory.fish_inventory.length === 0) ? (
+                    <div className="col-span-full text-center text-slate-500 py-10 font-bold text-sm">Kho cá trống trơn! Hãy đi câu thêm nhé.</div>
+                ) : (
+                    inventory.fish_inventory.map((fish: any) => {
+                        const currentVal = getFishCurrentValue(fish);
+                        const isSelected = selectedFishes.includes(fish.id);
+                        const ageMs = Date.now() - fish.caughtAt;
+                        const ageDays = ageMs / (1000 * 60 * 60 * 24);
+
+                        return (
+                            <div key={fish.id} onClick={() => {
+                                if (isSelected) setSelectedFishes(selectedFishes.filter(id => id !== fish.id));
+                                else setSelectedFishes([...selectedFishes, fish.id]);
+                            }} className={`relative bg-slate-900 rounded-2xl p-3 flex flex-col items-center justify-between shadow-lg cursor-pointer border transition-all ${isSelected ? 'border-sky-400 ring-2 ring-sky-400/50 bg-sky-900/30' : 'border-slate-800 hover:border-slate-600'}`}>
+                                {isSelected && <div className="absolute top-2 right-2 w-4 h-4 bg-sky-500 rounded-full flex items-center justify-center text-slate-950 font-black text-[10px]">✓</div>}
+                                
+                                <img src={`/assets/cauca/${fish.filename}`} alt={fish.vnName} className="h-14 object-contain mb-2 drop-shadow-md" />
+                                <h4 className="text-[10px] font-black text-amber-300 text-center w-full truncate">{fish.vnName}</h4>
+                                <div className="w-full space-y-1 mt-1 border-t border-slate-800 pt-1">
+                                    <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Nặng:</span> <span>{fish.weight} kg</span></div>
+                                    <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Độ tươi:</span> <span className={ageDays > 5 ? 'text-rose-400' : 'text-emerald-400'}>{100 - Math.floor(ageDays)*5}%</span></div>
+                                    <div className="flex justify-between text-[10px] font-black text-slate-300"><span>Giá bán:</span> <span className="text-yellow-400">{currentVal.toLocaleString()}🪙</span></div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-800 flex gap-2 flex-wrap sm:flex-nowrap">
+                <button 
+                   disabled={selectedFishes.length === 0} 
+                   onClick={() => handleSellFishes(selectedFishes)} 
+                   className={`flex-1 py-3 rounded-xl font-black text-xs uppercase shadow transition ${selectedFishes.length > 0 ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                >
+                    💰 Bán Cá Đã Chọn
+                </button>
+                <button 
+                   disabled={inventory.fish_inventory?.length === 0} 
+                   onClick={() => handleSellFishes((inventory.fish_inventory || []).map((f:any) => f.id))} 
+                   className={`flex-1 py-3 rounded-xl font-black text-xs uppercase shadow transition ${(inventory.fish_inventory?.length || 0) > 0 ? 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                >
+                    🔥 Bán Tất Cả
+                </button>
+                <button 
+                   disabled={selectedFishes.length === 0} 
+                   onClick={() => handleMoveToAquarium(selectedFishes)} 
+                   className={`flex-1 py-3 rounded-xl font-black text-xs uppercase shadow transition ${selectedFishes.length > 0 ? 'bg-sky-500 hover:bg-sky-400 text-slate-950 cursor-pointer' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                >
+                    🌊 Thả Cá Vào Hồ
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DANH HIỆU DRAGON BALL (MỚI) --- */}
+      {isAchievementOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
+          <div className="bg-slate-950 border-2 border-yellow-500/60 w-full max-w-4xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(234,179,8,0.3)] flex flex-col relative overflow-hidden">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+              <h2 className="text-base sm:text-xl font-black text-yellow-400 uppercase tracking-wider flex items-center gap-2">🏆 Danh Hiệu Cần Thủ</h2>
+              <button onClick={() => setIsAchievementOpen(false)} className="bg-slate-800 hover:bg-rose-600 text-white font-black w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer shadow text-xs">✕</button>
+            </div>
+            
+            <div className="my-2 text-[10px] sm:text-xs text-slate-300 font-bold border-b border-slate-800 pb-2">
+                Hoàn thành bộ sưu tập cá để kích hoạt hiệu ứng Aura Dragon Ball quanh Avatar! (Bản cập nhật Aura sẽ có ở phần Hồ Cá)
+            </div>
+
+            <div className="flex-1 overflow-y-auto my-2 pr-1 space-y-3">
+               {ACHIEVEMENTS_CONFIG.map((ach) => {
+                   const isClaimed = (inventory.claimed_achievements || []).includes(ach.id);
+                   return (
+                       <div key={ach.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+                           <div className="flex-1">
+                               <h3 className="text-sm font-black text-yellow-400 mb-1">{ach.name}</h3>
+                               <p className="text-[10px] sm:text-xs text-slate-300 mb-0.5">{ach.desc}</p>
+                               <p className="text-[10px] text-sky-400 font-bold">✨ Aura: {ach.aura}</p>
+                           </div>
+                           <div className="text-center sm:text-right w-full sm:w-auto">
+                               <p className="text-[10px] font-black text-emerald-400 mb-2">{ach.rewardText}</p>
+                               <button disabled className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-black uppercase shadow ${isClaimed ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
+                                   {isClaimed ? "Đã Nhận" : "Chưa Đạt"}
+                               </button>
+                           </div>
+                       </div>
+                   )
+               })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isGuideOpen && (
         <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
           <div className="bg-slate-950 border-2 border-sky-500/60 w-full max-w-3xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(14,165,233,0.3)] flex flex-col relative overflow-hidden">
@@ -2095,6 +2345,7 @@ export default function CauCaMultiPage() {
                                   <label className="text-[10px] font-bold text-slate-400 block mb-1">Loại vật phẩm:</label>
                                   <select value={sellForm.itemType} onChange={(e) => setSellForm({...sellForm, itemType: e.target.value, itemId: ""})} className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl p-2 font-bold">
                                       <option value="bait">Mồi Câu Trong Kho</option>
+                                      <option value="fish">Cá Tươi Trong Kho</option>
                                       <option value="rod">Cần Câu Đang Sở Hữu</option>
                                   </select>
                               </div>
@@ -2106,9 +2357,13 @@ export default function CauCaMultiPage() {
                                       {sellForm.itemType === 'bait' ? (
                                           Object.keys(inventory).map(bId => {
                                               const amt = inventory[bId];
-                                              if (amt <= 0) return null;
+                                              if (typeof amt !== 'number' || amt <= 0) return null;
                                               const bObj = resolveBaitInfo(bId);
                                               return <option key={bId} value={bId}>{bObj.name} (Còn {amt})</option>;
+                                          })
+                                      ) : sellForm.itemType === 'fish' ? (
+                                          (inventory.fish_inventory || []).map((f: any) => {
+                                              return <option key={f.id} value={f.id}>{f.vnName} - {f.weight}kg</option>;
                                           })
                                       ) : (
                                           Object.keys(userRodsMap).map(rFname => {
@@ -2173,6 +2428,14 @@ export default function CauCaMultiPage() {
           
           <button onClick={() => setIsGuideOpen(true)} className="bg-gradient-to-r from-sky-500 to-blue-400 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
             📜 Luật
+          </button>
+
+          {/* --- NÚT KHO CÁ VÀ DANH HIỆU MỚI --- */}
+          <button onClick={() => setIsFishBagOpen(true)} className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
+            🐟 Kho Cá ({(inventory.fish_inventory || []).length})
+          </button>
+          <button onClick={() => setIsAchievementOpen(true)} className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
+            🏆 Danh Hiệu
           </button>
 
           <button onClick={() => setIsFindBaitMenuOpen(true)} className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-2 py-1 rounded-md font-black text-[9px] sm:text-[10px] shadow active:scale-95 transition cursor-pointer flex items-center border border-white/40">
@@ -2258,7 +2521,7 @@ export default function CauCaMultiPage() {
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
                    {(() => {
-                       const specialKeys = Object.keys(inventory).filter(k => !k.startsWith("basic_") && !k.startsWith("fish_sk") && (inventory[k] || 0) > 0);
+                       const specialKeys = Object.keys(inventory).filter(k => !k.startsWith("basic_") && !k.startsWith("fish_sk") && (inventory[k] || 0) > 0 && typeof inventory[k] === 'number');
                        if (specialKeys.length === 0) {
                            return <div className="p-3 text-center text-[10px] text-slate-500 font-bold">Chưa có mồi trộn! Vào Trạm Trộn 🔮</div>;
                        }
