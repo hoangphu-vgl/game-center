@@ -264,6 +264,9 @@ export default function ArenaCaPage() {
   const [score, setScore] = useState<number>(0);
   const [rawInventory, setRawInventory] = useState<any>({});
   const [isHardcoreMode, setIsHardcoreMode] = useState<boolean>(false); // 💀 Chế độ sinh tử
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null); // Đang ở phòng nào
+  const [activeChannel, setActiveChannel] = useState<any>(null); // Kênh realtime Supabase
+  const [isRoomLobbyOpen, setIsRoomLobbyOpen] = useState<boolean>(false); // Bật/tắt bảng chọn 3 phòng
 
   const [playerRoster, setPlayerRoster] = useState<any[]>([]);
   const [playerRosterIdx, setPlayerRosterIdx] = useState<number>(0);
@@ -399,8 +402,11 @@ export default function ArenaCaPage() {
     const sameTierList = ALL_FISH_DATABASE.filter((f) => f.tier === playerTier);
     const picked = pickNonDuplicateSpecies(sameTierList);
 
-    const minW = picked.minWeight;
-    const maxW = Math.min(picked.maxWeight, tierCap);
+    const playerW = Number(playerFish?.weight || 50);
+    const minW = Math.max(picked.minWeight, playerW * 0.8);
+    const maxW = playerTier === "LON" || playerTier === "BOSS"
+      ? Math.min(tierCap, playerW * 1.3)
+      : Math.min(picked.maxWeight, tierCap);
     const randomWeight = +(minW + Math.random() * (maxW - minW)).toFixed(1);
 
     const rolled = rollRandomFishSkills(picked.filename, picked.name);
@@ -744,7 +750,60 @@ export default function ArenaCaPage() {
       setIsScanning(false);
     }, 1000);
   }
+// 👇 DÁN CỤM 3 HÀM REALTIME NÀY VÀO NGAY ĐÂY:
+  async function joinMultiplayerRoom(roomId: string) {
+    if (!user?.id) {
+      alert("Vui lòng đăng nhập để vào phòng đọ cá!");
+      return;
+    }
+    if (activeChannel) {
+      activeChannel.unsubscribe();
+    }
+    setCurrentRoomId(roomId);
+    setIsRoomLobbyOpen(false);
 
+    const channel = supabase.channel(`arena_${roomId}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on('broadcast', { event: 'fish_action' }, (payload) => {
+        const data = payload.payload;
+        console.log("Nhận tín hiệu từ đối thủ:", data);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.send({
+            type: 'broadcast',
+            event: 'fish_action',
+            payload: { type: 'JOIN_ROOM', userId: user.id, name: user.email || 'Người chơi' }
+          });
+        }
+      });
+    setActiveChannel(channel);
+  }
+
+  function leaveMultiplayerRoom() {
+    if (activeChannel) {
+      activeChannel.send({
+        type: 'broadcast',
+        event: 'fish_action',
+        payload: { type: 'LEAVE_ROOM', userId: user?.id }
+      });
+      activeChannel.unsubscribe();
+      setActiveChannel(null);
+    }
+    setCurrentRoomId(null);
+  }
+
+  function sendRealtimeAction(actionType: string, actionData: any) {
+    if (!activeChannel) return;
+    activeChannel.send({
+      type: 'broadcast',
+      event: 'fish_action',
+      payload: { userId: user?.id, type: actionType, ...actionData },
+    });
+  }
   function sayQuote(fish: any, text: string) {
     fish.speech = text;
     fish.speechTimer = 1.9;
@@ -1095,7 +1154,12 @@ export default function ArenaCaPage() {
     );
 
     if (defender.hp <= 0 && !bs.gameOver) {
-      endMatch(attacker.isPlayer);
+      bs.gameOver = true; // Khóa ngay trận đấu để không nhận thêm đòn đánh thừa
+      
+      // Cho game khựng lại 0.4 giây để người chơi thưởng thức trọn vẹn đòn chí mạng cuối cùng
+      setTimeout(() => {
+        endMatch(attacker.isPlayer);
+      }, 400); 
     }
     updateHUD();
   }
@@ -2340,7 +2404,76 @@ export default function ArenaCaPage() {
             {isHardcoreMode ? "Thua là mất vĩnh viễn!" : "Đánh thường an toàn"}
           </span>
         </button>
+
+        {/* 🏟️ NÚT MỞ PHÒNG REALTIME TRÊN FOOTER */}
+        <button
+          onClick={() => setIsRoomLobbyOpen(true)}
+          className="flex flex-col items-center justify-center bg-gradient-to-b from-indigo-500 to-purple-700 border-b-4 border-indigo-950 rounded-xl p-2 text-white shadow-lg cursor-pointer active:scale-95 transition col-span-2 sm:col-span-1"
+        >
+          <span className="text-base sm:text-lg leading-none mb-0.5">🏟️</span>
+          <span className="font-arcade font-bold text-xs leading-tight">
+            {currentRoomId ? `Phòng: ${currentRoomId}` : "Chọn Phòng Đấu"}
+          </span>
+          <span className="text-[9px] text-indigo-200 font-semibold">
+            {currentRoomId ? "Đang kết nối" : "Đọ cá Realtime"}
+          </span>
+        </button>
       </footer>
+
+      {/* 🏟️ MODAL CHỌN 3 PHÒNG REALTIME */}
+      {isRoomLobbyOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-purple-500/50 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl relative">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-arcade font-bold text-yellow-400">🏟️ CHỌN PHÒNG ĐỌ CÁ REALTIME</h3>
+              <button 
+                onClick={() => setIsRoomLobbyOpen(false)}
+                className="text-slate-400 hover:text-white font-bold text-lg px-2 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 mb-4">
+              Chọn phòng để kết nối trực tiếp với các anh em khác trên Supabase[cite: 3, 4] và cùng so tài cá cưng!
+            </p>
+
+            <div className="flex flex-col gap-3">
+              {[
+                { id: "room_1", name: "🏠 Phòng 1: Ao Làng (Chill)", color: "from-blue-600 to-cyan-700" },
+                { id: "room_2", name: "⚔️ Phòng 2: Sông Lớn (Cạnh tranh)", color: "from-emerald-600 to-teal-700" },
+                { id: "room_3", name: "👑 Phòng 3: Đại Dương Thượng Cổ", color: "from-rose-600 to-red-800" },
+              ].map((room) => (
+                <button
+                  key={room.id}
+                  onClick={() => joinMultiplayerRoom(room.id)}
+                  className={`p-4 bg-gradient-to-r ${room.color} rounded-xl font-bold shadow-lg transition active:scale-95 flex justify-between items-center text-left cursor-pointer`}
+                >
+                  <div>
+                    <div className="text-sm font-bold">{room.name}</div>
+                    <div className="text-[10px] opacity-80 font-normal">Trạng thái: Sẵn sàng kết nối</div>
+                  </div>
+                  <span className="text-xs bg-slate-950 px-3 py-1.5 rounded-lg text-yellow-300 font-arcade">
+                    VÀO NGAY
+                  </span>
+                </button>
+              ))}
+
+              {currentRoomId && (
+                <button
+                  onClick={() => {
+                    leaveMultiplayerRoom();
+                    setIsRoomLobbyOpen(false);
+                  }}
+                  className="mt-2 p-3 bg-red-600/30 border border-red-500/50 hover:bg-red-600/50 rounded-xl font-bold text-red-300 text-xs transition cursor-pointer"
+                >
+                  🚪 Rời khỏi phòng hiện tại ({currentRoomId})
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
