@@ -89,18 +89,6 @@ function resolveBaitInfo(id: string) {
   return { name: displayName, emoji: "📦", desc: "Vật phẩm trong kho", type: id.startsWith("basic_") ? "basic" : "special" };
 }
 
-const specialBaits = [
-  { id: "bait_thuong_1", filename: "01_thinh_ki_vang.png", name: "Mồi Kì Vàng Hoàn Hảo", type: "normal", desc: "Mồi trộn thường (Cá <= 500kg, tầng trung)." },
-  { id: "bait_thuong_2", filename: "02_ba_doc_sam.png", name: "Bả Độc Tố Hợp Thành", type: "normal", desc: "Mồi trộn thường (Cá <= 500kg, tầng trung)." },
-  { id: "bait_thuong_3", filename: "03_moi_bien_sau.png", name: "Mồi Hắc Hải Sâu", type: "normal", desc: "Mồi trộn thường (Cá <= 500kg, tầng trung)." },
-  { id: "bait_moi_thao_duoc", filename: "10_moi_thao_duoc.png", name: "Mồi Thảo Dược", type: "normal", desc: "Mồi trộn thường (Cá <= 500kg, bớt giật căng dây)." },
-  { id: "bait_xin_hoang_gia", filename: "07_moi_hoang_gia.png", name: "Mồi Hoàng Gia (Xịn)", type: "advanced", desc: "👑 Mồi duy nhất săn được BOSS THƯỢNG CỔ!" },
-  { id: "bait_xin_lua_do", filename: "04_moi_lua_do.png", name: "Mồi Lửa Đỏ (Xịn)", type: "advanced", desc: "🔥 Đốt 5% HP cá khủng khi đớp." },
-  { id: "bait_xin_sam_set", filename: "05_moi_sam_set.png", name: "Mồi Sấm Sét (Xịn)", type: "advanced", desc: "⚡ Choáng cá 2 giây." },
-  { id: "bait_xin_bang_gia", filename: "09_moi_bang_gia.png", name: "Mồi Băng Giá (Xịn)", type: "advanced", desc: "❄️ Đóng băng cá ngay khi cắn mồi." },
-  { id: "bait_xin_co_khi", filename: "08_moi_co_khi.png", name: "Mồi Cơ Khí (Xịn)", type: "advanced", desc: "⚙️ Giảm 30% độ căng dây." },
-];
-
 const CRAFT_RECIPES_NORMAL = [
   { id: "rc_n1", output: "bait_thuong_1", name: "Mồi Kì Vàng Hoàn Hảo", qtyRange: [50, 100], req: [{id: "basic_worm", qty: 2}, {id: "basic_hook", qty: 1}], fee: 10000, difficulty: "normal" },
   { id: "rc_n2", output: "bait_thuong_2", name: "Bả Độc Tố Hợp Thành", qtyRange: [50, 100], req: [{id: "basic_bread", qty: 3}, {id: "basic_cricket", qty: 1}], fee: 10000, difficulty: "normal" },
@@ -129,7 +117,6 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
     const [holdProgress, setHoldProgress] = useState(0);
     const isHoldingRef = useRef(false);
     
-    // Minigame #5: Chỉ còn 4 hộp (lưới 2x2)
     const [gridTarget] = useState<number>(() => Math.floor(Math.random() * 4));
     const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
 
@@ -149,7 +136,6 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
             }, 20);
             return () => clearInterval(interval);
         } else if (gameType === 3) {
-            // Minigame #3: Chỉ chọn 2 nút (Nút #1 và Nút #2) thay vì 4 nút
             const seqLength = isHard ? 4 : 2;
             const seq = Array.from({length: seqLength}, () => Math.floor(Math.random() * 2));
             setMemorySeq(seq);
@@ -168,7 +154,6 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
         setIsFinished(true);
         const minQ = recipe.qtyRange[0];
         const maxQ = recipe.qtyRange[1];
-        // Trộn hoàn hảo nhận random từ minQ đến maxQ (ví dụ: mồi thường 50-100, mồi xịn 20-50)
         const earnedQty = isPerfect ? Math.floor(Math.random() * (maxQ - minQ + 1)) + minQ : 5;
         setFinalResult({ isPerfect, qty: earnedQty });
         setTimeout(() => { onComplete(isPerfect, earnedQty); }, 1800);
@@ -197,12 +182,12 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
                       <div className="space-y-4">
                           <p className="text-xs font-bold text-amber-300">Canh dừng đúng vạch xanh lá!</p>
                           <div className="relative w-full h-8 bg-slate-800 rounded-full overflow-hidden border-2 border-slate-600">
-                              <div className={`absolute top-0 bottom-0 ${isHard ? 'left-[46%] w-[8%]' : 'left-[40%] w-[20%]' } bg-emerald-500/80`}></div>
+                              <div className={`absolute top-0 bottom-0 ${isHard ? 'left-[44%] w-[12%]' : 'left-[35%] w-[30%]' } bg-emerald-500/80`}></div>
                               <div className="absolute top-0 bottom-0 w-2 bg-white rounded-full -ml-1 shadow" style={{ left: `${barPos}%` }}></div>
                           </div>
                           <button onClick={() => {
-                              const targetMin = isHard ? 46 : 40;
-                              const targetMax = isHard ? 54 : 60;
+                              const targetMin = isHard ? 44 : 35;
+                              const targetMax = isHard ? 56 : 65;
                               const isPerfect = barPos >= targetMin && barPos <= targetMax;
                               finishGame(isPerfect);
                           }} className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3 rounded-xl active:scale-95 shadow cursor-pointer">
@@ -213,7 +198,7 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
 
                   {gameType === 3 && (
                       <div className="space-y-4">
-                          <p className="text-xs font-bold text-amber-300">Nhấn đúng 2 nút theo thứ tự ({userSeqIndex}/{memorySeq.length})</p>
+                          <p className="text-xs font-bold text-amber-300">Nhấn đúng nút theo thứ tự ({userSeqIndex}/{memorySeq.length})</p>
                           <div className="grid grid-cols-2 gap-3">
                               {[0, 1].map((idx) => (
                                   <button key={idx} onClick={() => {
@@ -234,23 +219,23 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
                       <div className="space-y-4">
                           <p className="text-xs font-bold text-amber-300">Giữ và thả đúng vùng Xanh Lá</p>
                           <div className="w-full bg-slate-800 h-6 rounded-full overflow-hidden border border-slate-600 relative">
-                              <div className={`absolute top-0 bottom-0 ${isHard ? 'left-[80%] w-[8%]' : 'left-[70%] w-[20%]' } bg-emerald-500/50`}></div>
+                              <div className={`absolute top-0 bottom-0 ${isHard ? 'left-[75%] w-[15%]' : 'left-[65%] w-[30%]' } bg-emerald-500/50`}></div>
                               <div className="h-full bg-purple-500 transition-all duration-75" style={{ width: `${holdProgress}%` }}></div>
                           </div>
                           <button 
                               onMouseDown={() => { isHoldingRef.current = true; }}
                               onMouseUp={() => { 
                                   isHoldingRef.current = false;
-                                  const minH = isHard ? 80 : 70;
-                                  const maxH = isHard ? 88 : 90;
+                                  const minH = isHard ? 75 : 65;
+                                  const maxH = isHard ? 90 : 95;
                                   const isPerfect = holdProgress >= minH && holdProgress <= maxH;
                                   finishGame(isPerfect);
                               }}
                               onTouchStart={() => { isHoldingRef.current = true; }}
                               onTouchEnd={() => { 
                                   isHoldingRef.current = false;
-                                  const minH = isHard ? 80 : 70;
-                                  const maxH = isHard ? 88 : 90;
+                                  const minH = isHard ? 75 : 65;
+                                  const maxH = isHard ? 90 : 95;
                                   const isPerfect = holdProgress >= minH && holdProgress <= maxH;
                                   finishGame(isPerfect);
                               }}
@@ -263,7 +248,7 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
 
                   {gameType === 5 && (
                       <div className="space-y-4">
-                          <p className="text-xs font-bold text-amber-300">Chọn đúng 1 trong 4 hũ mồi thần bí (Thưởng nóng 50 mồi)</p>
+                          <p className="text-xs font-bold text-amber-300">Chọn đúng 1 trong 4 hộp quà thần bí</p>
                           <div className="grid grid-cols-2 gap-3">
                               {Array.from({length: 4}).map((_, boxIdx) => (
                                   <button key={boxIdx} disabled={selectedGrid !== null} onClick={() => {
@@ -304,14 +289,26 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
     const [stopped, setStopped] = useState(false);
     const [resultMsg, setResultMsg] = useState<string | null>(null);
 
-    // Giảm tốc độ thanh trượt và nới rộng vạch xanh để dễ canh chỉnh hơn
-    const speed = difficulty === "easy" ? 1.5 : (difficulty === "medium" ? 2.5 : 3.8);
-    const zoneWidth = difficulty === "easy" ? 35 : (difficulty === "medium" ? 24 : 16);
-    const zoneStart = difficulty === "easy" ? 32 : (difficulty === "medium" ? 38 : 42);
+    const speed = difficulty === "easy" ? 1.2 : (difficulty === "medium" ? 2.0 : 3.0);
+    const zoneWidth = difficulty === "easy" ? 40 : (difficulty === "medium" ? 28 : 18);
+    const zoneStart = difficulty === "easy" ? 30 : (difficulty === "medium" ? 36 : 41);
     const zoneEnd = zoneStart + zoneWidth;
 
-    // Tăng phần thưởng tìm mồi tự nhiên lên 50 đến 200 mồi random
-    const randomEarned = Math.floor(Math.random() * 151) + 50; // 50 - 200
+    const randomEarned = Math.floor(Math.random() * 151) + 50;
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!stopped) {
+                setPos(prev => {
+                    let next = prev + dirRef.current * speed;
+                    if (next >= 100) { next = 100; dirRef.current = -1; }
+                    if (next <= 0) { next = 0; dirRef.current = 1; }
+                    return next;
+                });
+            }
+        }, 20);
+        return () => clearInterval(interval);
+    }, [stopped, speed]);
 
     const handleShoot = () => {
         if (stopped) return;
@@ -319,7 +316,7 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
         const isSuccess = pos >= zoneStart && pos <= zoneEnd;
         const finalQty = isSuccess ? randomEarned : 10;
 
-        setResultMsg(isSuccess ? `⚽ CĂN CHUẨN NÈ! (+${randomEarned} MỒI)` : `⚠️ TRƯỢT VẠCH VÀNG! (NHẬN 10 MỒI CƠ BẢN)`);
+        setResultMsg(isSuccess ? `⚽ CĂN CHUẨN NÈ! (+${randomEarned} MỒI)` : `⚠️ TRƯỢT VẠCH! (NHẬN 10 MỒI CƠ BẢN)`);
         setTimeout(() => {
             onFinish(finalQty);
         }, 1800);
@@ -347,7 +344,7 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
                         ⚽ BẤM CĂN VẠCH!
                     </button>
                 ) : (
-                    <div className={`p-3 rounded-xl font-black text-xs uppercase animate-bounce ${resultMsg?.includes('FIFA') || resultMsg?.includes('CHUẨN') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500' : 'bg-amber-500/20 text-amber-300 border border-amber-500'}`}>
+                    <div className={`p-3 rounded-xl font-black text-xs uppercase animate-bounce ${resultMsg?.includes('CHUẨN') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500' : 'bg-amber-500/20 text-amber-300 border border-amber-500'}`}>
                         {resultMsg}
                     </div>
                 )}
@@ -835,43 +832,50 @@ export default function CauCaMultiPage() {
     const powerContainer = document.getElementById("power-container");
 
     const fishDatabase = [
-      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 100, weightRange: [2, 10], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn", sizeScale: 0.7, basePoints: 100, weightRange: [5, 20], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 100, weightRange: [2, 15], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 120, weightRange: [10, 30], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 100, weightRange: [1, 10], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 120, weightRange: [15, 40], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "Abramis_brama.png", vnName: "Cá vền", sizeScale: 0.85, basePoints: 150, weightRange: [20, 50], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "cahongdang.png", vnName: "Cá hồng đăng", sizeScale: 0.8, basePoints: 150, weightRange: [10, 35], layer: "top", struggleWeight: 0.08, isRare: false },
-      { filename: "cakoinhatban.png", vnName: "Cá Koi Nhật Bản", sizeScale: 0.6, basePoints: 150, weightRange: [15, 45], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 100, weightRange: [2, 10], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn", sizeScale: 0.7, basePoints: 100, weightRange: [5, 20], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 100, weightRange: [2, 15], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 120, weightRange: [10, 30], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 100, weightRange: [1, 10], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 120, weightRange: [15, 40], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "Abramis_brama.png", vnName: "Cá vền", sizeScale: 0.85, basePoints: 150, weightRange: [20, 50], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "cahongdang.png", vnName: "Cá hồng đăng", sizeScale: 0.8, basePoints: 150, weightRange: [10, 35], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
+      { filename: "cakoinhatban.png", vnName: "Cá Koi Nhật Bản", sizeScale: 0.6, basePoints: 150, weightRange: [15, 45], layer: "top", struggleWeight: 0.08, isRare: false, isChest: false },
 
-      { filename: "cataituong.png", vnName: "Cá tai tượng", sizeScale: 3.1, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.18, isRare: false },
-      { filename: "cahuyetlong.png", vnName: "Cá Huyết Long", sizeScale: 3.25, basePoints: 1000, weightRange: [60, 200], layer: "mid", struggleWeight: 0.22, isRare: false },
-      { filename: "calochoangde.png", vnName: "Cá Lóc Hoàng Đế", sizeScale: 2.3, basePoints: 600, weightRange: [70, 150], layer: "mid", struggleWeight: 0.25, isRare: false },
-      { filename: "cachep.png", vnName: "Cá chép lớn", sizeScale: 2.6, basePoints: 700, weightRange: [80, 180], layer: "mid", struggleWeight: 0.28, isRare: false },
-      { filename: "cachimbien.png", vnName: "Cá chim biển", sizeScale: 2.1, basePoints: 500, weightRange: [50, 130], layer: "mid", struggleWeight: 0.25, isRare: false },
-      { filename: "carolon.png", vnName: "Cá rô khủng", sizeScale: 2.5, basePoints: 800, weightRange: [90, 200], layer: "mid", struggleWeight: 0.32, isRare: false },
-      { filename: "cabasa.png", vnName: "Cá basa", sizeScale: 2.3, basePoints: 500, weightRange: [50, 120], layer: "mid", struggleWeight: 0.22, isRare: false },
-      { filename: "camu.png", vnName: "Cá mú", sizeScale: 2.6, basePoints: 900, weightRange: [100, 200], layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "calahan.png", vnName: "Cá la hán", sizeScale: 2.25, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "cangubo.png", vnName: "Cá ngừ bò", sizeScale: 2.4, basePoints: 1000, weightRange: [120, 200], layer: "mid", struggleWeight: 0.4, isRare: false },
-      { filename: "catra.png", vnName: "Cá tra", sizeScale: 2.7, basePoints: 700, weightRange: [10, 50], layer: "mid", struggleWeight: 0.45, isRare: false },
+      { filename: "cataituong.png", vnName: "Cá tai tượng", sizeScale: 3.1, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.18, isRare: false, isChest: false },
+      { filename: "cahuyetlong.png", vnName: "Cá Huyết Long", sizeScale: 3.25, basePoints: 1000, weightRange: [60, 200], layer: "mid", struggleWeight: 0.22, isRare: false, isChest: false },
+      { filename: "calochoangde.png", vnName: "Cá Lóc Hoàng Đế", sizeScale: 2.3, basePoints: 600, weightRange: [70, 150], layer: "mid", struggleWeight: 0.25, isRare: false, isChest: false },
+      { filename: "cachep.png", vnName: "Cá chép lớn", sizeScale: 2.6, basePoints: 700, weightRange: [80, 180], layer: "mid", struggleWeight: 0.28, isRare: false, isChest: false },
+      { filename: "cachimbien.png", vnName: "Cá chim biển", sizeScale: 2.1, basePoints: 500, weightRange: [50, 130], layer: "mid", struggleWeight: 0.25, isRare: false, isChest: false },
+      { filename: "carolon.png", vnName: "Cá rô khủng", sizeScale: 2.5, basePoints: 800, weightRange: [90, 200], layer: "mid", struggleWeight: 0.32, isRare: false, isChest: false },
+      { filename: "cabasa.png", vnName: "Cá basa", sizeScale: 2.3, basePoints: 500, weightRange: [50, 120], layer: "mid", struggleWeight: 0.22, isRare: false, isChest: false },
+      { filename: "camu.png", vnName: "Cá mú", sizeScale: 2.6, basePoints: 900, weightRange: [100, 200], layer: "mid", struggleWeight: 0.35, isRare: false, isChest: false },
+      { filename: "calahan.png", vnName: "Cá la hán", sizeScale: 2.25, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.35, isRare: false, isChest: false },
+      { filename: "cangubo.png", vnName: "Cá ngừ bò", sizeScale: 2.4, basePoints: 1000, weightRange: [120, 200], layer: "mid", struggleWeight: 0.4, isRare: false, isChest: false },
+      { filename: "catra.png", vnName: "Cá tra", sizeScale: 2.7, basePoints: 700, weightRange: [10, 50], layer: "mid", struggleWeight: 0.45, isRare: false, isChest: false },
       
-      { filename: "caduoimata.png", vnName: "Cá đuối mata", sizeScale: 4.6, basePoints: 2000, weightRange: [100, 1500], layer: "bottom", struggleWeight: 0.55, isRare: true },
-      { filename: "mucnamcuc.png", vnName: "Mực nam cực", sizeScale: 4.8, basePoints: 2500, weightRange: [200, 3000], layer: "bottom", struggleWeight: 0.6, isRare: true },
-      { filename: "canhamvoi.png", vnName: "Cá nhám voi", sizeScale: 5.2, basePoints: 3000, weightRange: [5000, 9000], layer: "bottom", struggleWeight: 0.65, isRare: true },
-      { filename: "camaptrang.png", vnName: "Cá mặp trắng", sizeScale: 6.4, basePoints: 8000, weightRange: [1000, 6000], layer: "bottom", struggleWeight: 0.7, isRare: true },
-      { filename: "camapdaubua.png", vnName: "Cá mập đầu búa", sizeScale: 5.0, basePoints: 6000, weightRange: [800, 5000], layer: "bottom", struggleWeight: 0.72, isRare: true },
-      { filename: "canhatan.png", vnName: "Cá nhà tán", sizeScale: 7.4, basePoints: 10000, weightRange: [7000, 10000], layer: "bottom", struggleWeight: 0.75, isRare: true },
-      { filename: "cavoisatthu.png", vnName: "Cá voi sát thủ", sizeScale: 6.6, basePoints: 9000, weightRange: [2000, 9000], layer: "bottom", struggleWeight: 0.78, isRare: true },
+      { filename: "caduoimata.png", vnName: "Cá đuối mata", sizeScale: 4.6, basePoints: 2000, weightRange: [100, 1500], layer: "bottom", struggleWeight: 0.55, isRare: true, isChest: false },
+      { filename: "mucnamcuc.png", vnName: "Mực nam cực", sizeScale: 4.8, basePoints: 2500, weightRange: [200, 3000], layer: "bottom", struggleWeight: 0.6, isRare: true, isChest: false },
+      { filename: "canhamvoi.png", vnName: "Cá nhám voi", sizeScale: 5.2, basePoints: 3000, weightRange: [5000, 9000], layer: "bottom", struggleWeight: 0.65, isRare: true, isChest: false },
+      { filename: "camaptrang.png", vnName: "Cá mặp trắng", sizeScale: 6.4, basePoints: 8000, weightRange: [1000, 6000], layer: "bottom", struggleWeight: 0.7, isRare: true, isChest: false },
+      { filename: "camapdaubua.png", vnName: "Cá mập đầu búa", sizeScale: 5.0, basePoints: 6000, weightRange: [800, 5000], layer: "bottom", struggleWeight: 0.72, isRare: true, isChest: false },
+      { filename: "canhatan.png", vnName: "Cá nhà tán", sizeScale: 7.4, basePoints: 10000, weightRange: [7000, 10000], layer: "bottom", struggleWeight: 0.75, isRare: true, isChest: false },
+      { filename: "cavoisatthu.png", vnName: "Cá voi sát thủ", sizeScale: 6.6, basePoints: 9000, weightRange: [2000, 9000], layer: "bottom", struggleWeight: 0.78, isRare: true, isChest: false },
       
-      { filename: "livyatan.png", vnName: "Livyatan Thượng Cổ", sizeScale: 15.5, basePoints: 50000, weightRange: [100000, 200000], layer: "boss", struggleWeight: 0.85, isRare: true },
-      { filename: "megalodon.png", vnName: "Megalodon Sơ Cổ", sizeScale: 14.0, basePoints: 20000, weightRange: [20000, 50000], layer: "boss", struggleWeight: 0.85, isRare: true },
-      { filename: "mosa.png", vnName: "Mosasaurus Đại Dương", sizeScale: 14.5, basePoints: 30000, weightRange: [50000, 100000], layer: "boss", struggleWeight: 0.85, isRare: true }
+      { filename: "livyatan.png", vnName: "Livyatan Thượng Cổ", sizeScale: 15.5, basePoints: 50000, weightRange: [100000, 200000], layer: "boss", struggleWeight: 0.85, isRare: true, isChest: false },
+      { filename: "megalodon.png", vnName: "Megalodon Sơ Cổ", sizeScale: 14.0, basePoints: 20000, weightRange: [20000, 50000], layer: "boss", struggleWeight: 0.85, isRare: true, isChest: false },
+      { filename: "mosa.png", vnName: "Mosasaurus Đại Dương", sizeScale: 14.5, basePoints: 30000, weightRange: [50000, 100000], layer: "boss", struggleWeight: 0.85, isRare: true, isChest: false },
+
+      // --- 3 RƯƠNG KHO BẢN ---
+      { filename: "ruongdong.png", vnName: "📦 Rương Đồng", sizeScale: 1.2, basePoints: 500, weightRange: [1, 1], layer: "top", struggleWeight: 0.1, isRare: false, isChest: true, chestType: "copper" },
+      { filename: "ruongbac.png", vnName: "🪙 Rương Bạc", sizeScale: 1.5, basePoints: 1500, weightRange: [1, 1], layer: "mid", struggleWeight: 0.2, isRare: false, isChest: true, chestType: "silver" },
+      { filename: "ruongvang.png", vnName: "👑 Rương Vàng", sizeScale: 2.0, basePoints: 5000, weightRange: [1, 1], layer: "bottom", struggleWeight: 0.4, isRare: true, isChest: true, chestType: "gold" }
     ];
 
     const loadedFishObjects = fishDatabase.map((item) => {
-      const img = new Image(); img.src = `/assets/cauca/${item.filename}`; return { img, info: item };
+      const img = new Image(); 
+      img.src = `/assets/cauca/${item.filename}`;
+      return { img, info: item };
     });
 
     const decorFilenames = ["dabien.png", "dabien2.png", "rongbien.png", "sanho.png", "sanho2.png", "taobien.png", "taobien2.png"];
@@ -925,7 +929,7 @@ export default function CauCaMultiPage() {
       targetX?: number; 
       targetY?: number; 
 
-      constructor(forcedLayer?: string, forcedY?: number, forcedDirection?: number, syncData?: any) {
+      constructor(forcedLayer?: string, forcedY?: number, forcedDirection?: number, syncData?: any, forcedInfo?: any) {
         this.id = Math.random().toString(36).substring(2, 9);
         if (syncData) {
             this.id = syncData.id; this.x = syncData.x; this.y = syncData.y; this.speed = syncData.vx;
@@ -934,22 +938,38 @@ export default function CauCaMultiPage() {
             const chosenInfo = fishDatabase.find(fd => fd.filename === syncData.filename) || fishDatabase[0];
             this.fishObj = loadedFishObjects.find((fo) => fo.info.filename === chosenInfo.filename) || loadedFishObjects[0];
             this.fishData = this.fishObj.info; this.isCaught = false; this.animFrame = Math.random() * 100;
-        } else { this.spawn(forcedLayer, forcedY, forcedDirection); }
+        } else { this.spawn(forcedLayer, forcedY, forcedDirection, forcedInfo); }
       }
 
-      spawn(forcedLayer?: string, forcedY?: number, forcedDirection?: number) {
+      spawn(forcedLayer?: string, forcedY?: number, forcedDirection?: number, forcedInfo?: any) {
         this.direction = forcedDirection !== undefined ? forcedDirection : (Math.random() > 0.5 ? 1 : -1);
-        let availableFish = fishDatabase.filter(f => f.layer !== "boss");
+        let availableFish = fishDatabase.filter(f => f.layer !== "boss" && !f.isChest);
         
-        if (forcedLayer === "boss") availableFish = fishDatabase.filter(f => f.layer === "boss");
-        else if (forcedLayer) {
-          availableFish = fishDatabase.filter((f) => f.layer === forcedLayer);
-          if (availableFish.length === 0) availableFish = fishDatabase.filter(f => f.layer !== "boss");
+        let chosenInfo: any;
+
+        if (forcedInfo) {
+            chosenInfo = forcedInfo;
+        } else if (forcedLayer === "boss") {
+            availableFish = fishDatabase.filter(f => f.layer === "boss");
+            chosenInfo = availableFish[Math.floor(Math.random() * availableFish.length)];
+        } else if (forcedLayer === "chest_copper") {
+            chosenInfo = fishDatabase.find(f => f.filename === "ruongdong.png")!;
+        } else if (forcedLayer === "chest_silver") {
+            chosenInfo = fishDatabase.find(f => f.filename === "ruongbac.png")!;
+        } else if (forcedLayer === "chest_gold") {
+            chosenInfo = fishDatabase.find(f => f.filename === "ruongvang.png")!;
+        } else if (forcedLayer) {
+          availableFish = fishDatabase.filter((f) => f.layer === forcedLayer && !f.isChest);
+          if (availableFish.length === 0) availableFish = fishDatabase.filter(f => f.layer !== "boss" && !f.isChest);
+          chosenInfo = availableFish[Math.floor(Math.random() * availableFish.length)];
+        } else {
+          let pool = fishDatabase.filter(f => f.layer !== "boss" && !f.isChest);
+          chosenInfo = pool[Math.floor(Math.random() * pool.length)];
         }
 
-        const chosenInfo = availableFish[Math.floor(Math.random() * availableFish.length)];
         this.fishObj = loadedFishObjects.find((f) => f.info.filename === chosenInfo.filename) || loadedFishObjects[0];
-        this.fishData = this.fishObj.info; this.layer = this.fishData.layer;
+        this.fishData = this.fishObj.info; 
+        this.layer = this.fishData.layer;
         this.size = (Math.random() * 8 + 16) * this.fishData.sizeScale;
         
         const wRange = this.fishData.weightRange;
@@ -960,8 +980,7 @@ export default function CauCaMultiPage() {
         
         this.points = Math.round(this.weight * this.fishData.basePoints * bonusMultiplier);
         
-        let actualWeightKg = this.layer === "boss" ? this.weight : this.weight;
-        this.maxHp = Math.max(10, Math.sqrt(actualWeightKg) * 12);
+        this.maxHp = this.fishData.isChest ? (this.fishData.chestType === 'copper' ? 15 : (this.fishData.chestType === 'silver' ? 25 : 35)) : Math.max(10, Math.sqrt(this.weight) * 12);
         this.hp = this.maxHp;
         
         this.animFrame = Math.random() * 100;
@@ -969,15 +988,28 @@ export default function CauCaMultiPage() {
         this.stunTimer = 0;
 
         const waterHeight = height - waterY;
-        if (this.layer === "top") {
-          this.y = forcedY !== undefined ? forcedY : waterY + 20 + Math.random() * (waterHeight * 0.28);
-          this.speed = (Math.random() * 1.5 + 1.0) * this.direction;
-        } else if (this.layer === "mid") {
-          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + Math.random() * (waterHeight * 0.35);
-          this.speed = (Math.random() * 0.9 + 0.5) * this.direction;
+        if (this.fishData.isChest) {
+            if (this.fishData.chestType === 'copper') {
+                this.y = forcedY !== undefined ? forcedY : waterY + 20 + Math.random() * (waterHeight * 0.25);
+                this.speed = (Math.random() * 1.2 + 0.8) * this.direction;
+            } else if (this.fishData.chestType === 'silver') {
+                this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + Math.random() * (waterHeight * 0.3);
+                this.speed = (Math.random() * 0.8 + 0.4) * this.direction;
+            } else {
+                this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + Math.random() * (waterHeight * 0.2);
+                this.speed = (Math.random() * 0.4 + 0.2) * this.direction;
+            }
         } else {
-          this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + Math.random() * (waterHeight * 0.22);
-          this.speed = (Math.random() * 0.4 + 0.2) * this.direction;
+            if (this.layer === "top") {
+              this.y = forcedY !== undefined ? forcedY : waterY + 20 + Math.random() * (waterHeight * 0.28);
+              this.speed = (Math.random() * 1.5 + 1.0) * this.direction;
+            } else if (this.layer === "mid") {
+              this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.32 + Math.random() * (waterHeight * 0.35);
+              this.speed = (Math.random() * 0.9 + 0.5) * this.direction;
+            } else {
+              this.y = forcedY !== undefined ? forcedY : waterY + waterHeight * 0.7 + Math.random() * (waterHeight * 0.22);
+              this.speed = (Math.random() * 0.4 + 0.2) * this.direction;
+            }
         }
         this.x = this.direction === 1 ? -this.size * 3 : width + this.size * 3;
         this.isCaught = false;
@@ -1002,7 +1034,7 @@ export default function CauCaMultiPage() {
         
         this.animFrame += this.escapedBoost ? 0.15 : 0.08;
 
-        if ((this.layer === "bottom" || this.layer === "boss") && !this.notifiedRare && this.x > width * 0.2 && this.x < width * 0.8) {
+        if (!this.fishData.isChest && (this.layer === "bottom" || this.layer === "boss") && !this.notifiedRare && this.x > width * 0.2 && this.x < width * 0.8) {
           this.notifiedRare = true;
           if ((window as any).isHost && roomChannelRef.current) {
             roomChannelRef.current.send({ type: "broadcast", event: "rare_fish_spawn", payload: { fishName: this.fishData.vnName, points: this.points } });
@@ -1013,8 +1045,10 @@ export default function CauCaMultiPage() {
           if ((window as any).isHost) {
             if (this.layer === "boss") {
                 const idx = fishes.indexOf(this); if (idx > -1) fishes.splice(idx, 1);
-            }
-            else if (this.layer === "bottom") {
+            } else if (this.fishData.isChest) {
+                const chestTag = this.fishData.chestType === 'copper' ? 'chest_copper' : (this.fishData.chestType === 'silver' ? 'chest_silver' : 'chest_gold');
+                this.spawn(chestTag);
+            } else if (this.layer === "bottom") {
               this.isWaitingForWave = true;
               const delayMs = Math.floor(Math.random() * (60000 - 15000 + 1)) + 15000;
               setTimeout(() => { if (isMounted && fishes.includes(this)) this.spawn("bottom"); }, delayMs);
@@ -1025,7 +1059,8 @@ export default function CauCaMultiPage() {
 
       draw() {
         if (this.isWaitingForWave) return;
-        ctx!.save(); ctx!.translate(this.x, this.y); ctx!.rotate(Math.sin(this.animFrame) * (this.escapedBoost ? 0.1 : 0.04));
+        ctx!.save(); ctx!.translate(this.x, this.y); 
+        if (!this.fishData.isChest) ctx!.rotate(Math.sin(this.animFrame) * (this.escapedBoost ? 0.1 : 0.04));
         if (this.direction === 1) ctx!.scale(-1, 1);
         const img = this.fishObj.img;
         if (img && img.complete && img.naturalWidth !== 0) {
@@ -1130,7 +1165,7 @@ export default function CauCaMultiPage() {
       triggerSnap() {
           this.state = "IDLE";
           if (statusEl) { statusEl.innerText = "💥 Đứt dây tiêu r!"; statusEl.style.color = "#F44336"; }
-          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "💥 ĐỨT DÂY!", message: "Cá lạng mạnh đứt dây!", type: "beerus" } }));
+          window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "💥 ĐỨT DÂY!", message: "Cá/Rương lạng mạnh đứt dây!", type: "beerus" } }));
           if (this.caughtFish) { this.caughtFish.isCaught = false; this.caughtFish.escapedBoost = true; }
           this.reset();
       }
@@ -1199,8 +1234,8 @@ export default function CauCaMultiPage() {
             critPopups.push({ x: this.x, y: this.y - 30, alpha: 1, scale: 1.2, text: "BÙM!! GIẬT!", color: "#FFD700" });
             
             if (this.caughtFish) {
-               let wTxt = this.caughtFish.layer === "boss" ? `${this.caughtFish.weight >= 1000 ? (this.caughtFish.weight / 1000).toFixed(1) + ' Tấn' : this.caughtFish.weight + 'kg'}` : `${this.caughtFish.weight}kg`;
-               if (statusEl) { statusEl.innerText = `Dính ${this.caughtFish.fishData.vnName} (${wTxt})! TAP LIÊN TỤC ĐỂ RỈA MÁU!`; statusEl.style.color = "#FF5252"; }
+               let wTxt = this.caughtFish.fishData.isChest ? "Mở rương phần thưởng" : `${this.caughtFish.weight}kg`;
+               if (statusEl) { statusEl.innerText = `Dính ${this.caughtFish.fishData.vnName}! TAP LIÊN TỤC ĐỂ MỞ/KÉO!`; statusEl.style.color = "#FF5252"; }
                setBossUI({ name: this.caughtFish.fishData.vnName, hpPercent: (this.caughtFish.hp / this.caughtFish.maxHp) * 100, weightText: wTxt });
             }
             this.applyStruggleDamage(2.5);
@@ -1231,7 +1266,7 @@ export default function CauCaMultiPage() {
                 if (statusEl) { statusEl.innerText = `⚠️ Giữ chặt! Căng dây: ${Math.round(this.lineTension)}% (Nhớ TAP nhen)`; statusEl.style.color = "#FF9800"; }
             } else {
                 this.lineTension += (baseTensionGain * 2.5 * tensionMultiplier);
-                if (statusEl) { statusEl.innerText = `🎣 Cá đang trôi đi! TAP NHANH! (Căng: ${Math.round(this.lineTension)}%)`; statusEl.style.color = "#F44336"; }
+                if (statusEl) { statusEl.innerText = `🎣 Vật thể đang kéo! TAP NHANH! (Căng: ${Math.round(this.lineTension)}%)`; statusEl.style.color = "#F44336"; }
             }
         }
       }
@@ -1259,7 +1294,7 @@ export default function CauCaMultiPage() {
             const remainingPercent = Math.max(0, (this.caughtFish.hp / this.caughtFish.maxHp) * 100);
             this.tapProgress = 100 - remainingPercent;
             
-            let wTxt = this.caughtFish.layer === "boss" ? `${this.caughtFish.weight >= 1000 ? (this.caughtFish.weight / 1000).toFixed(1) + ' Tấn' : this.caughtFish.weight + 'kg'}` : `${this.caughtFish.weight}kg`;
+            let wTxt = this.caughtFish.fishData.isChest ? "Mở rương" : `${this.caughtFish.weight}kg`;
             setBossUI({ name: this.caughtFish.fishData.vnName, hpPercent: remainingPercent, weightText: wTxt });
 
             if (roomChannelRef.current) roomChannelRef.current.send({ type: "broadcast", event: "boss_damage", payload: { fishId: this.caughtFish.id, damage: hitDamage } });
@@ -1267,9 +1302,7 @@ export default function CauCaMultiPage() {
             if (this.caughtFish.hp <= 0 && !this.isAssistingOpponent) {
                 this.state = "REELING_HORIZ"; this.lineTension = 0; setIsStrugglingUI(false); setBossUI(null); this.qteEvent.active = false;
                 
-                if (this.caughtFish.layer === "boss") lastBossKillTime = Date.now();
-
-                if (statusEl) { statusEl.innerText = `Khuất phục thành công! Kéo lên...`; statusEl.style.color = "#FFEB3B"; }
+                if (statusEl) { statusEl.innerText = `Chinh phục thành công! Kéo lên...`; statusEl.style.color = "#FFEB3B"; }
             }
         }
       }
@@ -1325,20 +1358,14 @@ export default function CauCaMultiPage() {
               const isNormal = currentBaitId.startsWith("bait_thuong_") || currentBaitId.includes("_thinh_ki_") || currentBaitId.includes("_ba_doc_") || currentBaitId.includes("_bien_sau_") || currentBaitId.includes("_thao_duoc");
               const isPoor = currentBaitId.includes("_poor");
 
-              if (f.layer === "boss" && !currentBaitId.includes("hoang_gia")) {
-                  continue;
+              if (!f.fishData.isChest) {
+                  if (f.layer === "boss" && !currentBaitId.includes("hoang_gia")) continue;
+                  if (isBasic && f.weight >= 50) continue;
+                  if (isNormal && f.weight > 500) continue;
               }
 
-              if (isBasic && f.weight >= 50) {
-                  continue;
-              }
-
-              if (isNormal && f.weight > 500) {
-                  continue;
-              }
-
-              const missChance = isPoor ? 0.50 : 0.30;
-              if (Math.random() < missChance) {
+              const missChance = isPoor ? 0.50 : 0.20;
+              if (Math.random() < missChance && !f.fishData.isChest) {
                   window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "💨 HỤT MỒI!", message: `Bị ${f.fishData.vnName} ngó lơ hoặc đớp mất mồi!`, type: "beerus" } }));
                   this.state = "REELING_HORIZ"; break;
               }
@@ -1346,7 +1373,7 @@ export default function CauCaMultiPage() {
               if (currentBaitId.includes("sam_set")) {
                   f.stunTimer = 120;
                   window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "⚡ SẤM SÉT ĐỊNH THÂN!", message: `${f.fishData.vnName} bị choáng 2 giây!`, type: "rare" } }));
-              } else if (currentBaitId.includes("lua_do")) {
+              } else if (currentBaitId.includes("lua_do") && !f.fishData.isChest) {
                   f.hp = Math.max(0, f.hp - (f.maxHp * 0.05));
                   window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: "🔥 THIÊU ĐỐT LỬA ĐỎ!", message: `${f.fishData.vnName} mất 5% HP!`, type: "rare" } }));
               }
@@ -1373,12 +1400,11 @@ export default function CauCaMultiPage() {
         } else if (this.state === "STRUGGLING" || this.state === "COOP_HELPING") {
           if (this.lineTension >= 100) { this.triggerSnap(); return; }
           
-          if (this.state === "STRUGGLING" && this.caughtFish && !this.qteEvent.active && this.caughtFish.hp > 0) {
+          if (this.state === "STRUGGLING" && this.caughtFish && !this.qteEvent.active && this.caughtFish.hp > 0 && !this.caughtFish.fishData.isChest) {
               const isEligible = this.caughtFish.layer === "mid" || this.caughtFish.layer === "bottom" || this.caughtFish.layer === "boss";
               if (isEligible && Math.random() < 0.005) { 
                   this.qteEvent.active = true;
                   let actualWeightKg = this.caughtFish.weight;
-                  
                   let reqSwipes = 2;
                   if (actualWeightKg >= 100 && actualWeightKg < 500) reqSwipes = 3;
                   else if (actualWeightKg >= 500) reqSwipes = 4;
@@ -1415,21 +1441,64 @@ export default function CauCaMultiPage() {
           let dy = rodTipY - this.y; let speed = 30;
           if (Math.abs(dy) < speed) {
             if (this.caughtFish && !this.isAssistingOpponent) {
-              let earnedPoints = this.caughtFish.points; const currentFish = this.caughtFish.fishData;
-              let wTxt = this.caughtFish.weight >= 1000 ? `${(this.caughtFish.weight / 1000).toFixed(1)} Tấn` : `${this.caughtFish.weight}kg`;
-              if (selectedRod === "cancauvectorvang.png") earnedPoints *= 2;
+              const currentFish = this.caughtFish.fishData;
+              
+              if (currentFish.isChest) {
+                  let rewardMồiQty = 0;
+                  let popupTitle = "";
+                  let popupMsg = "";
 
-              const activeUser = (window as any).currentUser || user;
-              if (roomChannelRef.current && activeUser?.id) roomChannelRef.current.send({ type: "broadcast", event: "catch_alert", payload: { user_id: activeUser.id, fishName: currentFish.vnName, weightText: wTxt, points: earnedPoints } });
+                  if (currentFish.chestType === 'copper') {
+                      rewardMồiQty = Math.floor(Math.random() * 51) + 50;
+                      popupTitle = "📦 MỞ RƯƠNG ĐỒNG THÀNH CÔNG!";
+                      popupMsg = `Nhận +${rewardMồiQty} mồi ngẫu nhiên & 2 Cần Câu 3 Ngày!`;
+                  } else if (currentFish.chestType === 'silver') {
+                      rewardMồiQty = Math.floor(Math.random() * 201) + 100;
+                      popupTitle = "🪙 MỞ RƯƠNG BẠC VIP!";
+                      popupMsg = `Nhận +${rewardMồiQty} mồi & 2 Cần Câu 5 Ngày!`;
+                  } else {
+                      rewardMồiQty = Math.floor(Math.random() * 301) + 200;
+                      popupTitle = "👑 MỞ RƯƠNG VÀNG HUYỀN THOẠI!";
+                      popupMsg = `Nhận +${rewardMồiQty} mồi & 2 Cần Câu 7 Ngày!`;
+                  }
 
-              setMyCatchNotice({ text: currentFish.vnName, amount: `+${earnedPoints.toLocaleString()}🪙`, show: true });
-              setTimeout(() => setMyCatchNotice(null), 3500);
-              setCenterCatchNotice({ text: `${currentFish.vnName} (${wTxt})`, show: true });
-              setTimeout(() => setCenterCatchNotice(null), 3500);
+                  const allBaitKeys = Object.keys(baitDictionary);
+                  const randomBaitId = allBaitKeys[Math.floor(Math.random() * allBaitKeys.length)];
+                  const newInv = { ...inventory, [randomBaitId]: (inventory[randomBaitId] || 0) + rewardMồiQty };
+                  setInventory(newInv);
+                  (window as any).currentInventory = newInv;
+                  const activeUser = (window as any).currentUser || user;
+                  if (activeUser?.id) supabase.from("profiles").update({ inventory: newInv }).eq("id", activeUser.id);
 
-              syncScoreToSupabase(((window as any).currentGameScore ?? 1000) + earnedPoints);
+                  window.dispatchEvent(new CustomEvent("showPopupBanner", { detail: { title: popupTitle, message: popupMsg, type: "rare" } }));
+                  setCenterCatchNotice({ text: `${currentFish.vnName} (${popupMsg})`, show: true });
+                  setTimeout(() => setCenterCatchNotice(null), 4000);
+              } else {
+                  let earnedPoints = this.caughtFish.points; 
+                  let wTxt = `${this.caughtFish.weight}kg`;
+                  if (selectedRod === "cancauvectorvang.png") earnedPoints *= 2;
+
+                  const activeUser = (window as any).currentUser || user;
+                  if (roomChannelRef.current && activeUser?.id) roomChannelRef.current.send({ type: "broadcast", event: "catch_alert", payload: { user_id: activeUser.id, fishName: currentFish.vnName, weightText: wTxt, points: earnedPoints } });
+
+                  setMyCatchNotice({ text: currentFish.vnName, amount: `+${earnedPoints.toLocaleString()}🪙`, show: true });
+                  setTimeout(() => setMyCatchNotice(null), 3500);
+                  setCenterCatchNotice({ text: `${currentFish.vnName} (${wTxt})`, show: true });
+                  setTimeout(() => setCenterCatchNotice(null), 3500);
+
+                  syncScoreToSupabase(((window as any).currentGameScore ?? 1000) + earnedPoints);
+              }
+
               let idx = fishes.indexOf(this.caughtFish);
-              if (idx > -1) { fishes.splice(idx, 1); if (currentFish.layer !== "boss") fishes.push(new Fish()); }
+              if (idx > -1) { 
+                  fishes.splice(idx, 1); 
+                  if (currentFish.isChest) {
+                      const cTag = currentFish.chestType === 'copper' ? 'chest_copper' : (currentFish.chestType === 'silver' ? 'chest_silver' : 'chest_gold');
+                      fishes.push(new Fish(cTag));
+                  } else if (currentFish.layer !== "boss") {
+                      fishes.push(new Fish()); 
+                  }
+              }
             }
             this.reset();
           } else {
@@ -1446,20 +1515,19 @@ export default function CauCaMultiPage() {
         this.caughtFish = fish; fish.isCaught = true; 
         const currentBaitId = (window as any).currentSelectedBait?.id || "";
 
-        let actualWeightKg = fish.weight;
-        fish.maxHp = Math.max(10, Math.sqrt(actualWeightKg) * 12); 
+        fish.maxHp = fish.fishData.isChest ? (fish.fishData.chestType === 'copper' ? 15 : (fish.fishData.chestType === 'silver' ? 25 : 35)) : Math.max(10, Math.sqrt(fish.weight) * 12); 
         fish.hp = fish.maxHp;
 
-        if (currentBaitId.includes("bang_gia")) {
+        if (currentBaitId.includes("bang_gia") && !fish.fishData.isChest) {
             this.state = "STRUGGLING"; this.lineTension = 10; setIsStrugglingUI(true);
-            let wTxt = fish.weight >= 1000 ? `${(fish.weight / 1000).toFixed(1)} Tấn` : `${fish.weight}kg`;
+            let wTxt = `${fish.weight}kg`;
             if (statusEl) { statusEl.innerText = `Băng giá đóng băng ${fish.fishData.vnName}! Nhấp Để Kéo!`; statusEl.style.color = "#00E676"; }
             setBossUI({ name: fish.fishData.vnName, hpPercent: 100, weightText: wTxt });
             return;
         }
 
         this.state = "BITE_WAIT"; this.biteWaitFrames = 35;
-        if (statusEl) { statusEl.innerText = `CÁ CẮN MỒI!! GIẬT LÊN NGAY (TAP)!!`; statusEl.style.color = "#FFD700"; }
+        if (statusEl) { statusEl.innerText = fish.fishData.isChest ? `📦 RƯƠNG TRÔI CẮN MỒI!! GIẬT NGAY (TAP)!!` : `CÁ CẮN MỒI!! GIẬT LÊN NGAY (TAP)!!`; statusEl.style.color = "#FFD700"; }
       }
 
       draw() {
@@ -1492,14 +1560,6 @@ export default function CauCaMultiPage() {
         if (this.state === "BITE_WAIT") {
             ctx!.save(); ctx!.font = "900 24px sans-serif"; ctx!.fillStyle = "#FF1744"; ctx!.strokeStyle = "#FFF"; ctx!.lineWidth = 4;
             const tw = ctx!.measureText("!!").width; ctx!.strokeText("!!", drawX - tw/2, drawY - 25); ctx!.fillText("!!", drawX - tw/2, drawY - 25); ctx!.restore();
-        }
-        
-        if (this.qteEvent.active) {
-            ctx!.save(); ctx!.font = "900 18px sans-serif"; ctx!.fillStyle = "#FFF"; ctx!.strokeStyle = "#000"; ctx!.lineWidth = 3;
-            const text = this.qteEvent.direction === "left" ? `◀ VUỐT TRÁI (${this.qteEvent.currentSwipes}/${this.qteEvent.requiredSwipes})` : `VUỐT PHẢI ▶ (${this.qteEvent.currentSwipes}/${this.qteEvent.requiredSwipes})`;
-            const tw = ctx!.measureText(text).width;
-            ctx!.strokeText(text, drawX - tw/2, drawY - 60); ctx!.fillText(text, drawX - tw/2, drawY - 60);
-            ctx!.restore();
         }
 
         if (this.state === "STRUGGLING" || this.state === "COOP_HELPING") {
@@ -1540,9 +1600,13 @@ export default function CauCaMultiPage() {
       if ((window as any).isHost && !hasSpawnedInitialFishes) {
         hasSpawnedInitialFishes = true;
         
-        for (let i = 0; i < 20; i++) fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 20) * i));
-        for (let i = 0; i < 10; i++) fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 10) * i));
+        for (let i = 0; i < 15; i++) fishes.push(new Fish("top", computedWaterY + 15 + ((waterHeight * 0.28) / 15) * i));
+        for (let i = 0; i < 8; i++) fishes.push(new Fish("mid", computedWaterY + waterHeight * 0.32 + ((waterHeight * 0.35) / 8) * i));
         for (let i = 0; i < 2; i++) fishes.push(new Fish("bottom", computedWaterY + waterHeight * 0.7 + ((waterHeight * 0.22) / 2) * i));
+        
+        fishes.push(new Fish("chest_copper", computedWaterY + waterHeight * 0.15));
+        fishes.push(new Fish("chest_silver", computedWaterY + waterHeight * 0.45));
+        fishes.push(new Fish("chest_gold", computedWaterY + waterHeight * 0.85));
         
         bossInterval = setInterval(() => {
             const now = Date.now();
@@ -1590,13 +1654,6 @@ export default function CauCaMultiPage() {
     const handleUp = (clientX: number) => {
       isHolding = false;
       if (hook.state === "CHARGING") { if (powerContainer) powerContainer.style.display = "none"; hook.releaseCharging(); }
-      if (hook.state === "STRUGGLING" && hook.qteEvent.active) {
-         const deltaX = clientX - touchStartX;
-         if (Math.abs(deltaX) > 50) {
-             if (deltaX < 0) hook.resolveSwipe("left");
-             else hook.resolveSwipe("right");
-         }
-      }
     };
 
     canvas.addEventListener("mousedown", (e) => handleDown(e.clientX));
@@ -1688,13 +1745,13 @@ export default function CauCaMultiPage() {
 
           if (rand < 0.35) {
               newType = "rain";
-              warnText = "🌧️ Mưa lớn! Nước đọng làm tất cả cá bơi nhanh hơn 30%-50%!";
+              warnText = "🌧️ Mưa lớn! Nước đọng làm tất cả cá bơi nhanh hơn!";
           } else if (rand < 0.7) {
               newType = "storm";
-              warnText = "⚡ Bão giật! Dây câu bị lắc uốn lượn dữ dội & cá bơi cực hăng!";
+              warnText = "⚡ Bão giật! Dây câu bị lắc uốn lượn dữ dội!";
           } else {
               newType = "fog";
-              warnText = "🌫️ Sương mù dày đặc! Phủ kín toàn bộ mặt hồ cá!";
+              warnText = "🌫️ Sương mù dày đặc phủ kín mặt hồ!";
           }
 
           currentWeatherType = newType;
@@ -1772,10 +1829,8 @@ export default function CauCaMultiPage() {
         }
       }
 
-      // 1. VẼ CÁ TRƯỚC
       for (let f of fishes) { f.update(); f.draw(); }
       
-      // 2. VẼ SƯƠNG MÙ CHE LÊN ĐÀN CÁ
       if (currentWeatherType === "fog") {
           ctx!.fillStyle = "rgba(180, 195, 205, 0.92)";
           ctx!.fillRect(0, waterY, width, height - waterY);
@@ -1785,7 +1840,6 @@ export default function CauCaMultiPage() {
           ctx!.fillRect(-fogDrift, waterY, width * 2, height - waterY);
       }
 
-      // 3. VẼ CẦN CÂU (LÊN TRÊN CÙNG ĐỂ NGƯỜI CHƠI THẤY ĐƯỜNG CÂU)
       hook.holdStruggleTick(isHolding); hook.update(); hook.draw();
 
       const now = Date.now();
@@ -1891,7 +1945,6 @@ export default function CauCaMultiPage() {
          />
       )}
 
-      {/* --- POPUP LUẬT & HƯỚNG DẪN CÂU CÁ --- */}
       {isGuideOpen && (
         <div className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
           <div className="bg-slate-950 border-2 border-sky-500/60 w-full max-w-3xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(14,165,233,0.3)] flex flex-col relative overflow-hidden">
@@ -1902,20 +1955,10 @@ export default function CauCaMultiPage() {
             
             <div className="flex-1 overflow-y-auto my-3 pr-2 space-y-5 text-sm text-slate-300">
                 <div className="space-y-2">
-                    <h3 className="text-emerald-400 font-black uppercase border-l-4 border-emerald-400 pl-2">🎣 Cách Quăng & Căn Lực</h3>
+                    <h3 className="text-emerald-400 font-black uppercase border-l-4 border-emerald-400 pl-2">🎣 Săn Rương & Câu Cá</h3>
                     <ul className="list-disc list-inside space-y-1 ml-2 text-xs font-bold leading-relaxed">
-                        <li><span className="text-amber-300">Nhấn giữ màn hình</span> để gồng lực quăng. Thanh lực càng đầy, mồi văng càng xa.</li>
-                        <li>Độ sâu mồi chìm phụ thuộc vào lực quăng và loại mồi.</li>
-                        <li>Khi hiện <span className="text-rose-400 font-black">"CÁ CẮN MỒI!! GIẬT LÊN NGAY (TAP)!!"</span>, hãy nhấn thật nhanh 1 cái để đóng cá!</li>
-                    </ul>
-                </div>
-
-                <div className="space-y-2">
-                    <h3 className="text-rose-400 font-black uppercase border-l-4 border-rose-400 pl-2">⚔️ Kỹ Thuật Kéo & Giữ Dây</h3>
-                    <ul className="list-disc list-inside space-y-1 ml-2 text-xs font-bold leading-relaxed">
-                        <li><span className="text-amber-300">Tap (Nhấp) liên tục:</span> Dùng để rỉa máu cá.</li>
-                        <li><span className="text-blue-300">Nhấn giữ:</span> Hãm lực kéo, giúp độ căng dây tăng chậm lại.</li>
-                        <li>Đừng để mốc căng lên 100% (Đứt dây).</li>
+                        <li><span className="text-amber-300">Rương Đồng, Bạc, Vàng</span> trôi nổi tự do trong nước chứa hàng trăm mồi & cần câu xịn!</li>
+                        <li>Nhấn giữ màn hình để gồng lực quăng mồi tới độ sâu mong muốn.</li>
                     </ul>
                 </div>
             </div>
@@ -1988,12 +2031,11 @@ export default function CauCaMultiPage() {
           />
       )}
 
-      {/* --- SÀN ĐẤU GIÁ REALTIME --- */}
       {isAuctionOpen && (
         <div className="absolute inset-0 z-[75] bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded-3xl animate-fadeIn">
              <div className="bg-slate-900 border-2 border-blue-500 w-full max-w-3xl max-h-[85vh] rounded-2xl p-6 shadow-[0_0_30px_rgba(59,130,246,0.4)] relative flex flex-col">
                   <div className="flex justify-between items-center pb-3 border-b border-slate-800">
-                      <h3 className="text-xl font-black text-blue-400 uppercase tracking-wider">⚖️ Sàn Đấu Giá </h3>
+                      <h3 className="text-xl font-black text-blue-400 uppercase tracking-wider">⚖️ Sàn Đấu Giá</h3>
                       <button onClick={() => setIsAuctionOpen(false)} className="bg-slate-800 hover:bg-rose-600 text-white font-black w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer shadow text-xs">✕</button>
                   </div>
                   
@@ -2017,7 +2059,7 @@ export default function CauCaMultiPage() {
                               });
 
                               if (validAuctions.length === 0) {
-                                  return <div className="text-center text-slate-500 py-10 font-bold text-xs">Không có phiên đấu giá nào đang hoạt động. Ní hãy là người đầu tiên đăng bán!</div>;
+                                  return <div className="text-center text-slate-500 py-10 font-bold text-xs">Không có phiên đấu giá nào đang hoạt động.</div>;
                               }
 
                               return validAuctions.map(item => {
@@ -2034,7 +2076,6 @@ export default function CauCaMultiPage() {
                                                   <h4 className="text-sm font-black text-amber-300">{item.item_name} {item.amount > 1 ? `(x${item.amount})` : ''}</h4>
                                                   <p className="text-[10px] text-slate-400">Người đăng: <span className="text-blue-400 font-bold">{item.seller_name}</span></p>
                                                   <p className="text-[10px] text-slate-400">Giá hiện tại: <span className="text-emerald-400 font-bold">{item.current_bid.toLocaleString()}🪙</span></p>
-                                                  <p className="text-[10px] text-slate-400">Dẫn đầu: <span className="text-white font-bold">{item.highest_bidder_name || "Chưa có"}</span></p>
                                                   <p className="text-[10px] font-bold text-slate-500">Còn lại: {mins}p {secs}s</p>
                                               </div>
                                           </div>
@@ -2048,7 +2089,7 @@ export default function CauCaMultiPage() {
                       </div>
                   ) : (
                       <div className="flex-1 overflow-y-auto mt-2 p-2 bg-slate-950 rounded-xl border border-slate-800 space-y-4">
-                          <h4 className="text-xs font-black text-emerald-400 uppercase">Chọn Vật Phẩm Trong Kho Đồ Của Bạn</h4>
+                          <h4 className="text-xs font-black text-emerald-400 uppercase">Chọn Vật Phẩm Trong Kho Đồ</h4>
                           <div className="space-y-3">
                               <div>
                                   <label className="text-[10px] font-bold text-slate-400 block mb-1">Loại vật phẩm:</label>
@@ -2067,7 +2108,7 @@ export default function CauCaMultiPage() {
                                               const amt = inventory[bId];
                                               if (amt <= 0) return null;
                                               const bObj = resolveBaitInfo(bId);
-                                              return <option key={bId} value={bId}>{bObj.name} (Còn {amt} túi)</option>;
+                                              return <option key={bId} value={bId}>{bObj.name} (Còn {amt})</option>;
                                           })
                                       ) : (
                                           Object.keys(userRodsMap).map(rFname => {
@@ -2080,7 +2121,7 @@ export default function CauCaMultiPage() {
 
                               {sellForm.itemType === 'bait' && (
                                   <div>
-                                      <label className="text-[10px] font-bold text-slate-400 block mb-1">Số lượng đăng bán:</label>
+                                      <label className="text-[10px] font-bold text-slate-400 block mb-1">Số lượng:</label>
                                       <input type="number" min="1" max={inventory[sellForm.itemId] || 1} value={sellForm.amount} onChange={(e) => setSellForm({...sellForm, amount: parseInt(e.target.value) || 1})} className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl p-2 font-bold" />
                                   </div>
                               )}
@@ -2091,7 +2132,7 @@ export default function CauCaMultiPage() {
                                       <input type="number" min="1000" step="5000" value={sellForm.startBid} onChange={(e) => setSellForm({...sellForm, startBid: parseInt(e.target.value) || 1000})} className="w-full bg-slate-900 border border-slate-700 text-emerald-400 text-xs rounded-xl p-2 font-bold" />
                                   </div>
                                   <div>
-                                      <label className="text-[10px] font-bold text-slate-400 block mb-1">Thời gian đấu (phút):</label>
+                                      <label className="text-[10px] font-bold text-slate-400 block mb-1">Thời gian (phút):</label>
                                       <select value={sellForm.durationMins} onChange={(e) => setSellForm({...sellForm, durationMins: parseInt(e.target.value)})} className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl p-2 font-bold">
                                           <option value={5}>5 Phút</option>
                                           <option value={10}>10 Phút</option>
@@ -2110,7 +2151,7 @@ export default function CauCaMultiPage() {
         </div>
       )}
 
-      {/* --- NÚT MENU Ở TRÊN --- */}
+      {/* --- MENU Ở TRÊN --- */}
       <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-50 pointer-events-auto gap-2">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button onClick={leaveRoom} className="bg-rose-900/95 text-rose-200 hover:bg-rose-800 px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black border border-rose-500/40 shadow cursor-pointer active:scale-95 transition">← Rời</button>
@@ -2161,14 +2202,13 @@ export default function CauCaMultiPage() {
             {isBasicBaitDropdownOpen && (
               <div className="absolute right-0 mt-1 w-60 bg-slate-950/98 border-2 border-amber-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md animate-fadeIn">
                 <div className="px-2 py-1 text-[9px] font-black text-amber-400 uppercase border-b border-slate-800 flex justify-between items-center">
-                    <span>🪱 Mồi Cơ Bản Trong Kho</span>
-                    <span className="text-[8px] text-slate-400">Chọn để dùng</span>
+                    <span>🪱 Mồi Cơ Bản</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
                    {(() => {
                        const basicKeys = Object.keys(inventory).filter(k => k.startsWith("basic_") && (inventory[k] || 0) > 0);
                        if (basicKeys.length === 0) {
-                           return <div className="p-3 text-center text-[10px] text-slate-500 font-bold">Kho hết mồi cơ bản! Hãy mua ở Shop 🪱</div>;
+                           return <div className="p-3 text-center text-[10px] text-slate-500 font-bold">Kho hết mồi cơ bản!</div>;
                        }
                        return basicKeys.map((bId) => {
                            const count = inventory[bId] || 0;
@@ -2215,13 +2255,12 @@ export default function CauCaMultiPage() {
               <div className="absolute right-0 mt-1 w-64 bg-slate-950/98 border-2 border-purple-500 rounded-xl shadow-2xl overflow-hidden z-50 p-1 space-y-1 backdrop-blur-md animate-fadeIn">
                 <div className="px-2 py-1 text-[9px] font-black text-purple-400 uppercase border-b border-slate-800 flex justify-between items-center">
                     <span>🔮 Mồi Trộn & Đặc Biệt</span>
-                    <span className="text-[8px] text-slate-400">Chọn để dùng</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
                    {(() => {
                        const specialKeys = Object.keys(inventory).filter(k => !k.startsWith("basic_") && !k.startsWith("fish_sk") && (inventory[k] || 0) > 0);
                        if (specialKeys.length === 0) {
-                           return <div className="p-3 text-center text-[10px] text-slate-500 font-bold">Chưa có mồi trộn! Hãy vào Trạm Trộn 🔮</div>;
+                           return <div className="p-3 text-center text-[10px] text-slate-500 font-bold">Chưa có mồi trộn! Vào Trạm Trộn 🔮</div>;
                        }
                        return specialKeys.map((bId) => {
                            const count = inventory[bId] || 0;
@@ -2269,7 +2308,7 @@ export default function CauCaMultiPage() {
       
       {centerCatchNotice && centerCatchNotice.show && (
         <div className="absolute left-1/2 -translate-x-1/2 top-16 z-40 bg-slate-900/90 border border-amber-400/60 px-2.5 py-0.5 rounded-md shadow-lg pointer-events-none flex items-center gap-1 animate-fadeIn">
-          <span className="text-[9px]">🎣</span><span className="text-[9px] font-black text-amber-300">{centerCatchNotice.text}</span>
+          <span className="text-[9px]">📦</span><span className="text-[9px] font-black text-amber-300">{centerCatchNotice.text}</span>
         </div>
       )}
 
@@ -2295,7 +2334,7 @@ export default function CauCaMultiPage() {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
           <div className="bg-slate-950 border-2 border-emerald-500/60 w-full max-w-2xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden">
             <div className="flex justify-between items-center pb-3 border-b border-slate-800">
-              <h2 className="text-base sm:text-xl font-black text-emerald-400 uppercase tracking-wider">🪱 Shop Mồi Cơ Bản (Chọn Số Lượng)</h2>
+              <h2 className="text-base sm:text-xl font-black text-emerald-400 uppercase tracking-wider">🪱 Shop Mồi Cơ Bản</h2>
               <button onClick={() => setIsBasicShopOpen(false)} className="bg-slate-800 hover:bg-rose-600 text-white font-black w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer shadow text-xs">✕</button>
             </div>
             {shopNotification && <div className="my-2 bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-xl font-black text-xs text-center animate-bounce shadow">{shopNotification}</div>}
@@ -2406,28 +2445,36 @@ export default function CauCaMultiPage() {
             
             <div className="flex-1 overflow-y-auto my-2 pr-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                {(craftingTab === 'normal' ? CRAFT_RECIPES_NORMAL : CRAFT_RECIPES_ADVANCED).map((recipe) => {
+                  const bInfo = resolveBaitInfo(recipe.output);
                   return (
                      <div key={recipe.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2 shadow-lg">
                         <div className="flex items-center gap-3 border-b border-slate-800 pb-2">
                            <div className="w-12 h-12 bg-slate-950 rounded-xl p-1.5 flex items-center justify-center border border-purple-500/50 shadow">
-                               <img src={`/assets/cauca/baits/${specialBaits.find(b=>b.id===recipe.output)?.filename}`} className="w-full h-full object-contain" />
+                               {bInfo.filename ? (
+                                   <img src={`/assets/cauca/baits/${bInfo.filename}`} className="w-full h-full object-contain" />
+                               ) : (
+                                   <span className="text-2xl">{bInfo.emoji || "📦"}</span>
+                               )}
                            </div>
                            <div>
                                <h4 className="text-sm font-black text-purple-300">{recipe.name}</h4>
-                               <p className="text-[10px] text-slate-400">{specialBaits.find(b=>b.id===recipe.output)?.desc}</p>
+                               <p className="text-[10px] text-slate-400">{bInfo.desc}</p>
                            </div>
                         </div>
                         <div className="text-[10px] font-bold text-slate-300">Yêu cầu nguyên liệu:</div>
                         <div className="flex gap-2">
                            {recipe.req.map(r => {
-                               const bBasic = basicBaitsConfig.find(sb => sb.id === r.id);
-                               const bSpecial = specialBaits.find(sb => sb.id === r.id);
+                               const reqInfo = resolveBaitInfo(r.id);
                                const hasAmt = inventory[r.id] || 0;
                                const isEnough = hasAmt >= r.qty;
                                return (
                                    <div key={r.id} className={`flex-1 flex flex-col items-center bg-slate-950 p-2 rounded-lg border ${isEnough ? "border-emerald-500/30" : "border-rose-500/30"}`}>
-                                      {bBasic ? <span className="text-xl mb-1">{bBasic.emoji}</span> : <img src={`/assets/cauca/baits/${bSpecial?.filename}`} className="w-6 h-6 object-contain mb-1" />}
-                                      <span className="text-[8px] text-center line-clamp-1">{bBasic?.name || bSpecial?.name}</span>
+                                      {reqInfo.filename ? (
+                                         <img src={`/assets/cauca/baits/${reqInfo.filename}`} className="w-6 h-6 object-contain mb-1" />
+                                      ) : (
+                                         <span className="text-xl mb-1">{reqInfo.emoji || "📦"}</span>
+                                      )}
+                                      <span className="text-[8px] text-center line-clamp-1">{reqInfo.name}</span>
                                       <span className={`text-[9px] font-black ${isEnough ? "text-emerald-400" : "text-rose-400"}`}>{hasAmt} / {r.qty}</span>
                                    </div>
                                );
