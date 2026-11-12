@@ -1422,12 +1422,17 @@ export default function HoCaPage() {
 
       <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-50 pointer-events-none">
         <div className="flex gap-2 pointer-events-auto">
-          <Link
-            href="/caucamulti"
-            className="bg-slate-900/80 hover:bg-slate-800 text-sky-400 px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-500/40 backdrop-blur transition active:scale-95"
-          >
-            ← Ra Khơi
-          </Link>
+          <button
+  onClick={async () => {
+    if (typeof syncToDB === "function" && aquariumRef.current) {
+      await syncToDB(aquariumRef.current, fishInvRef.current, scoreRef.current, true);
+    }
+    window.location.href = "/caucamulti";
+  }}
+  className="bg-slate-900/80 hover:bg-slate-800 text-sky-400 px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-500/40 backdrop-blur transition active:scale-95 cursor-pointer"
+>
+  ← Ra Khơi
+</button>
           <Link
             href="/caucamulti/hoca/arenaca"
             className="bg-gradient-to-r from-amber-500 to-rose-600 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-amber-300/40 backdrop-blur transition active:scale-95"
