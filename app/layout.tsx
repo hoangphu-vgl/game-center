@@ -209,16 +209,19 @@ export default function RootLayout({
     }
   };
 
-  // KIỂM TRA XEM CÓ ĐANG Ở TRANG CHỦ HAY KHÔNG (ví dụ đường dẫn là "/" hoặc trang chủ chuẩn)
+  // KIỂM TRA XEM CÓ ĐANG Ở TRANG CHỦ HAY KHÔNG
   const isHomePage = pathname === "/";
 
   return (
     <html lang="vi">
-      <body className="antialiased bg-slate-950 text-white relative min-h-screen">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+      </head>
+      <body className="antialiased bg-slate-950 text-white relative w-screen h-[100dvh] overflow-hidden">
         {children}
 
-        {/* KHUNG CHAT NỔI TOÀN CỤC - CHỈ HIỂN THỊ KHI Ở TRANG CHỦ VÀ ĐÃ ĐĂNG NHẬP */}
-        {user && (
+        {/* KHUNG CHAT NỔI TOÀN CỤC - KHÓA LẠI CHỈ HIỂN THỊ KHI Ở TRANG CHỦ VÀ ĐÃ ĐĂNG NHẬP */}
+        {user && isHomePage && (
           <div className="fixed z-50 select-none" style={{ left: `${chatPosition.x}px`, top: `${chatPosition.y}px` }}>
             {!chatOpen ? (
               <button

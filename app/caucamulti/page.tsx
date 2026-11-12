@@ -2745,7 +2745,7 @@ export default function CauCaMultiPage() {
   }
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: "none" }}>
+    <div className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: "none" }}>
       {activeCraftingRecipe && (
         <CraftingMinigame
           recipe={activeCraftingRecipe}

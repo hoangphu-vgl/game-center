@@ -11,7 +11,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: true, autoRefreshToken: true },
 });
 
-// --- HỆ THỐNG ARENA STATS ---
+// --- HỆ THỐNG ARENA STATS (ĐỒNG BỘ TỪ CODE CÂU CÁ) ---
 function generateArenaStats(weight: number) {
   const rand = Math.random() * 100;
   let rank = "D";
@@ -104,7 +104,7 @@ export default function HoCaPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [score, setScore] = useState<number>(0);
-  const [, setInventory] = useState<any>({});
+  const [inventory, setInventory] = useState<any>({});
   const [aquarium, setAquarium] = useState<any[]>([]);
 
   const [interactionMode, setInteractionMode] = useState<"pet" | "feed" | "breed">("pet");
@@ -122,12 +122,9 @@ export default function HoCaPage() {
   const userRef = useRef<any>(null);
   const scoreRef = useRef<number>(0);
   const inventoryRef = useRef<any>({});
-  
-  // 🔥 Khai báo đầy đủ các ref bị thiếu
   const aquariumRef = useRef<any[]>([]);
   const fishInvRef = useRef<any[]>([]);
   const activeFishEntitiesRef = useRef<any[]>([]);
-  
   const isDataLoadedRef = useRef<boolean>(false);
   const isSavingRef = useRef<boolean>(false);
   const lastLocalWriteAtRef = useRef<number>(0);
@@ -148,6 +145,7 @@ export default function HoCaPage() {
     };
   }, []);
 
+  // Hàm xử lý & đồng bộ dữ liệu từ Supabase (dùng chung cho lúc mới mở, khi focus lại tab, hoặc khi DB thay đổi từ caucamulti)
   const hydrateFromProfileData = async (userId: string, forceRenderEntities = true) => {
     if (isSavingRef.current) return;
     const { data } = await supabase.from("profiles").select("balance, inventory").eq("id", userId).single();
@@ -276,8 +274,9 @@ export default function HoCaPage() {
         userRef.current = session.user;
         await hydrateFromProfileData(session.user.id, true);
 
+        // Lắng nghe thay đổi Realtime trên bảng profiles (khi bán/câu cá bên caucamulti thì Hồ Cá tự cập nhật ngay, không bao giờ hồi sinh cá đã bán)
         profileChannel = supabase
-          .channel(`profile_sync_hoca_${session.user.id}_${Date.now()}`)
+          .channel(`profile_sync_hoca_${session.user.id}`)
           .on(
             "postgres_changes",
             { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${session.user.id}` },
@@ -291,6 +290,7 @@ export default function HoCaPage() {
     }
     loadData();
 
+    // Khi quay lại tab / chuyển trang từ caucamulti về hoca -> tải lại ngay bản mới nhất từ DB
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible" && userRef.current?.id) {
         hydrateFromProfileData(userRef.current.id, true);
@@ -315,9 +315,7 @@ export default function HoCaPage() {
     return () => {
       window.removeEventListener("focus", handleVisibilityOrFocus);
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
-      if (profileChannel) {
-        supabase.removeChannel(profileChannel);
-      }
+      if (profileChannel) supabase.removeChannel(profileChannel);
       supabase.removeChannel(auctionChannel);
     };
   }, []);
@@ -336,6 +334,7 @@ export default function HoCaPage() {
     return () => clearInterval(interval);
   }, [selectedFishInfo?.id]);
 
+  // Lưu an toàn: Fetch inventory mới nhất trên DB trước khi ghi để KHÔNG BAO GIỜ ghi đè mất dữ liệu từ caucamulti
   const syncToDB = async (newAq: any[], newFishInv: any[], newScore?: number, skipReadBeforeWrite = false) => {
     const activeUser = userRef.current || user;
     if (!activeUser || !isDataLoadedRef.current || isSavingRef.current) return;
@@ -832,6 +831,7 @@ export default function HoCaPage() {
     window.addEventListener("triggerSaveAquarium", handleTriggerSave);
     window.addEventListener("triggerSaveAquariumNow", handleTriggerSaveNow);
 
+    // Chỉ tự lưu định kỳ khi tab đang mở (visible) và chỉ khi có cá trong hồ để tránh ghi đè dữ liệu từ tab khác
     const autoSyncInterval = setInterval(() => {
       if (
         document.visibilityState === "visible" &&
@@ -1121,6 +1121,7 @@ export default function HoCaPage() {
       ? Math.floor((fishObj.baseValue || 1000) * 2.5)
       : Math.floor((fishObj.baseValue || 1000) * (0.5 + ratio * 1.5));
 
+    // Đọc số dư mới nhất từ DB trước khi cộng tiền bán cá để không lệch với caucamulti
     let latestBalance = scoreRef.current;
     const activeUser = userRef.current || user;
     if (activeUser?.id) {
@@ -1194,6 +1195,7 @@ export default function HoCaPage() {
     const activeUser = userRef.current || user;
     if (!activeUser?.id || fishIds.length === 0) return;
 
+    // Fetch lại kho cá mới nhất từ DB trước khi thả vào hồ để tránh trường hợp con cá đó vừa bị bán ở caucamulti
     const { data: freshProfile } = await supabase
       .from("profiles")
       .select("inventory")
@@ -1291,7 +1293,7 @@ export default function HoCaPage() {
   })();
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-slate-950 font-sans pointer-events-auto select-none" style={{ touchAction: "none" }}>
+    <div className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 select-none font-sans pointer-events-auto" style={{ touchAction: "none" }}>
       {toastBanner && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[80] bg-slate-900/95 border-2 border-amber-400 px-4 py-2 rounded-2xl shadow-2xl text-center max-w-xs sm:max-w-md pointer-events-none animate-bounce">
           <div className="text-xs font-black text-amber-300 uppercase">{toastBanner.title}</div>
