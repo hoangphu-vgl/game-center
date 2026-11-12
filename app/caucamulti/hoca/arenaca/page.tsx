@@ -208,8 +208,9 @@ function formatFishWeight(w: number): string {
 
 function calcBalancedCombatStats(weight: number, meta: { hpBonus: number; atkBonus: number }) {
   const safeW = Math.max(1, Number(weight || 1));
-  const baseHp = Math.floor(Math.sqrt(safeW) * 76 + 520);
-  const baseAtk = Math.floor(Math.sqrt(safeW) * 14 + 105);
+  // 📈 Tăng mạnh hệ số cơ bản của máu (từ * 76 lên * 150 hoặc * 200) để trâu bò hơn
+  const baseHp = Math.floor(Math.sqrt(safeW) * 180 + 5000); 
+  const baseAtk = Math.floor(Math.sqrt(safeW) * 12 + 200); // Giảm nhẹ công một chút để đánh dai hơn nữa
   return {
     maxHp: Math.round(baseHp * meta.hpBonus),
     atk: Math.round(baseAtk * meta.atkBonus),

@@ -1424,13 +1424,12 @@ export default function HoCaPage() {
         <div className="flex gap-2 pointer-events-auto">
           <button
   onClick={async () => {
-    // 1. Ép lưu trạng thái cá và độ no xuống Supabase trước khi rời trang
+    // 1. Lưu dữ liệu cá & độ no xuống Supabase trước khi chuyển trang
     if (typeof syncToDB === "function" && aquariumRef.current) {
       await syncToDB(aquariumRef.current, fishInvRef.current, scoreRef.current, true);
     }
-    // 2. Trả về đúng màn hình chèo thuyền câu cá ngoài khơi (Hình trái)
-    // Nếu game của ní có kèm roomId (ví dụ /caucamulti?room=room_1), ní thay cho đúng nhé:
-    window.location.href = "/caucamulti"; 
+    // 2. Ép buộc quay về đúng màn hình chèo thuyền câu cá ngoài khơi
+    window.location.href = "/caucamulti";
   }}
   className="bg-slate-900/80 hover:bg-slate-800 text-sky-400 px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-500/40 backdrop-blur transition active:scale-95 cursor-pointer"
 >
