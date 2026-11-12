@@ -102,18 +102,18 @@ const specialBaits = [
 ];
 
 const CRAFT_RECIPES_NORMAL = [
-  { id: "rc_n1", output: "bait_thuong_1", name: "Mồi Kì Vàng Hoàn Hảo", qtyRange: [1, 3], req: [{id: "basic_worm", qty: 2}, {id: "basic_hook", qty: 1}], fee: 10000, difficulty: "normal" },
-  { id: "rc_n2", output: "bait_thuong_2", name: "Bả Độc Tố Hợp Thành", qtyRange: [1, 3], req: [{id: "basic_bread", qty: 3}, {id: "basic_cricket", qty: 1}], fee: 10000, difficulty: "normal" },
-  { id: "rc_n3", output: "bait_thuong_3", name: "Mồi Hắc Hải Sâu", qtyRange: [1, 4], req: [{id: "basic_fly", qty: 2}, {id: "basic_shrimp", qty: 2}], fee: 10000, difficulty: "normal" },
-  { id: "rc_n4", output: "bait_moi_thao_duoc", name: "Mồi Thảo Dược", qtyRange: [1, 2], req: [{id: "basic_bread", qty: 2}, {id: "basic_fly", qty: 2}], fee: 15000, difficulty: "normal" },
+  { id: "rc_n1", output: "bait_thuong_1", name: "Mồi Kì Vàng Hoàn Hảo", qtyRange: [50, 100], req: [{id: "basic_worm", qty: 2}, {id: "basic_hook", qty: 1}], fee: 10000, difficulty: "normal" },
+  { id: "rc_n2", output: "bait_thuong_2", name: "Bả Độc Tố Hợp Thành", qtyRange: [50, 100], req: [{id: "basic_bread", qty: 3}, {id: "basic_cricket", qty: 1}], fee: 10000, difficulty: "normal" },
+  { id: "rc_n3", output: "bait_thuong_3", name: "Mồi Hắc Hải Sâu", qtyRange: [50, 100], req: [{id: "basic_fly", qty: 2}, {id: "basic_shrimp", qty: 2}], fee: 10000, difficulty: "normal" },
+  { id: "rc_n4", output: "bait_moi_thao_duoc", name: "Mồi Thảo Dược", qtyRange: [50, 100], req: [{id: "basic_bread", qty: 2}, {id: "basic_fly", qty: 2}], fee: 15000, difficulty: "normal" },
 ];
 
 const CRAFT_RECIPES_ADVANCED = [
-  { id: "rc_a1", output: "bait_xin_lua_do", name: "Mồi Lửa Đỏ (Xịn)", qtyRange: [1, 2], req: [{id: "bait_thuong_1", qty: 2}, {id: "basic_worm", qty: 5}], fee: 20000, difficulty: "hard" },
-  { id: "rc_a2", output: "bait_xin_sam_set", name: "Mồi Sấm Sét (Xịn)", qtyRange: [1, 2], req: [{id: "bait_thuong_2", qty: 2}, {id: "basic_hook", qty: 5}], fee: 20000, difficulty: "hard" },
-  { id: "rc_a3", output: "bait_xin_bang_gia", name: "Mồi Băng Giá (Xịn)", qtyRange: [1, 2], req: [{id: "bait_thuong_3", qty: 2}, {id: "basic_bread", qty: 5}], fee: 25000, difficulty: "hard" },
-  { id: "rc_a4", output: "bait_xin_co_khi", name: "Mồi Cơ Khí (Xịn)", qtyRange: [1, 2], req: [{id: "bait_xin_lua_do", qty: 1}, {id: "bait_xin_sam_set", qty: 1}], fee: 50000, difficulty: "hard" },
-  { id: "rc_a5", output: "bait_xin_hoang_gia", name: "Mồi Hoàng Gia (Xịn)", qtyRange: [1, 3], req: [{id: "bait_xin_co_khi", qty: 1}, {id: "bait_xin_bang_gia", qty: 1}], fee: 100000, difficulty: "hard" },
+  { id: "rc_a1", output: "bait_xin_lua_do", name: "Mồi Lửa Đỏ (Xịn)", qtyRange: [20, 50], req: [{id: "bait_thuong_1", qty: 2}, {id: "basic_worm", qty: 5}], fee: 20000, difficulty: "hard" },
+  { id: "rc_a2", output: "bait_xin_sam_set", name: "Mồi Sấm Sét (Xịn)", qtyRange: [20, 50], req: [{id: "bait_thuong_2", qty: 2}, {id: "basic_hook", qty: 5}], fee: 20000, difficulty: "hard" },
+  { id: "rc_a3", output: "bait_xin_bang_gia", name: "Mồi Băng Giá (Xịn)", qtyRange: [20, 50], req: [{id: "bait_thuong_3", qty: 2}, {id: "basic_bread", qty: 5}], fee: 25000, difficulty: "hard" },
+  { id: "rc_a4", output: "bait_xin_co_khi", name: "Mồi Cơ Khí (Xịn)", qtyRange: [20, 50], req: [{id: "bait_xin_lua_do", qty: 1}, {id: "bait_xin_sam_set", qty: 1}], fee: 50000, difficulty: "hard" },
+  { id: "rc_a5", output: "bait_xin_hoang_gia", name: "Mồi Hoàng Gia (Xịn)", qtyRange: [20, 50], req: [{id: "bait_xin_co_khi", qty: 1}, {id: "bait_xin_bang_gia", qty: 1}], fee: 100000, difficulty: "hard" },
 ];
 
 function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onComplete: (isPerfect: boolean, earnedQty: number) => void, onCancel: () => void }) {
@@ -128,7 +128,9 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
     const [userSeqIndex, setUserSeqIndex] = useState(0);
     const [holdProgress, setHoldProgress] = useState(0);
     const isHoldingRef = useRef(false);
-    const [gridTarget] = useState<number>(() => Math.floor(Math.random() * (isHard ? 12 : 9)));
+    
+    // Minigame #5: Chỉ còn 4 hộp (lưới 2x2)
+    const [gridTarget] = useState<number>(() => Math.floor(Math.random() * 4));
     const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
 
     const [isFinished, setIsFinished] = useState(false);
@@ -147,8 +149,9 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
             }, 20);
             return () => clearInterval(interval);
         } else if (gameType === 3) {
-            const seqLength = isHard ? 6 : 4;
-            const seq = Array.from({length: seqLength}, () => Math.floor(Math.random() * 4));
+            // Minigame #3: Chỉ chọn 2 nút (Nút #1 và Nút #2) thay vì 4 nút
+            const seqLength = isHard ? 4 : 2;
+            const seq = Array.from({length: seqLength}, () => Math.floor(Math.random() * 2));
             setMemorySeq(seq);
         } else if (gameType === 4) {
             const interval = setInterval(() => {
@@ -165,7 +168,8 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
         setIsFinished(true);
         const minQ = recipe.qtyRange[0];
         const maxQ = recipe.qtyRange[1];
-        const earnedQty = isPerfect ? Math.floor(Math.random() * (maxQ - minQ + 1)) + minQ : 1;
+        // Trộn hoàn hảo nhận random từ minQ đến maxQ (ví dụ: mồi thường 50-100, mồi xịn 20-50)
+        const earnedQty = isPerfect ? Math.floor(Math.random() * (maxQ - minQ + 1)) + minQ : 5;
         setFinalResult({ isPerfect, qty: earnedQty });
         setTimeout(() => { onComplete(isPerfect, earnedQty); }, 1800);
     };
@@ -209,16 +213,16 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
 
                   {gameType === 3 && (
                       <div className="space-y-4">
-                          <p className="text-xs font-bold text-amber-300">Nhấn đúng thứ tự mài mồi ({userSeqIndex}/{memorySeq.length})</p>
-                          <div className="grid grid-cols-2 gap-2">
-                              {[0, 1, 2, 3].map((idx) => (
+                          <p className="text-xs font-bold text-amber-300">Nhấn đúng 2 nút theo thứ tự ({userSeqIndex}/{memorySeq.length})</p>
+                          <div className="grid grid-cols-2 gap-3">
+                              {[0, 1].map((idx) => (
                                   <button key={idx} onClick={() => {
                                       if (memorySeq[userSeqIndex] === idx) {
                                           const nextIdx = userSeqIndex + 1;
                                           setUserSeqIndex(nextIdx);
                                           if (nextIdx >= memorySeq.length) finishGame(true);
                                       } else { finishGame(false); }
-                                  }} className="bg-slate-800 hover:bg-purple-600 text-white font-black py-4 rounded-xl border border-slate-700 active:scale-95 transition">
+                                  }} className="bg-slate-800 hover:bg-purple-600 text-white font-black py-5 rounded-xl border border-slate-700 active:scale-95 transition text-sm">
                                       Nút #{idx + 1}
                                   </button>
                               ))}
@@ -259,15 +263,15 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
 
                   {gameType === 5 && (
                       <div className="space-y-4">
-                          <p className="text-xs font-bold text-amber-300">Chọn đúng hũ mồi thần bí</p>
-                          <div className={`grid ${isHard ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
-                              {Array.from({length: isHard ? 12 : 9}).map((_, boxIdx) => (
+                          <p className="text-xs font-bold text-amber-300">Chọn đúng 1 trong 4 hũ mồi thần bí (Thưởng nóng 50 mồi)</p>
+                          <div className="grid grid-cols-2 gap-3">
+                              {Array.from({length: 4}).map((_, boxIdx) => (
                                   <button key={boxIdx} disabled={selectedGrid !== null} onClick={() => {
                                       setSelectedGrid(boxIdx);
                                       const isPerfect = boxIdx === gridTarget;
                                       finishGame(isPerfect);
-                                  }} className={`h-12 rounded-xl font-black transition ${selectedGrid === boxIdx ? (boxIdx === gridTarget ? 'bg-emerald-500 text-slate-950' : 'bg-rose-600 text-white') : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
-                                      📦
+                                  }} className={`h-16 rounded-xl font-black transition text-2xl ${selectedGrid === boxIdx ? (boxIdx === gridTarget ? 'bg-emerald-500 text-slate-950' : 'bg-rose-600 text-white') : 'bg-slate-800 hover:bg-slate-700 text-white'}`}>
+                                      📦 #{boxIdx + 1}
                                   </button>
                               ))}
                           </div>
@@ -290,8 +294,8 @@ function CraftingMinigame({ recipe, onComplete, onCancel }: { recipe: any, onCom
 function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "shrimp" | "bread", onFinish: (earnedQty: number) => void, onCancel: () => void }) {
     const [difficulty] = useState<"easy" | "medium" | "hard">( () => {
         const r = Math.random();
-        if (r < 0.4) return "easy";
-        if (r < 0.75) return "medium";
+        if (r < 0.5) return "easy";
+        if (r < 0.8) return "medium";
         return "hard";
     });
 
@@ -300,34 +304,22 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
     const [stopped, setStopped] = useState(false);
     const [resultMsg, setResultMsg] = useState<string | null>(null);
 
-    const speed = difficulty === "easy" ? 2.2 : (difficulty === "medium" ? 3.5 : 5.0);
-    const zoneWidth = difficulty === "easy" ? 24 : (difficulty === "medium" ? 14 : 8);
-    const zoneStart = difficulty === "easy" ? 38 : (difficulty === "medium" ? 43 : 46);
+    // Giảm tốc độ thanh trượt và nới rộng vạch xanh để dễ canh chỉnh hơn
+    const speed = difficulty === "easy" ? 1.5 : (difficulty === "medium" ? 2.5 : 3.8);
+    const zoneWidth = difficulty === "easy" ? 35 : (difficulty === "medium" ? 24 : 16);
+    const zoneStart = difficulty === "easy" ? 32 : (difficulty === "medium" ? 38 : 42);
     const zoneEnd = zoneStart + zoneWidth;
 
-    const bonusQty = difficulty === "easy" ? 2 : (difficulty === "medium" ? 5 : 10);
-    const totalSuccess = 3 + bonusQty;
-
-    useEffect(() => {
-        if (stopped) return;
-        const interval = setInterval(() => {
-            setPos(prev => {
-                let next = prev + dirRef.current * speed;
-                if (next >= 100) { next = 100; dirRef.current = -1; }
-                if (next <= 0) { next = 0; dirRef.current = 1; }
-                return next;
-            });
-        }, 16);
-        return () => clearInterval(interval);
-    }, [stopped, speed]);
+    // Tăng phần thưởng tìm mồi tự nhiên lên 50 đến 200 mồi random
+    const randomEarned = Math.floor(Math.random() * 151) + 50; // 50 - 200
 
     const handleShoot = () => {
         if (stopped) return;
         setStopped(true);
         const isSuccess = pos >= zoneStart && pos <= zoneEnd;
-        const finalQty = isSuccess ? totalSuccess : 3;
+        const finalQty = isSuccess ? randomEarned : 10;
 
-        setResultMsg(isSuccess ? `⚽ CĂN CHUẨN NÈ! (+${totalSuccess} MỒI)` : `⚠️ TRƯỢT VẠCH VÀNG! (NHẬN 3 MỒI CƠ BẢN)`);
+        setResultMsg(isSuccess ? `⚽ CĂN CHUẨN NÈ! (+${randomEarned} MỒI)` : `⚠️ TRƯỢT VẠCH VÀNG! (NHẬN 10 MỒI CƠ BẢN)`);
         setTimeout(() => {
             onFinish(finalQty);
         }, 1800);
@@ -341,7 +333,7 @@ function FindBaitFIFAMinigame({ type, onFinish, onCancel }: { type: "insect" | "
                 </h4>
                 <p className="text-xs text-slate-300 font-bold mb-3">
                     Độ khó: <span className={difficulty === 'easy' ? 'text-emerald-400' : (difficulty === 'medium' ? 'text-amber-400' : 'text-rose-500 font-black')}>
-                        {difficulty === 'easy' ? '🟢 DỄ (+2)' : (difficulty === 'medium' ? '🟡 TRUNG BÌNH (+5)' : '🔴 KHÓ (+10)')}
+                        {difficulty === 'easy' ? '🟢 DỄ (Vạch lớn)' : (difficulty === 'medium' ? '🟡 TRUNG BÌNH' : '🔴 KHÓ')}
                     </span>
                 </p>
 
@@ -779,7 +771,8 @@ export default function CauCaMultiPage() {
           return slotA - slotB;
         });
         const topPlayer = players[0];
-        (window as any).isHost = (topPlayer.user_id === activeUser.id);
+        const isUserHost = (topPlayer.user_id === activeUser.id);
+        (window as any).isHost = isUserHost;
       }
 
       if (count > 1) {
@@ -842,39 +835,39 @@ export default function CauCaMultiPage() {
     const powerContainer = document.getElementById("power-container");
 
     const fishDatabase = [
-      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 100, weightRange: [2, 10], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn", sizeScale: 0.7, basePoints: 100, weightRange: [5, 20], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 100, weightRange: [2, 15], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 120, weightRange: [10, 30], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 100, weightRange: [1, 10], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 120, weightRange: [15, 40], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "Abramis_brama.png", vnName: "Cá vền", sizeScale: 0.85, basePoints: 150, weightRange: [20, 50], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "cahongdang.png", vnName: "Cá hồng đăng", sizeScale: 0.8, basePoints: 150, weightRange: [10, 35], layer: "top", struggleWeight: 0.1, isRare: false },
-      { filename: "cakoinhatban.png", vnName: "Cá Koi Nhật Bản", sizeScale: 0.6, basePoints: 150, weightRange: [15, 45], layer: "top", struggleWeight: 0.1, isRare: false },
+      { filename: "Amphiprion_ocellaris.png", vnName: "Cá hề Nemo", sizeScale: 0.65, basePoints: 100, weightRange: [2, 10], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "Abudefduf_saxatilis.png", vnName: "Cá thia vằn", sizeScale: 0.7, basePoints: 100, weightRange: [5, 20], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "Chromis_chromis.png", vnName: "Cá thia xanh", sizeScale: 0.6, basePoints: 100, weightRange: [2, 15], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "Carassius_auratus.png", vnName: "Cá vàng cảnh", sizeScale: 0.7, basePoints: 120, weightRange: [10, 30], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "Campostoma_anomalum.png", vnName: "Cá tuế suối", sizeScale: 0.65, basePoints: 100, weightRange: [1, 10], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "Abudefduf_sordidus.png", vnName: "Cá thia xám", sizeScale: 0.8, basePoints: 120, weightRange: [15, 40], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "Abramis_brama.png", vnName: "Cá vền", sizeScale: 0.85, basePoints: 150, weightRange: [20, 50], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "cahongdang.png", vnName: "Cá hồng đăng", sizeScale: 0.8, basePoints: 150, weightRange: [10, 35], layer: "top", struggleWeight: 0.08, isRare: false },
+      { filename: "cakoinhatban.png", vnName: "Cá Koi Nhật Bản", sizeScale: 0.6, basePoints: 150, weightRange: [15, 45], layer: "top", struggleWeight: 0.08, isRare: false },
 
-      { filename: "cataituong.png", vnName: "Cá tai tượng", sizeScale: 3.1, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.25, isRare: false },
-      { filename: "cahuyetlong.png", vnName: "Cá Huyết Long", sizeScale: 3.25, basePoints: 1000, weightRange: [60, 200], layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "calochoangde.png", vnName: "Cá Lóc Hoàng Đế", sizeScale: 2.3, basePoints: 600, weightRange: [70, 150], layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "cachep.png", vnName: "Cá chép lớn", sizeScale: 2.6, basePoints: 700, weightRange: [80, 180], layer: "mid", struggleWeight: 0.4, isRare: false },
-      { filename: "cachimbien.png", vnName: "Cá chim biển", sizeScale: 2.1, basePoints: 500, weightRange: [50, 130], layer: "mid", struggleWeight: 0.35, isRare: false },
-      { filename: "carolon.png", vnName: "Cá rô khủng", sizeScale: 2.5, basePoints: 800, weightRange: [90, 200], layer: "mid", struggleWeight: 0.45, isRare: false },
-      { filename: "cabasa.png", vnName: "Cá basa", sizeScale: 2.3, basePoints: 500, weightRange: [50, 120], layer: "mid", struggleWeight: 0.3, isRare: false },
-      { filename: "camu.png", vnName: "Cá mú", sizeScale: 2.6, basePoints: 900, weightRange: [100, 200], layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "calahan.png", vnName: "Cá la hán", sizeScale: 2.25, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.5, isRare: false },
-      { filename: "cangubo.png", vnName: "Cá ngừ bò", sizeScale: 2.4, basePoints: 1000, weightRange: [120, 200], layer: "mid", struggleWeight: 0.55, isRare: false },
-      { filename: "catra.png", vnName: "Cá tra", sizeScale: 2.7, basePoints: 700, weightRange: [10, 50], layer: "mid", struggleWeight: 0.6, isRare: false },
+      { filename: "cataituong.png", vnName: "Cá tai tượng", sizeScale: 3.1, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.18, isRare: false },
+      { filename: "cahuyetlong.png", vnName: "Cá Huyết Long", sizeScale: 3.25, basePoints: 1000, weightRange: [60, 200], layer: "mid", struggleWeight: 0.22, isRare: false },
+      { filename: "calochoangde.png", vnName: "Cá Lóc Hoàng Đế", sizeScale: 2.3, basePoints: 600, weightRange: [70, 150], layer: "mid", struggleWeight: 0.25, isRare: false },
+      { filename: "cachep.png", vnName: "Cá chép lớn", sizeScale: 2.6, basePoints: 700, weightRange: [80, 180], layer: "mid", struggleWeight: 0.28, isRare: false },
+      { filename: "cachimbien.png", vnName: "Cá chim biển", sizeScale: 2.1, basePoints: 500, weightRange: [50, 130], layer: "mid", struggleWeight: 0.25, isRare: false },
+      { filename: "carolon.png", vnName: "Cá rô khủng", sizeScale: 2.5, basePoints: 800, weightRange: [90, 200], layer: "mid", struggleWeight: 0.32, isRare: false },
+      { filename: "cabasa.png", vnName: "Cá basa", sizeScale: 2.3, basePoints: 500, weightRange: [50, 120], layer: "mid", struggleWeight: 0.22, isRare: false },
+      { filename: "camu.png", vnName: "Cá mú", sizeScale: 2.6, basePoints: 900, weightRange: [100, 200], layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "calahan.png", vnName: "Cá la hán", sizeScale: 2.25, basePoints: 500, weightRange: [50, 100], layer: "mid", struggleWeight: 0.35, isRare: false },
+      { filename: "cangubo.png", vnName: "Cá ngừ bò", sizeScale: 2.4, basePoints: 1000, weightRange: [120, 200], layer: "mid", struggleWeight: 0.4, isRare: false },
+      { filename: "catra.png", vnName: "Cá tra", sizeScale: 2.7, basePoints: 700, weightRange: [10, 50], layer: "mid", struggleWeight: 0.45, isRare: false },
       
-      { filename: "caduoimata.png", vnName: "Cá đuối mata", sizeScale: 4.6, basePoints: 2000, weightRange: [100, 1500], layer: "bottom", struggleWeight: 0.75, isRare: true },
-      { filename: "mucnamcuc.png", vnName: "Mực nam cực", sizeScale: 4.8, basePoints: 2500, weightRange: [200, 3000], layer: "bottom", struggleWeight: 0.8, isRare: true },
-      { filename: "canhamvoi.png", vnName: "Cá nhám voi", sizeScale: 5.2, basePoints: 3000, weightRange: [5000, 9000], layer: "bottom", struggleWeight: 0.85, isRare: true },
-      { filename: "camaptrang.png", vnName: "Cá mặp trắng", sizeScale: 6.4, basePoints: 8000, weightRange: [1000, 6000], layer: "bottom", struggleWeight: 0.88, isRare: true },
-      { filename: "camapdaubua.png", vnName: "Cá mập đầu búa", sizeScale: 5.0, basePoints: 6000, weightRange: [800, 5000], layer: "bottom", struggleWeight: 0.9, isRare: true },
-      { filename: "canhatan.png", vnName: "Cá nhà tán", sizeScale: 7.4, basePoints: 10000, weightRange: [7000, 10000], layer: "bottom", struggleWeight: 0.93, isRare: true },
-      { filename: "cavoisatthu.png", vnName: "Cá voi sát thủ", sizeScale: 6.6, basePoints: 9000, weightRange: [2000, 9000], layer: "bottom", struggleWeight: 0.95, isRare: true },
+      { filename: "caduoimata.png", vnName: "Cá đuối mata", sizeScale: 4.6, basePoints: 2000, weightRange: [100, 1500], layer: "bottom", struggleWeight: 0.55, isRare: true },
+      { filename: "mucnamcuc.png", vnName: "Mực nam cực", sizeScale: 4.8, basePoints: 2500, weightRange: [200, 3000], layer: "bottom", struggleWeight: 0.6, isRare: true },
+      { filename: "canhamvoi.png", vnName: "Cá nhám voi", sizeScale: 5.2, basePoints: 3000, weightRange: [5000, 9000], layer: "bottom", struggleWeight: 0.65, isRare: true },
+      { filename: "camaptrang.png", vnName: "Cá mặp trắng", sizeScale: 6.4, basePoints: 8000, weightRange: [1000, 6000], layer: "bottom", struggleWeight: 0.7, isRare: true },
+      { filename: "camapdaubua.png", vnName: "Cá mập đầu búa", sizeScale: 5.0, basePoints: 6000, weightRange: [800, 5000], layer: "bottom", struggleWeight: 0.72, isRare: true },
+      { filename: "canhatan.png", vnName: "Cá nhà tán", sizeScale: 7.4, basePoints: 10000, weightRange: [7000, 10000], layer: "bottom", struggleWeight: 0.75, isRare: true },
+      { filename: "cavoisatthu.png", vnName: "Cá voi sát thủ", sizeScale: 6.6, basePoints: 9000, weightRange: [2000, 9000], layer: "bottom", struggleWeight: 0.78, isRare: true },
       
-      { filename: "livyatan.png", vnName: "Livyatan Thượng Cổ", sizeScale: 15.5, basePoints: 50000, weightRange: [100000, 200000], layer: "boss", struggleWeight: 1.0, isRare: true },
-      { filename: "megalodon.png", vnName: "Megalodon Sơ Cổ", sizeScale: 14.0, basePoints: 20000, weightRange: [20000, 50000], layer: "boss", struggleWeight: 1.0, isRare: true },
-      { filename: "mosa.png", vnName: "Mosasaurus Đại Dương", sizeScale: 14.5, basePoints: 30000, weightRange: [50000, 100000], layer: "boss", struggleWeight: 1.0, isRare: true }
+      { filename: "livyatan.png", vnName: "Livyatan Thượng Cổ", sizeScale: 15.5, basePoints: 50000, weightRange: [100000, 200000], layer: "boss", struggleWeight: 0.85, isRare: true },
+      { filename: "megalodon.png", vnName: "Megalodon Sơ Cổ", sizeScale: 14.0, basePoints: 20000, weightRange: [20000, 50000], layer: "boss", struggleWeight: 0.85, isRare: true },
+      { filename: "mosa.png", vnName: "Mosasaurus Đại Dương", sizeScale: 14.5, basePoints: 30000, weightRange: [50000, 100000], layer: "boss", struggleWeight: 0.85, isRare: true }
     ];
 
     const loadedFishObjects = fishDatabase.map((item) => {
@@ -995,8 +988,8 @@ export default function CauCaMultiPage() {
         if (this.stunTimer > 0) { this.stunTimer--; return; }
 
         if (!(window as any).isHost && this.targetX !== undefined && this.targetY !== undefined) {
-          this.x += (this.targetX - this.x) * 0.2;
-          this.y += (this.targetY - this.y) * 0.2;
+          this.x += (this.targetX - this.x) * 0.3;
+          this.y += (this.targetY - this.y) * 0.3;
         } else {
           let currentSpeed = this.speed;
           const activeWeather = (window as any).currentWeather?.type;
@@ -1221,7 +1214,7 @@ export default function CauCaMultiPage() {
       holdStruggleTick(isHoldingDown: boolean) {
         if (this.state === "STRUGGLING" && this.caughtFish && this.caughtFish.hp > 0) {
             if (this.qteEvent.active) return;
-            const baseTensionGain = this.caughtFish.fishData.struggleWeight || 0.2;
+            const baseTensionGain = this.caughtFish.fishData.struggleWeight || 0.15;
             
             const currentBaitId = (window as any).currentSelectedBait?.id || "";
             let tensionMultiplier = 1.0;
@@ -1234,10 +1227,10 @@ export default function CauCaMultiPage() {
             }
 
             if (isHoldingDown) {
-                this.lineTension += (baseTensionGain * 0.8 * tensionMultiplier);
+                this.lineTension += (baseTensionGain * 0.6 * tensionMultiplier);
                 if (statusEl) { statusEl.innerText = `⚠️ Giữ chặt! Căng dây: ${Math.round(this.lineTension)}% (Nhớ TAP nhen)`; statusEl.style.color = "#FF9800"; }
             } else {
-                this.lineTension += (baseTensionGain * 3.5 * tensionMultiplier);
+                this.lineTension += (baseTensionGain * 2.5 * tensionMultiplier);
                 if (statusEl) { statusEl.innerText = `🎣 Cá đang trôi đi! TAP NHANH! (Căng: ${Math.round(this.lineTension)}%)`; statusEl.style.color = "#F44336"; }
             }
         }
@@ -1772,7 +1765,7 @@ export default function CauCaMultiPage() {
 
       if ((window as any).isHost && roomChannelRef.current) {
         syncTimer++;
-        if (syncTimer > 6) { 
+        if (syncTimer > 8) { 
           syncTimer = 0;
           const fishPayload = fishes.map(f => ({ id: f.id, x: f.x, y: f.y, vx: f.speed, direction: f.direction, size: f.size, points: f.points, weight: f.weight, hp: f.hp, maxHp: f.maxHp, layer: f.layer, filename: f.fishData.filename }));
           roomChannelRef.current.send({ type: "broadcast", event: "sync_fishes", payload: { fishes: fishPayload } });
@@ -1797,7 +1790,7 @@ export default function CauCaMultiPage() {
 
       const now = Date.now();
       const activeUser = (window as any).currentUser || user;
-      if (roomChannelRef.current && activeUser?.id && now - lastBroadcastTime > 100) {
+      if (roomChannelRef.current && activeUser?.id && now - lastBroadcastTime > 120) {
         roomChannelRef.current.send({ type: "broadcast", event: "player_state", payload: { user_id: activeUser.id, avatar: userAvatar, rodFilename: selectedRod, boatRatio: boatX / width, hookX: hook.x, hookY: hook.y, hookState: hook.state, facing: boatFacing } });
         lastBroadcastTime = now;
       }
