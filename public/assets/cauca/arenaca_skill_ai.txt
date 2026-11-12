@@ -1,0 +1,1014 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+
+// --- CẤU HÌNH SUPABASE ---
+const supabaseUrl = "https://iaejbvlibjfpdwuqfszp.supabase.co";
+const supabaseKey = "sb_publishable_Bf1jY3-FAjFRij0LMn5FLQ_nLrw2MUE";
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: true, autoRefreshToken: true },
+});
+
+// --- DANH SÁCH SKILL & COOLDOWN CHUẨN XÁC ---
+const ALL_SKILLS = [
+  { id: "kiyellow", name: "Hào Quang Ki Vàng", type: "aura", cooldown: 0, desc: "Tăng sức mạnh", price: 0, icon: "⚡", animText: "HÀO QUANG KI VÀNG!" },
+  { id: "chieu_kiyellow", name: "Chưởng Ki Vàng", type: "active", cooldown: 5, desc: "Bắn cầu năng lượng Ki vàng", price: 0, icon: "🟡", animText: "CHƯỞNG KI VÀNG!" },
+  { id: "ssj", name: "Biến Hình Siêu Saiyan", type: "transform", cooldown: 12, desc: "Hóa vàng bộc phát x1.5 sát thương", price: 100000, icon: "💥", animText: "BIẾN HÌNH SIÊU SAIYAN!" },
+  { id: "ssblue", name: "Saiyan Blue", type: "transform", cooldown: 12, desc: "Aura xanh dương né đòn", price: 300000, icon: "🌀", animText: "SAIYAN BLUE KÍCH HOẠT!" },
+  { id: "kiblue", name: "Ki Xanh Hồi Nộ", type: "aura", cooldown: 0, desc: "Hồi Nộ Ki cực nhanh", price: 150000, icon: "💠", animText: "KI XANH HỒI NỘ!" },
+  { id: "hakai", name: "Hakai Hủy Diệt", type: "active", cooldown: 8, desc: "Quả cầu tím hủy diệt", price: 500000, icon: "🟣", animText: "HAKAI HỦY DIỆT!" },
+  { id: "kaioken", name: "Kaio-ken X20", type: "buff", cooldown: 10, desc: "Đốt 5% HP tăng sát thương chí mạng", price: 200000, icon: "🔥", animText: "KAIO-KEN X20!" },
+  { id: "instant_transmission", name: "Dịch Chuyển", type: "active", cooldown: 7, desc: "Né đòn và phản công", price: 250000, icon: "✨", animText: "DỊCH CHUYỂN TỨC THỜI!" },
+  { id: "spirit_bomb", name: "Genki Dama", type: "active", cooldown: 15, desc: "Nguyên Khí Cầu giáng lâm", price: 1000000, icon: "🌟", animText: "GENKI DAMA - NGUYÊN KHÍ CẦU!" },
+  { id: "ultra_instinct", name: "Bản Năng Vô Cực", type: "transform", cooldown: 20, desc: "Né đòn & Crit 100%", price: 2000000, icon: "⚪", animText: "BẢN NĂNG VÔ CỰC!" },
+];
+
+function generateArenaStats(weight: number) {
+  const rand = Math.random() * 100;
+  let rank = 'D'; let statMult = 1.0;
+  if (rand < 5) { rank = 'S'; statMult = 4.0; }
+  else if (rand < 15) { rank = 'A'; statMult = 2.5; }
+  else if (rand < 30) { rank = 'B'; statMult = 1.8; }
+  else if (rand < 60) { rank = 'C'; statMult = 1.2; }
+  else { rank = 'D'; statMult = 0.8; }
+
+  const baseVal = Math.max(10, Math.sqrt(weight) * 15);
+  return {
+    rank,
+    power: Math.floor(baseVal * statMult * (0.8 + Math.random() * 0.4)),
+    defense: Math.floor(baseVal * statMult * (0.8 + Math.random() * 0.4)),
+    arenaHp: Math.floor(baseVal * statMult * (1.5 + Math.random() * 0.5) * 5)
+  };
+}
+
+export default function ArenaCaPage() {
+  const [isMounted, setIsMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [score, setScore] = useState<number>(0);
+  const [userAvatar, setUserAvatar] = useState<string>("/assets/avatar/xtra1.ico");
+
+  const [fishInventory, setFishInventory] = useState<any[]>([]);
+  const [ownedSkillsCount, setOwnedSkillsCount] = useState<{ [key: string]: number }>({ kiyellow: 999, chieu_kiyellow: 999 });
+  const [equippedSkills, setEquippedSkills] = useState<{ [fishId: string]: string[] }>({});
+  
+  const [senzuCount, setSenzuCount] = useState<number>(3);
+  const [senzuUsedInMatch, setSenzuUsedInMatch] = useState<boolean>(false);
+
+  const [buyQuantities, setBuyQuantities] = useState<{ [key: string]: number }>({});
+  const [skillCooldowns, setSkillCooldowns] = useState<{ [key: string]: number }>({});
+  const [skillsUsedThisMatch, setSkillsUsedThisMatch] = useState<{ [key: string]: boolean }>({});
+
+  const [gameState, setGameState] = useState<"lobby" | "skillShop" | "skillInventory" | "fighting" | "result">("lobby");
+  const [selectedFighter, setSelectedFighter] = useState<any | null>(null);
+  const [enemyFighter, setEnemyFighter] = useState<any | null>(null);
+
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
+  const [matchResult, setMatchResult] = useState<{ isWin: boolean; reward: number; message: string } | null>(null);
+  const [, setHpForceTick] = useState<number>(0);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animFrameRef = useRef<number>(0);
+
+  const battleStateRef = useRef({
+    p1Hp: 100,
+    p1MaxHp: 100,
+    p1Ki: 0,
+    p2Hp: 100,
+    p2MaxHp: 100,
+    p2Ki: 0,
+    p1X: 0,
+    p2X: 0,
+    p1Y: 0,
+    p2Y: 0,
+    p1BaseX: 0,
+    p2BaseX: 0,
+    state: "CIRCLING",
+    timer: 0,
+    activeUltText: "",
+    activeUltTimer: 0,
+    ultCaster: 1,
+    // Cooldown riêng cho tuyệt kỹ tự động của từng bên (đếm theo frame)
+    p1UltCooldown: 0,
+    p2UltCooldown: 0,
+    lastUltCaster: 2,
+    p1SkillCooldownFrames: {} as Record<string, number>,
+    p2SkillCooldownFrames: {} as Record<string, number>,
+    shakeTimer: 0,
+    floatTexts: [] as { text: string; x: number; y: number; color: string; life: number }[],
+    winner: null as string | null
+  });
+
+  useEffect(() => {
+    setIsMounted(true);
+    async function loadUserData() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user);
+        const { data } = await supabase.from("profiles").select("balance, avatar_url, inventory").eq("id", session.user.id).single();
+        if (data) {
+          if (data.balance !== undefined) setScore(data.balance);
+          if (data.avatar_url) setUserAvatar(data.avatar_url);
+          const fishes = data.inventory?.fish_inventory || [];
+          setFishInventory(fishes);
+          if (fishes.length > 0) setSelectedFighter(fishes[0]);
+          if (data.inventory?.ownedSkillsCount) {
+            setOwnedSkillsCount({ kiyellow: 999, chieu_kiyellow: 999, ...data.inventory.ownedSkillsCount });
+          } else if (data.inventory?.ownedSkills) {
+            const oldMap: any = { kiyellow: 999, chieu_kiyellow: 999 };
+            data.inventory.ownedSkills.forEach((id: string) => { oldMap[id] = 999; });
+            setOwnedSkillsCount(oldMap);
+          }
+          if (data.inventory?.equippedSkills) setEquippedSkills(data.inventory.equippedSkills);
+          if (data.inventory?.senzuCount !== undefined) setSenzuCount(data.inventory.senzuCount);
+        }
+      }
+    }
+    loadUserData();
+  }, []);
+
+  // Cooldown interval đếm ngược mỗi giây chuẩn xác
+  useEffect(() => {
+    if (gameState !== "fighting") return;
+    const timerInterval = setInterval(() => {
+      setSkillCooldowns(prev => {
+        const next = { ...prev };
+        let hasChanges = false;
+        for (const k of Object.keys(next)) {
+          if (next[k] > 0) {
+            next[k] -= 1;
+            hasChanges = true;
+          }
+        }
+        return hasChanges ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(timerInterval);
+  }, [gameState]);
+
+  const buySkillQuantity = async (skill: any, qty: number) => {
+    const totalCost = skill.price * qty;
+    if (score < totalCost) { alert(`Không đủ xu! Cần ${totalCost.toLocaleString()}🪙`); return; }
+    const newScore = score - totalCost;
+    const currentCount = ownedSkillsCount[skill.id] || 0;
+    const newOwnedCount = { ...ownedSkillsCount, [skill.id]: currentCount + qty };
+
+    setScore(newScore);
+    setOwnedSkillsCount(newOwnedCount);
+
+    if (user?.id) {
+      const { data } = await supabase.from("profiles").select("inventory").eq("id", user.id).single();
+      const currentInv = data?.inventory || {};
+      currentInv.ownedSkillsCount = newOwnedCount;
+      await supabase.from("profiles").update({ balance: newScore, inventory: currentInv }).eq("id", user.id);
+    }
+    alert(`Đã mua thành công ${qty}x ${skill.name}!`);
+  };
+
+  const buySenzu = async () => {
+    const cost = 50000;
+    if (score < cost) { alert("Cần 50,000🪙 để mua Đậu Senzu!"); return; }
+    const newScore = score - cost;
+    const newCount = senzuCount + 1;
+    setScore(newScore);
+    setSenzuCount(newCount);
+
+    if (user?.id) {
+      const { data } = await supabase.from("profiles").select("inventory").eq("id", user.id).single();
+      const currentInv = data?.inventory || {};
+      currentInv.senzuCount = newCount;
+      await supabase.from("profiles").update({ balance: newScore, inventory: currentInv }).eq("id", user.id);
+    }
+    alert("Đã mua thành công Đậu Senzu!");
+  };
+
+  const toggleEquipSkill = async (skillId: string) => {
+    if (!selectedFighter) return;
+    const currentFishSkills = equippedSkills[selectedFighter.id] || ["kiyellow", "chieu_kiyellow"];
+    let updated: string[];
+    if (currentFishSkills.includes(skillId)) {
+      if (currentFishSkills.length <= 1) { alert("Cần ít nhất 1 kỹ năng!"); return; }
+      updated = currentFishSkills.filter(id => id !== skillId);
+    } else {
+      if (currentFishSkills.length >= 4) { alert("Tối đa 4 kỹ năng mỗi con cá!"); return; }
+      updated = [...currentFishSkills, skillId];
+    }
+    const newEquipped = { ...equippedSkills, [selectedFighter.id]: updated };
+    setEquippedSkills(newEquipped);
+
+    if (user?.id) {
+      const { data } = await supabase.from("profiles").select("inventory").eq("id", user.id).single();
+      const currentInv = data?.inventory || {};
+      currentInv.equippedSkills = newEquipped;
+      await supabase.from("profiles").update({ inventory: currentInv }).eq("id", user.id);
+    }
+  };
+
+  const startPvE = () => {
+    if (!selectedFighter) { alert("Ní chưa chọn cá xuất chiến!"); return; }
+    setIsScanning(true);
+    setTimeout(() => {
+      setIsScanning(false);
+      const enemyNames = ["Cá Trê Chúa Đầm Lầy", "Megalodon Sơ Cổ Hắc Ám", "Cá Mập Sấm Sét", "Cá Nóc Hỏa Tiễn Đột Biến", "Cá Voi Sát Thủ Vực Sâu"];
+      const rName = enemyNames[Math.floor(Math.random() * enemyNames.length)];
+      const rWeight = Math.floor(selectedFighter.weight * (0.8 + Math.random() * 0.5));
+      const rStats = generateArenaStats(rWeight);
+
+      const enemy = {
+        id: "enemy_ai",
+        vnName: rName,
+        filename: selectedFighter.filename,
+        weight: rWeight,
+        rank: rStats.rank,
+        power: rStats.power,
+        defense: rStats.defense,
+        arenaHp: rStats.arenaHp,
+        gender: "♂️"
+      };
+
+      setEnemyFighter(enemy);
+      setSenzuUsedInMatch(false);
+      setSkillsUsedThisMatch({});
+      setSkillCooldowns({});
+      initBattle(selectedFighter, enemy);
+      setGameState("fighting");
+    }, 2000);
+  };
+
+  const initBattle = (p1: any, p2: any) => {
+    const p1Hp = p1.arenaHp || 200;
+    const p2Hp = p2.arenaHp || 200;
+    const midX = window.innerWidth / 2;
+    const p1Base = midX - 160;
+    const p2Base = midX + 160;
+
+    battleStateRef.current = {
+      p1Hp, p1MaxHp: p1Hp, p1Ki: 0,
+      p2Hp, p2MaxHp: p2Hp, p2Ki: 0,
+      p1X: p1Base, p2X: p2Base, p1Y: 0, p2Y: 0,
+      p1BaseX: p1Base, p2BaseX: p2Base,
+      state: "CIRCLING",
+      timer: 0,
+      activeUltText: "",
+      activeUltTimer: 0,
+      ultCaster: 1,
+      p1UltCooldown: 0,
+      p2UltCooldown: 0,
+      lastUltCaster: 2,
+      p1SkillCooldownFrames: {},
+      p2SkillCooldownFrames: {},
+      shakeTimer: 0,
+      floatTexts: [],
+      winner: null
+    };
+  };
+
+  const useSenzuBean = async () => {
+    if (senzuUsedInMatch) { alert("Đã dùng Đậu Senzu trận này rồi!"); return; }
+    if (senzuCount <= 0) { alert("Hết Đậu Senzu!"); return; }
+
+    const newCount = senzuCount - 1;
+    setSenzuCount(newCount);
+    setSenzuUsedInMatch(true);
+    battleStateRef.current.p1Hp = battleStateRef.current.p1MaxHp;
+    setHpForceTick(prev => prev + 1);
+
+    if (user?.id) {
+      const { data } = await supabase.from("profiles").select("inventory").eq("id", user.id).single();
+      const currentInv = data?.inventory || {};
+      currentInv.senzuCount = newCount;
+      await supabase.from("profiles").update({ inventory: currentInv }).eq("id", user.id);
+    }
+    alert("✨ Hồi phục 100% HP!");
+  };
+
+  // --- KÍCH HOẠT SKILL: kiểm tra cooldown, trừ sát thương đúng một lần ---
+  const triggerSkill = async (skillId: string) => {
+    const bs = battleStateRef.current;
+    if (bs.winner || bs.state !== "CIRCLING") return;
+
+    if ((skillCooldowns[skillId] || 0) > 0) {
+      alert(`Kỹ năng đang hồi chiêu (${skillCooldowns[skillId]}s)!`);
+      return;
+    }
+
+    const skillObj = ALL_SKILLS.find(s => s.id === skillId);
+    if (!skillObj) return;
+
+    if (skillObj.price > 0) {
+      const currentCount = ownedSkillsCount[skillId] || 0;
+      if (currentCount <= 0) {
+        alert("Bạn đã hết số lượng kỹ năng này trong kho! Hãy ra shop mua thêm.");
+        return;
+      }
+      const newCount = currentCount - 1;
+      const updatedOwnedCount = { ...ownedSkillsCount, [skillId]: newCount };
+      setOwnedSkillsCount(updatedOwnedCount);
+
+      if (user?.id) {
+        const { data } = await supabase.from("profiles").select("inventory").eq("id", user.id).single();
+        const currentInv = data?.inventory || {};
+        currentInv.ownedSkillsCount = updatedOwnedCount;
+        await supabase.from("profiles").update({ inventory: currentInv }).eq("id", user.id);
+      }
+    }
+
+    // Chỉ khóa theo cooldown; hết CD thì được dùng lại trong cùng trận.
+    setSkillCooldowns(prev => ({ ...prev, [skillId]: skillObj.cooldown }));
+    bs.p1SkillCooldownFrames[skillId] = Math.max(1, skillObj.cooldown * 60);
+    // Skill thủ công cũng tính crit theo tỉ lệ mặc định 15% khi gây sát thương.
+
+    // Hiển thị chính xác tên kỹ năng được bấm (VD: Biến Hình Siêu Saiyan, v.v.)
+    bs.state = "ULT";
+    bs.activeUltTimer = 0;
+    bs.ultCaster = 1;
+    bs.activeUltText = `⚡ ${selectedFighter.vnName}: ${skillObj.animText || skillObj.name.toUpperCase()}!`;
+    // Skill thủ công cũng đặt lại thanh Ki và khóa tuyệt kỹ tự động,
+    // tránh vừa dùng skill xong lại lập tức chưởng Kamehameha.
+    bs.p1Ki = 0;
+    bs.p1UltCooldown = 480;
+    bs.shakeTimer = 45;
+
+    // Không trừ HP tại đây. Sát thương được áp dụng đúng một lần
+    // khi hoạt ảnh ULT kết thúc trong updateBattle().
+  };
+
+  useEffect(() => {
+    if (gameState !== "fighting" || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+    };
+    window.addEventListener("resize", resize);
+    resize();
+
+    const p1Img = new Image(); p1Img.src = `/assets/cauca/${selectedFighter?.filename}`;
+    const p2Img = new Image(); p2Img.src = `/assets/cauca/${enemyFighter?.filename}`;
+
+    const updateBattle = () => {
+      const bs = battleStateRef.current;
+      if (bs.winner) return;
+
+      if (bs.shakeTimer > 0) bs.shakeTimer -= speedMultiplier;
+      bs.timer += speedMultiplier;
+
+      // Hai bên nạp Ki độc lập và có cooldown tuyệt kỹ riêng.
+      bs.p1UltCooldown = Math.max(0, bs.p1UltCooldown - speedMultiplier);
+      bs.p2UltCooldown = Math.max(0, bs.p2UltCooldown - speedMultiplier);
+      bs.p1Ki = Math.min(100, bs.p1Ki + 0.35 * speedMultiplier);
+      bs.p2Ki = Math.min(100, bs.p2Ki + 0.35 * speedMultiplier);
+
+      bs.floatTexts.forEach((ft) => {
+        ft.y -= 1.5 * speedMultiplier;
+        ft.life -= speedMultiplier;
+      });
+      bs.floatTexts = bs.floatTexts.filter(ft => ft.life > 0);
+
+      // Giảm cooldown riêng cho từng kỹ năng của cả hai đấu thủ.
+      for (const id of Object.keys(bs.p1SkillCooldownFrames)) {
+        bs.p1SkillCooldownFrames[id] = Math.max(0, bs.p1SkillCooldownFrames[id] - speedMultiplier);
+      }
+      for (const id of Object.keys(bs.p2SkillCooldownFrames)) {
+        bs.p2SkillCooldownFrames[id] = Math.max(0, bs.p2SkillCooldownFrames[id] - speedMultiplier);
+      }
+
+      if (bs.state === "CIRCLING") {
+        // Bơi vòng quanh nhau: đổi vị trí ngang + nhấp nhô theo chiều dọc.
+        const orbit = bs.timer * 0.045;
+        bs.p1X = bs.p1BaseX + Math.sin(orbit) * 48;
+        bs.p2X = bs.p2BaseX - Math.sin(orbit + 0.7) * 48;
+        bs.p1Y = Math.sin(orbit * 1.7) * 22;
+        bs.p2Y = Math.cos(orbit * 1.5) * 22;
+
+        if (bs.timer > 70) {
+          bs.timer = 0;
+          // Tuyệt kỹ Ki chỉ dùng khi đã đầy nộ và hết hồi chiêu.
+          const p1Ready = bs.p1Ki >= 100 && bs.p1UltCooldown <= 0;
+          const p2Ready = bs.p2Ki >= 100 && bs.p2UltCooldown <= 0;
+          let caster: 1 | 2 | 0 = 0;
+          if (p1Ready && p2Ready) caster = bs.lastUltCaster === 1 ? 2 : 1;
+          else if (p1Ready) caster = 1;
+          else if (p2Ready) caster = 2;
+
+          if (caster !== 0) {
+            bs.state = "ULT";
+            bs.activeUltTimer = 0;
+            bs.ultCaster = caster;
+            bs.lastUltCaster = caster;
+            if (caster === 1) {
+              bs.activeUltText = `⚡ ${selectedFighter.vnName}: KAMEHAMEHA TỐI THƯỢNG! 🐉`;
+              bs.p1Ki = 0; bs.p1UltCooldown = 480;
+            } else {
+              bs.activeUltText = `🔥 ${enemyFighter.vnName}: HAKAI HỦY DIỆT! 🟣`;
+              bs.p2Ki = 0; bs.p2UltCooldown = 480;
+            }
+            bs.shakeTimer = 50;
+          } else {
+            // Cả hai tự chọn ngẫu nhiên một skill đã trang bị, chỉ chọn skill hết CD.
+            const equipped = (equippedSkills[selectedFighter?.id] || ["kiyellow", "chieu_kiyellow"])
+              .map((id: string) => ALL_SKILLS.find(sk => sk.id === id))
+              .filter((sk: any) => sk && sk.type !== "aura");
+            const chooseReady = (side: 1 | 2) => {
+              const cdMap = side === 1 ? bs.p1SkillCooldownFrames : bs.p2SkillCooldownFrames;
+              const ready = equipped.filter((sk: any) =>
+                (cdMap[sk.id] || 0) <= 0 &&
+                (side === 2 || sk.price === 0 || (ownedSkillsCount[sk.id] || 0) > 0)
+              );
+              return ready.length ? ready[Math.floor(Math.random() * ready.length)] : null;
+            };
+            const p1Skill = Math.random() < 0.38 ? chooseReady(1) : null;
+            const p2Skill = Math.random() < 0.38 ? chooseReady(2) : null;
+
+            if (p1Skill || p2Skill) {
+              // Nếu hai bên cùng kích hoạt, chọn ngẫu nhiên một bên để không chồng hoạt ảnh.
+              const side: 1 | 2 = p1Skill && p2Skill ? (Math.random() < 0.5 ? 1 : 2) : (p1Skill ? 1 : 2);
+              const skill = side === 1 ? p1Skill : p2Skill;
+              if (skill) {
+                bs.state = "ULT";
+                bs.activeUltTimer = 0;
+                bs.ultCaster = side;
+                bs.activeUltText = `${skill.icon} ${side === 1 ? selectedFighter.vnName : enemyFighter.vnName}: ${skill.animText || skill.name.toUpperCase()}`;
+                const cdMap = side === 1 ? bs.p1SkillCooldownFrames : bs.p2SkillCooldownFrames;
+                cdMap[skill.id] = Math.max(1, skill.cooldown * 60);
+                if (side === 1) {
+                  setSkillCooldowns(prev => ({ ...prev, [skill.id]: skill.cooldown }));
+                  if (skill.price > 0) {
+                    setOwnedSkillsCount(prev => {
+                      const next = { ...prev, [skill.id]: Math.max(0, (prev[skill.id] || 0) - 1) };
+                      if (user?.id) supabase.from("profiles").select("inventory").eq("id", user.id).single().then(({ data }) => {
+                        const inv = data?.inventory || {}; inv.ownedSkillsCount = next;
+                        supabase.from("profiles").update({ inventory: inv }).eq("id", user.id);
+                      });
+                      return next;
+                    });
+                  }
+                }
+                bs.shakeTimer = 35;
+              }
+            } else {
+              // Không có skill sẵn sàng: lao vào cắn/chọi thường.
+              bs.state = "DASH";
+            }
+          }
+        }
+      } else if (bs.state === "CHARGING") {
+        if (bs.timer > 45) {
+          bs.timer = 0;
+          bs.state = "CIRCLING";
+        }
+      } else if (bs.state === "DASH") {
+        bs.p1X += 12 * speedMultiplier;
+        bs.p2X -= 12 * speedMultiplier;
+
+        if (bs.p1X >= bs.p2X - 60) {
+          bs.state = "CLASH";
+          bs.timer = 0;
+          bs.shakeTimer = 35;
+        }
+      } else if (bs.state === "CLASH") {
+        if (bs.timer > 30) {
+          const isCrit = Math.random() < 0.15;
+          const isEvade = Math.random() < 0.15;
+
+          if (isEvade) {
+            bs.p2X += 40;
+            bs.floatTexts.push({ text: "NÉ ĐÒN!", x: bs.p2X, y: height * 0.65, color: "#38BDF8", life: 40 });
+          } else {
+            const p1Dmg = Math.max(15, (selectedFighter.power || 50) - (enemyFighter.defense || 30));
+            const p2Dmg = Math.max(15, (enemyFighter.power || 50) - (selectedFighter.defense || 30));
+
+            if (Math.random() > 0.5) {
+              const finalDmg = Math.round(p1Dmg * (isCrit ? 2.4 : 1.2));
+              bs.p2Hp = Math.max(0, bs.p2Hp - finalDmg);
+              bs.floatTexts.push({ text: `${isCrit ? 'CRIT! ' : ''}-${finalDmg} HP`, x: bs.p2X, y: height * 0.65, color: isCrit ? "#FACC15" : "#EF4444", life: 50 });
+              if (isCrit) bs.shakeTimer = 45;
+            } else {
+              const finalDmg = Math.round(p2Dmg * (isCrit ? 2.4 : 1.2));
+              bs.p1Hp = Math.max(0, bs.p1Hp - finalDmg);
+              bs.floatTexts.push({ text: `${isCrit ? 'CRIT! ' : ''}-${finalDmg} HP`, x: bs.p1X, y: height * 0.65, color: isCrit ? "#FACC15" : "#EF4444", life: 50 });
+              if (isCrit) bs.shakeTimer = 45;
+            }
+          }
+
+          setHpForceTick(prev => prev + 1);
+
+          bs.p1X = bs.p1BaseX;
+          bs.p2X = bs.p2BaseX;
+          bs.p1Y = 0; bs.p2Y = 0;
+          bs.timer = 0;
+          bs.state = "CIRCLING";
+
+          if (bs.p1Hp <= 0 || bs.p2Hp <= 0) {
+            triggerWin(bs.p1Hp <= 0 ? enemyFighter.vnName : selectedFighter.vnName);
+          }
+        }
+      } else if (bs.state === "ULT") {
+        bs.activeUltTimer += speedMultiplier;
+        if (bs.activeUltTimer > 60) {
+          const isCrit = Math.random() < 0.15;
+          if (bs.ultCaster === 1) {
+            const dmg = Math.round((selectedFighter.power || 50) * (isCrit ? 3.75 : 2.5));
+            bs.p2Hp = Math.max(0, bs.p2Hp - dmg);
+            bs.floatTexts.push({ text: `${isCrit ? 'ULTI CRIT! ' : ''}-${dmg} HP`, x: bs.p2X, y: height * 0.65, color: "#FACC15", life: 60 });
+          } else {
+            const dmg = Math.round((enemyFighter.power || 50) * (isCrit ? 3.75 : 2.5));
+            bs.p1Hp = Math.max(0, bs.p1Hp - dmg);
+            bs.floatTexts.push({ text: `${isCrit ? 'ULTI CRIT! ' : ''}-${dmg} HP`, x: bs.p1X, y: height * 0.65, color: "#FACC15", life: 60 });
+          }
+
+          setHpForceTick(prev => prev + 1);
+
+          bs.activeUltText = "";
+          bs.timer = 0;
+          bs.state = "CIRCLING";
+          bs.shakeTimer = 45;
+
+          if (bs.p1Hp <= 0 || bs.p2Hp <= 0) {
+            triggerWin(bs.p1Hp <= 0 ? enemyFighter.vnName : selectedFighter.vnName);
+          }
+        }
+      }
+
+      if (bs.p1Hp <= 0 || bs.p2Hp <= 0) {
+        triggerWin(bs.p1Hp <= 0 ? enemyFighter.vnName : selectedFighter.vnName);
+      }
+    };
+
+    const triggerWin = (winnerName: string) => {
+      const bs = battleStateRef.current;
+      if (bs.winner) return;
+      bs.winner = winnerName;
+      const isWin = bs.winner === selectedFighter.vnName;
+      const reward = isWin ? 50000 : 5000;
+
+      setMatchResult({
+        isWin,
+        reward,
+        message: isWin ? "🎉 CHIẾN THẮNG VINH QUANG!" : "💀 THẤT BẠI TRONG ĐẤU TRƯỜNG!"
+      });
+      setGameState("result");
+
+      if (isWin) {
+        const newScore = score + 50000;
+        setScore(newScore);
+        supabase.from("profiles").update({ balance: newScore }).eq("id", user?.id);
+      }
+    };
+
+    const drawBattle = () => {
+      ctx.save();
+      const bs = battleStateRef.current;
+
+      if (bs.shakeTimer > 0) {
+        ctx.translate((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16);
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // --- NỀN VÕ ĐÀI ---
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, "#0284C7");
+      grad.addColorStop(0.5, "#0369A1");
+      grad.addColorStop(1, "#020617");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.beginPath(); ctx.moveTo(width * 0.2, 0); ctx.lineTo(width * 0.35, 0); ctx.lineTo(width * 0.7, height); ctx.lineTo(width * 0.55, height); ctx.fill();
+
+      const floorY = height * 0.78;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, floorY, width, height - floorY);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(width, floorY); ctx.stroke();
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.6)";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(width / 2, floorY, 240, 35, 0, 0, Math.PI * 2); ctx.stroke();
+
+      // --- HÀO QUANG KI (AURA) ---
+      ctx.save();
+      ctx.translate(bs.p1X, floorY - 50 + bs.p1Y);
+      const aura1 = ctx.createRadialGradient(0, 0, 10, 0, 0, 105);
+      aura1.addColorStop(0, "rgba(234, 179, 8, 0.95)");
+      aura1.addColorStop(0.5, "rgba(202, 138, 4, 0.5)");
+      aura1.addColorStop(1, "transparent");
+      ctx.fillStyle = aura1;
+      ctx.beginPath(); ctx.arc(0, 0, 105 + Math.sin(Date.now() * 0.015) * 15, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(bs.p2X, floorY - 50 + bs.p2Y);
+      const aura2 = ctx.createRadialGradient(0, 0, 10, 0, 0, 105);
+      aura2.addColorStop(0, "rgba(244, 63, 94, 0.95)");
+      aura2.addColorStop(0.5, "rgba(168, 85, 247, 0.5)");
+      aura2.addColorStop(1, "transparent");
+      ctx.fillStyle = aura2;
+      ctx.beginPath(); ctx.arc(0, 0, 105 + Math.cos(Date.now() * 0.015) * 15, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // --- VẼ 2 CON CÁ ĐỐI MẶT NHAU CHUẨN GÓC NHÌN ---
+      // Cá 1 (Bên trái): scale(-1, 1) để hướng đầu sang PHẢI nhìn thẳng vào kẻ địch
+      ctx.save();
+      ctx.translate(bs.p1X, floorY - 50 + bs.p1Y);
+      ctx.scale(-1, 1);
+      if (p1Img.complete && p1Img.naturalWidth !== 0) {
+        ctx.drawImage(p1Img, -50, -35, 100, 70);
+      } else {
+        ctx.fillStyle = "#38bdf8"; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+
+      // Cá 2 (Bên phải): giữ nguyên scale(1, 1) để hướng đầu sang TRÁI nhìn thẳng vào cá 1
+      ctx.save();
+      ctx.translate(bs.p2X, floorY - 50 + bs.p2Y);
+      if (p2Img.complete && p2Img.naturalWidth !== 0) {
+        ctx.drawImage(p2Img, -50, -35, 100, 70);
+      } else {
+        ctx.fillStyle = "#f43f5e"; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+
+      // --- FLOATING TEXT SÁT THƯƠNG ---
+      bs.floatTexts.forEach(ft => {
+        ctx.save();
+        ctx.font = "900 20px sans-serif";
+        ctx.fillStyle = ft.color;
+        ctx.textAlign = "center";
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 4;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
+
+      // --- HIỆU ỨNG CHIÊU THỨC ---
+      if (bs.state === "ULT") {
+        ctx.save();
+        const startX = bs.ultCaster === 1 ? bs.p1X + 40 : bs.p2X - 40;
+        const endX = bs.ultCaster === 1 ? width * 0.85 : width * 0.15;
+        const beam = ctx.createLinearGradient(startX, floorY - 50, endX, floorY - 50);
+        beam.addColorStop(0, "#FFF");
+        beam.addColorStop(0.3, "#38BDF8");
+        beam.addColorStop(1, "transparent");
+
+        ctx.strokeStyle = beam;
+        ctx.lineWidth = 60;
+        ctx.beginPath(); ctx.moveTo(startX, floorY - 50); ctx.lineTo(endX, floorY - 50); ctx.stroke();
+        ctx.restore();
+      }
+
+      if (bs.activeUltText) {
+        ctx.save();
+        ctx.font = "900 24px sans-serif";
+        ctx.fillStyle = "#FACC15";
+        ctx.textAlign = "center";
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 5;
+        ctx.strokeText(bs.activeUltText, width / 2, height * 0.22);
+        ctx.fillText(bs.activeUltText, width / 2, height * 0.22);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    };
+
+    const loop = () => {
+      updateBattle();
+      drawBattle();
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+    animFrameRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(animFrameRef.current);
+      window.removeEventListener("resize", resize);
+    };
+  }, [gameState, speedMultiplier, selectedFighter, enemyFighter, equippedSkills, score, user]);
+
+  const activeSkillsList = equippedSkills[selectedFighter?.id] || ["kiyellow", "chieu_kiyellow"];
+
+  return (
+    <div className="fixed inset-0 overflow-hidden bg-slate-950 font-sans select-none pointer-events-auto text-white">
+      {/* TOP BAR */}
+      <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
+        <Link href="/caucamulti/hoca" className="bg-slate-900 border border-sky-500/40 text-sky-400 px-3 py-1.5 rounded-xl font-black text-xs shadow hover:bg-slate-800 transition">
+          ← Quay Lại Hồ Cá
+        </Link>
+        <div className="flex gap-2">
+          <button onClick={() => setGameState("skillShop")} className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow">🛒 Shop Skill</button>
+          <button onClick={() => setGameState("skillInventory")} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow">🎒 Kho Skill & Gán</button>
+          <div className="bg-slate-900/90 border border-amber-500/40 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow">
+            <img src={userAvatar} className="w-5 h-5 rounded-full border border-amber-400 object-cover" />
+            <span className="text-yellow-300">{score.toLocaleString()}🪙</span>
+          </div>
+        </div>
+      </div>
+
+      {/* LOBBY */}
+      {gameState === "lobby" && (
+        <div className="absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          <div className="max-w-2xl w-full bg-slate-900 border-2 border-cyan-500/60 p-6 rounded-3xl shadow-2xl text-center space-y-4">
+            <h2 className="text-xl sm:text-2xl font-black text-cyan-400 uppercase tracking-widest">⚔️ ĐẤU TRƯỜNG CHỌI CÁ - DRAGON BALL</h2>
+            <p className="text-xs text-slate-300">Chọn chiến thần và bước vào võ đài dưới nước!</p>
+
+            {fishInventory.length === 0 ? (
+              <div className="py-8 text-slate-500 font-bold text-xs">Kho cá trống! Hãy thả cá vào hồ trước nhé.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-56 overflow-y-auto p-2">
+                {fishInventory.map((fish: any) => {
+                  const isSelected = selectedFighter?.id === fish.id;
+                  return (
+                    <div
+                      key={fish.id}
+                      onClick={() => setSelectedFighter(fish)}
+                      className={`bg-slate-950 border-2 rounded-2xl p-3 flex flex-col items-center cursor-pointer transition ${
+                        isSelected ? "border-cyan-400 bg-cyan-950/30 scale-105 shadow-[0_0_15px_rgba(6,182,212,0.4)]" : "border-slate-800 hover:border-slate-600"
+                      }`}
+                    >
+                      <img src={`/assets/cauca/${fish.filename}`} className="h-12 object-contain mb-2" />
+                      <h4 className="text-[10px] font-black text-amber-300 truncate w-full text-center">[{fish.rank || 'D'}] {fish.vnName}</h4>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              disabled={!selectedFighter || fishInventory.length === 0}
+              onClick={startPvE}
+              className={`w-full py-3.5 rounded-xl font-black text-xs uppercase shadow-lg transition cursor-pointer ${
+                selectedFighter && fishInventory.length > 0 ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 hover:brightness-110" : "bg-slate-800 text-slate-500 cursor-not-allowed"
+              }`}
+            >
+              🚀 BẮT ĐẦU VÕ ĐÀI (PVE)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* SHOP SKILL */}
+      {gameState === "skillShop" && (
+        <div className="absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          <div className="max-w-3xl w-full bg-slate-900 border-2 border-purple-500/60 p-6 rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
+              <h3 className="text-lg font-black text-purple-400 uppercase">🛒 Shop Kỹ Năng & Mua Số Lượng Lớn</h3>
+              <button onClick={() => setGameState("lobby")} className="bg-slate-800 text-white w-7 h-7 rounded-full font-black text-xs">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {ALL_SKILLS.map((skill) => {
+                const ownedQty = ownedSkillsCount[skill.id] || 0;
+                const currentBuyQty = buyQuantities[skill.id] || 1;
+
+                return (
+                  <div key={skill.id} className="bg-slate-950 border border-slate-800 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="text-3xl bg-slate-900 p-2 rounded-xl">{skill.icon}</div>
+                      <div>
+                        <h4 className="text-xs font-black text-amber-300">{skill.name} (CD: {skill.cooldown}s)</h4>
+                        <p className="text-[10px] text-slate-400">{skill.desc}</p>
+                        <p className="text-[10px] text-emerald-400 font-bold">Đang có trong kho: {skill.price === 0 ? "Vô hạn" : `${ownedQty} cái`}</p>
+                      </div>
+                    </div>
+
+                    {skill.price > 0 ? (
+                      <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                        <select
+                          value={currentBuyQty}
+                          onChange={(e) => setBuyQuantities({ ...buyQuantities, [skill.id]: Number(e.target.value) })}
+                          className="bg-slate-900 border border-slate-700 text-amber-300 text-xs rounded-xl p-1.5 font-bold"
+                        >
+                          {[1, 5, 10, 20, 50, 100].map(q => (
+                            <option key={q} value={q}>Mua {q} cái</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => buySkillQuantity(skill, currentBuyQty)}
+                          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 text-white font-black px-4 py-2 rounded-xl text-xs shadow cursor-pointer"
+                        >
+                          Mua {(skill.price * currentBuyQty).toLocaleString()}🪙
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-black text-sky-400 bg-sky-500/20 px-3 py-1.5 rounded-xl">Mặc Định</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KHO SKILL */}
+      {gameState === "skillInventory" && (
+        <div className="absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          <div className="max-w-3xl w-full bg-slate-900 border-2 border-blue-500/60 p-6 rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
+              <h3 className="text-lg font-black text-blue-400 uppercase">🎒 Kho Skill & Gán Cho Cá</h3>
+              <button onClick={() => setGameState("lobby")} className="bg-slate-800 text-white w-7 h-7 rounded-full font-black text-xs">✕</button>
+            </div>
+            <div className="mb-3">
+              <select
+                value={selectedFighter?.id || ""}
+                onChange={(e) => setSelectedFighter(fishInventory.find(f => f.id === e.target.value))}
+                className="w-full bg-slate-950 border border-slate-700 text-amber-300 text-xs rounded-xl p-2.5 font-bold"
+              >
+                {fishInventory.map((f: any) => (
+                  <option key={f.id} value={f.id}>{f.vnName} ({f.weight}kg)</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {ALL_SKILLS.map((skillObj) => {
+                const sId = skillObj.id;
+                const ownedQty = ownedSkillsCount[sId] || 0;
+                if (ownedQty <= 0 && skillObj.price > 0) return null;
+
+                const isEquipped = (equippedSkills[selectedFighter?.id] || ["kiyellow", "chieu_kiyellow"]).includes(sId);
+                return (
+                  <div key={sId} className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{skillObj.icon}</span>
+                      <div>
+                        <h4 className="text-xs font-black text-amber-300">{skillObj.name}</h4>
+                        <p className="text-[10px] text-slate-400">{skillObj.desc} {skillObj.price > 0 && `(Kho: ${ownedQty})`}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleEquipSkill(sId)}
+                      className={`px-4 py-2 rounded-xl text-xs font-black shadow transition ${
+                        isEquipped ? "bg-rose-600 text-white hover:bg-rose-500" : "bg-emerald-600 text-white hover:bg-emerald-500"
+                      }`}
+                    >
+                      {isEquipped ? "Gỡ Bỏ" : "Trang Bị"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RADAR */}
+      {isScanning && (
+        <div className="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fadeIn">
+          <div className="w-24 h-24 border-4 border-cyan-400 rounded-full animate-ping mb-4 flex items-center justify-center">
+            <span className="text-2xl">📡</span>
+          </div>
+          <h3 className="text-lg font-black text-cyan-400 uppercase tracking-wider animate-pulse">Đang dò tìm thủy quái đối thủ...</h3>
+        </div>
+      )}
+
+      {/* MÀN HÌNH FIGHTING */}
+      {gameState === "fighting" && (
+        <>
+          <div className="absolute top-16 left-4 right-4 flex justify-between items-center z-30 pointer-events-none">
+            <div className="bg-slate-900/90 border border-sky-500 p-2.5 rounded-2xl w-40 sm:w-56 shadow-lg">
+              <div className="flex justify-between text-[10px] font-black mb-1">
+                <span className="text-sky-300 truncate">{selectedFighter?.vnName}</span>
+                <span className="text-rose-400">{Math.round(battleStateRef.current.p1Hp)}/{battleStateRef.current.p1MaxHp} HP</span>
+              </div>
+              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1">
+                <div className="bg-emerald-500 h-full transition-all" style={{ width: `${Math.max(0, Math.min(100, (battleStateRef.current.p1Hp / battleStateRef.current.p1MaxHp) * 100))}%` }}></div>
+              </div>
+              <div className="flex justify-between text-[8px] font-bold text-slate-400">
+                <span>Nộ Ki</span>
+                <span className="text-amber-300">{Math.round(battleStateRef.current.p1Ki)}%</span>
+              </div>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-amber-400 h-full transition-all" style={{ width: `${battleStateRef.current.p1Ki}%` }}></div>
+              </div>
+            </div>
+
+            <div className="text-xl font-black text-amber-400 italic">VS</div>
+
+            <div className="bg-slate-900/90 border border-rose-500 p-2.5 rounded-2xl w-40 sm:w-56 shadow-lg">
+              <div className="flex justify-between text-[10px] font-black mb-1">
+                <span className="text-rose-300 truncate">{enemyFighter?.vnName}</span>
+                <span className="text-rose-400">{Math.round(battleStateRef.current.p2Hp)}/{battleStateRef.current.p2MaxHp} HP</span>
+              </div>
+              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-1">
+                <div className="bg-rose-500 h-full transition-all" style={{ width: `${Math.max(0, Math.min(100, (battleStateRef.current.p2Hp / battleStateRef.current.p2MaxHp) * 100))}%` }}></div>
+              </div>
+              <div className="flex justify-between text-[8px] font-bold text-slate-400">
+                <span>Nộ Ki</span>
+                <span className="text-amber-300">{Math.round(battleStateRef.current.p2Ki)}%</span>
+              </div>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-amber-400 h-full transition-all" style={{ width: `${battleStateRef.current.p2Ki}%` }}></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center z-30 pointer-events-auto">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={useSenzuBean}
+                disabled={senzuUsedInMatch || senzuCount <= 0}
+                className={`px-3 py-2 rounded-xl font-black text-[10px] uppercase shadow-xl border flex items-center gap-1.5 transition cursor-pointer ${
+                  !senzuUsedInMatch && senzuCount > 0 ? "bg-emerald-600 border-emerald-400 text-white hover:bg-emerald-500 animate-bounce" : "bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed"
+                }`}
+              >
+                <span>🟢</span>
+                <span>Senzu ({senzuCount})</span>
+              </button>
+              <button onClick={buySenzu} className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-black px-2.5 py-2 rounded-xl text-[10px] shadow cursor-pointer">
+                🛒 Mua (50k)
+              </button>
+            </div>
+
+            <div className="flex gap-2 bg-slate-900/80 p-2 rounded-2xl border border-white/20 backdrop-blur">
+              {activeSkillsList.map((sId) => {
+                const sObj = ALL_SKILLS.find(s => s.id === sId);
+                if (!sObj) return null;
+                const cd = skillCooldowns[sId] || 0;
+                const isUsed = false; // Skill được dùng lại khi cooldown về 0.
+                const ownedQty = ownedSkillsCount[sId] || 0;
+
+                return (
+                  <button
+                    key={sId}
+                    disabled={cd > 0 || isUsed || (sObj.price > 0 && ownedQty <= 0)}
+                    onClick={() => triggerSkill(sId)}
+                    className={`px-3 py-1.5 rounded-xl flex flex-col items-center transition shadow relative ${
+                      cd > 0 || isUsed || (sObj.price > 0 && ownedQty <= 0)
+                        ? "bg-slate-900 border border-slate-800 opacity-50 cursor-not-allowed"
+                        : "bg-slate-950 hover:bg-slate-800 border border-cyan-500/50 cursor-pointer"
+                    }`}
+                  >
+                    <span className="text-base">{sObj.icon}</span>
+                    <span className="text-[9px] font-black text-cyan-300">{sObj.name}</span>
+                    <span className="text-[8px] text-amber-400 font-bold">
+                      {isUsed ? "Đã dùng (1/1)" : cd > 0 ? `CD: ${cd}s` : sObj.price > 0 ? `Kho: ${ownedQty}` : "Sẵn sàng"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-1.5 bg-black/70 p-1.5 rounded-2xl border border-white/20 backdrop-blur">
+              {[1, 2, 3].map((spd) => (
+                <button
+                  key={spd}
+                  onClick={() => setSpeedMultiplier(spd)}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-black transition cursor-pointer ${
+                    speedMultiplier === spd ? "bg-cyan-500 text-slate-950 shadow" : "bg-slate-800 text-slate-300"
+                  }`}
+                >
+                  {spd}x
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* KẾT QUẢ TRẬN ĐẤU */}
+      {gameState === "result" && matchResult && (
+        <div className="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+          <div className="max-w-md w-full bg-slate-900 border-2 border-amber-500 p-6 rounded-3xl shadow-2xl text-center space-y-4 animate-fadeIn">
+            <h2 className={`text-2xl font-black uppercase ${matchResult.isWin ? "text-emerald-400" : "text-rose-500"}`}>{matchResult.message}</h2>
+            <p className="text-xs text-slate-300">
+              {matchResult.isWin ? `Nhận thưởng chiến thắng: +${matchResult.reward.toLocaleString()}🪙` : "Rèn luyện thêm sức mạnh ở Hồ Cá rồi quay lại phục thù!"}
+            </p>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setGameState("lobby")}
+                className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black py-3 rounded-xl text-xs uppercase shadow cursor-pointer transition"
+              >
+                🔄 Đấu Trận Khác
+              </button>
+              <Link
+                href="/caucamulti/hoca"
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow text-center flex items-center justify-center transition"
+              >
+                🌊 Về Hồ Cá
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full -z-10 pointer-events-none"></canvas>
+    </div>
+  );
+}
