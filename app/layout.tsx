@@ -218,7 +218,7 @@ export default function RootLayout({
         {children}
 
         {/* KHUNG CHAT NỔI TOÀN CỤC - CHỈ HIỂN THỊ KHI Ở TRANG CHỦ VÀ ĐÃ ĐĂNG NHẬP */}
-        {user && isHomePage && (
+        {user && (
           <div className="fixed z-50 select-none" style={{ left: `${chatPosition.x}px`, top: `${chatPosition.y}px` }}>
             {!chatOpen ? (
               <button

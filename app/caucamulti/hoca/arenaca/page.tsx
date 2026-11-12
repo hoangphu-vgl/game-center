@@ -267,6 +267,11 @@ export default function ArenaCaPage() {
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null); // Đang ở phòng nào
   const [activeChannel, setActiveChannel] = useState<any>(null); // Kênh realtime Supabase
   const [isRoomLobbyOpen, setIsRoomLobbyOpen] = useState<boolean>(false); // Bật/tắt bảng chọn 3 phòng
+  const [roomFishPickerOpen, setRoomFishPickerOpen] = useState<boolean>(false);
+  const [myReadyFish, setMyReadyFish] = useState<any>(null);
+  const [rivalReadyInfo, setRivalReadyInfo] = useState<any>(null);
+  const [isWaitingForRival, setIsWaitingForRival] = useState<boolean>(false);
+  const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
 
   const [playerRoster, setPlayerRoster] = useState<any[]>([]);
   const [playerRosterIdx, setPlayerRosterIdx] = useState<number>(0);
@@ -761,8 +766,8 @@ export default function ArenaCaPage() {
     }
     setCurrentRoomId(roomId);
     setIsRoomLobbyOpen(false);
+    setRoomFishPickerOpen(true); // Vô phòng là bật ngay bảng chọn cá chiến đấu!
 
-    // Tạo kênh kết nối Supabase Realtime cho phòng
     const channel = supabase.channel(`arena_${roomId}`, {
       config: { broadcast: { self: false } },
     });
@@ -770,12 +775,17 @@ export default function ArenaCaPage() {
     channel
       .on('broadcast', { event: 'fish_action' }, (payload) => {
         const data = payload.payload;
-        console.log("Nhận tín hiệu PvP từ đối thủ:", data);
+        console.log("Nhận tín hiệu từ đối thủ:", data);
         
-        // 👉 Xử lý khi đối thủ bên kia ra đòn tấn công hoặc dùng skill
-        if (data.type === 'PVP_ATTACK' && battleRef.current.playerFish) {
+        if (data.type === 'SELECT_FISH') {
+          setRivalReadyInfo(data.fish);
+          if (myReadyFish) {
+            startPvPCountdown(data.fish);
+          } else {
+            setIsWaitingForRival(false);
+          }
+        } else if (data.type === 'PVP_ATTACK' && battleRef.current.playerFish) {
           const bs = battleRef.current;
-          // Trừ máu cá nhà theo sát thương đối thủ vừa gây ra
           bs.playerFish.hp = Math.max(0, bs.playerFish.hp - data.damage);
           triggerShake(12, 0.25);
           spawnFloatingText(bs.playerFish.x, bs.playerFish.y - 40, `💥 -${data.damage} (PvP)`, "#f43f5e", 18);
@@ -799,6 +809,49 @@ export default function ArenaCaPage() {
       });
       
     setActiveChannel(channel);
+  }
+
+  // Hàm đếm ngược trước khi chính thức giao chiến
+  function startPvPCountdown(rivalFishData: any) {
+    setMatchCountdown(3);
+    let count = 3;
+    const timer = setInterval(() => {
+      count--;
+      if (count > 0) {
+        setMatchCountdown(count);
+      } else {
+        clearInterval(timer);
+        setMatchCountdown(null);
+        setRoomFishPickerOpen(false);
+        
+        const bs = battleRef.current;
+        bs.playerFish = createFish(myReadyFish, true);
+        bs.rivalFish = createFish(rivalFishData, false);
+        startMatch();
+      }
+    }, 1000);
+  }
+
+  // Hàm khi mình bấm chọn một con cá trong phòng
+  async function selectFishForRoom(fish: any) {
+    setMyReadyFish(fish);
+    setRoomFishPickerOpen(false);
+    
+    if (activeChannel) {
+      await activeChannel.send({
+        type: 'broadcast',
+        event: 'fish_action',
+        payload: {
+          type: 'SELECT_FISH',
+          userId: user?.id,
+          fish: fish,
+        },
+      });
+    }
+
+    if (!rivalReadyInfo) {
+      setIsWaitingForRival(true);
+    }
   }
 
   function leaveMultiplayerRoom() {
@@ -2488,6 +2541,65 @@ export default function ArenaCaPage() {
                   🚪 Rời khỏi phòng hiện tại ({currentRoomId})
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🐟 MODAL CHỌN CÁ RIÊNG CHO PHÒNG MULTIPLAYER */}
+      {roomFishPickerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3">
+          <div className="bg-slate-900 border-2 border-purple-500/75 w-full max-w-3xl max-h-[85vh] rounded-3xl p-5 shadow-2xl flex flex-col text-white">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
+              <div>
+                <h3 className="text-lg font-arcade font-bold text-yellow-400">🏟️ CHỌN CHIẾN BINH VÀO PHÒNG ({currentRoomId})</h3>
+                <p className="text-xs text-slate-300">Chọn con cá cưng mạnh nhất để so tài trực tiếp với đối thủ!</p>
+              </div>
+              <button 
+                onClick={() => setRoomFishPickerOpen(false)}
+                className="text-slate-400 hover:text-white font-bold text-lg px-2 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Trạng thái chờ */}
+            {isWaitingForRival && (
+              <div className="bg-purple-950/50 border border-purple-500/40 rounded-2xl p-4 mb-4 text-center animate-pulse">
+                <span className="text-sm font-bold text-purple-300">⏳ Đã chọn cá! Đang đợi đối thủ chọn xong...</span>
+              </div>
+            )}
+
+            {matchCountdown !== null && (
+              <div className="bg-amber-950/85 border-2 border-amber-400 rounded-2xl p-6 mb-4 text-center">
+                <div className="text-xs text-amber-200 font-bold mb-1">Cả hai đã sẵn sàng! Trận đấu bắt đầu sau:</div>
+                <div className="font-arcade font-extrabold text-6xl text-amber-400 animate-bounce">{matchCountdown}</div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {playerRoster.map((fish) => (
+                <div
+                  key={fish.id}
+                  onClick={() => selectFishForRoom(fish)}
+                  className="bg-slate-950 border border-slate-800 hover:border-purple-400 rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition hover:scale-[1.02]"
+                >
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 mb-1">
+                    <span>{fish.name}</span>
+                    <span className="text-amber-300">⚖️ {formatFishWeight(fish.weight)}</span>
+                  </div>
+                  <div className="h-16 flex items-center justify-center my-1">
+                    <img
+                      src={fish.filename.startsWith("http") || fish.filename.startsWith("/") ? fish.filename : `/assets/cauca/${fish.filename}`}
+                      alt={fish.name}
+                      className="max-h-full object-contain"
+                    />
+                  </div>
+                  <button className="w-full mt-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 py-2 rounded-xl text-xs font-bold text-white shadow-md">
+                    XUẤT TRẬN CON NÀY
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
