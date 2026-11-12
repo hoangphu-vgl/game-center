@@ -2,6 +2,7 @@
 
 import "./globals.css";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface ChatMessage {
@@ -16,6 +17,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [displayName, setDisplayName] = useState("Chiến Binh");
   
@@ -172,7 +174,6 @@ export default function RootLayout({
       isDraggingRef.current = false;
     };
 
-    // Thêm passive: true để không gián đoạn cảm ứng mượt trên iOS
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("touchmove", handleTouchMove, { passive: true });
@@ -208,13 +209,16 @@ export default function RootLayout({
     }
   };
 
+  // KIỂM TRA XEM CÓ ĐANG Ở TRANG CHỦ HAY KHÔNG (ví dụ đường dẫn là "/" hoặc trang chủ chuẩn)
+  const isHomePage = pathname === "/";
+
   return (
     <html lang="vi">
       <body className="antialiased bg-slate-950 text-white relative min-h-screen">
         {children}
 
-        {/* KHUNG CHAT NỔI TOÀN CỤC */}
-        {user && (
+        {/* KHUNG CHAT NỔI TOÀN CỤC - CHỈ HIỂN THỊ KHI Ở TRANG CHỦ VÀ ĐÃ ĐĂNG NHẬP */}
+        {user && isHomePage && (
           <div className="fixed z-50 select-none" style={{ left: `${chatPosition.x}px`, top: `${chatPosition.y}px` }}>
             {!chatOpen ? (
               <button
