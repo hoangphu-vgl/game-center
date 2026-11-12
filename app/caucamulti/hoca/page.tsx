@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 
 // --- CẤU HÌNH SUPABASE ---
 const supabaseUrl = "https://iaejbvlibjfpdwuqfszp.supabase.co";
@@ -101,6 +102,7 @@ const getGrowthDurationSec = (baseWeight: number) => {
 };
 
 export default function HoCaPage() {
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [score, setScore] = useState<number>(0);
@@ -1424,12 +1426,12 @@ export default function HoCaPage() {
         <div className="flex gap-2 pointer-events-auto">
           <button
   onClick={async () => {
-    // 1. Ép lưu ngay lập tức tiến trình độ no, trọng lượng cá và xu xuống Supabase trước khi rời trang
+    // 1. Ép lưu dữ liệu độ no và trọng lượng cá xuống Supabase an toàn tuyệt đối
     if (typeof syncToDB === "function" && aquariumRef.current) {
       await syncToDB(aquariumRef.current, fishInvRef.current, scoreRef.current, true);
     }
-    // 2. Chuyển hướng về đúng màn hình câu cá ngoài khơi
-    window.location.href = "/caucamulti";
+    // 2. Quay lại chính xác phòng/màn hình đang đứng trước đó bằng router của Next.js
+    router.back();
   }}
   className="bg-slate-900/80 hover:bg-slate-800 text-sky-400 px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-500/40 backdrop-blur transition active:scale-95 cursor-pointer"
 >
