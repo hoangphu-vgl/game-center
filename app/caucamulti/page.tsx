@@ -406,7 +406,6 @@ export default function CauCaMultiPage() {
   const [isFindBaitMenuOpen, setIsFindBaitMenuOpen] = useState<boolean>(false);
   const [activeFindGame, setActiveFindGame] = useState<"insect" | "shrimp" | "bread" | null>(null);
   
-  // Dùng state lưu thời gian hồi chiêu tìm mồi & đồng bộ localStorage tránh việc F5/refresh là mất hồi chiêu 5 phút
   const [lastInsectTime, setLastInsectTime] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("lastInsectTime");
@@ -1909,69 +1908,22 @@ export default function CauCaMultiPage() {
             </div>
             
             <div className="flex-1 overflow-y-auto my-3 pr-2 space-y-5 text-sm text-slate-300">
-                {/* 1. Cách câu */}
                 <div className="space-y-2">
                     <h3 className="text-emerald-400 font-black uppercase border-l-4 border-emerald-400 pl-2">🎣 Cách Quăng & Căn Lực</h3>
                     <ul className="list-disc list-inside space-y-1 ml-2 text-xs font-bold leading-relaxed">
                         <li><span className="text-amber-300">Nhấn giữ màn hình</span> để gồng lực quăng. Thanh lực càng đầy, mồi văng càng xa.</li>
-                        <li>Độ sâu mồi chìm phụ thuộc vào lực quăng và loại mồi (Ví dụ: tép, mồi xịn sẽ dễ chìm xuống đáy).</li>
+                        <li>Độ sâu mồi chìm phụ thuộc vào lực quăng và loại mồi.</li>
                         <li>Khi hiện <span className="text-rose-400 font-black">"CÁ CẮN MỒI!! GIẬT LÊN NGAY (TAP)!!"</span>, hãy nhấn thật nhanh 1 cái để đóng cá!</li>
                     </ul>
                 </div>
 
-                {/* 2. Cách giữ & kéo dây */}
                 <div className="space-y-2">
                     <h3 className="text-rose-400 font-black uppercase border-l-4 border-rose-400 pl-2">⚔️ Kỹ Thuật Kéo & Giữ Dây</h3>
                     <ul className="list-disc list-inside space-y-1 ml-2 text-xs font-bold leading-relaxed">
-                        <li><span className="text-amber-300">Tap (Nhấp) liên tục:</span> Dùng để rỉa máu cá. Tuy nhiên, nếu bạn chỉ nhấp mà không giữ, cá lạng ra xa sẽ làm độ căng dây tăng vọt.</li>
+                        <li><span className="text-amber-300">Tap (Nhấp) liên tục:</span> Dùng để rỉa máu cá.</li>
                         <li><span className="text-blue-300">Nhấn giữ:</span> Hãm lực kéo, giúp độ căng dây tăng chậm lại.</li>
-                        <li><span className="text-white">Quy tắc vàng:</span> <span className="text-emerald-300">Nhấp nhả nhịp nhàng!</span> Tap để trừ máu, Giữ khi thấy dây căng nhanh, và đừng để mốc căng lên 100% (Đứt dây).</li>
-                        <li>Đôi khi sẽ xuất hiện <span className="text-purple-300">Sự kiện QTE (Vuốt Trái/Phải)</span>, vuốt đúng hướng sẽ lập tức giảm được rất nhiều độ căng dây!</li>
+                        <li>Đừng để mốc căng lên 100% (Đứt dây).</li>
                     </ul>
-                </div>
-                
-                {/* 3. Luật Mồi */}
-                <div className="space-y-2">
-                    <h3 className="text-purple-400 font-black uppercase border-l-4 border-purple-400 pl-2">📦 Quy Tắc Chọn Mồi</h3>
-                    <ul className="list-disc list-inside space-y-1 ml-2 text-xs font-bold leading-relaxed">
-                        <li><span className="text-emerald-300">Mồi Cơ Bản:</span> Dùng để câu cá nhỏ (Dưới 50kg). Cá to sẽ lơ mồi này.</li>
-                        <li><span className="text-purple-300">Mồi Trộn Thường:</span> Chuyên trị cá hạng trung (Dưới 500kg). Nếu lỡ dùng "Mồi Kém", tỉ lệ hụt cá là 50%.</li>
-                        <li><span className="text-amber-400">Mồi Xịn / Hoàng Gia:</span> Vật phẩm thiết yếu để săn bắt các loài Cá Quái Vật, Cá Khủng và BOSS Thượng Cổ.</li>
-                    </ul>
-                </div>
-
-                {/* 4. Base Points */}
-                <div className="space-y-2">
-                    <h3 className="text-amber-400 font-black uppercase border-l-4 border-amber-400 pl-2">🐟 Bảng Giá Trị Cơ Bản Của Cá</h3>
-                    <p className="text-[10px] text-slate-400 italic mb-2">
-                        *Lưu ý: Xu nhận được = <span className="text-white">Cân nặng (kg)</span> × <span className="text-white">Giá Trị Cơ Bản</span> × <span className="text-amber-300">Buff Cần Câu / Đồng Đội</span>.
-                    </p>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] font-bold">
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Hề Nemo:</span> <span className="text-amber-300">100</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Thia vằn/xanh:</span> <span className="text-amber-300">100</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Tuế suối:</span> <span className="text-amber-300">100</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Vàng/Thia xám:</span> <span className="text-amber-300">120</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Vền/Koi:</span> <span className="text-amber-300">150</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Hồng đăng:</span> <span className="text-amber-300">150</span></div>
-                        
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Tai tượng:</span> <span className="text-amber-300">500</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Chim/Basa/La hán:</span> <span className="text-amber-300">500</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Lóc hoàng đế:</span> <span className="text-amber-300">600</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Chép lớn/Tra:</span> <span className="text-amber-300">700</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Rô khủng:</span> <span className="text-amber-300">800</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Cá mú:</span> <span className="text-amber-300">900</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Huyết long:</span> <span className="text-amber-300">1000</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Ngừ bò:</span> <span className="text-amber-300">1000</span></div>
-
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Đuối mata:</span> <span className="text-amber-300">2000</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Mực nam cực:</span> <span className="text-amber-300">2500</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Nhám voi:</span> <span className="text-amber-300">3000</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Mập đầu búa:</span> <span className="text-amber-300">6000</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Mập trắng:</span> <span className="text-amber-300">8000</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Voi sát thủ:</span> <span className="text-amber-300">9000</span></div>
-                        <div className="bg-slate-900 p-2 rounded-lg border border-slate-700 flex justify-between"><span>Nhà tán:</span> <span className="text-amber-300">10000</span></div>
-                    </div>
                 </div>
             </div>
           </div>
@@ -1982,13 +1934,13 @@ export default function CauCaMultiPage() {
         <div className="absolute inset-0 z-[70] bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded-3xl animate-fadeIn">
              <div className="bg-slate-900 border-2 border-amber-500 w-full max-w-md rounded-2xl p-6 shadow-[0_0_30px_rgba(245,158,11,0.4)] text-center relative">
                   <h3 className="text-xl font-black text-amber-400 mb-1 uppercase">🏕️ KHO MỤC TÌM MỒI</h3>
-                  <p className="text-[10px] text-slate-400 mb-4">Mỗi hoạt động có thời gian hồi riêng 5 phút!</p>
+                  <p className="text-[10px] text-slate-400 mb-4">Mỗi hoạt động có thời gian hồi riêng 5 phút (Nhận 50-200 mồi random)!</p>
 
                   <div className="space-y-3">
                       {(() => {
                           const now = Date.now();
                           const diff = now - lastInsectTime;
-                          const cooldown = 300000; // 5 phút
+                          const cooldown = 300000;
                           const canDo = diff >= cooldown;
                           const leftSec = Math.max(0, Math.ceil((cooldown - diff) / 1000));
                           return (
@@ -2165,7 +2117,7 @@ export default function CauCaMultiPage() {
         </div>
       )}
 
-      {/* --- NÚT MENU Ở TRÊN (CẢI TIẾN GỌN NHẸ HƠN) --- */}
+      {/* --- NÚT MENU Ở TRÊN --- */}
       <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-50 pointer-events-auto gap-2">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button onClick={leaveRoom} className="bg-rose-900/95 text-rose-200 hover:bg-rose-800 px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black border border-rose-500/40 shadow cursor-pointer active:scale-95 transition">← Rời</button>
@@ -2450,10 +2402,10 @@ export default function CauCaMultiPage() {
             
             <div className="flex gap-2 my-3">
                <button onClick={() => setCraftingTab("normal")} className={`flex-1 py-2 rounded-xl text-xs font-black transition cursor-pointer ${craftingTab === 'normal' ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400'}`}>
-                   🟢 Trộn Mồi Thường 
+                   🟢 Trộn Mồi Thường (50-100 Mồi)
                </button>
                <button onClick={() => setCraftingTab("advanced")} className={`flex-1 py-2 rounded-xl text-xs font-black transition cursor-pointer ${craftingTab === 'advanced' ? 'bg-amber-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400'}`}>
-                   ⚡ Trộn Mồi Xịn 
+                   ⚡ Trộn Mồi Xịn (20-50 Mồi)
                </button>
             </div>
 
