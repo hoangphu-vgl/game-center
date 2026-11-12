@@ -263,6 +263,7 @@ export default function ArenaCaPage() {
   const [user, setUser] = useState<any>(null);
   const [score, setScore] = useState<number>(0);
   const [rawInventory, setRawInventory] = useState<any>({});
+  const [isHardcoreMode, setIsHardcoreMode] = useState<boolean>(false); // 💀 Chế độ sinh tử
 
   const [playerRoster, setPlayerRoster] = useState<any[]>([]);
   const [playerRosterIdx, setPlayerRosterIdx] = useState<number>(0);
@@ -422,7 +423,6 @@ export default function ArenaCaPage() {
     };
   }
 
-  // 1. TẢI DỮ LIỆU TỪ SUPABASE & GÁN CLASS + 4 SKILL
   // 1. TẢI DỮ LIỆU TỪ SUPABASE & GÁN CLASS + 4 SKILL
   useEffect(() => {
     async function loadUserData() {
@@ -1111,13 +1111,20 @@ export default function ArenaCaPage() {
     if (playerWon) {
       const isBossWin = Boolean(currentEnemyCfg?.isBossBattle);
       const bonusWeight = isBossWin ? 1.5 : 0.8;
-      const bonusCoins = isBossWin ? 1500 : 500;
 
-      setWinStreak((prev) => {
-        const nextStreak = prev + 1;
-        if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = `Chuỗi: ${nextStreak}🔥`;
-        return nextStreak;
-      });
+      // 1. TĂNG CHUỖI THẮNG VÀ TÍNH THƯỞNG TĂNG DẦN THEO WINSTREAK
+      const currentStreak = winStreak + 1;
+      setWinStreak(currentStreak);
+      if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = `Chuỗi: ${currentStreak}🔥`;
+
+      const baseCoins = isBossWin ? 1500 : 500;
+      const streakBonus = isBossWin ? (currentStreak - 1) * 400 : (currentStreak - 1) * 150;
+      
+      // 2. CHECK HARDCORE: BẬT LÀ X2 TIỀN THƯỞNG, TẮT THÌ ĂN BÌNH THƯỜNG (CHILL)
+      let bonusCoins = baseCoins + streakBonus;
+      if (isHardcoreMode) {
+        bonusCoins *= 2; 
+      }
 
       const updatedRoster = [...playerRoster];
       const safeIdx = playerRosterIdx % updatedRoster.length;
@@ -1161,18 +1168,48 @@ export default function ArenaCaPage() {
           "font-arcade font-extrabold text-2xl sm:text-5xl italic tracking-wider text-yellow-400 drop-shadow-[0_4px_16px_rgba(250,204,21,0.6)] mb-2";
       }
       if (hudRefs.current.resultSub) {
-        hudRefs.current.resultSub.textContent = `${bs.playerFish.name} hạ gục ${bs.rivalFish.name}! Tăng +${bonusWeight} kg & nhận +${bonusCoins.toLocaleString()} Xu!`;
+        hudRefs.current.resultSub.textContent = `${bs.playerFish.name} hạ gục ${bs.rivalFish.name}! Tăng +${bonusWeight} kg & nhận +${bonusCoins.toLocaleString()} Xu ${isHardcoreMode ? "(🔥 Hardcore x2)" : "(🌱 Chill)"} (Chuỗi ${currentStreak}🔥)!`;
       }
     } else {
+      // 3. NHÁNH THUA TRẬN (RESET CHUỖI VÀ XÉT HARDCORE XÓA CÁ VĨNH VIỄN)
       setWinStreak(0);
-      if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = `Chuỗi: 0🔥`;
+      if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = "Chuỗi: 0🔥";
+
+      const updatedRoster = [...playerRoster];
+      const safeIdx = playerRosterIdx % updatedRoster.length;
+      const deadFish = updatedRoster[safeIdx];
+
+      if (isHardcoreMode) {
+        // Hardcore BẬT: Xóa vĩnh viễn con cá đang đấu khỏi inventory
+        const nextInv = { ...rawInventory };
+        if (deadFish._source === "aquarium" && Array.isArray(nextInv.aquarium)) {
+          nextInv.aquarium = nextInv.aquarium.filter((f: any) => f.id !== deadFish.id);
+        } else if (Array.isArray(nextInv.fish_inventory)) {
+          nextInv.fish_inventory = nextInv.fish_inventory.filter((f: any) => f.id !== deadFish.id);
+        }
+        setRawInventory(nextInv);
+
+        updatedRoster.splice(safeIdx, 1);
+        setPlayerRoster(updatedRoster);
+        setPlayerRosterIdx(0);
+
+        if (user?.id) {
+          await supabase
+            .from("profiles")
+            .update({ inventory: nextInv })
+            .eq("id", user.id);
+        }
+      }
+
       if (hudRefs.current.resultBadge) {
-        hudRefs.current.resultBadge.textContent = "😵 THẤT BẠI!";
+        hudRefs.current.resultBadge.textContent = isHardcoreMode ? "💀 TỬ TRẬN - MẤT VĨNH VIỄN!" : "💀 THẤT TRẬN!";
         hudRefs.current.resultBadge.className =
-          "font-arcade font-extrabold text-3xl sm:text-5xl italic tracking-wider text-rose-400 drop-shadow-[0_4px_16px_rgba(244,63,94,0.6)] mb-2";
+          "font-arcade font-extrabold text-2xl sm:text-5xl italic tracking-wider text-rose-500 drop-shadow-[0_4px_16px_rgba(244,63,94,0.6)] mb-2";
       }
       if (hudRefs.current.resultSub) {
-        hudRefs.current.resultSub.textContent = `${bs.rivalFish.name} quá mạnh! Bấm Đổi Cá Nhà để chọn chiến binh khác nhé.`;
+        hudRefs.current.resultSub.textContent = isHardcoreMode 
+          ? `${deadFish.name} đã ngã xuống và vĩnh viễn biến mất khỏi hồ do bật chế độ Sinh Tử!` 
+          : `${bs.playerFish.name} đã thua cuộc. Thử lại ở trận sau nhé!`;
       }
     }
   }
@@ -2242,8 +2279,8 @@ export default function ArenaCaPage() {
         </div>
       </main>
 
-      {/* FOOTER CONTROLS (4 NÚT: TỐC ĐỘ, QUÉT CÙNG TẦNG, SĂN BOSS, ĐỔI CÁ NHÀ) */}
-      <footer className="w-full max-w-4xl mx-auto z-10 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+      {/* FOOTER CONTROLS (5 NÚT: TỐC ĐỘ, QUÉT CÙNG TẦNG, SĂN BOSS, ĐỔI CÁ NHÀ, SINH TỬ) */}
+      <footer className="w-full max-w-4xl mx-auto z-10 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-2.5">
         <button
           onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 3 : 1))}
           className="flex flex-col items-center justify-center bg-gradient-to-b from-amber-400 to-orange-500 border-b-4 border-orange-800 rounded-xl p-2 text-slate-950 shadow-lg cursor-pointer active:scale-95 transition"
@@ -2283,7 +2320,24 @@ export default function ArenaCaPage() {
           <span className="text-base sm:text-lg leading-none mb-0.5">🐟</span>
           <span className="font-arcade font-bold text-xs leading-tight">Đổi Cá Nhà</span>
           <span ref={(el) => { hudRefs.current.playerRosterLabel = el; }} className="text-[9px] text-teal-950 font-bold">
-            {(playerRosterIdx % (playerRoster.length || 1)) + 1} / {playerRoster.length || 1} Cá Cưng (Mở Kho)
+            {(playerRosterIdx % (playerRoster.length || 1)) + 1} / {playerRoster.length || 1} Cá Cưng
+          </span>
+        </button>
+
+        <button
+          onClick={() => setIsHardcoreMode(!isHardcoreMode)}
+          className={`flex flex-col items-center justify-center border-b-4 rounded-xl p-2 shadow-lg cursor-pointer active:scale-95 transition col-span-2 sm:col-span-1 ${
+            isHardcoreMode
+              ? "bg-gradient-to-b from-rose-600 to-red-900 border-red-950 text-white animate-pulse"
+              : "bg-gradient-to-b from-slate-700 to-slate-900 border-slate-950 text-slate-300"
+          }`}
+        >
+          <span className="text-base sm:text-lg leading-none mb-0.5">💀</span>
+          <span className="font-arcade font-bold text-xs leading-tight">
+            Sinh Tử: {isHardcoreMode ? "BẬT" : "TẮT"}
+          </span>
+          <span className="text-[9px] font-semibold opacity-80">
+            {isHardcoreMode ? "Thua là mất vĩnh viễn!" : "Đánh thường an toàn"}
           </span>
         </button>
       </footer>

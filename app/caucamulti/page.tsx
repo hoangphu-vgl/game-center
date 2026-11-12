@@ -3687,7 +3687,7 @@ export default function CauCaMultiPage() {
                   craftingTab === "normal" ? "bg-purple-600 text-white shadow-lg" : "bg-slate-900 text-slate-400"
                 }`}
               >
-                🟢 Trộn Mồi Thường (50-100 Mồi)
+                🟢 Trộn Mồi Thường (100-200 Mồi)
               </button>
               <button
                 onClick={() => setCraftingTab("advanced")}
@@ -3695,7 +3695,7 @@ export default function CauCaMultiPage() {
                   craftingTab === "advanced" ? "bg-amber-600 text-white shadow-lg" : "bg-slate-900 text-slate-400"
                 }`}
               >
-                ⚡ Trộn Mồi Xịn (20-50 Mồi)
+                ⚡ Trộn Mồi Xịn (50-100 Mồi)
               </button>
             </div>
 
