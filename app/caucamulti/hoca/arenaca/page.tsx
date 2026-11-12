@@ -762,6 +762,7 @@ export default function ArenaCaPage() {
     setCurrentRoomId(roomId);
     setIsRoomLobbyOpen(false);
 
+    // Tạo kênh kết nối Supabase Realtime cho phòng
     const channel = supabase.channel(`arena_${roomId}`, {
       config: { broadcast: { self: false } },
     });
@@ -769,10 +770,26 @@ export default function ArenaCaPage() {
     channel
       .on('broadcast', { event: 'fish_action' }, (payload) => {
         const data = payload.payload;
-        console.log("Nhận tín hiệu từ đối thủ:", data);
+        console.log("Nhận tín hiệu PvP từ đối thủ:", data);
+        
+        // 👉 Xử lý khi đối thủ bên kia ra đòn tấn công hoặc dùng skill
+        if (data.type === 'PVP_ATTACK' && battleRef.current.playerFish) {
+          const bs = battleRef.current;
+          // Trừ máu cá nhà theo sát thương đối thủ vừa gây ra
+          bs.playerFish.hp = Math.max(0, bs.playerFish.hp - data.damage);
+          triggerShake(12, 0.25);
+          spawnFloatingText(bs.playerFish.x, bs.playerFish.y - 40, `💥 -${data.damage} (PvP)`, "#f43f5e", 18);
+          updateHUD();
+          
+          if (bs.playerFish.hp <= 0 && !bs.gameOver) {
+            bs.gameOver = true;
+            setTimeout(() => endMatch(false), 400);
+          }
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
+          console.log(`Đã vào phòng realtime: ${roomId}`);
           await channel.send({
             type: 'broadcast',
             event: 'fish_action',
@@ -780,6 +797,7 @@ export default function ArenaCaPage() {
           });
         }
       });
+      
     setActiveChannel(channel);
   }
 
