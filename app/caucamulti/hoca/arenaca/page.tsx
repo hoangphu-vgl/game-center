@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
-// --- HỆ THỐNG CLASS & SKILL ĐẶC SẮC (DRAGON BALL STYLE) ---
+// --- HỆ THỐNG CLASS & SKILL GỐC TỪ ARENACA_3.TXT[cite: 10] ---
 type FishClassType = "ASSASSIN" | "TANKER" | "MAGE" | "WARRIOR" | "BOSS";
 
 interface FishSkill {
@@ -255,21 +255,21 @@ export default function ArenaCaPage() {
   const [score, setScore] = useState<number>(0);
   const [rawInventory, setRawInventory] = useState<any>({});
   const [isHardcoreMode, setIsHardcoreMode] = useState<boolean>(false);
-  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5); // Hỗ trợ 1v1, 3v3, 5v5
+  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5); // Hỗ trợ 1v1, 3v3, 5v5[cite: 10]
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [activeChannel, setActiveChannel] = useState<any>(null);
   const [isRoomLobbyOpen, setIsRoomLobbyOpen] = useState<boolean>(false);
   const [roomFishPickerOpen, setRoomFishPickerOpen] = useState<boolean>(false);
   
-  // Hồ chờ Multiplayer (1 đến 5 con khác nhau)
+  // Hồ chờ Multiplayer (1 đến 5 con khác nhau)[cite: 10]
   const [roomMyFishList, setRoomMyFishList] = useState<any[]>([]);
   const [roomRivalFishList, setRoomRivalFishList] = useState<any[]>([]);
   const [isMyReady, setIsMyReady] = useState<boolean>(false);
   const [isRivalReady, setIsRivalReady] = useState<boolean>(false);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
 
-  // Kho cá tổng và Đội hình chiến đấu PvE (1 đến 5 con không trùng lặp)
+  // Kho cá tổng và Đội hình chiến đấu PvE (1 đến 5 con không trùng lặp)[cite: 10]
   const [playerRoster, setPlayerRoster] = useState<any[]>(() => buildDefaultDemoRoster());
   const [activeBattleTeam, setActiveBattleTeam] = useState<any[]>(() => buildDefaultDemoRoster().slice(0, 5));
   const [isFishPickerOpen, setIsFishPickerOpen] = useState<boolean>(false);
@@ -349,7 +349,6 @@ export default function ArenaCaPage() {
     floatingTexts: [] as any[],
     glassCracks: [] as any[],
     projectiles: [] as any[],
-    beams: [] as any[],
     slashArcs: [] as any[],
     afterimages: [] as any[],
     activeUltVfx: null as any,
@@ -574,7 +573,7 @@ export default function ArenaCaPage() {
     const { width, height } = battleRef.current;
     const bs = battleRef.current;
     bs.bubbles = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 34; i++) {
       bs.bubbles.push({
         x: Math.random() * width,
         y: Math.random() * height,
@@ -600,11 +599,9 @@ export default function ArenaCaPage() {
   function createFish(cfg: any, isPlayer: boolean, index: number, total: number) {
     const width = battleRef.current.width || 800;
     const height = battleRef.current.height || 450;
-    const startX = isPlayer
-      ? 80 + Math.random() * (width * 0.18)
-      : width - 80 - Math.random() * (width * 0.18);
-    const spacing = (height - 90) / (total + 1);
-    const startY = 45 + spacing * (index + 1);
+    const startX = isPlayer ? width * 0.22 : width * 0.78;
+    const spacing = height / (total + 1);
+    const startY = spacing * (index + 1);
 
     const fishClass: FishClassType = cfg.fishClass || "WARRIOR";
     const meta = CLASS_META[fishClass];
@@ -612,8 +609,6 @@ export default function ArenaCaPage() {
       Array.isArray(cfg.skills) && cfg.skills.length > 0
         ? cfg.skills
         : rollRandomFishSkills(cfg.filename, cfg.name).skills;
-
-    const modeScale = total === 1 ? 1.15 : total === 3 ? 0.95 : 0.85;
 
     return {
       isPlayer,
@@ -631,24 +626,25 @@ export default function ArenaCaPage() {
       hp: cfg.maxHp,
       atk: cfg.atk,
       kiGain: cfg.kiGain || 15,
-      ki: 25 + Math.random() * 20,
+      ki: 35 + Math.random() * 15,
       maxKi: 100,
       x: startX,
       y: startY,
-      homeX: startX,
-      homeY: startY,
       vx: 0,
       vy: 0,
+      homeX: startX,
+      homeY: startY,
       dir: isPlayer ? 1 : -1,
-      baseScale: modeScale,
-      currentScale: modeScale,
-      radius: total === 1 ? 28 : 20,
-      auraColor: isPlayer ? "#22c55e" : "#ef4444",
-      classColor: meta.color,
-      quotes: cfg.quotes || [`${meta.icon} ${meta.label} xuất kích!`],
-      aiState: "APPROACH",
-      aiTimer: 0.6 + Math.random() * 0.6,
-      cooldown: 1.2 + Math.random() * 1.5,
+      baseScale: cfg.scale || 0.92,
+      currentScale: cfg.scale || 0.92,
+      auraColor: meta.color,
+      quotes: cfg.quotes || [`${meta.icon} ${meta.label} xung trận!`],
+      aiState: "CIRCLING",
+      aiTimer: 0.4 + Math.random() * 0.5,
+      comboStep: 0,
+      comboMaxSteps: 3,
+      comboTimer: 0,
+      afterimageTimer: 0,
       powerBuff: 1.0,
       superSaiyan: false,
       swimPhase: Math.random() * Math.PI * 2,
@@ -663,22 +659,22 @@ export default function ArenaCaPage() {
     const roster = activeBattleTeam.length > 0 ? activeBattleTeam : buildDefaultDemoRoster().slice(0, battleMode);
     const bs = battleRef.current;
 
-    const count = customPTeam ? customPTeam.length : battleMode;
+    const countP = customPTeam ? customPTeam.length : battleMode;
     const pTeam = customPTeam || [];
     if (!customPTeam) {
-      for (let i = 0; i < count; i++) {
-        const fishData = roster[i % roster.length];
-        pTeam.push(createFish(fishData, true, i, count));
+      for (let i = 0; i < countP; i++) {
+        pTeam.push(createFish(roster[i % roster.length], true, i, countP));
       }
     }
     bs.teamPlayer = pTeam;
 
+    const countE = customRivalTeam ? customRivalTeam.length : battleMode;
     const eTeam = customRivalTeam || [];
     if (!customRivalTeam) {
       const activeLeader = roster[0];
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < countE; i++) {
         const enemyCfg = i === 0 ? currentEnemyCfg : buildSameTierEnemyConfig(activeLeader);
-        eTeam.push(createFish(enemyCfg, false, i, count));
+        eTeam.push(createFish(enemyCfg, false, i, countE));
       }
     }
     bs.teamRival = eTeam;
@@ -688,7 +684,6 @@ export default function ArenaCaPage() {
     bs.floatingTexts = [];
     bs.glassCracks = [];
     bs.projectiles = [];
-    bs.beams = [];
     bs.slashArcs = [];
     bs.afterimages = [];
     bs.activeUltVfx = null;
@@ -712,7 +707,7 @@ export default function ArenaCaPage() {
     if (hudRefs.current.eClassBadge) hudRefs.current.eClassBadge.textContent = `${eMeta.icon} ${eMeta.label}`;
 
     if (hudRefs.current.playerRosterLabel) {
-      hudRefs.current.playerRosterLabel.textContent = `Đội ${bs.teamPlayer.length}v${bs.teamRival.length}`;
+      hudRefs.current.playerRosterLabel.textContent = `Đội hình ${battleMode}v${battleMode} (${bs.teamPlayer.length}/${battleMode})`;
     }
 
     sayQuote(leadP, leadP.quotes[0]);
@@ -733,7 +728,7 @@ export default function ArenaCaPage() {
       if (hudRefs.current.radarOverlay) hudRefs.current.radarOverlay.classList.add("hidden");
       setIsScanning(false);
       startMatch();
-    }, 800);
+    }, 900);
   }
 
   function scanBossEnemy() {
@@ -770,10 +765,10 @@ export default function ArenaCaPage() {
       if (hudRefs.current.radarOverlay) hudRefs.current.radarOverlay.classList.add("hidden");
       setIsScanning(false);
       startMatch();
-    }, 900);
+    }, 1000);
   }
 
-  // --- MULTIPLAYER ROOM & HỒ CHỜ THẢ CÁ (1 ĐẾN 5 CON KHÔNG TRÙNG LẶP) ---
+  // --- MULTIPLAYER ROOM & HỒ CHỜ THẢ CÁ (1 ĐẾN 5 CON KHÔNG TRÙNG LẶP)[cite: 10] ---
   async function joinMultiplayerRoom(roomId: string) {
     if (!user?.id) {
       alert("Vui lòng đăng nhập để vào phòng đọ cá!");
@@ -935,45 +930,42 @@ export default function ArenaCaPage() {
 
   function sayQuote(fish: any, text: string) {
     fish.speech = text;
-    fish.speechTimer = 1.6;
+    fish.speechTimer = 1.9;
   }
 
-  function triggerShake(intensity: number, duration = 0.2) {
+  function triggerShake(intensity: number, duration = 0.25) {
     const bs = battleRef.current;
     bs.shakeIntensity = Math.max(bs.shakeIntensity, intensity);
     bs.shakeTime = Math.max(bs.shakeTime, duration);
   }
 
-  function triggerFlash(color = "#ffffff", alpha = 0.35) {
+  function triggerFlash(color = "#ffffff", alpha = 0.45) {
     battleRef.current.screenFlash = alpha;
     battleRef.current.screenFlashColor = color;
   }
 
-  function spawnFloatingText(x: number, y: number, text: string, color = "#fff", size = 14) {
-    if (battleRef.current.floatingTexts.length > 10) {
-      battleRef.current.floatingTexts.shift();
-    }
+  function spawnFloatingText(x: number, y: number, text: string, color = "#fff", size = 19) {
     battleRef.current.floatingTexts.push({
       x,
       y,
-      vy: -48,
+      vy: -58,
       text,
       color,
       size,
-      life: 0.72,
-      maxLife: 0.72,
+      life: 0.95,
+      maxLife: 0.95,
     });
   }
 
-  function spawnShockwave(x: number, y: number, color: string, maxRadius = 90) {
+  function spawnShockwave(x: number, y: number, color: string, maxRadius = 110) {
     battleRef.current.shockwaves.push({
       x,
       y,
-      r: 8,
+      r: 10,
       maxR: maxRadius,
       color,
-      life: 0.38,
-      maxLife: 0.38,
+      life: 0.45,
+      maxLife: 0.45,
     });
   }
 
@@ -983,153 +975,292 @@ export default function ArenaCaPage() {
       y,
       color,
       angle,
-      radius: 40 + Math.random() * 20,
-      life: 0.26,
-      maxLife: 0.26,
+      radius: 44 + Math.random() * 24,
+      life: 0.28,
+      maxLife: 0.28,
     });
   }
 
-  function spawnParticles(x: number, y: number, color: string, count = 14, speedScale = 1) {
+  function spawnParticles(x: number, y: number, color: string, count = 18, speedScale = 1) {
     const bs = battleRef.current;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = (60 + Math.random() * 220) * speedScale;
+      const speed = (70 + Math.random() * 210) * speedScale;
       bs.particles.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        r: 2.5 + Math.random() * 4.5,
-        color,
-        life: 0.3 + Math.random() * 0.4,
-        maxLife: 0.7,
+        r: 2.5 + Math.random() * 4.8,
+        color: Math.random() > 0.35 ? color : "#ffffff",
+        life: 0.35 + Math.random() * 0.48,
+        maxLife: 0.85,
       });
     }
   }
 
-  // --- CƠ CHẾ ĐẤU TRƯỜNG (BƠI VÒNG VÒNG, GIẢNG KHOẢNG CÁCH, ĐẤM ĐÁ, SKILL CÓ COOLDOWN) ---
-  function executeFighterAction(fish: any, opponent: any) {
+  function spawnGlassCrack(x: number, y: number) {
+    const bs = battleRef.current;
+    if (bs.glassCracks.length > 5) bs.glassCracks.shift();
+    const lines = [];
+    const branches = 6 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < branches; i++) {
+      const a = (i / branches) * Math.PI * 2 + Math.random() * 0.4;
+      const len = 22 + Math.random() * 34;
+      lines.push({ x1: x, y1: y, x2: x + Math.cos(a) * len, y2: y + Math.sin(a) * len });
+    }
+    bs.glassCracks.push({ x, y, lines, alpha: 0.72 });
+  }
+
+  function decideNextAiAction(fish: any, opponent: any) {
     const mySkills: FishSkill[] = fish.skills || [];
     if (mySkills.length === 0) return;
 
+    if (fish.ki >= fish.maxKi) {
+      const ultSkill =
+        mySkills.find((s) => s.category === "ultimate") ||
+        [...mySkills].sort((a, b) => b.powerMult - a.powerMult)[0];
+      executeSkill(fish, opponent, ultSkill, true);
+      return;
+    }
+
+    const nonUltSkills = mySkills.filter((s) => s.category !== "ultimate");
+    const candidatePool = nonUltSkills.length > 0 ? nonUltSkills : mySkills;
+    const chosenSkill = candidatePool[Math.floor(Math.random() * candidatePool.length)];
+
+    executeSkill(fish, opponent, chosenSkill, false);
+  }
+
+  function executeSkill(fish: any, opponent: any, skill: FishSkill, isOverdrive: boolean) {
+    fish.activeSkill = skill;
     fish.dir = opponent.x >= fish.x ? 1 : -1;
 
-    if (fish.ki >= fish.maxKi || Math.random() < 0.22) {
+    if (isOverdrive) {
       fish.ki = 0;
-      fish.aiState = "ULTIMATE";
-      fish.aiTimer = 0.9;
+      fish.aiState = "CAST_ULTIMATE";
+      fish.aiTimer = 0.85;
       fish.superSaiyan = true;
 
-      const ultSkill = mySkills.find((s) => s.category === "ultimate") || mySkills[0];
-      const dmg = Math.round(fish.atk * ultSkill.powerMult * fish.powerBuff);
+      const dmg = Math.round(fish.atk * skill.powerMult * fish.powerBuff);
       fish.powerBuff = 1.0;
 
       if (fish.isPlayer && hudRefs.current.ultCasterName) {
         hudRefs.current.ultCasterName.textContent = `${fish.name} (${fish.classLabel})`;
-        hudRefs.current.ultSkillTitle.textContent = `⚡ ${ultSkill.name.toUpperCase()}!`;
+        hudRefs.current.ultSkillTitle.textContent = `⚡ ${skill.name.toUpperCase()}!`;
         if (hudRefs.current.ultCutIn) hudRefs.current.ultCutIn.classList.remove("hidden");
-        battleRef.current.cutInTimer = 0.95;
+        battleRef.current.cutInTimer = 1.05;
       }
 
-      triggerShake(16, 0.3);
-      triggerFlash(ultSkill.color, 0.45);
-      spawnShockwave(opponent.x, opponent.y, ultSkill.color, 160);
-      spawnParticles(opponent.x, opponent.y, ultSkill.color, 32, 1.4);
+      battleRef.current.cameraZoom = 1.06;
+      triggerFlash(skill.color, 0.45);
+      sayQuote(fish, `${skill.name}!!`);
 
-      applyDamage(fish, opponent, dmg, true, `💥 ${ultSkill.name}: -${dmg}!`);
-      fish.cooldown = 2.5 + Math.random() * 1.0;
-      sayQuote(fish, `${ultSkill.name}!!`);
+      triggerSkillVisualEffect(fish, opponent, skill);
+      spawnShockwave(opponent.x, opponent.y, skill.color, 180);
+      spawnShockwave(opponent.x, opponent.y, "#ffffff", 125);
+      spawnParticles(opponent.x, opponent.y, skill.color, 36, 1.4);
+
+      applyDamage(fish, opponent, dmg, true, `💥 ${skill.name}: -${dmg}!`);
+      spawnGlassCrack(opponent.x + (Math.random() - 0.5) * 35, opponent.y + (Math.random() - 0.5) * 35);
       return;
     }
 
-    const rand = Math.random();
-    if (rand < 0.35) {
-      fish.aiState = "CAST";
-      fish.aiTimer = 0.4;
-      const skill = mySkills.find((s) => s.category === "projectile") || mySkills[0];
-      const dmg = Math.round(fish.atk * skill.powerMult);
+    spawnFloatingText(fish.x, fish.y - 45, `✨ ${skill.name}`, skill.color, 13);
 
-      spawnShockwave(fish.x + fish.dir * 25, fish.y, skill.color, 60);
-      battleRef.current.projectiles.push({
-        ownerIsPlayer: fish.isPlayer,
-        attacker: fish,
-        x: fish.x + fish.dir * 30,
-        y: fish.y,
-        vx: fish.dir * 580,
-        vy: (Math.random() - 0.5) * 50,
-        radius: 10,
+    if (skill.category === "buff") {
+      fish.aiState = "CHARGING";
+      fish.aiTimer = 0.5;
+      fish.ki = Math.min(fish.maxKi, fish.ki + 28);
+      fish.powerBuff = Math.min(1.9, +(fish.powerBuff + (skill.powerMult - 1)).toFixed(2));
+      if (fish.ki >= 70) fish.superSaiyan = true;
+
+      if (fish.fishClass === "TANKER" || fish.fishClass === "WARRIOR") {
+        const healAmt = Math.round(fish.maxHp * (fish.fishClass === "TANKER" ? 0.14 : 0.08));
+        fish.hp = Math.min(fish.maxHp, fish.hp + healAmt);
+        spawnFloatingText(fish.x, fish.y - 25, `💚 +${healAmt} HP`, "#4ade80", 14);
+      }
+
+      triggerShake(4, 0.14);
+      spawnShockwave(fish.x, fish.y, skill.color, 85);
+      spawnParticles(fish.x, fish.y, skill.color, 16, 0.85);
+      sayQuote(fish, `${skill.name}!`);
+      return;
+    }
+
+    if (skill.category === "projectile") {
+      fish.aiState = "KI_BARRAGE";
+      fish.aiTimer = 0.45;
+      spawnShockwave(fish.x + fish.dir * 30, fish.y, skill.color, 65);
+      sayQuote(fish, `${skill.name}!`);
+
+      const boltCount = fish.fishClass === "MAGE" ? 3 : 2;
+      for (let i = 0; i < boltCount; i++) {
+        const spreadY = (i - (boltCount - 1) / 2) * 22;
+        const speed = 520 + i * 30;
+        const angleToOpp = Math.atan2(opponent.y - fish.y, opponent.x - fish.x);
+        battleRef.current.projectiles.push({
+          ownerIsPlayer: fish.isPlayer,
+          skillName: skill.name,
+          vfx: skill.vfx,
+          x: fish.x + fish.dir * 40,
+          y: fish.y + spreadY * 0.4,
+          vx: Math.cos(angleToOpp) * speed,
+          vy: Math.sin(angleToOpp) * speed + spreadY,
+          radius: 11,
+          color: skill.color,
+          damage: Math.round((fish.atk * skill.powerMult * fish.powerBuff) / boltCount),
+          life: 1.4,
+        });
+      }
+      return;
+    }
+
+    if (skill.category === "combo") {
+      fish.aiState = "TELEPORT_COMBO";
+      fish.comboStep = 0;
+      fish.comboMaxSteps = fish.fishClass === "ASSASSIN" ? 4 : 3;
+      fish.comboTimer = 0.05;
+      fish.aiTimer = 0.75;
+      sayQuote(fish, `${skill.name}!`);
+      return;
+    }
+
+    fish.aiState = "DASH_ATTACK";
+    fish.aiTimer = 0.42;
+    const dx = opponent.x - fish.x;
+    const dy = opponent.y - fish.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const dashSpeed = Math.max(battleRef.current.width * 1.4, 680);
+
+    fish.vx = (dx / dist) * dashSpeed;
+    fish.vy = (dy / dist) * dashSpeed;
+    spawnShockwave(fish.x, fish.y, skill.color, 75);
+    spawnParticles(fish.x, fish.y, skill.color, 14, 0.85);
+    sayQuote(fish, `${skill.name}!`);
+  }
+
+  function triggerSkillVisualEffect(attacker: any, defender: any, skill: FishSkill) {
+    const vfx = skill.vfx;
+    if (vfx === "lightning") {
+      const bolts = [];
+      for (let b = 0; b < 5; b++) {
+        const targetX = defender.x + (b - 2) * 28;
+        const pts = [{ x: targetX + (Math.random() - 0.5) * 40, y: 0 }];
+        const steps = 6;
+        for (let s = 1; s <= steps; s++) {
+          pts.push({
+            x: targetX + (s === steps ? 0 : (Math.random() - 0.5) * 48),
+            y: (defender.y / steps) * s,
+          });
+        }
+        bolts.push(pts);
+      }
+      battleRef.current.activeUltVfx = {
+        type: "lightning",
+        bolts,
+        x2: defender.x,
+        y2: defender.y,
         color: skill.color,
-        damage: dmg,
-        life: 1.2,
-      });
-
-      fish.cooldown = 1.2 + Math.random() * 0.5;
-      sayQuote(fish, `${skill.name}!`);
-    } else if (rand < 0.68) {
-      fish.aiState = "COMBO";
-      fish.aiTimer = 0.7;
-      const skill = mySkills.find((s) => s.category === "combo") || mySkills[0];
-      const dmg = Math.round(fish.atk * skill.powerMult);
-
-      fish.x = opponent.x - fish.dir * 45;
-      fish.y = opponent.y + (Math.random() - 0.5) * 20;
-
-      battleRef.current.afterimages.push({
-        x: fish.x,
-        y: fish.y,
-        dir: fish.dir,
-        scale: fish.currentScale,
-        filename: fish.filename,
-        color: fish.classColor,
-        life: 0.28,
-        maxLife: 0.28,
-      });
-
-      spawnSlashArc(opponent.x, opponent.y, skill.color, fish.dir * 0.5);
-      applyDamage(fish, opponent, dmg, true, `⚔️ ${skill.name}: -${dmg}!`);
-      fish.cooldown = 1.5 + Math.random() * 0.6;
-      sayQuote(fish, `${skill.name}!`);
+        life: 0.75,
+        maxLife: 0.75,
+      };
+    } else if (vfx === "meteor") {
+      const meteors = [];
+      for (let m = 0; m < 6; m++) {
+        const tx = defender.x + (Math.random() - 0.5) * 110;
+        const ty = defender.y + (Math.random() - 0.5) * 60;
+        meteors.push({
+          sx: tx - attacker.dir * 220,
+          sy: -40 - m * 45,
+          tx,
+          ty,
+          r: 18 + Math.random() * 12,
+        });
+      }
+      battleRef.current.activeUltVfx = {
+        type: "meteor",
+        meteors,
+        x2: defender.x,
+        y2: defender.y,
+        color: skill.color,
+        life: 0.8,
+        maxLife: 0.8,
+      };
+    } else if (vfx === "slash" || vfx === "bite") {
+      for (let s = 0; s < 5; s++) {
+        spawnSlashArc(
+          defender.x + (Math.random() - 0.5) * 40,
+          defender.y + (Math.random() - 0.5) * 40,
+          skill.color,
+          (s - 2) * 0.55
+        );
+      }
+      battleRef.current.activeUltVfx = {
+        type: "beam",
+        x1: attacker.x + attacker.dir * 45,
+        y1: attacker.y,
+        x2: defender.x,
+        y2: defender.y,
+        color: skill.color,
+        core: "#ffffff",
+        life: 0.65,
+        maxLife: 0.65,
+      };
     } else {
-      fish.aiState = "DASH";
-      fish.aiTimer = 0.35;
-      const dx = opponent.x - fish.x;
-      const dy = opponent.y - fish.y;
-      const dist = Math.hypot(dx, dy) || 1;
-      fish.vx = (dx / dist) * 520;
-      fish.vy = (dy / dist) * 520;
-
-      spawnParticles(fish.x, fish.y, fish.classColor, 10, 0.8);
-      fish.cooldown = 0.9 + Math.random() * 0.4;
+      battleRef.current.activeUltVfx = {
+        type: "beam",
+        x1: attacker.x + attacker.dir * 45,
+        y1: attacker.y,
+        x2: defender.x,
+        y2: defender.y,
+        color: skill.color,
+        core: "#ffffff",
+        life: 0.75,
+        maxLife: 0.75,
+      };
     }
   }
 
   function applyDamage(attacker: any, defender: any, rawDamage: number, isCrit = false, customLabel?: string) {
     if (!defender || !defender.isAlive) return;
+    const bs = battleRef.current;
     const finalDamage =
       defender.fishClass === "TANKER" ? Math.max(1, Math.round(rawDamage * 0.88)) : rawDamage;
 
     defender.hp = Math.max(0, defender.hp - finalDamage);
-    defender.flashTimer = 0.15;
-    defender.ki = Math.min(defender.maxKi, defender.ki + 16);
-    if (attacker) attacker.ki = Math.min(attacker.maxKi, attacker.ki + 14);
+    defender.flashTimer = 0.16;
+    defender.ki = Math.min(defender.maxKi, defender.ki + 14);
+    if (attacker) attacker.ki = Math.min(attacker.maxKi, attacker.ki + 11);
 
-    triggerShake(isCrit ? 10 : 5, isCrit ? 0.2 : 0.1);
-    spawnParticles(defender.x, defender.y, attacker?.classColor || "#38bdf8", isCrit ? 16 : 8, 0.9);
+    if (defender.aiState === "DASH_ATTACK") {
+      defender.aiState = "CIRCLING";
+    }
+
+    const pushDir = defender.x >= (attacker?.x || 0) ? 1 : -1;
+    const knockbackResistance = defender.fishClass === "TANKER" || defender.fishClass === "BOSS" ? 0.65 : 1.0;
+    defender.vx = pushDir * (isCrit ? 320 : 200) * knockbackResistance;
+    defender.vy = (Math.random() - 0.5) * 140;
+
+    bs.hitStopTimer = isCrit ? 0.03 : 0.015;
+    triggerShake(isCrit ? 12 : 6, isCrit ? 0.25 : 0.12);
+
+    const midX = ((attacker?.x || defender.x) + defender.x) / 2;
+    const midY = ((attacker?.y || defender.y) + defender.y) / 2;
+    spawnShockwave(defender.x, defender.y, isCrit ? "#facc15" : "#38bdf8", isCrit ? 120 : 75);
+    spawnParticles(midX, midY, attacker?.auraColor || "#38bdf8", isCrit ? 22 : 11, isCrit ? 1.2 : 0.9);
 
     spawnFloatingText(
       defender.x,
-      defender.y - 30,
-      customLabel || (isCrit ? `💥-${finalDamage}` : `-${finalDamage}`),
+      defender.y - 38,
+      customLabel || (isCrit ? `💥 -${finalDamage} CHÍ MẠNG!` : `-${finalDamage}`),
       isCrit ? "#facc15" : "#ffffff",
-      isCrit ? 16 : 13
+      isCrit ? 19 : 15
     );
 
     if (defender.hp <= 0) {
       defender.hp = 0;
       defender.isAlive = false;
-      triggerShake(12, 0.25);
-      spawnShockwave(defender.x, defender.y, defender.classColor, 100);
-      spawnParticles(defender.x, defender.y, defender.classColor, 30, 1.4);
+      spawnFloatingText(defender.x, defender.y - 52, "💀 GỤC NGÃ!", "#f43f5e", 18);
     }
     updateHUD();
   }
@@ -1137,7 +1268,7 @@ export default function ArenaCaPage() {
   async function endMatch(playerWon: boolean) {
     const bs = battleRef.current;
     bs.gameOver = true;
-    triggerFlash(playerWon ? "#22c55e" : "#ef4444", 0.45);
+    triggerFlash(playerWon ? "#22c55e" : "#ef4444", 0.55);
     if (hudRefs.current.ultCutIn) hudRefs.current.ultCutIn.classList.add("hidden");
     if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.remove("hidden");
 
@@ -1195,12 +1326,12 @@ export default function ArenaCaPage() {
       }
 
       if (hudRefs.current.resultBadge) {
-        hudRefs.current.resultBadge.textContent = isBossWin ? "👑 HẠ GỤC BOSS!" : `🏆 CHIẾN THẮNG TRẬN ĐẤU!`;
+        hudRefs.current.resultBadge.textContent = isBossWin ? "👑 ĐỘI HÌNH HẠ GỤC BOSS!" : `🏆 CHIẾN THẮNG TRẬN ĐẤU!`;
         hudRefs.current.resultBadge.className =
           "font-arcade font-extrabold text-2xl sm:text-5xl italic tracking-wider text-emerald-400 drop-shadow-[0_4px_16px_rgba(34,197,94,0.6)] mb-2";
       }
       if (hudRefs.current.resultSub) {
-        hudRefs.current.resultSub.textContent = `Toàn đội chiến thắng! Nhận +${bonusCoins.toLocaleString()} Xu ${
+        hudRefs.current.resultSub.textContent = `Đội hình quét sạch đối thủ! Chủ lực tăng +${bonusWeight} kg & nhận +${bonusCoins.toLocaleString()} Xu ${
           isHardcoreMode ? "(🔥 Hardcore x2)" : "(🌱 Chill)"
         } (Chuỗi ${currentStreak}🔥)!`;
       }
@@ -1256,19 +1387,19 @@ export default function ArenaCaPage() {
     const totalHpE = bs.teamRival.reduce((sum, f) => sum + f.hp, 0);
     const maxTotalHpE = bs.teamRival.reduce((sum, f) => sum + f.maxHp, 0) || 1;
 
-    if (hudRefs.current.pName) hudRefs.current.pName.textContent = `${leadP.name} (${alivePlayers.length}/${bs.teamPlayer.length})`;
+    if (hudRefs.current.pName) hudRefs.current.pName.textContent = `${leadP.name} (${alivePlayers.length}/${bs.teamPlayer.length} sống)`;
     if (hudRefs.current.pWeight) hudRefs.current.pWeight.textContent = formatFishWeight(leadP.weight);
     if (hudRefs.current.pHpBar) hudRefs.current.pHpBar.style.width = `${Math.max(0, (totalHpP / maxTotalHpP) * 100)}%`;
-    if (hudRefs.current.pHpText) hudRefs.current.pHpText.textContent = `${totalHpP} / ${maxTotalHpP}`;
+    if (hudRefs.current.pHpText) hudRefs.current.pHpText.textContent = `Tổng HP: ${totalHpP} / ${maxTotalHpP}`;
     if (hudRefs.current.pKiBar) {
       hudRefs.current.pKiBar.style.width = `${Math.max(0, (leadP.ki / leadP.maxKi) * 100)}%`;
       hudRefs.current.pKiBar.classList.toggle("ki-full", leadP.ki >= 85);
     }
 
-    if (hudRefs.current.eName) hudRefs.current.eName.textContent = `${leadE.name} (${aliveRivals.length}/${bs.teamRival.length})`;
+    if (hudRefs.current.eName) hudRefs.current.eName.textContent = `${leadE.name} (${aliveRivals.length}/${bs.teamRival.length} sống)`;
     if (hudRefs.current.eWeight) hudRefs.current.eWeight.textContent = formatFishWeight(leadE.weight);
     if (hudRefs.current.eHpBar) hudRefs.current.eHpBar.style.width = `${Math.max(0, (totalHpE / maxTotalHpE) * 100)}%`;
-    if (hudRefs.current.eHpText) hudRefs.current.eHpText.textContent = `${totalHpE} / ${maxTotalHpE}`;
+    if (hudRefs.current.eHpText) hudRefs.current.eHpText.textContent = `Tổng HP: ${totalHpE} / ${maxTotalHpE}`;
     if (hudRefs.current.eKiBar) {
       hudRefs.current.eKiBar.style.width = `${Math.max(0, (leadE.ki / leadE.maxKi) * 100)}%`;
       hudRefs.current.eKiBar.classList.toggle("ki-full", leadE.ki >= 85);
@@ -1327,8 +1458,8 @@ export default function ArenaCaPage() {
       p.life -= dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vx *= 0.93;
-      p.vy *= 0.93;
+      p.vx *= 0.94;
+      p.vy *= 0.94;
       if (p.life <= 0) bs.particles.splice(i, 1);
     }
 
@@ -1337,6 +1468,11 @@ export default function ArenaCaPage() {
       ft.life -= dt;
       ft.y += ft.vy * dt;
       if (ft.life <= 0) bs.floatingTexts.splice(i, 1);
+    }
+
+    if (bs.activeUltVfx) {
+      bs.activeUltVfx.life -= dt;
+      if (bs.activeUltVfx.life <= 0) bs.activeUltVfx = null;
     }
 
     if (!bs.teamPlayer || bs.teamPlayer.length === 0 || !bs.teamRival || bs.teamRival.length === 0) return;
@@ -1362,47 +1498,49 @@ export default function ArenaCaPage() {
       proj.life -= dt;
       proj.x += proj.vx * dt;
       proj.y += proj.vy * dt;
-
-      if (Math.random() > 0.4) {
-        spawnParticles(proj.x, proj.y, proj.color, 1, 0.3);
-      }
+      spawnParticles(proj.x, proj.y, proj.color, 1, 0.3);
 
       const targets = proj.ownerIsPlayer ? aliveRivals : alivePlayers;
+      const attackers = proj.ownerIsPlayer ? alivePlayers : aliveRivals;
+      const attacker = attackers[0];
+
       let hitTarget = null;
       for (const t of targets) {
-        if (Math.hypot(proj.x - t.x, proj.y - t.y) < t.radius + 18) {
+        if (Math.hypot(proj.x - t.x, proj.y - t.y) < 46) {
           hitTarget = t;
           break;
         }
       }
 
       if (!bs.gameOver && hitTarget) {
-        spawnShockwave(proj.x, proj.y, proj.color, 70);
-        spawnParticles(proj.x, proj.y, proj.color, 16, 1.0);
-        applyDamage(proj.attacker, hitTarget, proj.damage, false, `🔥 -${proj.damage}`);
+        spawnShockwave(proj.x, proj.y, proj.color, 75);
+        spawnParticles(proj.x, proj.y, proj.color, 14, 0.9);
+        applyDamage(attacker, hitTarget, proj.damage, false, `🔥 -${proj.damage}`);
         bs.projectiles.splice(i, 1);
         continue;
       }
 
-      if (proj.life <= 0 || proj.x < -50 || proj.x > bs.width + 50) {
+      if (proj.life <= 0 || proj.x < -50 || proj.x > bs.width + 50 || proj.y < -50 || proj.y > bs.height + 50) {
         bs.projectiles.splice(i, 1);
       }
     }
 
     for (const fish of bs.teamPlayer) {
-      if (fish.isAlive) updateClassicFighter(fish, aliveRivals, dt);
+      if (fish.isAlive) updateFighterTeamMode(fish, aliveRivals, dt);
     }
     for (const fish of bs.teamRival) {
-      if (fish.isAlive) updateClassicFighter(fish, alivePlayers, dt);
+      if (fish.isAlive) updateFighterTeamMode(fish, alivePlayers, dt);
     }
 
     updateHUD();
   }
 
-  function updateClassicFighter(fish: any, aliveEnemies: any[], dt: number) {
+  function updateFighterTeamMode(fish: any, aliveEnemies: any[], dt: number) {
     const bs = battleRef.current;
-    fish.swimPhase += dt * 10;
+    fish.swimPhase += dt * (fish.aiState === "CHARGING" ? 20 : 8);
     if (fish.flashTimer > 0) fish.flashTimer = Math.max(0, fish.flashTimer - dt);
+    fish.currentScale += (fish.baseScale - fish.currentScale) * 5 * dt;
+
     if (fish.speechTimer > 0) {
       fish.speechTimer -= dt;
       if (fish.speechTimer <= 0) fish.speech = null;
@@ -1411,40 +1549,123 @@ export default function ArenaCaPage() {
     if (aliveEnemies.length === 0) return;
 
     let opponent = aliveEnemies[0];
-    let minDist = Infinity;
+    let minDst = Infinity;
     for (const e of aliveEnemies) {
-      const d = Math.hypot(e.x - fish.x, e.y - fish.y);
-      if (d < minDist) {
-        minDist = d;
+      const dst = Math.hypot(e.x - fish.x, e.y - fish.y);
+      if (dst < minDst) {
+        minDst = dst;
         opponent = e;
       }
     }
 
-    fish.ki = Math.min(fish.maxKi, fish.ki + fish.kiGain * dt);
-    fish.cooldown -= dt;
+    if (!bs.gameOver && fish.aiState === "TELEPORT_COMBO") {
+      fish.comboTimer -= dt;
+      if (fish.comboTimer <= 0) {
+        fish.comboStep++;
+        const maxSteps = fish.comboMaxSteps || 3;
+        if (fish.comboStep <= maxSteps && opponent.isAlive) {
+          const side = fish.comboStep % 2 === 1 ? -1 : 1;
+          const offsetY = (fish.comboStep - 2) * 28;
+          fish.x = opponent.x + side * 55;
+          fish.y = opponent.y + offsetY;
+          fish.dir = -side;
 
-    if (!bs.gameOver && fish.cooldown <= 0) {
-      executeFighterAction(fish, opponent);
-    } else {
-      // Bơi vòng vòng và giữ khoảng cách hoặc áp sát đấm
-      const targetRange = 85;
-      if (minDist > targetRange) {
+          bs.afterimages.push({
+            x: fish.x,
+            y: fish.y,
+            dir: fish.dir,
+            scale: fish.currentScale,
+            filename: fish.filename,
+            color: fish.auraColor,
+            life: 0.25,
+            maxLife: 0.25,
+          });
+
+          const mult = fish.activeSkill?.powerMult || 1.45;
+          const hitDmg = Math.round((fish.atk * mult * fish.powerBuff) / maxSteps);
+          const isFinisher = fish.comboStep === maxSteps;
+          spawnSlashArc(opponent.x, opponent.y, fish.auraColor, side * 0.6);
+          applyDamage(
+            fish,
+            opponent,
+            isFinisher ? Math.round(hitDmg * 1.45) : hitDmg,
+            isFinisher,
+            isFinisher ? `⚡ KẾT LIỄU -${Math.round(hitDmg * 1.45)}!` : `⚔️ -${hitDmg}`
+          );
+          fish.comboTimer = 0.14;
+        } else {
+          fish.powerBuff = 1.0;
+          fish.aiState = "CIRCLING";
+          fish.aiTimer = 0.45;
+          fish.vx = (fish.isPlayer ? -1 : 1) * 260;
+        }
+      }
+      return;
+    }
+
+    if (fish.aiState === "DASH_ATTACK") {
+      fish.afterimageTimer -= dt;
+      if (fish.afterimageTimer <= 0) {
+        fish.afterimageTimer = 0.04;
+        bs.afterimages.push({
+          x: fish.x,
+          y: fish.y,
+          dir: fish.dir,
+          scale: fish.currentScale,
+          filename: fish.filename,
+          color: fish.auraColor,
+          life: 0.2,
+          maxLife: 0.2,
+        });
+      }
+
+      if (!bs.gameOver && minDst < 68) {
+        fish.aiState = "CIRCLING";
+        fish.aiTimer = 0.5 + Math.random() * 0.35;
+        fish.vx = (fish.isPlayer ? -1 : 1) * 220;
+        const mult = fish.activeSkill?.powerMult || 1.25;
+        const critChance = fish.fishClass === "ASSASSIN" ? 0.42 : 0.24;
+        const isCrit = fish.powerBuff > 1.15 || Math.random() < critChance;
+        const dmg = Math.round(fish.atk * mult * fish.powerBuff * (isCrit ? 1.35 : 1));
+        fish.powerBuff = 1.0;
+        spawnSlashArc(opponent.x, opponent.y, fish.auraColor, 0.35);
+        applyDamage(fish, opponent, dmg, isCrit);
+      }
+    }
+
+    if (!bs.gameOver) {
+      fish.ki = Math.min(fish.maxKi, fish.ki + fish.kiGain * dt);
+      fish.aiTimer -= dt;
+      if (fish.aiTimer <= 0) {
+        if (fish.aiState !== "CIRCLING") {
+          fish.aiState = "CIRCLING";
+          fish.aiTimer = 0.4 + Math.random() * 0.4;
+        } else {
+          decideNextAiAction(fish, opponent);
+        }
+      }
+    }
+
+    if (fish.aiState !== "DASH_ATTACK") {
+      const targetRange = 75;
+      if (minDst > targetRange) {
         const angle = Math.atan2(opponent.y - fish.y, opponent.x - fish.x);
-        fish.vx = Math.cos(angle) * 170;
-        fish.vy = Math.sin(angle) * 170;
-      } else if (minDist < 55) {
-        // Giảng ra (lùi nhẹ để tạo khoảng cách)
+        fish.vx = Math.cos(angle) * 175;
+        fish.vy = Math.sin(angle) * 175;
+      } else if (minDst < 45) {
+        // Giảng khoảng cách ra khi quá gần (đúng ý ní yêu cầu)
         const angle = Math.atan2(fish.y - opponent.y, fish.x - opponent.x);
-        fish.vx = Math.cos(angle) * 140;
-        fish.vy = Math.sin(angle) * 140;
+        fish.vx = Math.cos(angle) * 150;
+        fish.vy = Math.sin(angle) * 150;
       } else {
-        // Bơi vòng tròn quanh đối thủ
-        const angle = Math.atan2(opponent.y - fish.y, opponent.x - fish.x) + Math.PI / 2;
-        fish.vx = Math.cos(angle) * 120;
-        fish.vy = Math.sin(angle) * 120;
-        if (!bs.gameOver && Math.random() < 0.04) {
-          const punchDmg = Math.round(fish.atk * 0.75);
-          applyDamage(fish, opponent, punchDmg, false, `👊 -${punchDmg}`);
+        const bobX = Math.cos(fish.swimPhase * 0.8) * 35;
+        const bobY = Math.sin(fish.swimPhase * 1.1) * 35;
+        fish.vx += (bobX - fish.vx) * 5 * dt;
+        fish.vy += (bobY - fish.vy) * 5 * dt;
+
+        if (!bs.gameOver && Math.random() < 0.045) {
+          const dmg = Math.round(fish.atk * 0.9);
+          applyDamage(fish, opponent, dmg, false);
         }
       }
       fish.dir = opponent.x >= fish.x ? 1 : -1;
@@ -1453,16 +1674,16 @@ export default function ArenaCaPage() {
     fish.x += fish.vx * dt;
     fish.y += fish.vy * dt;
 
-    const width = bs.width || 800;
-    const height = bs.height || 450;
-    fish.x = Math.max(50, Math.min(width - 50, fish.x));
-    fish.y = Math.max(45, Math.min(height - 45, fish.y));
+    const marginX = 55;
+    const marginY = 48;
+    const { width, height } = bs;
+    fish.x = Math.max(marginX, Math.min(width - marginX, fish.x));
+    fish.y = Math.max(marginY, Math.min(height - marginY, fish.y));
   }
 
   function drawGame(ctx: CanvasRenderingContext2D) {
     const bs = battleRef.current;
-    const width = bs.width || 800;
-    const height = bs.height || 450;
+    const { width, height } = bs;
 
     ctx.save();
     if (bs.cameraZoom !== 1.0) {
@@ -1478,19 +1699,19 @@ export default function ArenaCaPage() {
     }
 
     const waterGrad = ctx.createLinearGradient(0, 0, 0, height);
-    waterGrad.addColorStop(0, "#04162d");
-    waterGrad.addColorStop(0.55, "#082f49");
-    waterGrad.addColorStop(1, "#031021");
+    waterGrad.addColorStop(0, "#0369a1");
+    waterGrad.addColorStop(0.45, "#0c4a6e");
+    waterGrad.addColorStop(1, "#041426");
     ctx.fillStyle = waterGrad;
     ctx.fillRect(0, 0, width, height);
 
     const time = performance.now() * 0.001;
     ctx.save();
-    for (let i = 0; i < 4; i++) {
-      const rayX = width * (0.18 + i * 0.2) + Math.sin(time * 0.6 + i) * 25;
+    for (let i = 0; i < 5; i++) {
+      const rayX = width * (0.15 + i * 0.18) + Math.sin(time * 0.7 + i) * 25;
       const rayGrad = ctx.createLinearGradient(rayX, 0, rayX + 40, height * 0.85);
-      rayGrad.addColorStop(0, "rgba(0, 180, 255, 0.09)");
-      rayGrad.addColorStop(1, "rgba(0, 180, 255, 0)");
+      rayGrad.addColorStop(0, "rgba(186, 230, 253, 0.16)");
+      rayGrad.addColorStop(1, "rgba(186, 230, 253, 0)");
       ctx.fillStyle = rayGrad;
       ctx.beginPath();
       ctx.moveTo(rayX - 25, 0);
@@ -1507,15 +1728,15 @@ export default function ArenaCaPage() {
     for (const b of bs.bubbles) {
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(224, 242, 254, 0.45)";
+      ctx.lineWidth = 1.2;
       ctx.stroke();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
       ctx.fill();
     }
 
     for (const ai of bs.afterimages) {
-      const alpha = Math.max(0, ai.life / ai.maxLife) * 0.5;
+      const alpha = Math.max(0, ai.life / ai.maxLife) * 0.45;
       ctx.save();
       ctx.translate(ai.x, ai.y);
       ctx.scale(-ai.dir * ai.scale, ai.scale);
@@ -1523,7 +1744,7 @@ export default function ArenaCaPage() {
       const img = getCachedFishImage(ai.filename);
       if (img && img.complete && img.naturalWidth !== 0) {
         const ratio = img.naturalWidth / img.naturalHeight;
-        const drawW = 82;
+        const drawW = 86;
         const drawH = drawW / (ratio || 1.33);
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
       }
@@ -1539,15 +1760,14 @@ export default function ArenaCaPage() {
 
     for (const proj of bs.projectiles) {
       ctx.save();
-      ctx.shadowBlur = 18;
-      ctx.shadowColor = proj.color;
-      ctx.fillStyle = "#ffffff";
+      const grad = ctx.createRadialGradient(proj.x, proj.y, 2, proj.x, proj.y, proj.radius * 1.8);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.45, proj.color);
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+      ctx.arc(proj.x, proj.y, proj.radius * 1.8, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = proj.color;
-      ctx.lineWidth = 3;
-      ctx.stroke();
       ctx.restore();
     }
 
@@ -1558,13 +1778,21 @@ export default function ArenaCaPage() {
       ctx.rotate(sl.angle);
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = sl.color;
-      ctx.lineWidth = 7 * alpha + 2;
+      ctx.lineWidth = 8 * alpha + 2;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.arc(0, 0, sl.radius, -0.9, 0.9);
       ctx.stroke();
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3 * alpha + 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, sl.radius, -0.7, 0.7);
+      ctx.stroke();
       ctx.restore();
     }
+
+    if (bs.activeUltVfx) drawUltimateVfx(ctx, bs.activeUltVfx, time);
 
     for (const sw of bs.shockwaves) {
       const alpha = Math.max(0, sw.life / sw.maxLife);
@@ -1573,7 +1801,7 @@ export default function ArenaCaPage() {
       ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
       ctx.strokeStyle = sw.color;
       ctx.globalAlpha = alpha;
-      ctx.lineWidth = 3.5 * alpha + 1;
+      ctx.lineWidth = 4 * alpha + 1;
       ctx.stroke();
       ctx.restore();
     }
@@ -1582,13 +1810,18 @@ export default function ArenaCaPage() {
       const alpha = Math.max(0, p.life / p.maxLife);
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = p.color;
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+    }
+
+    for (const fish of bs.teamPlayer) {
+      if (fish.speech) drawSpeechBubble(ctx, fish);
+    }
+    for (const fish of bs.teamRival) {
+      if (fish.speech) drawSpeechBubble(ctx, fish);
     }
 
     for (const ft of bs.floatingTexts) {
@@ -1597,11 +1830,24 @@ export default function ArenaCaPage() {
       ctx.globalAlpha = alpha;
       ctx.font = `800 ${ft.size}px "Chakra Petch", sans-serif`;
       ctx.textAlign = "center";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.strokeStyle = "rgba(2, 6, 23, 0.85)";
       ctx.strokeText(ft.text, ft.x, ft.y);
       ctx.fillStyle = ft.color;
       ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+    }
+
+    for (const crack of bs.glassCracks) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 255, 255, ${crack.alpha})`;
+      ctx.lineWidth = 1.5;
+      for (const l of crack.lines) {
+        ctx.beginPath();
+        ctx.moveTo(l.x1, l.y1);
+        ctx.lineTo(l.x2, l.y2);
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
@@ -1617,21 +1863,20 @@ export default function ArenaCaPage() {
   }
 
   function drawAquariumFloor(ctx: CanvasRenderingContext2D, time: number) {
-    const width = battleRef.current.width || 800;
-    const height = battleRef.current.height || 450;
-    const floorY = height - 26;
+    const { width, height } = battleRef.current;
+    const floorY = height - 34;
 
     for (const sw of battleRef.current.seaweeds) {
       ctx.save();
-      ctx.strokeStyle = `hsl(${sw.hue}, 70%, 35%)`;
-      ctx.lineWidth = 6;
+      ctx.strokeStyle = `hsl(${sw.hue}, 70%, 38%)`;
+      ctx.lineWidth = 7;
       ctx.lineCap = "round";
       ctx.beginPath();
       let px = sw.x;
-      let py = floorY + 6;
+      let py = floorY + 8;
       ctx.moveTo(px, py);
       for (let s = 1; s <= sw.segments; s++) {
-        const sway = Math.sin(time * 2.2 + sw.phase + s * 0.55) * (s * 2.2);
+        const sway = Math.sin(time * 2.2 + sw.phase + s * 0.55) * (s * 2.4);
         px = sw.x + sway;
         py -= sw.segLen;
         ctx.lineTo(px, py);
@@ -1641,13 +1886,13 @@ export default function ArenaCaPage() {
     }
 
     const sandGrad = ctx.createLinearGradient(0, floorY, 0, height);
-    sandGrad.addColorStop(0, "#b45309");
-    sandGrad.addColorStop(1, "#451a03");
+    sandGrad.addColorStop(0, "#d97706");
+    sandGrad.addColorStop(1, "#78350f");
     ctx.fillStyle = sandGrad;
     ctx.beginPath();
-    ctx.moveTo(0, floorY + 4);
-    ctx.quadraticCurveTo(width * 0.25, floorY - 4, width * 0.5, floorY + 3);
-    ctx.quadraticCurveTo(width * 0.75, floorY + 9, width, floorY + 2);
+    ctx.moveTo(0, floorY + 6);
+    ctx.quadraticCurveTo(width * 0.25, floorY - 6, width * 0.5, floorY + 4);
+    ctx.quadraticCurveTo(width * 0.75, floorY + 12, width, floorY + 2);
     ctx.lineTo(width, height);
     ctx.lineTo(0, height);
     ctx.closePath();
@@ -1655,31 +1900,60 @@ export default function ArenaCaPage() {
   }
 
   function drawFishFighter(ctx: CanvasRenderingContext2D, fish: any, time: number) {
-    if (!fish.isAlive) return;
-
     ctx.save();
     ctx.translate(fish.x, fish.y);
 
-    const barW = 38;
+    if (!fish.isAlive) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+      ctx.font = "bold 16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("💀", 0, 0);
+      ctx.restore();
+      return;
+    }
+
+    const barW = 46;
     const hpPercent = Math.max(0, fish.hp / fish.maxHp);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-    ctx.fillRect(-barW / 2, -32, barW, 4);
-    // Máu người chơi màu xanh lá, máu địch màu đỏ
-    ctx.fillStyle = fish.isPlayer ? "#22c55e" : "#ef4444";
-    ctx.fillRect(-barW / 2, -32, barW * hpPercent, 4);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+    ctx.fillRect(-barW / 2, -40, barW, 5);
+    // Máu người chơi màu xanh lá, máu địch màu đỏ (Đúng ý ní)[cite: 10]
+    ctx.fillStyle = fish.isPlayer ? "#4ade80" : "#f43f5e";
+    ctx.fillRect(-barW / 2, -40, barW * hpPercent, 5);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(fish.name, 0, -44);
 
     const kiRatio = fish.ki / fish.maxKi;
-    if (kiRatio > 0.4 || fish.superSaiyan) {
+    const isCharging = fish.aiState === "CHARGING";
+    const showAura = kiRatio > 0.38 || isCharging || fish.powerBuff > 1.1;
+
+    if (showAura) {
+      const auraScale = (isCharging ? 1.25 : 0.88 + kiRatio * 0.28) * fish.currentScale;
       ctx.save();
-      const auraR = 32 + Math.sin(time * 16) * 4;
-      const auraGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, auraR);
-      auraGrad.addColorStop(0, "#ffffff");
-      auraGrad.addColorStop(0.5, fish.classColor);
-      auraGrad.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = auraGrad;
-      ctx.globalAlpha = 0.65;
+      ctx.scale(auraScale, auraScale);
+
+      const flameCount = 12;
       ctx.beginPath();
-      ctx.arc(0, 0, auraR, 0, Math.PI * 2);
+      for (let i = 0; i <= flameCount; i++) {
+        const angle = (i / flameCount) * Math.PI * 2;
+        const flicker = Math.sin(time * 24 + i * 1.7) * 9;
+        const radX = 56 + flicker;
+        const radY = 36 + flicker * 0.7;
+        const px = Math.cos(angle) * radX;
+        const py = Math.sin(angle) * radY - 4;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+
+      const auraGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 68);
+      auraGrad.addColorStop(0, "#ffffff");
+      auraGrad.addColorStop(0.45, fish.auraColor);
+      auraGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = auraGrad;
+      ctx.globalAlpha = isCharging ? 0.85 : 0.55;
       ctx.fill();
       ctx.restore();
     }
@@ -1692,16 +1966,113 @@ export default function ArenaCaPage() {
     const img = getCachedFishImage(fish.filename);
     if (img && img.complete && img.naturalWidth !== 0) {
       const ratio = img.naturalWidth / img.naturalHeight;
-      const drawW = 78;
+      const drawW = 86;
       const drawH = drawW / (ratio || 1.33);
       ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
     } else {
-      ctx.fillStyle = fish.classColor;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 22, 13, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = "rgba(250, 204, 21, 0.85)";
+      ctx.fillRect(-30, -20, 60, 40);
     }
 
+    ctx.restore();
+  }
+
+  function drawUltimateVfx(ctx: CanvasRenderingContext2D, vfx: any, time: number) {
+    const progress = 1 - Math.max(0, vfx.life / vfx.maxLife);
+    const alpha = Math.max(0, vfx.life / vfx.maxLife);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if (vfx.type === "lightning" && vfx.bolts) {
+      for (const pts of vfx.bolts) {
+        ctx.strokeStyle = vfx.color;
+        ctx.lineWidth = 10 * alpha + 2;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        pts.forEach((p: any, idx: number) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+        ctx.stroke();
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4 * alpha + 1;
+        ctx.beginPath();
+        pts.forEach((p: any, idx: number) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+        ctx.stroke();
+      }
+      const boomR = 30 + progress * 95;
+      const boomGrad = ctx.createRadialGradient(vfx.x2, vfx.y2, 5, vfx.x2, vfx.y2, boomR);
+      boomGrad.addColorStop(0, "#ffffff");
+      boomGrad.addColorStop(0.5, vfx.color);
+      boomGrad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = boomGrad;
+      ctx.beginPath();
+      ctx.arc(vfx.x2, vfx.y2, boomR, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (vfx.type === "meteor" && vfx.meteors) {
+      const t = Math.min(1, progress * 1.45);
+      for (const m of vfx.meteors) {
+        const cx = m.sx + (m.tx - m.sx) * t;
+        const cy = m.sy + (m.ty - m.sy) * t;
+        ctx.strokeStyle = vfx.color;
+        ctx.lineWidth = m.r * 1.2;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(m.sx, m.sy);
+        ctx.lineTo(cx, cy);
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(cx, cy, m.r * 0.75, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      ctx.lineCap = "round";
+      ctx.strokeStyle = vfx.color;
+      ctx.lineWidth = 52 * alpha + 14;
+      ctx.beginPath();
+      ctx.moveTo(vfx.x1, vfx.y1);
+      ctx.lineTo(vfx.x2, vfx.y2);
+      ctx.stroke();
+
+      ctx.strokeStyle = vfx.core || "#ffffff";
+      ctx.lineWidth = 22 * alpha + 5;
+      ctx.beginPath();
+      ctx.moveTo(vfx.x1, vfx.y1);
+      ctx.lineTo(vfx.x2, vfx.y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawSpeechBubble(ctx: CanvasRenderingContext2D, fish: any) {
+    const text = fish.speech;
+    if (!text || !fish.isAlive) return;
+    const { width } = battleRef.current;
+
+    ctx.save();
+    ctx.font = '700 11px "Inter", sans-serif';
+    const padX = 9;
+    const textW = ctx.measureText(text).width;
+    const boxW = textW + padX * 2;
+    const boxH = 24;
+
+    let bx = fish.x - boxW / 2;
+    let by = fish.y - 68;
+    bx = Math.max(8, Math.min(width - boxW - 8, bx));
+    by = Math.max(8, by);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, boxW, boxH, 9);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, bx + boxW / 2, by + boxH / 2);
     ctx.restore();
   }
 
@@ -1723,10 +2094,10 @@ export default function ArenaCaPage() {
 
   return (
     <div
-      className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 font-sans pointer-events-auto select-none flex flex-col justify-between p-1.5 sm:p-2 text-white"
+      className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 font-sans pointer-events-auto select-none flex flex-col justify-between p-1.5 sm:p-2.5 text-white"
       style={{ touchAction: "none" }}
     >
-      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE (KHÔNG TRÙNG LẶP) */}
+      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE (KHÔNG TRÙNG LẶP)[cite: 10] */}
       {isFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-slate-900 border-2 border-emerald-400/70 w-full max-w-6xl h-[90dvh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(16,185,129,0.35)] flex flex-col">
@@ -1738,7 +2109,7 @@ export default function ArenaCaPage() {
                     Chọn Đội Hình Xuất Trận ({activeBattleTeam.length}/{battleMode} con)
                   </h2>
                   <p className="text-[11px] text-slate-400 font-semibold">
-                    Chọn các con cá khác nhau từ hồ cá &amp; kho cá để đưa vào đội hình chiến đấu {battleMode}v{battleMode} (Không trùng lặp)!
+                    Chọn các con cá khác nhau từ hồ cá &amp; kho cá cho chế độ {battleMode}v{battleMode} (Không trùng lặp)[cite: 10]!
                   </p>
                 </div>
               </div>
@@ -1833,7 +2204,7 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* TOP HEADER HUDS (THANH MÁU XANH LÁ CHO ĐỘI NHÀ, ĐỎ CHO ĐỘI ĐỊCH) */}
+      {/* TOP HEADER HUDS (MÁU NGƯỜI CHƠI XANH LÁ, MÁU ĐỊCH ĐỎ)[cite: 10] */}
       <header className="w-full mx-auto z-10 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-xl px-2.5 py-1.5 shadow-md">
         <div className="flex items-center justify-between gap-2">
           {/* PLAYER FISH HUD (XANH LÁ) */}
@@ -1912,7 +2283,7 @@ export default function ArenaCaPage() {
             </span>
           </div>
 
-          {/* ENEMY FISH HUD (ĐỎ) */}
+          {/* ENEMY FISH HUD (ĐỎ)[cite: 10] */}
           <div className="flex-1 min-w-0 text-right">
             <div className="flex items-center justify-between gap-1 mb-0.5 flex-row-reverse">
               <div className="flex items-center gap-1.5 truncate flex-row-reverse">
@@ -1970,7 +2341,7 @@ export default function ArenaCaPage() {
         </div>
       </header>
 
-      {/* KHUNG XEM ĐÁ CÁ (MỞ RỘNG TỐI ĐA TRÀN VIỀN) */}
+      {/* KHUNG XEM ĐÁ CÁ (MỞ RỘNG TỐI ĐA, CÓ HIỆU ỨNG KÍNH NỨT, CUT-IN ULTIMATE)[cite: 10] */}
       <main
         ref={containerRef}
         className="relative flex-1 w-full mx-auto my-1.5 rounded-2xl overflow-hidden border-2 border-cyan-400/40 shadow-[0_0_30px_rgba(6,182,212,0.2)] bg-sky-950"
@@ -1988,20 +2359,20 @@ export default function ArenaCaPage() {
             const tapX = (e.clientX - rect.left) * scaleX;
             const tapY = (e.clientY - rect.top) * scaleY;
 
-            spawnShockwave(tapX, tapY, "#bae6fd", 50);
+            spawnShockwave(tapX, tapY, "#bae6fd", 55);
             spawnParticles(tapX, tapY, "#fde047", 8, 0.5);
             const bs = battleRef.current;
             if (!bs.gameOver && !isScanning && bs.teamPlayer.length > 0) {
               bs.teamPlayer.forEach((f) => {
-                if (f.isAlive) f.ki = Math.min(f.maxKi, f.ki + 10);
+                if (f.isAlive) f.ki = Math.min(f.maxKi, f.ki + 8);
               });
-              spawnFloatingText(tapX, tapY - 12, "+10% Ki", "#fde047", 13);
+              spawnFloatingText(tapX, tapY - 12, "+8% Ki", "#fde047", 13);
               updateHUD();
             }
           }}
         ></canvas>
 
-        {/* ULTIMATE CUT-IN BANNER */}
+        {/* ULTIMATE CUT-IN BANNER[cite: 10] */}
         <div
           ref={(el) => {
             hudRefs.current.ultCutIn = el;
@@ -2094,9 +2465,9 @@ export default function ArenaCaPage() {
         </div>
       </main>
 
-      {/* THANH ĐIỀU KHIỂN SÁT ĐÁY (PHÂN BỔ GỌN GÀNG, CHỪA TRỌN KHUNG XEM) */}
+      {/* THANH ĐIỀU KHIỂN SÁT ĐÁY (GOM CỤM 1v1, 3v3, 5v5 VÀ CÁC NÚT NHỎ GỌN)[cite: 10] */}
       <footer className="w-full mx-auto z-10 flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5">
-        {/* CỤM 1: CHỌN CHẾ ĐỘ 1v1 | 3v3 | 5v5 NẰM CHUNG MỘT CỤM */}
+        {/* CỤM 1: MỤC 1v1, 3v3, 5v5 NẰM CHUNG MỘT CỤM */}
         <div className="flex items-center bg-slate-900/95 border border-cyan-500/40 rounded-xl p-1 gap-1 shrink-0 w-full sm:w-auto justify-center">
           {([1, 3, 5] as const).map((mode) => (
             <button
@@ -2117,7 +2488,7 @@ export default function ArenaCaPage() {
           ))}
         </div>
 
-        {/* CỤM 2: CÁC NÚT CHỨC NĂNG CÒN LẠI NẰM CHUNG */}
+        {/* CỤM 2: CÁC MỤC CÒN LẠI NẰM CHUNG, NHỎ GỌN CHỪA KHUNG XEM[cite: 10] */}
         <div className="flex-1 grid grid-cols-6 gap-1 sm:gap-1.5 w-full">
           <button
             onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 3 : 1))}
@@ -2198,7 +2569,7 @@ export default function ArenaCaPage() {
             </div>
 
             <p className="text-xs text-slate-300 mb-4">
-              Chọn phòng, thả cá xuống hồ chờ (từ 1 đến {battleMode} con không trùng lặp), đợi người chơi thứ 2 rồi bấm Sẵn Sàng là bem!
+              Chọn phòng, thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp), đợi người chơi thứ 2 rồi bấm Sẵn Sàng[cite: 10]!
             </p>
 
             <div className="flex flex-col gap-3">
@@ -2238,7 +2609,7 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* 🐟 MODAL HỒ CHỜ THẢ CÁ MULTIPLAYER (QUĂNG TỪ 1 ĐẾN 5 CON, ĐỒNG BỘ BÊN HOCA) */}
+      {/* 🐟 MODAL HỒ CHỜ THẢ CÁ MULTIPLAYER (ĐỒNG BỘ TỪ HOCA, THẢ TỪ 1 ĐẾN 5 CON)[cite: 10] */}
       {roomFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex items-center justify-center p-3">
           <div className="bg-slate-900 border-2 border-purple-500/75 w-full max-w-4xl h-[90vh] rounded-3xl p-5 shadow-2xl flex flex-col text-white">
@@ -2247,7 +2618,7 @@ export default function ArenaCaPage() {
                 <h3 className="text-lg font-arcade font-bold text-yellow-400">
                   🏟️ HỒ CHỜ PHÒNG: {currentRoomId} ({battleMode}v{battleMode})
                 </h3>
-                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ của bạn (tối đa {battleMode} con không trùng lặp) rồi bấm Sẵn Sàng!</p>
+                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp) rồi bấm Sẵn Sàng[cite: 10]!</p>
               </div>
               <button
                 onClick={() => setRoomFishPickerOpen(false)}
@@ -2336,9 +2707,9 @@ export default function ArenaCaPage() {
               </div>
             </div>
 
-            {/* Kho cá đồng bộ từ hoca để thả xuống hồ chờ */}
+            {/* Kho cá đồng bộ từ hoca để thả xuống hồ chờ[cite: 10] */}
             <div className="flex-1 overflow-y-auto flex flex-col">
-              <div className="text-xs font-bold text-slate-300 mb-2">Bấm vào cá dưới đây để thả vào hồ chờ (Đồng bộ từ Hồ Cá &amp; Kho Cá):</div>
+              <div className="text-xs font-bold text-slate-300 mb-2">Bấm vào cá dưới đây để thả vào hồ chờ (Đồng bộ từ Hồ Cá &amp; Kho Cá)[cite: 10]:</div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {playerRoster.map((fish) => {
                   const isAlreadyInPool = roomMyFishList.some((f) => f.id === fish.id);
