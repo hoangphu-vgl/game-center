@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
 // --- HỆ THỐNG CLASS & SKILL ĐẶC SẮC (DRAGON BALL STYLE) ---
@@ -251,25 +251,25 @@ function extractFishFilename(f: any): string {
 }
 
 export default function ArenaCaPage() {
-  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [score, setScore] = useState<number>(0);
   const [rawInventory, setRawInventory] = useState<any>({});
   const [isHardcoreMode, setIsHardcoreMode] = useState<boolean>(false);
-  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5);
+  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5); // Hỗ trợ 1v1, 3v3, 5v5
+
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [activeChannel, setActiveChannel] = useState<any>(null);
   const [isRoomLobbyOpen, setIsRoomLobbyOpen] = useState<boolean>(false);
   const [roomFishPickerOpen, setRoomFishPickerOpen] = useState<boolean>(false);
   
-  // Đội hình Multiplayer hồ chờ phòng
+  // Hồ chờ Multiplayer (1 đến 5 con khác nhau)
   const [roomMyFishList, setRoomMyFishList] = useState<any[]>([]);
   const [roomRivalFishList, setRoomRivalFishList] = useState<any[]>([]);
   const [isMyReady, setIsMyReady] = useState<boolean>(false);
   const [isRivalReady, setIsRivalReady] = useState<boolean>(false);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
 
-  // Kho cá tổng và Đội hình chiến đấu PvE (1 đến 5 con khác nhau)
+  // Kho cá tổng và Đội hình chiến đấu PvE (1 đến 5 con không trùng lặp)
   const [playerRoster, setPlayerRoster] = useState<any[]>(() => buildDefaultDemoRoster());
   const [activeBattleTeam, setActiveBattleTeam] = useState<any[]>(() => buildDefaultDemoRoster().slice(0, 5));
   const [isFishPickerOpen, setIsFishPickerOpen] = useState<boolean>(false);
@@ -773,7 +773,7 @@ export default function ArenaCaPage() {
     }, 900);
   }
 
-  // --- MULTIPLAYER ROOM & THẢ CÁ VÀO HỒ CHỜ ---
+  // --- MULTIPLAYER ROOM & HỒ CHỜ THẢ CÁ (1 ĐẾN 5 CON KHÔNG TRÙNG LẶP) ---
   async function joinMultiplayerRoom(roomId: string) {
     if (!user?.id) {
       alert("Vui lòng đăng nhập để vào phòng đọ cá!");
@@ -1007,14 +1007,13 @@ export default function ArenaCaPage() {
     }
   }
 
-  // --- CƠ CHẾ ĐẤU TRƯỜNG CŨ (ĐẤM THƯỜNG, LAO VÀO, COMBO, ULTIMATE VỚI COOLDOWN) ---
+  // --- CƠ CHẾ ĐẤU TRƯỜNG (BƠI VÒNG VÒNG, GIẢNG KHOẢNG CÁCH, ĐẤM ĐÁ, SKILL CÓ COOLDOWN) ---
   function executeFighterAction(fish: any, opponent: any) {
     const mySkills: FishSkill[] = fish.skills || [];
     if (mySkills.length === 0) return;
 
     fish.dir = opponent.x >= fish.x ? 1 : -1;
 
-    // 1. Khi đầy Ki hoặc ngẫu nhiên dùng Tuyệt Kỹ (Ultimate)
     if (fish.ki >= fish.maxKi || Math.random() < 0.22) {
       fish.ki = 0;
       fish.aiState = "ULTIMATE";
@@ -1045,7 +1044,6 @@ export default function ArenaCaPage() {
 
     const rand = Math.random();
     if (rand < 0.35) {
-      // 2. Phóng chưởng lực Ki Blast từ xa
       fish.aiState = "CAST";
       fish.aiTimer = 0.4;
       const skill = mySkills.find((s) => s.category === "projectile") || mySkills[0];
@@ -1068,7 +1066,6 @@ export default function ArenaCaPage() {
       fish.cooldown = 1.2 + Math.random() * 0.5;
       sayQuote(fish, `${skill.name}!`);
     } else if (rand < 0.68) {
-      // 3. Tốc biến combo chớp nhoáng (Teleport Combo)
       fish.aiState = "COMBO";
       fish.aiTimer = 0.7;
       const skill = mySkills.find((s) => s.category === "combo") || mySkills[0];
@@ -1084,8 +1081,8 @@ export default function ArenaCaPage() {
         scale: fish.currentScale,
         filename: fish.filename,
         color: fish.classColor,
-        life: 0.25,
-        maxLife: 0.25,
+        life: 0.28,
+        maxLife: 0.28,
       });
 
       spawnSlashArc(opponent.x, opponent.y, skill.color, fish.dir * 0.5);
@@ -1093,7 +1090,6 @@ export default function ArenaCaPage() {
       fish.cooldown = 1.5 + Math.random() * 0.6;
       sayQuote(fish, `${skill.name}!`);
     } else {
-      // 4. Lao vào đấm thường cận chiến (Melee Dash Attack)
       fish.aiState = "DASH";
       fish.aiTimer = 0.35;
       const dx = opponent.x - fish.x;
@@ -1430,16 +1426,23 @@ export default function ArenaCaPage() {
     if (!bs.gameOver && fish.cooldown <= 0) {
       executeFighterAction(fish, opponent);
     } else {
-      // Di chuyển tiếp cận đối thủ để đấm đá giáp lá cà
-      const targetRange = 65;
+      // Bơi vòng vòng và giữ khoảng cách hoặc áp sát đấm
+      const targetRange = 85;
       if (minDist > targetRange) {
         const angle = Math.atan2(opponent.y - fish.y, opponent.x - fish.x);
-        fish.vx = Math.cos(angle) * 185;
-        fish.vy = Math.sin(angle) * 185;
+        fish.vx = Math.cos(angle) * 170;
+        fish.vy = Math.sin(angle) * 170;
+      } else if (minDist < 55) {
+        // Giảng ra (lùi nhẹ để tạo khoảng cách)
+        const angle = Math.atan2(fish.y - opponent.y, fish.x - opponent.x);
+        fish.vx = Math.cos(angle) * 140;
+        fish.vy = Math.sin(angle) * 140;
       } else {
-        fish.vx *= 0.85;
-        fish.vy *= 0.85;
-        if (!bs.gameOver && Math.random() < 0.05) {
+        // Bơi vòng tròn quanh đối thủ
+        const angle = Math.atan2(opponent.y - fish.y, opponent.x - fish.x) + Math.PI / 2;
+        fish.vx = Math.cos(angle) * 120;
+        fish.vy = Math.sin(angle) * 120;
+        if (!bs.gameOver && Math.random() < 0.04) {
           const punchDmg = Math.round(fish.atk * 0.75);
           applyDamage(fish, opponent, punchDmg, false, `👊 -${punchDmg}`);
         }
@@ -1661,10 +1664,10 @@ export default function ArenaCaPage() {
     const hpPercent = Math.max(0, fish.hp / fish.maxHp);
     ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
     ctx.fillRect(-barW / 2, -32, barW, 4);
+    // Máu người chơi màu xanh lá, máu địch màu đỏ
     ctx.fillStyle = fish.isPlayer ? "#22c55e" : "#ef4444";
     ctx.fillRect(-barW / 2, -32, barW * hpPercent, 4);
 
-    // Hào quang Ki năng lượng Dragon Ball rực rỡ khi đầy Ki
     const kiRatio = fish.ki / fish.maxKi;
     if (kiRatio > 0.4 || fish.superSaiyan) {
       ctx.save();
@@ -1702,7 +1705,6 @@ export default function ArenaCaPage() {
     ctx.restore();
   }
 
-  // Thêm cá vào đội hình chiến đấu PvE (không trùng lặp, tối đa bằng battleMode)
   function handleToggleBattleTeamMember(fish: any) {
     if (activeBattleTeam.some((f) => f.id === fish.id)) {
       if (activeBattleTeam.length <= 1) {
@@ -1736,7 +1738,7 @@ export default function ArenaCaPage() {
                     Chọn Đội Hình Xuất Trận ({activeBattleTeam.length}/{battleMode} con)
                   </h2>
                   <p className="text-[11px] text-slate-400 font-semibold">
-                    Chọn các con cá khác nhau để đưa vào đội hình chiến đấu {battleMode}v{battleMode} (Không trùng lặp)!
+                    Chọn các con cá khác nhau từ hồ cá &amp; kho cá để đưa vào đội hình chiến đấu {battleMode}v{battleMode} (Không trùng lặp)!
                   </p>
                 </div>
               </div>
@@ -1747,7 +1749,7 @@ export default function ArenaCaPage() {
                 }}
                 className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs cursor-pointer"
               >
-                XÁC NHẬN & BEM!
+                XÁC NHẬN &amp; BEM!
               </button>
             </div>
 
@@ -1831,19 +1833,19 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* TOP HEADER HUDS: MÀU XANH LÁ CHO ĐỘI NHÀ, MÀU ĐỎ CHO ĐỘI ĐỊCH */}
+      {/* TOP HEADER HUDS (THANH MÁU XANH LÁ CHO ĐỘI NHÀ, ĐỎ CHO ĐỘI ĐỊCH) */}
       <header className="w-full mx-auto z-10 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-xl px-2.5 py-1.5 shadow-md">
         <div className="flex items-center justify-between gap-2">
           {/* PLAYER FISH HUD (XANH LÁ) */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-1 mb-0.5">
               <div className="flex items-center gap-1.5 truncate">
-                <button
-                  onClick={() => router.push("/caucamulti/hoca")}
-                  className="bg-slate-800 hover:bg-slate-700 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-black border border-emerald-500/40 shrink-0 cursor-pointer"
+                <Link
+                  href="/caucamulti/hoca"
+                  className="bg-slate-800 hover:bg-slate-700 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-black border border-emerald-500/40 shrink-0"
                 >
                   ← Hồ Cá
-                </button>
+                </Link>
                 <span
                   ref={(el) => {
                     hudRefs.current.pDot = el;
@@ -1968,7 +1970,7 @@ export default function ArenaCaPage() {
         </div>
       </header>
 
-      {/* KHUNG XEM ĐÁ CÁ */}
+      {/* KHUNG XEM ĐÁ CÁ (MỞ RỘNG TỐI ĐA TRÀN VIỀN) */}
       <main
         ref={containerRef}
         className="relative flex-1 w-full mx-auto my-1.5 rounded-2xl overflow-hidden border-2 border-cyan-400/40 shadow-[0_0_30px_rgba(6,182,212,0.2)] bg-sky-950"
@@ -2092,9 +2094,9 @@ export default function ArenaCaPage() {
         </div>
       </main>
 
-      {/* THANH ĐIỀU KHIỂN SÁT ĐÁY */}
+      {/* THANH ĐIỀU KHIỂN SÁT ĐÁY (PHÂN BỔ GỌN GÀNG, CHỪA TRỌN KHUNG XEM) */}
       <footer className="w-full mx-auto z-10 flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5">
-        {/* CỤM 1: 1v1 | 3v3 | 5v5 */}
+        {/* CỤM 1: CHỌN CHẾ ĐỘ 1v1 | 3v3 | 5v5 NẰM CHUNG MỘT CỤM */}
         <div className="flex items-center bg-slate-900/95 border border-cyan-500/40 rounded-xl p-1 gap-1 shrink-0 w-full sm:w-auto justify-center">
           {([1, 3, 5] as const).map((mode) => (
             <button
@@ -2115,7 +2117,7 @@ export default function ArenaCaPage() {
           ))}
         </div>
 
-        {/* CỤM 2: CÁC NÚT CHỨC NĂNG */}
+        {/* CỤM 2: CÁC NÚT CHỨC NĂNG CÒN LẠI NẰM CHUNG */}
         <div className="flex-1 grid grid-cols-6 gap-1 sm:gap-1.5 w-full">
           <button
             onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 3 : 1))}
@@ -2155,7 +2157,7 @@ export default function ArenaCaPage() {
               }}
               className="truncate"
             >
-              Đổi Đội ({activeBattleTeam.length})
+              Chọn Đội ({activeBattleTeam.length})
             </span>
           </button>
 
@@ -2196,7 +2198,7 @@ export default function ArenaCaPage() {
             </div>
 
             <p className="text-xs text-slate-300 mb-4">
-              Chọn phòng, thả cá xuống hồ chờ (tối đa {battleMode} con), đợi người chơi thứ 2 rồi bấm Sẵn Sàng là bem!
+              Chọn phòng, thả cá xuống hồ chờ (từ 1 đến {battleMode} con không trùng lặp), đợi người chơi thứ 2 rồi bấm Sẵn Sàng là bem!
             </p>
 
             <div className="flex flex-col gap-3">
@@ -2236,7 +2238,7 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* 🐟 MODAL HỒ CHỜ THẢ CÁ MULTIPLAYER */}
+      {/* 🐟 MODAL HỒ CHỜ THẢ CÁ MULTIPLAYER (QUĂNG TỪ 1 ĐẾN 5 CON, ĐỒNG BỘ BÊN HOCA) */}
       {roomFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex items-center justify-center p-3">
           <div className="bg-slate-900 border-2 border-purple-500/75 w-full max-w-4xl h-[90vh] rounded-3xl p-5 shadow-2xl flex flex-col text-white">
@@ -2245,7 +2247,7 @@ export default function ArenaCaPage() {
                 <h3 className="text-lg font-arcade font-bold text-yellow-400">
                   🏟️ HỒ CHỜ PHÒNG: {currentRoomId} ({battleMode}v{battleMode})
                 </h3>
-                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ (tối đa {battleMode} con) rồi bấm Sẵn Sàng!</p>
+                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ của bạn (tối đa {battleMode} con không trùng lặp) rồi bấm Sẵn Sàng!</p>
               </div>
               <button
                 onClick={() => setRoomFishPickerOpen(false)}
@@ -2334,9 +2336,9 @@ export default function ArenaCaPage() {
               </div>
             </div>
 
-            {/* Kho cá của bạn để thả xuống hồ chờ */}
+            {/* Kho cá đồng bộ từ hoca để thả xuống hồ chờ */}
             <div className="flex-1 overflow-y-auto flex flex-col">
-              <div className="text-xs font-bold text-slate-300 mb-2">Bấm vào cá dưới đây để thả vào hồ chờ (Không trùng lặp):</div>
+              <div className="text-xs font-bold text-slate-300 mb-2">Bấm vào cá dưới đây để thả vào hồ chờ (Đồng bộ từ Hồ Cá &amp; Kho Cá):</div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {playerRoster.map((fish) => {
                   const isAlreadyInPool = roomMyFishList.some((f) => f.id === fish.id);
