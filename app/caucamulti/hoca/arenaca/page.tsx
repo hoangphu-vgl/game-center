@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
-// --- HỆ THỐNG CLASS & SKILL GỐC TỪ ARENACA_3.TXT[cite: 10] ---
+// --- HỆ THỐNG CLASS & SKILL ĐẶC SẮC (DRAGON BALL STYLE) ---
 type FishClassType = "ASSASSIN" | "TANKER" | "MAGE" | "WARRIOR" | "BOSS";
 
 interface FishSkill {
@@ -255,21 +255,26 @@ export default function ArenaCaPage() {
   const [score, setScore] = useState<number>(0);
   const [rawInventory, setRawInventory] = useState<any>({});
   const [isHardcoreMode, setIsHardcoreMode] = useState<boolean>(false);
-  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5); // Hỗ trợ 1v1, 3v3, 5v5[cite: 10]
+  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5); // Hỗ trợ 1v1, 3v3, 5v5
+
+  // Trạng thái Auto-Farm PvE và PvP Flag
+  const [isAutoFarm, setIsAutoFarm] = useState<boolean>(false);
+  const [isPvPActive, setIsPvPActive] = useState<boolean>(false);
+  const [lastMatchWon, setLastMatchWon] = useState<boolean>(false);
 
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [activeChannel, setActiveChannel] = useState<any>(null);
   const [isRoomLobbyOpen, setIsRoomLobbyOpen] = useState<boolean>(false);
   const [roomFishPickerOpen, setRoomFishPickerOpen] = useState<boolean>(false);
   
-  // Hồ chờ Multiplayer (1 đến 5 con khác nhau)[cite: 10]
+  // Hồ chờ Multiplayer (1 đến 5 con khác nhau)
   const [roomMyFishList, setRoomMyFishList] = useState<any[]>([]);
   const [roomRivalFishList, setRoomRivalFishList] = useState<any[]>([]);
   const [isMyReady, setIsMyReady] = useState<boolean>(false);
   const [isRivalReady, setIsRivalReady] = useState<boolean>(false);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
 
-  // Kho cá tổng và Đội hình chiến đấu PvE (1 đến 5 con không trùng lặp)[cite: 10]
+  // Kho cá tổng và Đội hình chiến đấu PvE (1 đến 5 con không trùng lặp)
   const [playerRoster, setPlayerRoster] = useState<any[]>(() => buildDefaultDemoRoster());
   const [activeBattleTeam, setActiveBattleTeam] = useState<any[]>(() => buildDefaultDemoRoster().slice(0, 5));
   const [isFishPickerOpen, setIsFishPickerOpen] = useState<boolean>(false);
@@ -328,6 +333,7 @@ export default function ArenaCaPage() {
     resultOverlay: null as any,
     resultBadge: null as any,
     resultSub: null as any,
+    pvpActionButtons: null as any,
   });
 
   const battleRef = useRef({
@@ -640,7 +646,8 @@ export default function ArenaCaPage() {
       auraColor: meta.color,
       quotes: cfg.quotes || [`${meta.icon} ${meta.label} xung trận!`],
       aiState: "CIRCLING",
-      aiTimer: 0.4 + Math.random() * 0.5,
+      aiTimer: 0.8 + Math.random() * 0.6,
+      skillCooldown: 2.5 + Math.random() * 2.0, // Cooldown skill để tránh xả liên tục gây lag
       comboStep: 0,
       comboMaxSteps: 3,
       comboTimer: 0,
@@ -655,7 +662,8 @@ export default function ArenaCaPage() {
     };
   }
 
-  function startMatch(customPTeam?: any[], customRivalTeam?: any[]) {
+  function startMatch(customPTeam?: any[], customRivalTeam?: any[], isPvP = false) {
+    setIsPvPActive(isPvP);
     const roster = activeBattleTeam.length > 0 ? activeBattleTeam : buildDefaultDemoRoster().slice(0, battleMode);
     const bs = battleRef.current;
 
@@ -727,7 +735,7 @@ export default function ArenaCaPage() {
       setCurrentEnemyCfg(buildSameTierEnemyConfig(activePlayerFish));
       if (hudRefs.current.radarOverlay) hudRefs.current.radarOverlay.classList.add("hidden");
       setIsScanning(false);
-      startMatch();
+      startMatch(undefined, undefined, false);
     }, 900);
   }
 
@@ -764,11 +772,11 @@ export default function ArenaCaPage() {
 
       if (hudRefs.current.radarOverlay) hudRefs.current.radarOverlay.classList.add("hidden");
       setIsScanning(false);
-      startMatch();
+      startMatch(undefined, undefined, false);
     }, 1000);
   }
 
-  // --- MULTIPLAYER ROOM & HỒ CHỜ THẢ CÁ (1 ĐẾN 5 CON KHÔNG TRÙNG LẶP)[cite: 10] ---
+  // --- MULTIPLAYER ROOM & HỒ CHỜ THẢ CÁ ---
   async function joinMultiplayerRoom(roomId: string) {
     if (!user?.id) {
       alert("Vui lòng đăng nhập để vào phòng đọ cá!");
@@ -800,6 +808,10 @@ export default function ArenaCaPage() {
         } else if (data.type === "START_MATCH") {
           setRoomFishPickerOpen(false);
           startPvPCountdown(data.rivalFishList);
+        } else if (data.type === "REVENGE") {
+          setRoomFishPickerOpen(true);
+          setIsMyReady(false);
+          setIsRivalReady(false);
         }
       })
       .subscribe(async (status) => {
@@ -910,9 +922,22 @@ export default function ArenaCaPage() {
 
         const pTeam = roomMyFishList.map((f, i) => createFish(f, true, i, roomMyFishList.length));
         const eTeam = rivalFishDataList.map((f, i) => createFish(f, false, i, rivalFishDataList.length));
-        startMatch(pTeam, eTeam);
+        startMatch(pTeam, eTeam, true);
       }
     }, 1000);
+  }
+
+  async function handlePvPRevenge() {
+    if (activeChannel) {
+      await activeChannel.send({
+        type: "broadcast",
+        event: "fish_action",
+        payload: { type: "REVENGE", userId: user?.id },
+      });
+    }
+    setRoomFishPickerOpen(true);
+    setIsMyReady(false);
+    setIsRivalReady(false);
   }
 
   function leaveMultiplayerRoom() {
@@ -926,6 +951,8 @@ export default function ArenaCaPage() {
       setActiveChannel(null);
     }
     setCurrentRoomId(null);
+    setIsRoomLobbyOpen(false);
+    setRoomFishPickerOpen(false);
   }
 
   function sayQuote(fish: any, text: string) {
@@ -1007,7 +1034,7 @@ export default function ArenaCaPage() {
     for (let i = 0; i < branches; i++) {
       const a = (i / branches) * Math.PI * 2 + Math.random() * 0.4;
       const len = 22 + Math.random() * 34;
-      lines.push({ x1: x, y1: y, x2: x + Math.cos(a) * len, y2: y + Math.sin(a) * len });
+      lines.push({ x1: x, y1: y, x2: x + Math.cos(a) * len, y2: x + Math.sin(a) * len });
     }
     bs.glassCracks.push({ x, y, lines, alpha: 0.72 });
   }
@@ -1034,6 +1061,7 @@ export default function ArenaCaPage() {
   function executeSkill(fish: any, opponent: any, skill: FishSkill, isOverdrive: boolean) {
     fish.activeSkill = skill;
     fish.dir = opponent.x >= fish.x ? 1 : -1;
+    fish.skillCooldown = 3.5 + Math.random() * 2.5; // Cooldown giãn cách để không spam lag
 
     if (isOverdrive) {
       fish.ki = 0;
@@ -1093,10 +1121,12 @@ export default function ArenaCaPage() {
       spawnShockwave(fish.x + fish.dir * 30, fish.y, skill.color, 65);
       sayQuote(fish, `${skill.name}!`);
 
-      const boltCount = fish.fishClass === "MAGE" ? 3 : 2;
+      // Hiệu ứng đa dạng: Chưởng 1 hơi dài, cầu chà bá lửa hoặc bắn liên hoàn
+      const isGiantBall = Math.random() > 0.5;
+      const boltCount = isGiantBall ? 1 : 3;
       for (let i = 0; i < boltCount; i++) {
         const spreadY = (i - (boltCount - 1) / 2) * 22;
-        const speed = 520 + i * 30;
+        const speed = isGiantBall ? 420 : 580 + i * 30;
         const angleToOpp = Math.atan2(opponent.y - fish.y, opponent.x - fish.x);
         battleRef.current.projectiles.push({
           ownerIsPlayer: fish.isPlayer,
@@ -1106,7 +1136,7 @@ export default function ArenaCaPage() {
           y: fish.y + spreadY * 0.4,
           vx: Math.cos(angleToOpp) * speed,
           vy: Math.sin(angleToOpp) * speed + spreadY,
-          radius: 11,
+          radius: isGiantBall ? 28 : 12, // Cục chà bá lửa
           color: skill.color,
           damage: Math.round((fish.atk * skill.powerMult * fish.powerBuff) / boltCount),
           life: 1.4,
@@ -1186,26 +1216,6 @@ export default function ArenaCaPage() {
         life: 0.8,
         maxLife: 0.8,
       };
-    } else if (vfx === "slash" || vfx === "bite") {
-      for (let s = 0; s < 5; s++) {
-        spawnSlashArc(
-          defender.x + (Math.random() - 0.5) * 40,
-          defender.y + (Math.random() - 0.5) * 40,
-          skill.color,
-          (s - 2) * 0.55
-        );
-      }
-      battleRef.current.activeUltVfx = {
-        type: "beam",
-        x1: attacker.x + attacker.dir * 45,
-        y1: attacker.y,
-        x2: defender.x,
-        y2: defender.y,
-        color: skill.color,
-        core: "#ffffff",
-        life: 0.65,
-        maxLife: 0.65,
-      };
     } else {
       battleRef.current.activeUltVfx = {
         type: "beam",
@@ -1223,6 +1233,17 @@ export default function ArenaCaPage() {
 
   function applyDamage(attacker: any, defender: any, rawDamage: number, isCrit = false, customLabel?: string) {
     if (!defender || !defender.isAlive) return;
+
+    // 15% Né đòn mặc định cho mọi con cá (có hiệu ứng giật lùi và text NÉ)
+    if (Math.random() < 0.15) {
+      const dodgeDir = defender.x >= (attacker?.x || 0) ? 1 : -1;
+      defender.vx = dodgeDir * 240;
+      defender.vy = (Math.random() - 0.5) * 120;
+      spawnFloatingText(defender.x, defender.y - 35, "🏃‍♂️ NÉ ĐÒN!", "#38bdf8", 16);
+      spawnParticles(defender.x, defender.y, "#38bdf8", 10, 1.0);
+      return;
+    }
+
     const bs = battleRef.current;
     const finalDamage =
       defender.fishClass === "TANKER" ? Math.max(1, Math.round(rawDamage * 0.88)) : rawDamage;
@@ -1268,6 +1289,7 @@ export default function ArenaCaPage() {
   async function endMatch(playerWon: boolean) {
     const bs = battleRef.current;
     bs.gameOver = true;
+    setLastMatchWon(playerWon);
     triggerFlash(playerWon ? "#22c55e" : "#ef4444", 0.55);
     if (hudRefs.current.ultCutIn) hudRefs.current.ultCutIn.classList.add("hidden");
     if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.remove("hidden");
@@ -1331,9 +1353,17 @@ export default function ArenaCaPage() {
           "font-arcade font-extrabold text-2xl sm:text-5xl italic tracking-wider text-emerald-400 drop-shadow-[0_4px_16px_rgba(34,197,94,0.6)] mb-2";
       }
       if (hudRefs.current.resultSub) {
-        hudRefs.current.resultSub.textContent = `Đội hình quét sạch đối thủ! Chủ lực tăng +${bonusWeight} kg & nhận +${bonusCoins.toLocaleString()} Xu ${
+        hudRefs.current.resultSub.textContent = `Đội hình quét sạch đối thủ! Nhận +${bonusCoins.toLocaleString()} Xu ${
           isHardcoreMode ? "(🔥 Hardcore x2)" : "(🌱 Chill)"
         } (Chuỗi ${currentStreak}🔥)!`;
+      }
+
+      // Tự động ghép PvE farm tiếp nếu bật Auto-Farm
+      if (!isPvPActive && isAutoFarm) {
+        setTimeout(() => {
+          scanSameTierEnemy();
+        }, 1500);
+        return;
       }
     } else {
       setWinStreak(0);
@@ -1493,6 +1523,7 @@ export default function ArenaCaPage() {
       }
     }
 
+    // Xử lý đạn chưởng lực & va chạm Đọ Ki giữa các luồng đạn
     for (let i = bs.projectiles.length - 1; i >= 0; i--) {
       const proj = bs.projectiles[i];
       proj.life -= dt;
@@ -1500,13 +1531,27 @@ export default function ArenaCaPage() {
       proj.y += proj.vy * dt;
       spawnParticles(proj.x, proj.y, proj.color, 1, 0.3);
 
+      // Kiểm tra đọ ki với đạn đối phương ngược chiều
+      for (let j = i - 1; j >= 0; j--) {
+        const otherProj = bs.projectiles[j];
+        if (proj.ownerIsPlayer !== otherProj.ownerIsPlayer) {
+          if (Math.hypot(proj.x - otherProj.x, proj.y - otherProj.y) < 32) {
+            spawnShockwave((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "#facc15", 90);
+            spawnFloatingText((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "⚡ ĐỌ KI!", "#facc15", 16);
+            bs.projectiles.splice(i, 1);
+            bs.projectiles.splice(j, 1);
+            break;
+          }
+        }
+      }
+
       const targets = proj.ownerIsPlayer ? aliveRivals : alivePlayers;
       const attackers = proj.ownerIsPlayer ? alivePlayers : aliveRivals;
       const attacker = attackers[0];
 
       let hitTarget = null;
       for (const t of targets) {
-        if (Math.hypot(proj.x - t.x, proj.y - t.y) < 46) {
+        if (Math.hypot(proj.x - t.x, proj.y - t.y) < t.radius + 20) {
           hitTarget = t;
           break;
         }
@@ -1540,6 +1585,7 @@ export default function ArenaCaPage() {
     fish.swimPhase += dt * (fish.aiState === "CHARGING" ? 20 : 8);
     if (fish.flashTimer > 0) fish.flashTimer = Math.max(0, fish.flashTimer - dt);
     fish.currentScale += (fish.baseScale - fish.currentScale) * 5 * dt;
+    if (fish.skillCooldown > 0) fish.skillCooldown -= dt;
 
     if (fish.speechTimer > 0) {
       fish.speechTimer -= dt;
@@ -1636,10 +1682,10 @@ export default function ArenaCaPage() {
     if (!bs.gameOver) {
       fish.ki = Math.min(fish.maxKi, fish.ki + fish.kiGain * dt);
       fish.aiTimer -= dt;
-      if (fish.aiTimer <= 0) {
+      if (fish.aiTimer <= 0 && fish.skillCooldown <= 0) {
         if (fish.aiState !== "CIRCLING") {
           fish.aiState = "CIRCLING";
-          fish.aiTimer = 0.4 + Math.random() * 0.4;
+          fish.aiTimer = 0.5 + Math.random() * 0.4;
         } else {
           decideNextAiAction(fish, opponent);
         }
@@ -1647,13 +1693,14 @@ export default function ArenaCaPage() {
     }
 
     if (fish.aiState !== "DASH_ATTACK") {
-      const targetRange = 75;
+      const hpRatio = fish.hp / fish.maxHp;
+      const targetRange = hpRatio < 0.25 ? 120 : 75; // Hết máu dưới 25% biết lùi nhẹ giữ khoảng cách
+
       if (minDst > targetRange) {
         const angle = Math.atan2(opponent.y - fish.y, opponent.x - fish.x);
         fish.vx = Math.cos(angle) * 175;
         fish.vy = Math.sin(angle) * 175;
-      } else if (minDst < 45) {
-        // Giảng khoảng cách ra khi quá gần (đúng ý ní yêu cầu)
+      } else if (minDst < 50) {
         const angle = Math.atan2(fish.y - opponent.y, fish.x - opponent.x);
         fish.vx = Math.cos(angle) * 150;
         fish.vy = Math.sin(angle) * 150;
@@ -1665,7 +1712,7 @@ export default function ArenaCaPage() {
 
         if (!bs.gameOver && Math.random() < 0.045) {
           const dmg = Math.round(fish.atk * 0.9);
-          applyDamage(fish, opponent, dmg, false);
+          applyDamage(fish, opponent, dmg, false, `👊 -${dmg}`);
         }
       }
       fish.dir = opponent.x >= fish.x ? 1 : -1;
@@ -1916,7 +1963,7 @@ export default function ArenaCaPage() {
     const hpPercent = Math.max(0, fish.hp / fish.maxHp);
     ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
     ctx.fillRect(-barW / 2, -40, barW, 5);
-    // Máu người chơi màu xanh lá, máu địch màu đỏ (Đúng ý ní)[cite: 10]
+    // Máu người chơi màu xanh lá, máu địch màu đỏ
     ctx.fillStyle = fish.isPlayer ? "#4ade80" : "#f43f5e";
     ctx.fillRect(-barW / 2, -40, barW * hpPercent, 5);
 
@@ -2097,7 +2144,7 @@ export default function ArenaCaPage() {
       className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 font-sans pointer-events-auto select-none flex flex-col justify-between p-1.5 sm:p-2.5 text-white"
       style={{ touchAction: "none" }}
     >
-      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE (KHÔNG TRÙNG LẶP)[cite: 10] */}
+      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE */}
       {isFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-slate-900 border-2 border-emerald-400/70 w-full max-w-6xl h-[90dvh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(16,185,129,0.35)] flex flex-col">
@@ -2109,14 +2156,14 @@ export default function ArenaCaPage() {
                     Chọn Đội Hình Xuất Trận ({activeBattleTeam.length}/{battleMode} con)
                   </h2>
                   <p className="text-[11px] text-slate-400 font-semibold">
-                    Chọn các con cá khác nhau từ hồ cá &amp; kho cá cho chế độ {battleMode}v{battleMode} (Không trùng lặp)[cite: 10]!
+                    Chọn các con cá khác nhau từ hồ cá &amp; kho cá cho chế độ {battleMode}v{battleMode} (Không trùng lặp)!
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => {
                   setIsFishPickerOpen(false);
-                  startMatch();
+                  startMatch(undefined, undefined, false);
                 }}
                 className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs cursor-pointer"
               >
@@ -2204,7 +2251,7 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* TOP HEADER HUDS (MÁU NGƯỜI CHƠI XANH LÁ, MÁU ĐỊCH ĐỎ)[cite: 10] */}
+      {/* TOP HEADER HUDS */}
       <header className="w-full mx-auto z-10 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-xl px-2.5 py-1.5 shadow-md">
         <div className="flex items-center justify-between gap-2">
           {/* PLAYER FISH HUD (XANH LÁ) */}
@@ -2283,7 +2330,7 @@ export default function ArenaCaPage() {
             </span>
           </div>
 
-          {/* ENEMY FISH HUD (ĐỎ)[cite: 10] */}
+          {/* ENEMY FISH HUD (ĐỎ) */}
           <div className="flex-1 min-w-0 text-right">
             <div className="flex items-center justify-between gap-1 mb-0.5 flex-row-reverse">
               <div className="flex items-center gap-1.5 truncate flex-row-reverse">
@@ -2341,7 +2388,7 @@ export default function ArenaCaPage() {
         </div>
       </header>
 
-      {/* KHUNG XEM ĐÁ CÁ (MỞ RỘNG TỐI ĐA, CÓ HIỆU ỨNG KÍNH NỨT, CUT-IN ULTIMATE)[cite: 10] */}
+      {/* KHUNG XEM ĐÁ CÁ */}
       <main
         ref={containerRef}
         className="relative flex-1 w-full mx-auto my-1.5 rounded-2xl overflow-hidden border-2 border-cyan-400/40 shadow-[0_0_30px_rgba(6,182,212,0.2)] bg-sky-950"
@@ -2372,7 +2419,7 @@ export default function ArenaCaPage() {
           }}
         ></canvas>
 
-        {/* ULTIMATE CUT-IN BANNER[cite: 10] */}
+        {/* ULTIMATE CUT-IN BANNER */}
         <div
           ref={(el) => {
             hudRefs.current.ultCutIn = el;
@@ -2413,12 +2460,12 @@ export default function ArenaCaPage() {
           <p className="text-xs text-slate-400 mt-1">Tìm kiếm đối thủ {battleMode}v{battleMode} xứng tầm</p>
         </div>
 
-        {/* VICTORY / DEFEAT BANNER */}
+        {/* VICTORY / DEFEAT BANNER (PHÂN BIỆT PVE VÀ PVP THEO YÊU CẦU) */}
         <div
           ref={(el) => {
             hudRefs.current.resultOverlay = el;
           }}
-          className="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-20"
+          className="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center z-20"
         >
           <div
             ref={(el) => {
@@ -2426,7 +2473,7 @@ export default function ArenaCaPage() {
             }}
             className="font-arcade font-extrabold text-3xl sm:text-5xl italic tracking-wider text-yellow-400 drop-shadow-[0_4px_16px_rgba(250,204,21,0.6)] mb-2"
           >
-            🏆 CHIẾN THẮNG!
+            🏆 KẾT QUẢ TRẬN ĐẤU
           </div>
           <p
             ref={(el) => {
@@ -2434,38 +2481,78 @@ export default function ArenaCaPage() {
             }}
             className="text-xs sm:text-base text-slate-200 max-w-md mb-4"
           >
-            Đội hình đã hạ gục đối thủ!
+            Chi tiết thông báo trận đấu!
           </p>
+
           <div className="flex flex-wrap items-center justify-center gap-2.5">
-            <button
-              onClick={() => startMatch()}
-              className="bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-emerald-800 text-xs cursor-pointer"
-            >
-              ⚔️ Đấu Tiếp {battleMode}v{battleMode}
-            </button>
-            <button
-              onClick={scanSameTierEnemy}
-              className="bg-gradient-to-b from-cyan-400 to-blue-600 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-blue-900 text-xs cursor-pointer"
-            >
-              📡 Quét Cùng Tầng
-            </button>
-            <button
-              onClick={scanBossEnemy}
-              className="bg-gradient-to-b from-rose-500 to-red-700 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-red-950 text-xs cursor-pointer"
-            >
-              👑 Săn Boss (+1,500 Xu)
-            </button>
-            <button
-              onClick={() => setIsFishPickerOpen(true)}
-              className="bg-gradient-to-b from-amber-400 to-orange-500 text-slate-950 font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-orange-800 text-xs cursor-pointer"
-            >
-              🐟 Đổi Đội Hình
-            </button>
+            {isPvPActive ? (
+              /* NÚT DÀNH RIÊNG CHO PVP */
+              <>
+                {lastMatchWon ? (
+                  <button
+                    onClick={() => {
+                      if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.add("hidden");
+                      setRoomFishPickerOpen(true);
+                    }}
+                    className="bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 font-arcade font-bold px-5 py-2.5 rounded-xl shadow-lg border-b-4 border-emerald-800 text-xs sm:text-sm cursor-pointer"
+                  >
+                    🚀 Gửi khiêu chiến tiếp
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.add("hidden");
+                      handlePvPRevenge();
+                    }}
+                    className="bg-gradient-to-b from-rose-500 to-red-700 text-white font-arcade font-bold px-5 py-2.5 rounded-xl shadow-lg border-b-4 border-red-950 text-xs sm:text-sm cursor-pointer animate-pulse"
+                  >
+                    🔥 Báo thù
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.add("hidden");
+                    leaveMultiplayerRoom();
+                  }}
+                  className="bg-gradient-to-b from-slate-600 to-slate-800 text-white font-arcade font-bold px-5 py-2.5 rounded-xl shadow-lg border-b-4 border-slate-950 text-xs sm:text-sm cursor-pointer"
+                >
+                  🚪 Thoát phòng
+                </button>
+              </>
+            ) : (
+              /* NÚT DÀNH RIÊNG CHO PVE */
+              <>
+                <button
+                  onClick={() => startMatch(undefined, undefined, false)}
+                  className="bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-emerald-800 text-xs cursor-pointer"
+                >
+                  ⚔️ Đấu Tiếp {battleMode}v{battleMode}
+                </button>
+                <button
+                  onClick={scanSameTierEnemy}
+                  className="bg-gradient-to-b from-cyan-400 to-blue-600 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-blue-900 text-xs cursor-pointer"
+                >
+                  📡 Quét Cùng Tầng
+                </button>
+                <button
+                  onClick={scanBossEnemy}
+                  className="bg-gradient-to-b from-rose-500 to-red-700 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-red-950 text-xs cursor-pointer"
+                >
+                  👑 Săn Boss (+1,500 Xu)
+                </button>
+                <button
+                  onClick={() => setIsFishPickerOpen(true)}
+                  className="bg-gradient-to-b from-amber-400 to-orange-500 text-slate-950 font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-orange-800 text-xs cursor-pointer"
+                >
+                  🐟 Đổi Đội Hình
+                </button>
+              </>
+            )}
           </div>
         </div>
       </main>
 
-      {/* THANH ĐIỀU KHIỂN SÁT ĐÁY (GOM CỤM 1v1, 3v3, 5v5 VÀ CÁC NÚT NHỎ GỌN)[cite: 10] */}
+      {/* THANH ĐIỀU KHIỂN SÁT ĐÁY */}
       <footer className="w-full mx-auto z-10 flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5">
         {/* CỤM 1: MỤC 1v1, 3v3, 5v5 NẰM CHUNG MỘT CỤM */}
         <div className="flex items-center bg-slate-900/95 border border-cyan-500/40 rounded-xl p-1 gap-1 shrink-0 w-full sm:w-auto justify-center">
@@ -2475,7 +2562,7 @@ export default function ArenaCaPage() {
               onClick={() => {
                 setBattleMode(mode);
                 setActiveBattleTeam(playerRoster.slice(0, mode));
-                startMatch();
+                startMatch(undefined, undefined, false);
               }}
               className={`px-3 py-1.5 rounded-lg font-arcade font-extrabold text-xs transition cursor-pointer flex-1 sm:flex-initial ${
                 battleMode === mode
@@ -2488,7 +2575,7 @@ export default function ArenaCaPage() {
           ))}
         </div>
 
-        {/* CỤM 2: CÁC MỤC CÒN LẠI NẰM CHUNG, NHỎ GỌN CHỪA KHUNG XEM[cite: 10] */}
+        {/* CỤM 2: CÁC MỤC CÒN LẠI NẰM CHUNG, CÓ TÙY CHỌN AUTO-FARM PVE */}
         <div className="flex-1 grid grid-cols-6 gap-1 sm:gap-1.5 w-full">
           <button
             onClick={() => setSimSpeed((s) => (s === 1 ? 2 : s === 2 ? 3 : 1))}
@@ -2499,19 +2586,23 @@ export default function ArenaCaPage() {
           </button>
 
           <button
+            onClick={() => setIsAutoFarm(!isAutoFarm)}
+            className={`flex items-center justify-center gap-1 border-b-2 rounded-lg py-1.5 px-1 font-arcade font-bold text-[10px] sm:text-xs cursor-pointer active:scale-95 transition truncate ${
+              isAutoFarm
+                ? "bg-gradient-to-b from-emerald-500 to-teal-700 border-teal-950 text-white animate-pulse"
+                : "bg-gradient-to-b from-slate-700 to-slate-900 border-slate-950 text-slate-300"
+            }`}
+          >
+            <span>🤖</span>
+            <span className="truncate">{isAutoFarm ? "Auto Farm: BẬT" : "Auto Farm: TẮT"}</span>
+          </button>
+
+          <button
             onClick={scanSameTierEnemy}
             className="flex items-center justify-center gap-1 bg-gradient-to-b from-cyan-400 to-blue-600 border-b-2 border-blue-900 rounded-lg py-1.5 px-1 text-white font-arcade font-bold text-[10px] sm:text-xs cursor-pointer active:scale-95 transition truncate"
           >
             <span>📡</span>
             <span className="truncate">Quét PvE</span>
-          </button>
-
-          <button
-            onClick={scanBossEnemy}
-            className="flex items-center justify-center gap-1 bg-gradient-to-b from-rose-500 to-red-700 border-b-2 border-red-950 rounded-lg py-1.5 px-1 text-white font-arcade font-bold text-[10px] sm:text-xs cursor-pointer active:scale-95 transition truncate"
-          >
-            <span>👑</span>
-            <span className="truncate">Săn Boss</span>
           </button>
 
           <button
@@ -2569,7 +2660,7 @@ export default function ArenaCaPage() {
             </div>
 
             <p className="text-xs text-slate-300 mb-4">
-              Chọn phòng, thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp), đợi người chơi thứ 2 rồi bấm Sẵn Sàng[cite: 10]!
+              Chọn phòng, thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp), đợi người chơi thứ 2 rồi bấm Sẵn Sàng!
             </p>
 
             <div className="flex flex-col gap-3">
@@ -2595,10 +2686,7 @@ export default function ArenaCaPage() {
 
               {currentRoomId && (
                 <button
-                  onClick={() => {
-                    leaveMultiplayerRoom();
-                    setIsRoomLobbyOpen(false);
-                  }}
+                  onClick={leaveMultiplayerRoom}
                   className="mt-2 p-3 bg-red-600/30 border border-red-500/50 hover:bg-red-600/50 rounded-xl font-bold text-red-300 text-xs transition cursor-pointer"
                 >
                   🚪 Rời khỏi phòng ({currentRoomId})
@@ -2609,7 +2697,7 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* 🐟 MODAL HỒ CHỜ THẢ CÁ MULTIPLAYER (ĐỒNG BỘ TỪ HOCA, THẢ TỪ 1 ĐẾN 5 CON)[cite: 10] */}
+      {/* 🐟 MODAL HỒ CHỜ THẢ CÁ MULTIPLAYER */}
       {roomFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex items-center justify-center p-3">
           <div className="bg-slate-900 border-2 border-purple-500/75 w-full max-w-4xl h-[90vh] rounded-3xl p-5 shadow-2xl flex flex-col text-white">
@@ -2618,7 +2706,7 @@ export default function ArenaCaPage() {
                 <h3 className="text-lg font-arcade font-bold text-yellow-400">
                   🏟️ HỒ CHỜ PHÒNG: {currentRoomId} ({battleMode}v{battleMode})
                 </h3>
-                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp) rồi bấm Sẵn Sàng[cite: 10]!</p>
+                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp) rồi bấm Sẵn Sàng!</p>
               </div>
               <button
                 onClick={() => setRoomFishPickerOpen(false)}
@@ -2707,9 +2795,9 @@ export default function ArenaCaPage() {
               </div>
             </div>
 
-            {/* Kho cá đồng bộ từ hoca để thả xuống hồ chờ[cite: 10] */}
+            {/* Kho cá đồng bộ từ hoca để thả xuống hồ chờ */}
             <div className="flex-1 overflow-y-auto flex flex-col">
-              <div className="text-xs font-bold text-slate-300 mb-2">Bấm vào cá dưới đây để thả vào hồ chờ (Đồng bộ từ Hồ Cá &amp; Kho Cá)[cite: 10]:</div>
+              <div className="text-xs font-bold text-slate-300 mb-2">Bấm vào cá dưới đây để thả vào hồ chờ (Đồng bộ từ Hồ Cá &amp; Kho Cá):</div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {playerRoster.map((fish) => {
                   const isAlreadyInPool = roomMyFishList.some((f) => f.id === fish.id);
