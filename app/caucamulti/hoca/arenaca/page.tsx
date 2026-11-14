@@ -136,13 +136,6 @@ interface DbFishSpecies {
   quotes: string[];
 }
 
-const TIER_META: Record<FishTier, { label: string; minW: number; maxW: number; badge: string }> = {
-  NONG: { label: "Tầng Nông", minW: 1.0, maxW: 50.0, badge: "🌿 Tầng Nông (1–50kg)" },
-  TRUNG: { label: "Tầng Trung", minW: 50.1, maxW: 200.0, badge: "🌊 Tầng Trung (50–200kg)" },
-  LON: { label: "Tầng Cá Lớn", minW: 200.1, maxW: 10000.0, badge: "🔥 Tầng Lớn (200kg–10 tấn)" },
-  BOSS: { label: "Boss Thượng Cổ", minW: 20000.0, maxW: 200000.0, badge: "👑 Boss (20–200 tấn)" },
-};
-
 const ALL_FISH_DATABASE: DbFishSpecies[] = [
   { name: "Cá Rô Đồng", filename: "carodong.png", tier: "NONG", minWeight: 1.0, maxWeight: 12.0, quotes: ["Nhỏ nhưng có võ!", "Vây gai đâm thấu xương!"] },
   { name: "Cá Diêu Hồng", filename: "cadieuhong.png", tier: "NONG", minWeight: 3.0, maxWeight: 22.0, quotes: ["Ánh hồng rực rỡ!", "Xem ta quất đuôi nè!"] },
@@ -245,9 +238,8 @@ export default function ArenaCaPage() {
   const [score, setScore] = useState<number>(0);
   const [rawInventory, setRawInventory] = useState<any>({});
   const [isHardcoreMode, setIsHardcoreMode] = useState<boolean>(false);
-  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5); // Hỗ trợ 1v1, 3v3, 5v5
+  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5);
 
-  // Trạng thái Auto-Farm PvE và PvP Flag
   const [isAutoFarm, setIsAutoFarm] = useState<boolean>(false);
   const [isPvPActive, setIsPvPActive] = useState<boolean>(false);
   const [lastMatchWon, setLastMatchWon] = useState<boolean>(false);
@@ -257,17 +249,16 @@ export default function ArenaCaPage() {
   const [isRoomLobbyOpen, setIsRoomLobbyOpen] = useState<boolean>(false);
   const [roomFishPickerOpen, setRoomFishPickerOpen] = useState<boolean>(false);
   
-  // Hồ chờ Multiplayer (1 đến 5 con khác nhau)
   const [roomMyFishList, setRoomMyFishList] = useState<any[]>([]);
   const [roomRivalFishList, setRoomRivalFishList] = useState<any[]>([]);
   const [isMyReady, setIsMyReady] = useState<boolean>(false);
   const [isRivalReady, setIsRivalReady] = useState<boolean>(false);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
 
-  // Kho cá tổng và Đội hình chiến đấu PvE (1 đến 5 con không trùng lặp)
   const [playerRoster, setPlayerRoster] = useState<any[]>(() => buildDefaultDemoRoster());
   const [activeBattleTeam, setActiveBattleTeam] = useState<any[]>(() => buildDefaultDemoRoster().slice(0, 5));
-  const [isFishPickerOpen, setIsFishPickerOpen] = useState<boolean>(false);
+  // VỪA VÀO BẬT MODAL CHỌN ĐỘI TRƯỚC THEO YÊU CẦU
+  const [isFishPickerOpen, setIsFishPickerOpen] = useState<boolean>(true);
   const [pickerFilter, setPickerFilter] = useState<"all" | "aquarium" | "fish_inventory">("all");
 
   const [currentEnemyCfg, setCurrentEnemyCfg] = useState<any>(() => {
@@ -316,14 +307,10 @@ export default function ArenaCaPage() {
     eKiBar: null as any,
     streakText: null as any,
     playerRosterLabel: null as any,
-    ultCutIn: null as any,
-    ultCasterName: null as any,
-    ultSkillTitle: null as any,
     radarOverlay: null as any,
     resultOverlay: null as any,
     resultBadge: null as any,
     resultSub: null as any,
-    pvpActionButtons: null as any,
   });
 
   const battleRef = useRef({
@@ -348,7 +335,6 @@ export default function ArenaCaPage() {
     slashArcs: [] as any[],
     afterimages: [] as any[],
     activeUltVfx: null as any,
-    cutInTimer: 0,
   });
 
   function getCachedFishImage(filename: string) {
@@ -373,7 +359,6 @@ export default function ArenaCaPage() {
     return img;
   }
 
-  // --- GHÉP ĐỘI PVE NGẪU NHIÊN TOÀN BỘ, KHÔNG TRÙNG LẶP ---
   function pickRandomDatabaseFish(): DbFishSpecies {
     const history = recentEnemyHistoryRef.current;
     const available = ALL_FISH_DATABASE.filter((f) => !history.includes(f.name));
@@ -531,8 +516,7 @@ export default function ArenaCaPage() {
     window.addEventListener("resize", updateSize);
     updateSize();
 
-    startMatch();
-
+    // KHÔNG tự động startMatch khi chưa chọn đội hình xong (isFishPickerOpen đang true)
     let lastTime = 0;
     let animId: number;
 
@@ -583,7 +567,6 @@ export default function ArenaCaPage() {
   function createFish(cfg: any, isPlayer: boolean, index: number, total: number) {
     const width = battleRef.current.width || 800;
     const height = battleRef.current.height || 450;
-    // GIẢN RA: Tăng khoảng cách xuất phát hai bên trái/phải rộng rãi hơn
     const startX = isPlayer ? width * 0.18 : width * 0.82;
     const spacing = height / (total + 1);
     const startY = spacing * (index + 1);
@@ -681,7 +664,6 @@ export default function ArenaCaPage() {
     bs.screenFlash = 0;
 
     if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.add("hidden");
-    if (hudRefs.current.ultCutIn) hudRefs.current.ultCutIn.classList.add("hidden");
 
     const leadP = bs.teamPlayer[0];
     const leadE = bs.teamRival[0];
@@ -689,9 +671,7 @@ export default function ArenaCaPage() {
     const eMeta = CLASS_META[leadE.fishClass as FishClassType];
 
     if (hudRefs.current.pDot) hudRefs.current.pDot.style.backgroundColor = pMeta.color;
-    if (hudRefs.current.pClassBadge) hudRefs.current.pClassBadge.textContent = `${pMeta.icon} ${pMeta.label}`;
     if (hudRefs.current.eDot) hudRefs.current.eDot.style.backgroundColor = eMeta.color;
-    if (hudRefs.current.eClassBadge) hudRefs.current.eClassBadge.textContent = `${eMeta.icon} ${eMeta.label}`;
 
     if (hudRefs.current.playerRosterLabel) {
       hudRefs.current.playerRosterLabel.textContent = `Đội hình ${battleMode}v${battleMode} (${bs.teamPlayer.length}/${battleMode})`;
@@ -755,7 +735,6 @@ export default function ArenaCaPage() {
     }, 1000);
   }
 
-  // --- MULTIPLAYER ROOM & HỒ CHỜ THẢ CÁ ---
   async function joinMultiplayerRoom(roomId: string) {
     if (!user?.id) {
       alert("Vui lòng đăng nhập để vào phòng đọ cá!");
@@ -1042,38 +1021,30 @@ export default function ArenaCaPage() {
     fish.dir = opponent.x >= fish.x ? 1 : -1;
     fish.skillCooldown = 3.0 + Math.random() * 2.0;
 
+    // Tỉ lệ chí mạng 15% + bonus hệ sát thủ
+    const critChance = 0.15 + (fish.fishClass === "ASSASSIN" ? 0.25 : 0.0);
+    const isCrit = Math.random() < critChance || isOverdrive;
+
     if (isOverdrive) {
       fish.ki = 0;
       fish.aiState = "CAST_ULTIMATE";
       fish.aiTimer = 0.9;
       fish.superSaiyan = true;
-
-      const dmg = Math.round(fish.atk * skill.powerMult * fish.powerBuff);
-      fish.powerBuff = 1.0;
-
-      if (fish.isPlayer && hudRefs.current.ultCasterName) {
-        hudRefs.current.ultCasterName.textContent = `${fish.name} (${fish.classLabel})`;
-        hudRefs.current.ultSkillTitle.textContent = `⚡ ${skill.name.toUpperCase()}!`;
-        if (hudRefs.current.ultCutIn) hudRefs.current.ultCutIn.classList.remove("hidden");
-        battleRef.current.cutInTimer = 1.1;
-      }
-
-      battleRef.current.cameraZoom = 1.08;
-      triggerFlash(skill.color, 0.5);
-      sayQuote(fish, `${skill.name}!!`);
-
-      triggerSkillVisualEffect(fish, opponent, skill);
-      spawnShockwave(opponent.x, opponent.y, skill.color, 190);
-      spawnShockwave(opponent.x, opponent.y, "#ffffff", 130);
-      spawnParticles(opponent.x, opponent.y, skill.color, 40, 1.5);
-
-      applyDamage(fish, opponent, dmg, true, `💥 ${skill.name.toUpperCase()}: -${dmg}!`);
-      spawnGlassCrack(opponent.x + (Math.random() - 0.5) * 40, opponent.y + (Math.random() - 0.5) * 40);
-      return;
     }
 
-    // Hiển thị tên Skill rõ ràng, sắc nét trên đầu cá
+    let mult = skill.powerMult;
+    if (isCrit) mult *= 1.5;
+
+    const dmg = Math.round(fish.atk * mult * fish.powerBuff);
+    fish.powerBuff = 1.0;
+
     spawnFloatingText(fish.x, fish.y - 52, `🔥 ${skill.name.toUpperCase()}`, skill.color, 15);
+
+    if (isCrit) {
+      triggerShake(12, 0.22);
+      triggerFlash(skill.color, 0.4);
+      spawnGlassCrack(opponent.x + (Math.random() - 0.5) * 35, opponent.y + (Math.random() - 0.5) * 35);
+    }
 
     if (skill.category === "buff") {
       fish.aiState = "CHARGING";
@@ -1116,7 +1087,7 @@ export default function ArenaCaPage() {
           vy: Math.sin(angleToOpp) * speed + spreadY,
           radius: 14,
           color: skill.color,
-          damage: Math.round((fish.atk * skill.powerMult * fish.powerBuff) / boltCount),
+          damage: Math.round(dmg / boltCount),
           life: 1.5,
         });
       }
@@ -1145,67 +1116,10 @@ export default function ArenaCaPage() {
     spawnShockwave(fish.x, fish.y, skill.color, 85);
     spawnParticles(fish.x, fish.y, skill.color, 16, 0.9);
     sayQuote(fish, `${skill.name}!`);
-  }
 
-  function triggerSkillVisualEffect(attacker: any, defender: any, skill: FishSkill) {
-    const vfx = skill.vfx;
-    if (vfx === "lightning") {
-      const bolts = [];
-      for (let b = 0; b < 5; b++) {
-        const targetX = defender.x + (b - 2) * 30;
-        const pts = [{ x: targetX + (Math.random() - 0.5) * 45, y: 0 }];
-        const steps = 6;
-        for (let s = 1; s <= steps; s++) {
-          pts.push({
-            x: targetX + (s === steps ? 0 : (Math.random() - 0.5) * 50),
-            y: (defender.y / steps) * s,
-          });
-        }
-        bolts.push(pts);
-      }
-      battleRef.current.activeUltVfx = {
-        type: "lightning",
-        bolts,
-        x2: defender.x,
-        y2: defender.y,
-        color: skill.color,
-        life: 0.8,
-        maxLife: 0.8,
-      };
-    } else if (vfx === "meteor") {
-      const meteors = [];
-      for (let m = 0; m < 6; m++) {
-        const tx = defender.x + (Math.random() - 0.5) * 120;
-        const ty = defender.y + (Math.random() - 0.5) * 70;
-        meteors.push({
-          sx: tx - attacker.dir * 240,
-          sy: -50 - m * 50,
-          tx,
-          ty,
-          r: 20 + Math.random() * 12,
-        });
-      }
-      battleRef.current.activeUltVfx = {
-        type: "meteor",
-        meteors,
-        x2: defender.x,
-        y2: defender.y,
-        color: skill.color,
-        life: 0.85,
-        maxLife: 0.85,
-      };
-    } else {
-      battleRef.current.activeUltVfx = {
-        type: "beam",
-        x1: attacker.x + attacker.dir * 45,
-        y1: attacker.y,
-        x2: defender.x,
-        y2: defender.y,
-        color: skill.color,
-        core: "#ffffff",
-        life: 0.8,
-        maxLife: 0.8,
-      };
+    applyDamage(fish, opponent, dmg, isCrit, isCrit ? `⚡ CRIT SKILL: -${dmg}!` : `🔥 -${dmg}`);
+    if (isCrit) {
+      triggerShake(14, 0.25);
     }
   }
 
@@ -1240,7 +1154,12 @@ export default function ArenaCaPage() {
     defender.vy = (Math.random() - 0.5) * 150;
 
     bs.hitStopTimer = isCrit ? 0.04 : 0.02;
-    triggerShake(isCrit ? 14 : 7, isCrit ? 0.28 : 0.14);
+    if (isCrit) {
+      triggerShake(14, 0.25);
+      spawnGlassCrack(defender.x + (Math.random() - 0.5) * 35, defender.y + (Math.random() - 0.5) * 35);
+    } else {
+      triggerShake(6, 0.12);
+    }
 
     const midX = ((attacker?.x || defender.x) + defender.x) / 2;
     const midY = ((attacker?.y || defender.y) + defender.y) / 2;
@@ -1250,7 +1169,7 @@ export default function ArenaCaPage() {
     spawnFloatingText(
       defender.x,
       defender.y - 42,
-      customLabel || (isCrit ? `💥 -${finalDamage} CHÍ MẠNG!` : `-${finalDamage}`),
+      customLabel || (isCrit ? `💥 CHÍ MẠNG! -${finalDamage}` : `-${finalDamage}`),
       isCrit ? "#facc15" : "#ffffff",
       isCrit ? 21 : 16
     );
@@ -1268,7 +1187,6 @@ export default function ArenaCaPage() {
     bs.gameOver = true;
     setLastMatchWon(playerWon);
     triggerFlash(playerWon ? "#22c55e" : "#ef4444", 0.55);
-    if (hudRefs.current.ultCutIn) hudRefs.current.ultCutIn.classList.add("hidden");
     if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.remove("hidden");
 
     if (playerWon) {
@@ -1335,7 +1253,6 @@ export default function ArenaCaPage() {
         } (Chuỗi ${currentStreak}🔥)!`;
       }
 
-      // Tự động quét PvE tiếp nếu bật Auto-Farm
       if (!isPvPActive && isAutoFarm) {
         setTimeout(() => {
           scanRandomEnemy();
@@ -1426,13 +1343,6 @@ export default function ArenaCaPage() {
     if (bs.screenFlash > 0) bs.screenFlash = Math.max(0, bs.screenFlash - rawDt * 2.2);
     bs.cameraZoom += (1.0 - bs.cameraZoom) * 6 * rawDt;
 
-    if (bs.cutInTimer > 0) {
-      bs.cutInTimer -= rawDt;
-      if (bs.cutInTimer <= 0 && hudRefs.current.ultCutIn) {
-        hudRefs.current.ultCutIn.classList.add("hidden");
-      }
-    }
-
     for (const b of bs.bubbles) {
       b.y -= b.speed * 45 * dt;
       b.wobble += dt * 2.5;
@@ -1477,30 +1387,7 @@ export default function ArenaCaPage() {
       if (ft.life <= 0) bs.floatingTexts.splice(i, 1);
     }
 
-    if (bs.activeUltVfx) {
-      bs.activeUltVfx.life -= dt;
-      if (bs.activeUltVfx.life <= 0) bs.activeUltVfx = null;
-    }
-
-    if (!bs.teamPlayer || bs.teamPlayer.length === 0 || !bs.teamRival || bs.teamRival.length === 0) return;
-
-    const alivePlayers = bs.teamPlayer.filter((f: any) => f.isAlive);
-    const aliveRivals = bs.teamRival.filter((f: any) => f.isAlive);
-
-    if (!bs.gameOver) {
-      if (alivePlayers.length === 0) {
-        bs.gameOver = true;
-        setTimeout(() => endMatch(false), 400);
-        return;
-      }
-      if (aliveRivals.length === 0) {
-        bs.gameOver = true;
-        setTimeout(() => endMatch(true), 400);
-        return;
-      }
-    }
-
-    // Xử lý đạn chưởng lực & va chạm ĐỌ KI giữa các luồng đạn ngược chiều
+    // Xử lý đạn chưởng lực & va chạm ĐỌ KI giữa hai luồng đạn ngược chiều
     for (let i = bs.projectiles.length - 1; i >= 0; i--) {
       const proj = bs.projectiles[i];
       proj.life -= dt;
@@ -1511,9 +1398,10 @@ export default function ArenaCaPage() {
       for (let j = i - 1; j >= 0; j--) {
         const otherProj = bs.projectiles[j];
         if (proj.ownerIsPlayer !== otherProj.ownerIsPlayer) {
-          if (Math.hypot(proj.x - otherProj.x, proj.y - otherProj.y) < 36) {
-            spawnShockwave((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "#facc15", 100);
-            spawnFloatingText((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "⚡ ĐỌ KI!", "#facc15", 18);
+          if (Math.hypot(proj.x - otherProj.x, proj.y - otherProj.y) < 40) {
+            spawnShockwave((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "#facc15", 110);
+            spawnFloatingText((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "⚡ ĐỌ KI!", "#facc15", 20);
+            triggerShake(10, 0.2);
             bs.projectiles.splice(i, 1);
             bs.projectiles.splice(j, 1);
             break;
@@ -1521,13 +1409,13 @@ export default function ArenaCaPage() {
         }
       }
 
-      const targets = proj.ownerIsPlayer ? aliveRivals : alivePlayers;
-      const attackers = proj.ownerIsPlayer ? alivePlayers : aliveRivals;
+      const targets = proj.ownerIsPlayer ? bs.teamRival : bs.teamPlayer;
+      const attackers = proj.ownerIsPlayer ? bs.teamPlayer : bs.teamRival;
       const attacker = attackers[0];
 
       let hitTarget = null;
       for (const t of targets) {
-        if (Math.hypot(proj.x - t.x, proj.y - t.y) < t.radius + 22) {
+        if (t.isAlive && Math.hypot(proj.x - t.x, proj.y - t.y) < t.radius + 22) {
           hitTarget = t;
           break;
         }
@@ -1546,11 +1434,27 @@ export default function ArenaCaPage() {
       }
     }
 
-    for (const fish of bs.teamPlayer) {
-      if (fish.isAlive) updateFighterTeamMode(fish, aliveRivals, dt);
-    }
-    for (const fish of bs.teamRival) {
-      if (fish.isAlive) updateFighterTeamMode(fish, alivePlayers, dt);
+    if (!bs.gameOver && bs.teamPlayer.length > 0 && bs.teamRival.length > 0) {
+      const alivePlayers = bs.teamPlayer.filter((f: any) => f.isAlive);
+      const aliveRivals = bs.teamRival.filter((f: any) => f.isAlive);
+
+      if (alivePlayers.length === 0) {
+        bs.gameOver = true;
+        setTimeout(() => endMatch(false), 400);
+        return;
+      }
+      if (aliveRivals.length === 0) {
+        bs.gameOver = true;
+        setTimeout(() => endMatch(true), 400);
+        return;
+      }
+
+      for (const fish of bs.teamPlayer) {
+        if (fish.isAlive) updateFighterTeamMode(fish, aliveRivals, dt);
+      }
+      for (const fish of bs.teamRival) {
+        if (fish.isAlive) updateFighterTeamMode(fish, alivePlayers, dt);
+      }
     }
 
     updateHUD();
@@ -1646,12 +1550,12 @@ export default function ArenaCaPage() {
         fish.aiTimer = 0.5 + Math.random() * 0.35;
         fish.vx = (fish.isPlayer ? -1 : 1) * 240;
         const mult = fish.activeSkill?.powerMult || 1.25;
-        const critChance = fish.fishClass === "ASSASSIN" ? 0.42 : 0.24;
+        const critChance = 0.15 + (fish.fishClass === "ASSASSIN" ? 0.25 : 0.0);
         const isCrit = fish.powerBuff > 1.15 || Math.random() < critChance;
-        const dmg = Math.round(fish.atk * mult * fish.powerBuff * (isCrit ? 1.35 : 1));
+        const dmg = Math.round(fish.atk * mult * fish.powerBuff * (isCrit ? 1.4 : 1));
         fish.powerBuff = 1.0;
         spawnSlashArc(opponent.x, opponent.y, fish.auraColor, 0.35);
-        applyDamage(fish, opponent, dmg, isCrit);
+        applyDamage(fish, opponent, dmg, isCrit, isCrit ? `💥 CHÍ MẠNG! -${dmg}` : `-${dmg}`);
       }
     }
 
@@ -1670,7 +1574,6 @@ export default function ArenaCaPage() {
 
     if (fish.aiState !== "DASH_ATTACK") {
       const hpRatio = fish.hp / fish.maxHp;
-      // GIẢN RA: Tăng khoảng cách tản ra để đánh thoáng hơn (90 - 140px)
       const targetRange = hpRatio < 0.25 ? 140 : 90;
 
       if (minDst > targetRange) {
@@ -1687,11 +1590,26 @@ export default function ArenaCaPage() {
         fish.vx += (bobX - fish.vx) * 5 * dt;
         fish.vy += (bobY - fish.vy) * 5 * dt;
 
-        // ĐẤM THƯỜNG / CHÉM CẬN CHIẾN: Thay vì cụng đầu, mỗi đòn đánh cận chiến có vung chém rõ ràng
-        if (!bs.gameOver && Math.random() < 0.04) {
-          const dmg = Math.round(fish.atk * 0.95);
-          spawnSlashArc((fish.x + opponent.x) / 2, (fish.y + opponent.y) / 2, fish.auraColor, 0.2);
-          applyDamage(fish, opponent, dmg, false, `👊 ĐẤM THƯỜNG: -${dmg}`);
+        // ĐẤM THƯỜNG / CẬN CHIẾN: NHỊP LÙI RA RỒI ĐÂM VÀO + 15% CRIT + RUNG MÀN HÌNH
+        if (!bs.gameOver && Math.random() < 0.035) {
+          const critChance = 0.15 + (fish.fishClass === "ASSASSIN" ? 0.25 : 0.0);
+          const isCrit = Math.random() < critChance;
+          const dmg = Math.round(fish.atk * (isCrit ? 1.4 : 0.9));
+
+          // Nhịp lùi ra sau
+          const retreatDir = fish.x >= opponent.x ? 1 : -1;
+          fish.vx = retreatDir * 180;
+          fish.vy = (Math.random() - 0.5) * 80;
+
+          setTimeout(() => {
+            if (fish.isAlive && opponent.isAlive) {
+              // Đâm vào
+              const lungeDir = opponent.x >= fish.x ? 1 : -1;
+              fish.vx = lungeDir * 320;
+              spawnSlashArc((fish.x + opponent.x) / 2, (fish.y + opponent.y) / 2, fish.auraColor, 0.3);
+              applyDamage(fish, opponent, dmg, isCrit, isCrit ? `👊 CRIT ĐẤM: -${dmg}` : `👊 ĐẤM THƯỜNG: -${dmg}`);
+            }
+          }, 180);
         }
       }
       fish.dir = opponent.x >= fish.x ? 1 : -1;
@@ -2122,7 +2040,7 @@ export default function ArenaCaPage() {
       className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 font-sans pointer-events-auto select-none flex flex-col justify-between p-1.5 sm:p-2.5 text-white"
       style={{ touchAction: "none" }}
     >
-      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE */}
+      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE (MỞ SẴN KHI VỪA VÀO TRANG) */}
       {isFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-slate-900 border-2 border-emerald-400/70 w-full max-w-6xl h-[90dvh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(16,185,129,0.35)] flex flex-col">
@@ -2143,9 +2061,9 @@ export default function ArenaCaPage() {
                   setIsFishPickerOpen(false);
                   startMatch(undefined, undefined, false);
                 }}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 py-1.5 rounded-xl text-xs cursor-pointer"
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-5 py-2 rounded-xl text-xs sm:text-sm cursor-pointer shadow-lg animate-pulse"
               >
-                XÁC NHẬN &amp; BEM!
+                XÁC NHẬN &amp; VÀO TRẬN!
               </button>
             </div>
 
@@ -2232,7 +2150,7 @@ export default function ArenaCaPage() {
       {/* TOP HEADER HUDS */}
       <header className="w-full mx-auto z-10 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-xl px-2.5 py-1.5 shadow-md">
         <div className="flex items-center justify-between gap-2">
-          {/* PLAYER FISH HUD (XANH LÁ) */}
+          {/* PLAYER FISH HUD */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-1 mb-0.5">
               <div className="flex items-center gap-1.5 truncate">
@@ -2308,7 +2226,7 @@ export default function ArenaCaPage() {
             </span>
           </div>
 
-          {/* ENEMY FISH HUD (ĐỎ) */}
+          {/* ENEMY FISH HUD */}
           <div className="flex-1 min-w-0 text-right">
             <div className="flex items-center justify-between gap-1 mb-0.5 flex-row-reverse">
               <div className="flex items-center gap-1.5 truncate flex-row-reverse">
@@ -2396,33 +2314,6 @@ export default function ArenaCaPage() {
             }
           }}
         ></canvas>
-
-        {/* ULTIMATE CUT-IN BANNER */}
-        <div
-          ref={(el) => {
-            hudRefs.current.ultCutIn = el;
-          }}
-          className="pointer-events-none hidden absolute inset-x-0 top-1/4 flex items-center justify-center z-10"
-        >
-          <div className="px-6 py-1.5 bg-gradient-to-r from-transparent via-amber-500/90 to-transparent border-y-2 border-yellow-200 text-center transform -skew-x-12 shadow-2xl">
-            <div
-              ref={(el) => {
-                hudRefs.current.ultCasterName = el;
-              }}
-              className="text-[11px] font-bold uppercase tracking-widest text-slate-950"
-            >
-              CÁ NHÀ
-            </div>
-            <div
-              ref={(el) => {
-                hudRefs.current.ultSkillTitle = el;
-              }}
-              className="font-arcade font-extrabold text-xl sm:text-3xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]"
-            >
-              ⚡ TUYỆT KỸ!
-            </div>
-          </div>
-        </div>
 
         {/* RADAR SCANNING OVERLAY */}
         <div
