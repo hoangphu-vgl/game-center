@@ -101,6 +101,17 @@ const getGrowthDurationSec = (baseWeight: number) => {
   return 3600;
 };
 
+// Tính giá bán cá thời điểm hiện tại
+const getFishCurrentValue = (fishObj: any) => {
+  const curW = fishObj.currentWeight || fishObj.weight;
+  const maxW = fishObj.maxWeight || fishObj.weight * 3;
+  const isMaxed = (fishObj.growth || 0) >= 100 || curW >= maxW;
+  const ratio = curW / maxW;
+  return isMaxed
+    ? Math.floor((fishObj.baseValue || 1000) * 2.5)
+    : Math.floor((fishObj.baseValue || 1000) * (0.5 + ratio * 1.5));
+};
+
 export default function HoCaPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
@@ -116,6 +127,9 @@ export default function HoCaPage() {
   const [toastBanner, setToastBanner] = useState<{ title: string; message: string; type?: string } | null>(null);
 
   const [isFishBagOpen, setIsFishBagOpen] = useState<boolean>(false);
+  const [isAquariumManagerOpen, setIsAquariumManagerOpen] = useState<boolean>(false);
+  const [selectedManagerFishIds, setSelectedManagerFishIds] = useState<string[]>([]);
+
   const [isAuctionOpen, setIsAuctionOpen] = useState<boolean>(false);
   const [realtimeAuctions, setRealtimeAuctions] = useState<any[]>([]);
   const [shopNotification] = useState<string | null>(null);
@@ -147,7 +161,6 @@ export default function HoCaPage() {
     };
   }, []);
 
-  // Hàm xử lý & đồng bộ dữ liệu từ Supabase (dùng chung cho lúc mới mở, khi focus lại tab, hoặc khi DB thay đổi từ caucamulti)
   const hydrateFromProfileData = async (userId: string, forceRenderEntities = true) => {
     if (isSavingRef.current) return;
     const { data } = await supabase.from("profiles").select("balance, inventory").eq("id", userId).single();
@@ -276,7 +289,6 @@ export default function HoCaPage() {
         userRef.current = session.user;
         await hydrateFromProfileData(session.user.id, true);
 
-        // Lắng nghe thay đổi Realtime trên bảng profiles (khi bán/câu cá bên caucamulti thì Hồ Cá tự cập nhật ngay, không bao giờ hồi sinh cá đã bán)
         profileChannel = supabase
           .channel(`profile_sync_hoca_${session.user.id}`)
           .on(
@@ -292,7 +304,6 @@ export default function HoCaPage() {
     }
     loadData();
 
-    // Khi quay lại tab / chuyển trang từ caucamulti về hoca -> tải lại ngay bản mới nhất từ DB
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible" && userRef.current?.id) {
         hydrateFromProfileData(userRef.current.id, true);
@@ -336,7 +347,6 @@ export default function HoCaPage() {
     return () => clearInterval(interval);
   }, [selectedFishInfo?.id]);
 
-  // Lưu an toàn: Fetch inventory mới nhất trên DB trước khi ghi để KHÔNG BAO GIỜ ghi đè mất dữ liệu từ caucamulti
   const syncToDB = async (newAq: any[], newFishInv: any[], newScore?: number, skipReadBeforeWrite = false) => {
     const activeUser = userRef.current || user;
     if (!activeUser || !isDataLoadedRef.current || isSavingRef.current) return;
@@ -628,6 +638,7 @@ export default function HoCaPage() {
           }
         }
 
+        // CHỈNH SỬA: CÁ NO HOẶC MAX KÝ THÌ LƠ MỒI HOÀN TOÀN, KHÔNG ĐUỔI THEO NỮA
         if (this.isFull() || (this.dbData.growth || 0) >= 100) {
           this.targetFood = null;
         } else {
@@ -833,7 +844,6 @@ export default function HoCaPage() {
     window.addEventListener("triggerSaveAquarium", handleTriggerSave);
     window.addEventListener("triggerSaveAquariumNow", handleTriggerSaveNow);
 
-    // Chỉ tự lưu định kỳ khi tab đang mở (visible) và chỉ khi có cá trong hồ để tránh ghi đè dữ liệu từ tab khác
     const autoSyncInterval = setInterval(() => {
       if (
         document.visibilityState === "visible" &&
@@ -1118,12 +1128,8 @@ export default function HoCaPage() {
     let curW = fishObj.currentWeight || fishObj.weight;
     let maxW = fishObj.maxWeight || fishObj.weight * 3;
     let isMaxed = (fishObj.growth || 0) >= 100 || curW >= maxW;
-    let ratio = curW / maxW;
-    let earnedVal = isMaxed
-      ? Math.floor((fishObj.baseValue || 1000) * 2.5)
-      : Math.floor((fishObj.baseValue || 1000) * (0.5 + ratio * 1.5));
+    let earnedVal = getFishCurrentValue(fishObj);
 
-    // Đọc số dư mới nhất từ DB trước khi cộng tiền bán cá để không lệch với caucamulti
     let latestBalance = scoreRef.current;
     const activeUser = userRef.current || user;
     if (activeUser?.id) {
@@ -1148,6 +1154,50 @@ export default function HoCaPage() {
         detail: {
           title: isMaxed ? "🌾 THU HOẠCH MAX KÝ THÀNH CÔNG!" : "BÁN THÀNH CÔNG",
           message: `${isMaxed ? "Thu hoạch" : "Bán"} ${fishObj.vnName} (${curW}kg) thu được ${earnedVal.toLocaleString()}🪙`,
+          type: "rare",
+        },
+      })
+    );
+  };
+
+  // --- HÀM BÁN NHIỀU CON HOẶC BÁN TẤT CẢ TỪ BẢNG QUẢN LÝ ---
+  const handleBulkSellAquariumFish = async (fishIdsToSell: string[]) => {
+    if (fishIdsToSell.length === 0) return;
+    const targetSet = new Set(fishIdsToSell);
+
+    let totalEarned = 0;
+    const remainingAq = aquariumRef.current.filter((f) => {
+      if (targetSet.has(f.id)) {
+        totalEarned += getFishCurrentValue(f);
+        return false;
+      }
+      return true;
+    });
+
+    let latestBalance = scoreRef.current;
+    const activeUser = userRef.current || user;
+    if (activeUser?.id) {
+      const { data: fresh } = await supabase.from("profiles").select("balance").eq("id", activeUser.id).single();
+      if (fresh && typeof fresh.balance === "number") {
+        latestBalance = Number(fresh.balance);
+      }
+    }
+
+    const newScore = latestBalance + totalEarned;
+    aquariumRef.current = remainingAq;
+    activeFishEntitiesRef.current = activeFishEntitiesRef.current.filter((e) => !targetSet.has(e.dbData.id));
+    setAquarium(remainingAq);
+    setScore(newScore);
+    scoreRef.current = newScore;
+    setSelectedManagerFishIds([]);
+    setSelectedFishInfo(null);
+
+    await syncToDB(remainingAq, fishInvRef.current, newScore);
+    window.dispatchEvent(
+      new CustomEvent("showPopupBanner", {
+        detail: {
+          title: "💰 BÁN HÀNG LOẠT THÀNH CÔNG!",
+          message: `Đã bán ${fishIdsToSell.length} con cá, thu về ${totalEarned.toLocaleString()}🪙`,
           type: "rare",
         },
       })
@@ -1197,7 +1247,6 @@ export default function HoCaPage() {
     const activeUser = userRef.current || user;
     if (!activeUser?.id || fishIds.length === 0) return;
 
-    // Fetch lại kho cá mới nhất từ DB trước khi thả vào hồ để tránh trường hợp con cá đó vừa bị bán ở caucamulti
     const { data: freshProfile } = await supabase
       .from("profiles")
       .select("inventory")
@@ -1303,6 +1352,7 @@ export default function HoCaPage() {
         </div>
       )}
 
+      {/* 📦 MODAL KHO CÁ */}
       {isFishBagOpen && (
         <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 pointer-events-auto">
           <div className="bg-slate-950 border-2 border-sky-500/60 w-full max-w-4xl max-h-[85vh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(14,165,233,0.3)] flex flex-col relative overflow-hidden">
@@ -1352,91 +1402,182 @@ export default function HoCaPage() {
         </div>
       )}
 
-      {isAuctionOpen && (
-        <div className="absolute inset-0 z-[70] bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded-3xl animate-fadeIn">
-          <div className="bg-slate-900 border-2 border-blue-500 w-full max-w-3xl max-h-[85vh] rounded-2xl p-6 shadow-[0_0_30px_rgba(59,130,246,0.4)] relative flex flex-col">
+      {/* 📋 MODAL QUẢN LÝ HỒ CÁ (THÔNG TIN CHI TIẾT TỪNG CON, SINH SẢN, KÝ, GIÁ BÁN & NÚT BÁN HÀNG LOẠT) */}
+      {isAquariumManagerOpen && (
+        <div className="fixed inset-0 z-[65] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 pointer-events-auto">
+          <div className="bg-slate-950 border-2 border-purple-500/70 w-full max-w-5xl max-h-[88vh] rounded-3xl p-4 sm:p-6 shadow-[0_0_50px_rgba(168,85,247,0.35)] flex flex-col relative overflow-hidden">
             <div className="flex justify-between items-center pb-3 border-b border-slate-800">
-              <h3 className="text-xl font-black text-blue-400 uppercase tracking-wider">⚖️ Sàn Đấu Giá Trực Tuyến</h3>
+              <div>
+                <h2 className="text-base sm:text-xl font-black text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                  📋 Quản Lý Chi Tiết Sinh Vật Trong Hồ ({aquarium.length} con)
+                </h2>
+                <p className="text-[11px] text-slate-400 font-bold mt-0.5">
+                  Quản lý cân nặng, độ trưởng thành, trạng thái sinh sản và định giá bán từng sinh vật tại thời điểm hiện tại.
+                </p>
+              </div>
               <button
-                onClick={() => setIsAuctionOpen(false)}
+                onClick={() => setIsAquariumManagerOpen(false)}
                 className="bg-slate-800 hover:bg-rose-600 text-white font-black w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer shadow text-xs"
               >
                 ✕
               </button>
             </div>
-            {shopNotification && (
-              <div className="my-1 bg-blue-500 text-white px-3 py-1.5 rounded-xl font-black text-xs text-center animate-bounce shadow">
-                {shopNotification}
-              </div>
-            )}
 
-            <div className="flex-1 overflow-y-auto mt-2 pr-1 space-y-3">
-              {realtimeAuctions.length === 0 ? (
-                <div className="text-center text-slate-500 py-10 font-bold text-xs">Chưa có vật phẩm đấu giá nào.</div>
+            {/* Thanh công cụ chọn nhanh / thao tác hàng loạt */}
+            <div className="flex flex-wrap items-center justify-between gap-2 py-2.5 border-b border-slate-800/80 bg-slate-900/60 px-3 rounded-2xl my-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (selectedManagerFishIds.length === aquarium.length) {
+                      setSelectedManagerFishIds([]);
+                    } else {
+                      setSelectedManagerFishIds(aquarium.map((f) => f.id));
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-xs rounded-xl border border-purple-500/30 cursor-pointer shadow"
+                >
+                  {selectedManagerFishIds.length === aquarium.length ? "☑ Bỏ chọn tất cả" : "☐ Chọn tất cả"}
+                </button>
+                <span className="text-xs text-slate-300 font-bold">
+                  Đã chọn: <span className="text-amber-400">{selectedManagerFishIds.length}</span> con
+                </span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleBulkSellAquariumFish(selectedManagerFishIds)}
+                  disabled={selectedManagerFishIds.length === 0}
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-black text-xs rounded-xl shadow cursor-pointer uppercase"
+                >
+                  💰 Bán Các Con Đã Chọn
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm("Bạn có chắc chắn muốn BÁN TẤT CẢ cá trong hồ không?")) {
+                      handleBulkSellAquariumFish(aquarium.map((f) => f.id));
+                    }
+                  }}
+                  disabled={aquarium.length === 0}
+                  className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-black text-xs rounded-xl shadow cursor-pointer uppercase"
+                >
+                  🔥 Bán Tất Cả Hồ
+                </button>
+              </div>
+            </div>
+
+            {/* Danh sách cá trong hồ dạng thẻ chi tiết */}
+            <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 my-1">
+              {aquarium.length === 0 ? (
+                <div className="col-span-full text-center text-slate-500 py-12 font-bold text-sm">
+                  Hồ cá đang trống! Hãy thả cá từ kho hoặc câu cá mới nhé.
+                </div>
               ) : (
-                realtimeAuctions.map((item) => (
-                  <div key={item.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3 shadow-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 bg-slate-900 rounded-lg flex items-center justify-center border border-slate-800 p-1 text-2xl">
-                        <img src={item.item_image} className="max-h-full object-contain" />
+                aquarium.map((fish: any) => {
+                  const isSelected = selectedManagerFishIds.includes(fish.id);
+                  const curW = fish.currentWeight || fish.weight;
+                  const maxW = fish.maxWeight || fish.weight * 3;
+                  const growthPct = Math.min(100, Math.round(fish.growth || 0));
+                  const isMaxed = growthPct >= 100 || curW >= maxW;
+                  const currentPrice = getFishCurrentValue(fish);
+                  const fullnessRatio = Math.min(1, (fish.currentFood || 0) / (fish.stomachCapacity || getStomachCapacity(curW)));
+                  const fullnessPct = Math.round(fullnessRatio * 100);
+
+                  return (
+                    <div
+                      key={fish.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedManagerFishIds(selectedManagerFishIds.filter((id) => id !== fish.id));
+                        } else {
+                          setSelectedManagerFishIds([...selectedManagerFishIds, fish.id]);
+                        }
+                      }}
+                      className={`bg-slate-900 border-2 rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition shadow-md ${
+                        isSelected ? "border-purple-400 bg-purple-950/25" : "border-slate-800 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}}
+                            className="w-4 h-4 rounded border-slate-700 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                          />
+                          <img src={`/assets/cauca/${fish.filename}`} alt={fish.vnName} className="w-10 h-10 object-contain drop-shadow" />
+                          <div>
+                            <h4 className="text-xs font-black text-amber-300 truncate max-w-[140px]">
+                              [{fish.rank || "D"}] {fish.vnName}
+                            </h4>
+                            <span className="text-[10px] font-bold text-sky-300">
+                              {fish.gender === "Đực" ? "♂️ Đực" : "♀️ Cái"} {fish.isBaby ? "👶 Baby" : ""}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs font-black text-emerald-400">{currentPrice.toLocaleString()}🪙</div>
+                          <span className="text-[9px] text-slate-400 font-bold">{isMaxed ? "✨ Max Ký" : "Đang lớn"}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-black text-amber-300">{item.item_name}</h4>
-                        <p className="text-[10px] text-slate-400">
-                          Người bán: <span className="text-blue-400 font-bold">{item.seller_name}</span>
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                          Giá hiện tại: <span className="text-emerald-400 font-bold">{item.current_bid.toLocaleString()}🪙</span>
-                        </p>
+
+                      <div className="grid grid-cols-2 gap-2 my-2 text-[10px] font-bold text-slate-300 bg-slate-950 p-2 rounded-xl">
+                        <div>
+                          <span>Trọng lượng:</span> <span className="text-white">{curW}kg / {maxW}kg</span>
+                        </div>
+                        <div>
+                          <span>Sinh trưởng:</span> <span className="text-sky-300">{growthPct}%</span>
+                        </div>
+                        <div>
+                          <span>Độ no:</span> <span className={fullnessPct < 30 ? "text-rose-400" : "text-amber-300"}>{fullnessPct}%</span>
+                        </div>
+                        <div>
+                          <span>Sinh sản:</span> <span className="text-pink-400">{fish.breedState === "fertilizing" ? "💕 Thụ tinh" : fish.breedState === "ready_to_spawn" ? "🥚 Sẵn sàng đẻ" : "Bình thường"}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-[10px]">
+                        <span className="text-slate-400">
+                          ⚔️{fish.power || 10} | 🛡️{fish.defense || 10} | ❤️{fish.arenaHp || 50}
+                        </span>
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleTakeFishBackToBag(fish.id)}
+                            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded-lg font-bold text-[9px]"
+                          >
+                            📦 Cất Kho
+                          </button>
+                          <button
+                            onClick={() => handleSellFishFromHoca(fish.id)}
+                            className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-lg font-bold text-[9px]"
+                          >
+                            💰 Bán
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <button
-                      onClick={async () => {
-                        const nextBid = Math.floor(item.current_bid * 1.1);
-                        if (scoreRef.current < nextBid) {
-                          alert("Không đủ xu đấu giá!");
-                          return;
-                        }
-                        const newScore = scoreRef.current - nextBid;
-                        setScore(newScore);
-                        scoreRef.current = newScore;
-                        await supabase
-                          .from("auctions")
-                          .update({
-                            current_bid: nextBid,
-                            highest_bidder_id: user.id,
-                            highest_bidder_name: user.email?.split("@")[0],
-                          })
-                          .eq("id", item.id);
-                        await supabase.from("profiles").update({ balance: newScore }).eq("id", user.id);
-                      }}
-                      className="px-3 py-2 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-500 shadow"
-                    >
-                      Ra Giá {Math.floor(item.current_bid * 1.1).toLocaleString()}🪙
-                    </button>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         </div>
       )}
 
+      {/* TOP HEADER CONTROLS */}
       <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-50 pointer-events-none">
-        <div className="flex gap-2 pointer-events-auto">
+        <div className="flex flex-wrap gap-2 pointer-events-auto">
           <button
-  onClick={async () => {
-    // 1. Ép lưu dữ liệu độ no và trọng lượng cá xuống Supabase an toàn tuyệt đối
-    if (typeof syncToDB === "function" && aquariumRef.current) {
-      await syncToDB(aquariumRef.current, fishInvRef.current, scoreRef.current, true);
-    }
-    // 2. Quay lại chính xác phòng/màn hình đang đứng trước đó bằng router của Next.js
-    router.back();
-  }}
-  className="bg-slate-900/80 hover:bg-slate-800 text-sky-400 px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-500/40 backdrop-blur transition active:scale-95 cursor-pointer"
->
-  ← Ra Khơi
-</button>
+            onClick={async () => {
+              if (typeof syncToDB === "function" && aquariumRef.current) {
+                await syncToDB(aquariumRef.current, fishInvRef.current, scoreRef.current, true);
+              }
+              // CHỈNH SỬA: Điều hướng thẳng về phòng câu cá chính (/caucamulti) không bị kẹt lặp lịch sử
+              router.push("/caucamulti");
+            }}
+            className="bg-slate-900/80 hover:bg-slate-800 text-sky-400 px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-500/40 backdrop-blur transition active:scale-95 cursor-pointer"
+          >
+            ← Ra Khơi
+          </button>
           <Link
             href="/caucamulti/hoca/arenaca"
             className="bg-gradient-to-r from-amber-500 to-rose-600 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-amber-300/40 backdrop-blur transition active:scale-95"
@@ -1445,9 +1586,15 @@ export default function HoCaPage() {
           </Link>
           <button
             onClick={() => setIsFishBagOpen(true)}
-            className="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-400/40 backdrop-blur transition active:scale-95"
+            className="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-sky-400/40 backdrop-blur transition active:scale-95 cursor-pointer"
           >
             🐟 Kho Cá ({fishInvRef.current.length})
+          </button>
+          <button
+            onClick={() => setIsAquariumManagerOpen(true)}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-lg border border-purple-400/40 backdrop-blur transition active:scale-95 cursor-pointer"
+          >
+            📋 Quản Lý Hồ ({aquarium.length})
           </button>
         </div>
 
@@ -1459,6 +1606,7 @@ export default function HoCaPage() {
 
       <canvas ref={canvasRef} className="absolute inset-0 block w-full h-full -z-10 cursor-crosshair"></canvas>
 
+      {/* SELECTED FISH POPUP INFO */}
       {selectedFishInfo && selectedFishStats && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-sky-400 p-4 rounded-2xl shadow-[0_0_25px_rgba(56,189,248,0.5)] backdrop-blur-md z-40 w-80 animate-fadeIn pointer-events-auto text-center space-y-2">
           <div className="flex items-center justify-between">
@@ -1566,7 +1714,7 @@ export default function HoCaPage() {
                 onClick={() => handleSellFishFromHoca(selectedFishInfo.id)}
                 className="w-full bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 hover:brightness-110 text-slate-950 font-black py-2 rounded-xl text-[11px] uppercase shadow-lg cursor-pointer animate-pulse"
               >
-                🌾 Thu Hoạch Max Ký (+{Math.floor((selectedFishInfo.baseValue || 1000) * 2.5).toLocaleString()}🪙)
+                🌾 Thu Hoạch Max Ký (+{getFishCurrentValue(selectedFishInfo).toLocaleString()}🪙)
               </button>
             )}
             <button
@@ -1593,6 +1741,7 @@ export default function HoCaPage() {
         </div>
       )}
 
+      {/* BOTTOM ACTION CONTROLS */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-auto">
         {interactionMode === "feed" && (
           <div className="flex flex-wrap justify-center gap-1.5 bg-black/75 p-1.5 rounded-2xl border border-white/20 backdrop-blur-md shadow-xl animate-fadeIn">
