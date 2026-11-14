@@ -165,7 +165,6 @@ function formatFishWeight(w: number): string {
 
 function calcBalancedCombatStats(weight: number, meta: { hpBonus: number; atkBonus: number }) {
   const safeW = Math.max(1, Number(weight || 1));
-  // NHÂN ĐÔI MÁU (x2) NHƯNG VẪN SCALE THEO CÂN NẶNG BÌNH THƯỜNG
   const baseHp = Math.floor((Math.sqrt(safeW) * 180 + 5000) * 2);
   const baseAtk = Math.floor(Math.sqrt(safeW) * 12 + 200);
   return {
@@ -239,7 +238,7 @@ export default function ArenaCaPage() {
   const [score, setScore] = useState<number>(0);
   const [rawInventory, setRawInventory] = useState<any>({});
   const [isHardcoreMode, setIsHardcoreMode] = useState<boolean>(false);
-  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(5);
+  const [battleMode, setBattleMode] = useState<1 | 3 | 5>(3); // Mặc định 3v3
 
   const [isAutoFarm, setIsAutoFarm] = useState<boolean>(false);
   const [isPvPActive, setIsPvPActive] = useState<boolean>(false);
@@ -256,9 +255,14 @@ export default function ArenaCaPage() {
   const [isRivalReady, setIsRivalReady] = useState<boolean>(false);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
 
+  // ĐẶT CƯỢC BACCARAT STYLE CHO PVP
+  const [myBetAmount, setMyBetAmount] = useState<number>(10000);
+  const [rivalBetAmount, setRivalBetAmount] = useState<number>(10000);
+
   const [playerRoster, setPlayerRoster] = useState<any[]>(() => buildDefaultDemoRoster());
-  const [activeBattleTeam, setActiveBattleTeam] = useState<any[]>(() => buildDefaultDemoRoster().slice(0, 5));
+  const [activeBattleTeam, setActiveBattleTeam] = useState<any[]>(() => buildDefaultDemoRoster().slice(0, 3));
   
+  // LUÔN BẬT MODAL CHỌN ĐỘI KHI VỪA VÀO / NHẤN NÚT
   const [isFishPickerOpen, setIsFishPickerOpen] = useState<boolean>(true);
   const [pickerFilter, setPickerFilter] = useState<"all" | "aquarium" | "fish_inventory">("all");
 
@@ -369,10 +373,8 @@ export default function ArenaCaPage() {
     return picked;
   }
 
-  // GHÉP TEAM ĐỊCH THÔNG MINH: TỔNG CÂN NẶNG ĐỊCH LỆCH KHÔNG QUÁ 50 TẤN SO VỚI NGƯỜI CHƠI
   function buildBalancedEnemyTeam(playerTeam: any[], mode: number) {
     const totalPlayerWeightKg = playerTeam.reduce((sum, f) => sum + Number(f.weight || 50), 0);
-    // 50 tấn = 50,000 kg. Cho phép dao động từ totalPlayerWeightKg - 25000 đến +25000 (hoặc ±50 tấn)
     const targetTotalEnemyKg = Math.max(500, totalPlayerWeightKg + (Math.random() * 50000 - 25000));
     
     const eTeamConfigs = [];
@@ -620,7 +622,7 @@ export default function ArenaCaPage() {
       baseScale: cfg.scale || 0.92,
       currentScale: cfg.scale || 0.92,
       auraColor: meta.color,
-      quotes: cfg.quotes || [`${meta.icon} ${meta.label} xung trận!`],
+      quotes: cfg.quotes || [`${meta.icon} ${meta.label} xuất kích!`],
       aiState: "CIRCLING",
       aiTimer: 0.8 + Math.random() * 0.6,
       skillCooldown: 2.5 + Math.random() * 2.0,
@@ -771,6 +773,8 @@ export default function ArenaCaPage() {
     setRoomRivalFishList([]);
     setIsMyReady(false);
     setIsRivalReady(false);
+    setMyBetAmount(10000);
+    setRivalBetAmount(10000);
 
     const channel = supabase.channel(`arena_${roomId}`, {
       config: { broadcast: { self: false } },
@@ -782,6 +786,8 @@ export default function ArenaCaPage() {
         if (data.type === "UPDATE_FISH_LIST") {
           setRoomRivalFishList(data.fishList || []);
           setIsRivalReady(data.isReady || false);
+        } else if (data.type === "UPDATE_BET") {
+          setRivalBetAmount(data.betAmount || 10000);
         } else if (data.type === "SET_READY") {
           setIsRivalReady(data.isReady || false);
         } else if (data.type === "START_MATCH") {
@@ -848,6 +854,29 @@ export default function ArenaCaPage() {
           fishList: newList,
           isReady: false,
         },
+      });
+    }
+  }
+
+  async function addMyBet(amount: number) {
+    const nextBet = myBetAmount + amount;
+    setMyBetAmount(nextBet);
+    if (activeChannel) {
+      await activeChannel.send({
+        type: "broadcast",
+        event: "fish_action",
+        payload: { type: "UPDATE_BET", userId: user?.id, betAmount: nextBet },
+      });
+    }
+  }
+
+  async function followRivalBet() {
+    setMyBetAmount(rivalBetAmount);
+    if (activeChannel) {
+      await activeChannel.send({
+        type: "broadcast",
+        event: "fish_action",
+        payload: { type: "UPDATE_BET", userId: user?.id, betAmount: rivalBetAmount },
       });
     }
   }
@@ -1209,21 +1238,31 @@ export default function ArenaCaPage() {
     triggerFlash(playerWon ? "#22c55e" : "#ef4444", 0.6);
     if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.remove("hidden");
 
+    // TÍNH TOÁN THƯỞNG / PHẠT ĐIỂM THEO YÊU CẦU:
+    // - Mặc định farm thường: 10k điểm/trận. Thắng 1v1 x1, 3v3 x3, 5v5 x5. Chuỗi 5 trận thắng x2 thêm. Thua mất 10k.
+    // - Bật tử trận (Hardcore): 50k điểm/trận. Thua -50k.
+    const baseFee = isHardcoreMode ? 50000 : 10000;
+    const modeMultiplier = battleMode === 1 ? 1 : battleMode === 3 ? 3 : 5;
+    const currentStreak = playerWon ? winStreak + 1 : 0;
+    const streakBonusMultiplier = currentStreak >= 5 ? 2 : 1;
+
+    let pointDelta = 0;
+    if (playerWon) {
+      pointDelta = baseFee * modeMultiplier * streakBonusMultiplier;
+      setWinStreak(currentStreak);
+      if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = `Chuỗi: ${currentStreak}🔥`;
+    } else {
+      pointDelta = -baseFee;
+      setWinStreak(0);
+      if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = "Chuỗi: 0🔥";
+    }
+
+    const newScore = Math.max(0, Number(score ?? 0) + pointDelta);
+    setScore(newScore);
+
     if (playerWon) {
       const isBossWin = Boolean(currentEnemyCfg?.isBossBattle);
       const bonusWeight = isBossWin ? 1.8 : 0.9;
-
-      const currentStreak = winStreak + 1;
-      setWinStreak(currentStreak);
-      if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = `Chuỗi: ${currentStreak}🔥`;
-
-      const baseCoins = isBossWin ? 1800 : 600;
-      const streakBonus = isBossWin ? (currentStreak - 1) * 450 : (currentStreak - 1) * 180;
-
-      let bonusCoins = baseCoins + streakBonus;
-      if (isHardcoreMode) {
-        bonusCoins *= 2;
-      }
 
       const updatedTeam = [...activeBattleTeam];
       const activeFish = updatedTeam[0];
@@ -1237,9 +1276,6 @@ export default function ArenaCaPage() {
         setActiveBattleTeam(updatedTeam);
       }
 
-      const newScore = Number(score ?? 0) + bonusCoins;
-      setScore(newScore);
-
       if (user?.id && activeFish && !String(activeFish.id).startsWith("demo_fish_")) {
         const nextInv = { ...rawInventory };
         if (activeFish._source === "aquarium" && Array.isArray(nextInv.aquarium)) {
@@ -1252,37 +1288,17 @@ export default function ArenaCaPage() {
           );
         }
         setRawInventory(nextInv);
-
-        await supabase
-          .from("profiles")
-          .update({
-            balance: newScore,
-            inventory: nextInv,
-          })
-          .eq("id", user.id);
       }
 
       if (hudRefs.current.resultBadge) {
-        hudRefs.current.resultBadge.textContent = isBossWin ? "👑 ĐỘI HÌNH HẠ GỤC BOSS!" : `🏆 CHIẾN THẮNG TRẬN ĐẤU!`;
+        hudRefs.current.resultBadge.textContent = isBossWin ? "👑 HẠ GỤC BOSS THÀNH CÔNG!" : `🏆 CHIẾN THẮNG TRẬN ĐẤU!`;
         hudRefs.current.resultBadge.className =
           "font-arcade font-extrabold text-2xl sm:text-5xl italic tracking-wider text-emerald-400 drop-shadow-[0_4px_16px_rgba(34,197,94,0.6)] mb-2";
       }
       if (hudRefs.current.resultSub) {
-        hudRefs.current.resultSub.textContent = `Đội hình quét sạch đối thủ! Nhận +${bonusCoins.toLocaleString()} Xu ${
-          isHardcoreMode ? "(🔥 Hardcore x2)" : "(🌱 Chill)"
-        } (Chuỗi ${currentStreak}🔥)!`;
-      }
-
-      if (!isPvPActive && isAutoFarm) {
-        setTimeout(() => {
-          scanRandomEnemy();
-        }, 1500);
-        return;
+        hudRefs.current.resultSub.textContent = `Nhận +${pointDelta.toLocaleString()} Xu (${battleMode}v${battleMode} x${modeMultiplier}${streakBonusMultiplier > 1 ? " x2 Chuỗi" : ""})!`;
       }
     } else {
-      setWinStreak(0);
-      if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = "Chuỗi: 0🔥";
-
       const updatedTeam = [...activeBattleTeam];
       const deadFish = updatedTeam[0];
 
@@ -1297,10 +1313,6 @@ export default function ArenaCaPage() {
 
         updatedTeam.shift();
         setActiveBattleTeam(updatedTeam.length > 0 ? updatedTeam : buildDefaultDemoRoster().slice(0, battleMode));
-
-        if (user?.id) {
-          await supabase.from("profiles").update({ inventory: nextInv }).eq("id", user.id);
-        }
       }
 
       if (hudRefs.current.resultBadge) {
@@ -1309,10 +1321,12 @@ export default function ArenaCaPage() {
           "font-arcade font-extrabold text-2xl sm:text-5xl italic tracking-wider text-rose-500 drop-shadow-[0_4px_16px_rgba(244,63,94,0.6)] mb-2";
       }
       if (hudRefs.current.resultSub) {
-        hudRefs.current.resultSub.textContent = isHardcoreMode
-          ? `${deadFish?.name || "Cá"} đã ngã xuống và vĩnh viễn biến mất khỏi hồ do bật chế độ Sinh Tử!`
-          : `Đội hình đã thua cuộc. Thử lại ở trận sau nhé!`;
+        hudRefs.current.resultSub.textContent = `Thua trận! Trừ ${Math.abs(pointDelta).toLocaleString()} Xu ${isHardcoreMode ? "(Tử trận -50k)" : ""}`;
       }
+    }
+
+    if (user?.id) {
+      await supabase.from("profiles").update({ balance: newScore, inventory: rawInventory }).eq("id", user.id);
     }
   }
 
@@ -1331,7 +1345,6 @@ export default function ArenaCaPage() {
     const totalHpE = bs.teamRival.reduce((sum, f) => sum + f.hp, 0);
     const maxTotalHpE = bs.teamRival.reduce((sum, f) => sum + f.maxHp, 0) || 1;
 
-    // TỔNG CÂN NẶNG CỦA CẢ TEAM (tính bằng kg hoặc tấn)
     const totalPlayerWeightKg = bs.teamPlayer.reduce((sum, f) => sum + Number(f.weight || 0), 0);
     const totalRivalWeightKg = bs.teamRival.reduce((sum, f) => sum + Number(f.weight || 0), 0);
 
@@ -1638,7 +1651,6 @@ export default function ArenaCaPage() {
     fish.x += fish.vx * dt;
     fish.y += fish.vy * dt;
 
-    // KHẮC PHỤC TRIỆT ĐỂ LỖI CÁ VĂNG TUỐT GÓC TRÁI DƯỚI (CLAMP BIÊN AN TOÀN)
     const marginX = 70;
     const marginY = 60;
     const { width, height } = bs;
@@ -2056,7 +2068,6 @@ export default function ArenaCaPage() {
     }
   }
 
-  // HÀM SẮP XẾP VỊ TRÍ ĐỘI HÌNH TRONG MỤC CHỌN CÁ
   function moveTeamMemberIndex(index: number, direction: -1 | 1) {
     const newIdx = index + direction;
     if (newIdx < 0 || newIdx >= activeBattleTeam.length) return;
@@ -2072,7 +2083,7 @@ export default function ArenaCaPage() {
       className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 font-sans pointer-events-auto select-none flex flex-col justify-between p-1.5 sm:p-2.5 text-white"
       style={{ touchAction: "none" }}
     >
-      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE */}
+      {/* 🐟 MODAL CHỌN ĐỘI HÌNH & SẮP XẾP TRƯỚC KHI VÀO TRẬN */}
       {isFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-slate-900 border-2 border-emerald-400/70 w-full max-w-6xl h-[92dvh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(16,185,129,0.35)] flex flex-col">
@@ -2081,15 +2092,19 @@ export default function ArenaCaPage() {
                 <span className="text-xl">🐟</span>
                 <div>
                   <h2 className="text-base sm:text-xl font-black text-emerald-300 uppercase tracking-wider">
-                    Chọn &amp; Sắp Xếp Đội Hình Xuất Trận ({activeBattleTeam.length}/{battleMode} con)
+                    Chọn Đội Hình Xuất Trận ({activeBattleTeam.length}/{battleMode} con) - Chế độ {battleMode}v{battleMode}
                   </h2>
                   <p className="text-[11px] text-slate-400 font-semibold">
-                    Nhấn vào cá để chọn, sử dụng nút ⬆️ ⬇️ để sắp xếp thứ tự đội hình {battleMode}v{battleMode}!
+                    Sắp xếp vị trí ⬆️ ⬇️ (Chủ lực đánh đầu tiên), phí trận đấu: {isHardcoreMode ? "50,000 Xu (Tử Trận)" : "10,000 Xu"}.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => {
+                  if (activeBattleTeam.length < battleMode) {
+                    alert(`Chế độ hiện tại là ${battleMode}v${battleMode}, bạn cần chọn đủ ${battleMode} con cá!`);
+                    return;
+                  }
                   setIsFishPickerOpen(false);
                   startMatch(undefined, undefined, false);
                 }}
@@ -2099,9 +2114,8 @@ export default function ArenaCaPage() {
               </button>
             </div>
 
-            {/* KHU VỰC SẮP XẾP THỨ TỰ ĐỘI HÌNH ACTIVE */}
             <div className="my-2 bg-slate-950 border border-emerald-500/40 rounded-2xl p-3">
-              <div className="text-xs font-bold text-emerald-300 mb-1.5">👑 Thứ Tự Đội Hình Đang Chọn (Chủ lực số 1 ở vị trí đầu tiên):</div>
+              <div className="text-xs font-bold text-emerald-300 mb-1.5">👑 Thứ Tự Đội Hình Xuất Trận:</div>
               <div className="flex flex-wrap gap-2">
                 {activeBattleTeam.map((fish, idx) => (
                   <div key={fish.id} className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs">
@@ -2215,7 +2229,7 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* TOP HEADER HUDS - HIỂN THỊ TÊN TEAM VÀ TỔNG CÂN NẶNG CẢ TEAM */}
+      {/* TOP HEADER HUDS */}
       <header className="w-full mx-auto z-10 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-xl px-2.5 py-1.5 shadow-md">
         <div className="flex items-center justify-between gap-2">
           {/* PLAYER TEAM HUD */}
@@ -2282,7 +2296,7 @@ export default function ArenaCaPage() {
 
           <div className="shrink-0 flex flex-col items-center justify-center px-1">
             <span className="font-arcade font-extrabold text-sm sm:text-base italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-red-500 leading-none">
-              {battleMode}v{battleMode}
+              {battleMode === 1 ? "1v1" : battleMode === 3 ? "3v3" : "5v5"}
             </span>
             <span
               ref={(el) => {
@@ -2294,7 +2308,7 @@ export default function ArenaCaPage() {
             </span>
           </div>
 
-          {/* ENEMY TEAM / LEADER HUD */}
+          {/* ENEMY TEAM HUD */}
           <div className="flex-1 min-w-0 text-right">
             <div className="flex items-center justify-between gap-1 mb-0.5 flex-row-reverse">
               <div className="flex items-center gap-1.5 truncate flex-row-reverse">
@@ -2394,7 +2408,7 @@ export default function ArenaCaPage() {
             <span className="text-3xl">📡</span>
           </div>
           <div className="font-arcade font-bold text-lg sm:text-2xl text-cyan-300 tracking-wide">ĐANG GHÉP ĐỘI HÌNH ĐỊCH (±50 TẤN)...</div>
-          <p className="text-xs text-slate-400 mt-1">Tìm kiếm đối thủ {battleMode}v{battleMode} cân bằng trọng lượng</p>
+          <p className="text-xs text-slate-400 mt-1">Phí trận: {isHardcoreMode ? "50,000 Xu (Tử Trận)" : "10,000 Xu"}</p>
         </div>
 
         {/* VICTORY / DEFEAT BANNER */}
@@ -2458,28 +2472,28 @@ export default function ArenaCaPage() {
             ) : (
               <>
                 <button
-                  onClick={() => startMatch(undefined, undefined, false)}
+                  onClick={() => {
+                    if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.add("hidden");
+                    setIsFishPickerOpen(true);
+                  }}
                   className="bg-gradient-to-b from-emerald-400 to-emerald-600 text-slate-950 font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-emerald-800 text-xs cursor-pointer"
                 >
-                  ⚔️ Đấu Tiếp {battleMode}v{battleMode}
+                  ⚔️ Đấu Tiếp (Chọn Đội)
                 </button>
                 <button
-                  onClick={scanRandomEnemy}
+                  onClick={() => {
+                    if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.add("hidden");
+                    setIsFishPickerOpen(true);
+                  }}
                   className="bg-gradient-to-b from-cyan-400 to-blue-600 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-blue-900 text-xs cursor-pointer"
                 >
-                  📡 Quét Địch (±50 Tấn)
+                  📡 Ghép Địch (±50 Tấn)
                 </button>
                 <button
                   onClick={scanBossEnemy}
                   className="bg-gradient-to-b from-rose-500 to-red-700 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-red-950 text-xs cursor-pointer"
                 >
-                  👑 Săn Boss (+1,800 Xu)
-                </button>
-                <button
-                  onClick={() => setIsFishPickerOpen(true)}
-                  className="bg-gradient-to-b from-amber-400 to-orange-500 text-slate-950 font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-orange-800 text-xs cursor-pointer"
-                >
-                  🐟 Sắp Xếp Đội Hình
+                  👑 Săn Boss
                 </button>
               </>
             )}
@@ -2496,7 +2510,7 @@ export default function ArenaCaPage() {
               onClick={() => {
                 setBattleMode(mode);
                 setActiveBattleTeam(playerRoster.slice(0, mode));
-                startMatch(undefined, undefined, false);
+                setIsFishPickerOpen(true);
               }}
               className={`px-3 py-1.5 rounded-lg font-arcade font-extrabold text-xs transition cursor-pointer flex-1 sm:flex-initial ${
                 battleMode === mode
@@ -2504,7 +2518,7 @@ export default function ArenaCaPage() {
                   : "bg-slate-800/80 text-slate-300 hover:bg-slate-700"
               }`}
             >
-              {mode}v{mode}
+              {mode === 1 ? "1v1" : mode === 3 ? "3v3" : "5v5"}
             </button>
           ))}
         </div>
@@ -2531,7 +2545,7 @@ export default function ArenaCaPage() {
           </button>
 
           <button
-            onClick={scanRandomEnemy}
+            onClick={() => setIsFishPickerOpen(true)}
             className="flex items-center justify-center gap-1 bg-gradient-to-b from-cyan-400 to-blue-600 border-b-2 border-blue-900 rounded-lg py-1.5 px-1 text-white font-arcade font-bold text-[10px] sm:text-xs cursor-pointer active:scale-95 transition truncate"
           >
             <span>📡</span>
@@ -2593,7 +2607,7 @@ export default function ArenaCaPage() {
             </div>
 
             <p className="text-xs text-slate-300 mb-4">
-              Chọn phòng, thả cá xuống hồ chờ (tối đa {battleMode} con), sắp xếp đội hình và bấm Sẵn Sàng!
+              Chọn phòng, đặt cược xu và xếp đội hình PvP {battleMode}v{battleMode}!
             </p>
 
             <div className="flex flex-col gap-3">
@@ -2630,16 +2644,16 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* 🐟 MODAL HỒ CHỜ THẢ CÁ MULTIPLAYER */}
+      {/* 🐟 MODAL HỒ CHỜ & ĐẶT CƯỢC BACCARAT STYLE MULTIPLAYER */}
       {roomFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex items-center justify-center p-3">
-          <div className="bg-slate-900 border-2 border-purple-500/75 w-full max-w-4xl h-[90vh] rounded-3xl p-5 shadow-2xl flex flex-col text-white">
+          <div className="bg-slate-900 border-2 border-purple-500/75 w-full max-w-5xl h-[92vh] rounded-3xl p-5 shadow-2xl flex flex-col text-white">
             <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-3">
               <div>
                 <h3 className="text-lg font-arcade font-bold text-yellow-400">
-                  🏟️ HỒ CHỜ PHÒNG: {currentRoomId} ({battleMode}v{battleMode})
+                  🏟️ BÀN CƯỢC &amp; HỒ CHỜ PHÒNG: {currentRoomId} ({battleMode}v{battleMode})
                 </h3>
-                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ (tối đa {battleMode} con) rồi bấm Sẵn Sàng!</p>
+                <p className="text-xs text-slate-300">Đặt cược Xu, thả cá xuống hồ, xếp đội hình và bấm Sẵn Sàng!</p>
               </div>
               <button
                 onClick={() => setRoomFishPickerOpen(false)}
@@ -2650,27 +2664,87 @@ export default function ArenaCaPage() {
             </div>
 
             {matchCountdown !== null && (
-              <div className="bg-amber-950/85 border-2 border-amber-400 rounded-2xl p-6 mb-4 text-center">
-                <div className="text-xs text-amber-200 font-bold mb-1">Cả hai đã sẵn sàng! Trận đấu bắt đầu sau:</div>
-                <div className="font-arcade font-extrabold text-6xl text-amber-400 animate-bounce">{matchCountdown}</div>
+              <div className="bg-amber-950/85 border-2 border-amber-400 rounded-2xl p-4 mb-3 text-center">
+                <div className="text-xs text-amber-200 font-bold mb-1">Cả hai đã sẵn sàng cược &amp; đội hình! Trận đấu bắt đầu sau:</div>
+                <div className="font-arcade font-extrabold text-5xl text-amber-400 animate-bounce">{matchCountdown}</div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="bg-slate-950 border border-emerald-500/50 rounded-2xl p-4 flex flex-col">
+            {/* KHUNG ĐẶT CƯỢC BACCARAT STYLE (BÊN A & BÊN B) */}
+            <div className="bg-slate-950 border border-purple-500/50 rounded-2xl p-3 mb-3">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-amber-300">💰 BẢNG ĐẶT CƯỢC XU (Baccarat Style)</span>
+                <button
+                  onClick={followRivalBet}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] px-3 py-1 rounded-lg cursor-pointer shadow"
+                >
+                  📌 Theo cược đối phương ({rivalBetAmount.toLocaleString()} Xu)
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-emerald-950/30 border border-emerald-500/40 rounded-xl p-2.5 flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-1 text-xs">
+                    <span className="font-bold text-emerald-300">Cược Của Bạn:</span>
+                    <span className="font-arcade font-bold text-amber-400 text-sm">{myBetAmount.toLocaleString()} Xu</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {[1000, 10000, 100000, 1000000].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => addMyBet(amt)}
+                        className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-lg cursor-pointer text-amber-300"
+                      >
+                        +{amt >= 1000000 ? `${amt/1000000}M` : amt >= 1000 ? `${amt/1000}k` : amt}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => addMyBet(Math.max(10000, score))}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black px-3 py-1 rounded-lg cursor-pointer"
+                    >
+                      ALL-IN
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMyBetAmount(10000);
+                        if (activeChannel) {
+                          activeChannel.send({ type: "broadcast", event: "fish_action", payload: { type: "UPDATE_BET", userId: user?.id, betAmount: 10000 } });
+                        }
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-rose-950/30 border border-rose-500/40 rounded-xl p-2.5 flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-1 text-xs">
+                    <span className="font-bold text-rose-300">Cược Của Đối Thủ:</span>
+                    <span className="font-arcade font-bold text-amber-400 text-sm">{rivalBetAmount.toLocaleString()} Xu</span>
+                  </div>
+                  <div className="text-[10px] text-slate-300 italic">
+                    {myBetAmount === rivalBetAmount ? "✨ Mức cược đã khớp nhau!" : "⚠️ Mức cược chưa khớp (Có thể bấm 'Theo cược')."}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div className="bg-slate-950 border border-emerald-500/50 rounded-2xl p-3 flex flex-col">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs font-bold text-emerald-400">🌿 Hồ Chờ Của Bạn ({roomMyFishList.length}/{battleMode})</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${isMyReady ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-300"}`}>
                     {isMyReady ? "ĐÃ SẴN SÀNG" : "CHƯA SẴN SÀNG"}
                   </span>
                 </div>
-                <div className="flex-1 min-h-[110px] bg-slate-900/70 rounded-xl p-2 flex flex-wrap gap-2 overflow-y-auto">
+                <div className="flex-1 min-h-[90px] bg-slate-900/70 rounded-xl p-2 flex flex-wrap gap-2 overflow-y-auto">
                   {roomMyFishList.length === 0 ? (
-                    <div className="w-full text-center text-xs text-slate-500 py-8">Chưa có con cá nào trong hồ. Nhấn chọn bên dưới để thả vào!</div>
+                    <div className="w-full text-center text-xs text-slate-500 py-6">Chưa có con cá nào trong hồ. Nhấn chọn bên dưới để thả vào!</div>
                   ) : (
                     roomMyFishList.map((f) => (
                       <div key={f.id} className="relative bg-slate-800 border border-emerald-400/40 rounded-xl p-2 flex items-center gap-2 w-[47%]">
-                        <img src={`/assets/cauca/${f.filename}`} alt={f.name} className="w-10 h-10 object-contain" />
+                        <img src={`/assets/cauca/${f.filename}`} alt={f.name} className="w-9 h-9 object-contain" />
                         <div className="min-w-0 flex-1">
                           <div className="text-xs font-bold truncate text-white">{f.name}</div>
                           <div className="text-[9px] text-amber-300">{formatFishWeight(f.weight)}</div>
@@ -2688,30 +2762,30 @@ export default function ArenaCaPage() {
                 <button
                   onClick={toggleMyReadyState}
                   disabled={roomMyFishList.length === 0}
-                  className={`mt-3 w-full py-2.5 rounded-xl font-arcade font-bold text-xs shadow-lg transition cursor-pointer ${
+                  className={`mt-2.5 w-full py-2 rounded-xl font-arcade font-bold text-xs shadow-lg transition cursor-pointer ${
                     isMyReady
                       ? "bg-amber-500 text-slate-950 border-b-4 border-amber-700"
                       : "bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 border-b-4 border-teal-800 disabled:opacity-50"
                   }`}
                 >
-                  {isMyReady ? "HỦY SẴN SÀNG" : "✅ SẴN SÀNG BEM!"}
+                  {isMyReady ? "HỦY SẴN SÀNG" : "✅ SẴN SÀNG CHIẾN BEM!"}
                 </button>
               </div>
 
-              <div className="bg-slate-950 border border-rose-500/50 rounded-2xl p-4 flex flex-col">
+              <div className="bg-slate-950 border border-rose-500/50 rounded-2xl p-3 flex flex-col">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs font-bold text-rose-400">🔥 Hồ Chờ Đối Thủ ({roomRivalFishList.length}/{battleMode})</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${isRivalReady ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-300"}`}>
                     {isRivalReady ? "ĐÃ SẴN SÀNG" : "ĐANG CHỜ..."}
                   </span>
                 </div>
-                <div className="flex-1 min-h-[110px] bg-slate-900/70 rounded-xl p-2 flex flex-wrap gap-2 overflow-y-auto">
+                <div className="flex-1 min-h-[90px] bg-slate-900/70 rounded-xl p-2 flex flex-wrap gap-2 overflow-y-auto">
                   {roomRivalFishList.length === 0 ? (
-                    <div className="w-full text-center text-xs text-slate-500 py-8">Đối thủ chưa thả cá vào hồ.</div>
+                    <div className="w-full text-center text-xs text-slate-500 py-6">Đối thủ chưa thả cá vào hồ.</div>
                   ) : (
                     roomRivalFishList.map((f) => (
                       <div key={f.id} className="bg-slate-800 border border-rose-400/40 rounded-xl p-2 flex items-center gap-2 w-[47%]">
-                        <img src={`/assets/cauca/${f.filename}`} alt={f.name} className="w-10 h-10 object-contain" />
+                        <img src={`/assets/cauca/${f.filename}`} alt={f.name} className="w-9 h-9 object-contain" />
                         <div className="min-w-0 flex-1">
                           <div className="text-xs font-bold truncate text-white">{f.name}</div>
                           <div className="text-[9px] text-amber-300">{formatFishWeight(f.weight)}</div>
@@ -2720,14 +2794,14 @@ export default function ArenaCaPage() {
                     ))
                   )}
                 </div>
-                <div className="mt-3 py-2.5 text-center text-xs font-bold text-slate-400 bg-slate-900 rounded-xl border border-slate-800">
+                <div className="mt-2.5 py-2 text-center text-xs font-bold text-slate-400 bg-slate-900 rounded-xl border border-slate-800">
                   {isRivalReady ? "✨ Đối thủ đã sẵn sàng chiến đấu!" : "⏳ Đang đợi đối thủ xếp đội hình..."}
                 </div>
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto flex flex-col">
-              <div className="text-xs font-bold text-slate-300 mb-2">Bấm vào cá dưới đây để thả vào hồ chờ:</div>
+              <div className="text-xs font-bold text-slate-300 mb-1.5">Bấm vào cá dưới đây để thả vào hồ chờ:</div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {playerRoster.map((fish) => {
                   const isAlreadyInPool = roomMyFishList.some((f) => f.id === fish.id);
@@ -2739,7 +2813,7 @@ export default function ArenaCaPage() {
                         isAlreadyInPool ? "opacity-40 border-slate-800 cursor-not-allowed" : "border-slate-800 hover:border-purple-400"
                       }`}
                     >
-                      <img src={`/assets/cauca/${fish.filename}`} alt={fish.name} className="w-12 h-12 object-contain" />
+                      <img src={`/assets/cauca/${fish.filename}`} alt={fish.name} className="w-10 h-10 object-contain" />
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-bold truncate text-white">{fish.name}</div>
                         <div className="text-[10px] text-amber-300">{formatFishWeight(fish.weight)}</div>
