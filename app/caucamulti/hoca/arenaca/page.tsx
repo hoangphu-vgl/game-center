@@ -165,7 +165,8 @@ function formatFishWeight(w: number): string {
 
 function calcBalancedCombatStats(weight: number, meta: { hpBonus: number; atkBonus: number }) {
   const safeW = Math.max(1, Number(weight || 1));
-  const baseHp = Math.floor(Math.sqrt(safeW) * 180 + 5000);
+  // NHÂN ĐÔI MÁU (x2) NHƯNG VẪN SCALE THEO CÂN NẶNG BÌNH THƯỜNG
+  const baseHp = Math.floor((Math.sqrt(safeW) * 180 + 5000) * 2);
   const baseAtk = Math.floor(Math.sqrt(safeW) * 12 + 200);
   return {
     maxHp: Math.round(baseHp * meta.hpBonus),
@@ -257,7 +258,7 @@ export default function ArenaCaPage() {
 
   const [playerRoster, setPlayerRoster] = useState<any[]>(() => buildDefaultDemoRoster());
   const [activeBattleTeam, setActiveBattleTeam] = useState<any[]>(() => buildDefaultDemoRoster().slice(0, 5));
-  // VỪA VÀO BẬT MODAL CHỌN ĐỘI TRƯỚC THEO YÊU CẦU
+  
   const [isFishPickerOpen, setIsFishPickerOpen] = useState<boolean>(true);
   const [pickerFilter, setPickerFilter] = useState<"all" | "aquarium" | "fish_inventory">("all");
 
@@ -368,31 +369,42 @@ export default function ArenaCaPage() {
     return picked;
   }
 
-  function buildRandomEnemyConfig(playerFish: any) {
-    const picked = pickRandomDatabaseFish();
-    const playerW = Number(playerFish?.weight || 50);
-    const minW = Math.max(picked.minWeight, playerW * 0.7);
-    const maxW = Math.min(picked.maxWeight * 1.5, 5000);
-    const randomWeight = +(minW + Math.random() * (maxW - minW)).toFixed(1);
+  // GHÉP TEAM ĐỊCH THÔNG MINH: TỔNG CÂN NẶNG ĐỊCH LỆCH KHÔNG QUÁ 50 TẤN SO VỚI NGƯỜI CHƠI
+  function buildBalancedEnemyTeam(playerTeam: any[], mode: number) {
+    const totalPlayerWeightKg = playerTeam.reduce((sum, f) => sum + Number(f.weight || 50), 0);
+    // 50 tấn = 50,000 kg. Cho phép dao động từ totalPlayerWeightKg - 25000 đến +25000 (hoặc ±50 tấn)
+    const targetTotalEnemyKg = Math.max(500, totalPlayerWeightKg + (Math.random() * 50000 - 25000));
+    
+    const eTeamConfigs = [];
+    let remainingKg = targetTotalEnemyKg;
 
-    const rolled = rollRandomFishSkills(picked.filename, picked.name);
-    const finalClass = picked.fishClass || rolled.fishClass;
-    const meta = CLASS_META[finalClass];
-    const stats = calcBalancedCombatStats(randomWeight, meta);
+    for (let i = 0; i < mode; i++) {
+      const picked = pickRandomDatabaseFish();
+      const isLast = i === mode - 1;
+      let w = isLast ? Math.max(10, remainingKg) : Math.max(10, remainingKg / (mode - i) * (0.8 + Math.random() * 0.4));
+      w = Math.min(Math.max(w, picked.minWeight), picked.maxWeight * 1.5);
+      remainingKg -= w;
 
-    return {
-      name: picked.name,
-      filename: picked.filename,
-      tier: picked.tier,
-      isBossBattle: picked.tier === "BOSS",
-      fishClass: finalClass,
-      skills: rolled.skills,
-      weight: randomWeight,
-      maxHp: stats.maxHp,
-      atk: stats.atk,
-      kiGain: finalClass === "ASSASSIN" || finalClass === "MAGE" ? 18 : 15,
-      quotes: picked.quotes,
-    };
+      const rolled = rollRandomFishSkills(picked.filename, picked.name);
+      const finalClass = picked.fishClass || rolled.fishClass;
+      const meta = CLASS_META[finalClass];
+      const stats = calcBalancedCombatStats(w, meta);
+
+      eTeamConfigs.push({
+        name: picked.name,
+        filename: picked.filename,
+        tier: picked.tier,
+        isBossBattle: picked.tier === "BOSS",
+        fishClass: finalClass,
+        skills: rolled.skills,
+        weight: +w.toFixed(1),
+        maxHp: stats.maxHp,
+        atk: stats.atk,
+        kiGain: finalClass === "ASSASSIN" || finalClass === "MAGE" ? 18 : 15,
+        quotes: picked.quotes,
+      });
+    }
+    return eTeamConfigs;
   }
 
   useEffect(() => {
@@ -472,8 +484,11 @@ export default function ArenaCaPage() {
           }
 
           setPlayerRoster(finalRoster);
-          setActiveBattleTeam(finalRoster.slice(0, battleMode));
-          setCurrentEnemyCfg(buildRandomEnemyConfig(finalRoster[0]));
+          const initialTeam = finalRoster.slice(0, battleMode);
+          setActiveBattleTeam(initialTeam);
+          
+          const enemyConfigs = buildBalancedEnemyTeam(initialTeam, battleMode);
+          setCurrentEnemyCfg(enemyConfigs[0]);
 
           if (needSaveMigratedSkills) {
             const updatedInv = {
@@ -516,7 +531,6 @@ export default function ArenaCaPage() {
     window.addEventListener("resize", updateSize);
     updateSize();
 
-    // KHÔNG tự động startMatch khi chưa chọn đội hình xong (isFishPickerOpen đang true)
     let lastTime = 0;
     let animId: number;
 
@@ -569,7 +583,7 @@ export default function ArenaCaPage() {
     const height = battleRef.current.height || 450;
     const startX = isPlayer ? width * 0.18 : width * 0.82;
     const spacing = height / (total + 1);
-    const startY = spacing * (index + 1);
+    const startY = Math.max(70, Math.min(height - 70, spacing * (index + 1)));
 
     const fishClass: FishClassType = cfg.fishClass || "WARRIOR";
     const meta = CLASS_META[fishClass];
@@ -641,11 +655,11 @@ export default function ArenaCaPage() {
     const countE = customRivalTeam ? customRivalTeam.length : battleMode;
     const eTeam = customRivalTeam || [];
     if (!customRivalTeam) {
-      const activeLeader = roster[0];
+      const enemyConfigs = buildBalancedEnemyTeam(pTeam, countE);
       for (let i = 0; i < countE; i++) {
-        const enemyCfg = i === 0 ? currentEnemyCfg : buildRandomEnemyConfig(activeLeader);
-        eTeam.push(createFish(enemyCfg, false, i, countE));
+        eTeam.push(createFish(enemyConfigs[i], false, i, countE));
       }
+      setCurrentEnemyCfg(enemyConfigs[0]);
     }
     bs.teamRival = eTeam;
 
@@ -688,10 +702,7 @@ export default function ArenaCaPage() {
     if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.add("hidden");
     if (hudRefs.current.radarOverlay) hudRefs.current.radarOverlay.classList.remove("hidden");
 
-    const activePlayerFish = activeBattleTeam[0];
-
     setTimeout(() => {
-      setCurrentEnemyCfg(buildRandomEnemyConfig(activePlayerFish));
       if (hudRefs.current.radarOverlay) hudRefs.current.radarOverlay.classList.add("hidden");
       setIsScanning(false);
       startMatch(undefined, undefined, false);
@@ -712,8 +723,8 @@ export default function ArenaCaPage() {
       const randomWeight = +(picked.minWeight + Math.random() * (picked.maxWeight - picked.minWeight)).toFixed(1);
       const rolled = rollRandomFishSkills(picked.filename, picked.name);
 
-      const scaledMaxHp = Math.max(1250, Math.round(activePlayerFish.maxHp * 1.5));
-      const scaledAtk = Math.max(125, Math.round(activePlayerFish.atk * 1.2));
+      const scaledMaxHp = Math.max(2500, Math.round(activePlayerFish.maxHp * 1.5));
+      const scaledAtk = Math.max(250, Math.round(activePlayerFish.atk * 1.2));
 
       setCurrentEnemyCfg({
         name: picked.name,
@@ -731,7 +742,17 @@ export default function ArenaCaPage() {
 
       if (hudRefs.current.radarOverlay) hudRefs.current.radarOverlay.classList.add("hidden");
       setIsScanning(false);
-      startMatch(undefined, undefined, false);
+      startMatch(undefined, [createFish({
+        name: picked.name,
+        filename: picked.filename,
+        tier: "BOSS",
+        fishClass: "BOSS",
+        skills: rolled.skills,
+        weight: randomWeight,
+        maxHp: scaledMaxHp,
+        atk: scaledAtk,
+        quotes: picked.quotes,
+      }, false, 0, 1)], false);
     }, 1000);
   }
 
@@ -918,13 +939,13 @@ export default function ArenaCaPage() {
     fish.speechTimer = 2.0;
   }
 
-  function triggerShake(intensity: number, duration = 0.25) {
+  function triggerShake(intensity: number, duration = 0.3) {
     const bs = battleRef.current;
     bs.shakeIntensity = Math.max(bs.shakeIntensity, intensity);
     bs.shakeTime = Math.max(bs.shakeTime, duration);
   }
 
-  function triggerFlash(color = "#ffffff", alpha = 0.45) {
+  function triggerFlash(color = "#ffffff", alpha = 0.55) {
     battleRef.current.screenFlash = alpha;
     battleRef.current.screenFlashColor = color;
   }
@@ -933,7 +954,7 @@ export default function ArenaCaPage() {
     battleRef.current.floatingTexts.push({
       x,
       y,
-      vy: -65,
+      vy: -75,
       text,
       color,
       size,
@@ -942,15 +963,15 @@ export default function ArenaCaPage() {
     });
   }
 
-  function spawnShockwave(x: number, y: number, color: string, maxRadius = 120) {
+  function spawnShockwave(x: number, y: number, color: string, maxRadius = 140) {
     battleRef.current.shockwaves.push({
       x,
       y,
       r: 10,
       maxR: maxRadius,
       color,
-      life: 0.5,
-      maxLife: 0.5,
+      life: 0.55,
+      maxLife: 0.55,
     });
   }
 
@@ -960,41 +981,41 @@ export default function ArenaCaPage() {
       y,
       color,
       angle,
-      radius: 50 + Math.random() * 25,
-      life: 0.32,
-      maxLife: 0.32,
+      radius: 55 + Math.random() * 30,
+      life: 0.38,
+      maxLife: 0.38,
     });
   }
 
-  function spawnParticles(x: number, y: number, color: string, count = 22, speedScale = 1) {
+  function spawnParticles(x: number, y: number, color: string, count = 28, speedScale = 1.2) {
     const bs = battleRef.current;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = (80 + Math.random() * 220) * speedScale;
+      const speed = (100 + Math.random() * 260) * speedScale;
       bs.particles.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        r: 3 + Math.random() * 4.5,
-        color: Math.random() > 0.3 ? color : "#ffffff",
-        life: 0.4 + Math.random() * 0.5,
-        maxLife: 0.9,
+        r: 3.5 + Math.random() * 5,
+        color: Math.random() > 0.25 ? color : "#ffffff",
+        life: 0.5 + Math.random() * 0.5,
+        maxLife: 1.0,
       });
     }
   }
 
   function spawnGlassCrack(x: number, y: number) {
     const bs = battleRef.current;
-    if (bs.glassCracks.length > 5) bs.glassCracks.shift();
+    if (bs.glassCracks.length > 6) bs.glassCracks.shift();
     const lines = [];
-    const branches = 7 + Math.floor(Math.random() * 4);
+    const branches = 8 + Math.floor(Math.random() * 5);
     for (let i = 0; i < branches; i++) {
       const a = (i / branches) * Math.PI * 2 + Math.random() * 0.4;
-      const len = 30 + Math.random() * 40;
+      const len = 35 + Math.random() * 50;
       lines.push({ x1: x, y1: y, x2: x + Math.cos(a) * len, y2: x + Math.sin(a) * len });
     }
-    bs.glassCracks.push({ x, y, lines, alpha: 0.85 });
+    bs.glassCracks.push({ x, y, lines, alpha: 0.95 });
   }
 
   function decideNextAiAction(fish: any, opponent: any) {
@@ -1019,9 +1040,8 @@ export default function ArenaCaPage() {
   function executeSkill(fish: any, opponent: any, skill: FishSkill, isOverdrive: boolean) {
     fish.activeSkill = skill;
     fish.dir = opponent.x >= fish.x ? 1 : -1;
-    fish.skillCooldown = 3.0 + Math.random() * 2.0;
+    fish.skillCooldown = 2.8 + Math.random() * 1.8;
 
-    // Tỉ lệ chí mạng 15% + bonus hệ sát thủ
     const critChance = 0.15 + (fish.fishClass === "ASSASSIN" ? 0.25 : 0.0);
     const isCrit = Math.random() < critChance || isOverdrive;
 
@@ -1038,30 +1058,30 @@ export default function ArenaCaPage() {
     const dmg = Math.round(fish.atk * mult * fish.powerBuff);
     fish.powerBuff = 1.0;
 
-    spawnFloatingText(fish.x, fish.y - 52, `🔥 ${skill.name.toUpperCase()}`, skill.color, 15);
+    spawnFloatingText(fish.x, fish.y - 55, `🔥 ${skill.name.toUpperCase()}`, skill.color, 16);
 
     if (isCrit) {
-      triggerShake(12, 0.22);
-      triggerFlash(skill.color, 0.4);
-      spawnGlassCrack(opponent.x + (Math.random() - 0.5) * 35, opponent.y + (Math.random() - 0.5) * 35);
+      triggerShake(16, 0.28);
+      triggerFlash(skill.color, 0.5);
+      spawnGlassCrack(opponent.x + (Math.random() - 0.5) * 40, opponent.y + (Math.random() - 0.5) * 40);
     }
 
     if (skill.category === "buff") {
       fish.aiState = "CHARGING";
       fish.aiTimer = 0.5;
-      fish.ki = Math.min(fish.maxKi, fish.ki + 32);
-      fish.powerBuff = Math.min(2.0, +(fish.powerBuff + (skill.powerMult - 1)).toFixed(2));
+      fish.ki = Math.min(fish.maxKi, fish.ki + 35);
+      fish.powerBuff = Math.min(2.2, +(fish.powerBuff + (skill.powerMult - 1)).toFixed(2));
       if (fish.ki >= 70) fish.superSaiyan = true;
 
       if (fish.fishClass === "TANKER" || fish.fishClass === "WARRIOR") {
-        const healAmt = Math.round(fish.maxHp * (fish.fishClass === "TANKER" ? 0.16 : 0.1));
+        const healAmt = Math.round(fish.maxHp * (fish.fishClass === "TANKER" ? 0.2 : 0.12));
         fish.hp = Math.min(fish.maxHp, fish.hp + healAmt);
-        spawnFloatingText(fish.x, fish.y - 28, `💚 +${healAmt} HP`, "#4ade80", 15);
+        spawnFloatingText(fish.x, fish.y - 30, `💚 +${healAmt} HP`, "#4ade80", 16);
       }
 
-      triggerShake(5, 0.15);
-      spawnShockwave(fish.x, fish.y, skill.color, 90);
-      spawnParticles(fish.x, fish.y, skill.color, 18, 0.9);
+      triggerShake(7, 0.18);
+      spawnShockwave(fish.x, fish.y, skill.color, 100);
+      spawnParticles(fish.x, fish.y, skill.color, 22, 1.1);
       sayQuote(fish, `${skill.name}!`);
       return;
     }
@@ -1069,13 +1089,13 @@ export default function ArenaCaPage() {
     if (skill.category === "projectile") {
       fish.aiState = "KI_BARRAGE";
       fish.aiTimer = 0.45;
-      spawnShockwave(fish.x + fish.dir * 30, fish.y, skill.color, 75);
+      spawnShockwave(fish.x + fish.dir * 30, fish.y, skill.color, 85);
       sayQuote(fish, `${skill.name}!`);
 
       const boltCount = 3;
       for (let i = 0; i < boltCount; i++) {
-        const spreadY = (i - 1) * 25;
-        const speed = 620 + i * 40;
+        const spreadY = (i - 1) * 28;
+        const speed = 680 + i * 45;
         const angleToOpp = Math.atan2(opponent.y - fish.y, opponent.x - fish.x);
         battleRef.current.projectiles.push({
           ownerIsPlayer: fish.isPlayer,
@@ -1085,7 +1105,7 @@ export default function ArenaCaPage() {
           y: fish.y + spreadY * 0.4,
           vx: Math.cos(angleToOpp) * speed,
           vy: Math.sin(angleToOpp) * speed + spreadY,
-          radius: 14,
+          radius: 15,
           color: skill.color,
           damage: Math.round(dmg / boltCount),
           life: 1.5,
@@ -1109,17 +1129,17 @@ export default function ArenaCaPage() {
     const dx = opponent.x - fish.x;
     const dy = opponent.y - fish.y;
     const dist = Math.hypot(dx, dy) || 1;
-    const dashSpeed = Math.max(battleRef.current.width * 1.5, 720);
+    const dashSpeed = Math.max(battleRef.current.width * 1.6, 780);
 
     fish.vx = (dx / dist) * dashSpeed;
     fish.vy = (dy / dist) * dashSpeed;
-    spawnShockwave(fish.x, fish.y, skill.color, 85);
-    spawnParticles(fish.x, fish.y, skill.color, 16, 0.9);
+    spawnShockwave(fish.x, fish.y, skill.color, 95);
+    spawnParticles(fish.x, fish.y, skill.color, 20, 1.1);
     sayQuote(fish, `${skill.name}!`);
 
     applyDamage(fish, opponent, dmg, isCrit, isCrit ? `⚡ CRIT SKILL: -${dmg}!` : `🔥 -${dmg}`);
     if (isCrit) {
-      triggerShake(14, 0.25);
+      triggerShake(16, 0.28);
     }
   }
 
@@ -1128,21 +1148,21 @@ export default function ArenaCaPage() {
 
     if (Math.random() < 0.15) {
       const dodgeDir = defender.x >= (attacker?.x || 0) ? 1 : -1;
-      defender.vx = dodgeDir * 260;
-      defender.vy = (Math.random() - 0.5) * 130;
-      spawnFloatingText(defender.x, defender.y - 40, "🏃‍♂️ NÉ ĐÒN!", "#38bdf8", 17);
-      spawnParticles(defender.x, defender.y, "#38bdf8", 12, 1.1);
+      defender.vx = dodgeDir * 280;
+      defender.vy = (Math.random() - 0.5) * 140;
+      spawnFloatingText(defender.x, defender.y - 42, "🏃‍♂️ NÉ ĐÒN!", "#38bdf8", 18);
+      spawnParticles(defender.x, defender.y, "#38bdf8", 14, 1.2);
       return;
     }
 
     const bs = battleRef.current;
     const finalDamage =
-      defender.fishClass === "TANKER" ? Math.max(1, Math.round(rawDamage * 0.88)) : rawDamage;
+      defender.fishClass === "TANKER" ? Math.max(1, Math.round(rawDamage * 0.85)) : rawDamage;
 
     defender.hp = Math.max(0, defender.hp - finalDamage);
-    defender.flashTimer = 0.18;
-    defender.ki = Math.min(defender.maxKi, defender.ki + 16);
-    if (attacker) attacker.ki = Math.min(attacker.maxKi, attacker.ki + 12);
+    defender.flashTimer = 0.2;
+    defender.ki = Math.min(defender.maxKi, defender.ki + 18);
+    if (attacker) attacker.ki = Math.min(attacker.maxKi, attacker.ki + 14);
 
     if (defender.aiState === "DASH_ATTACK") {
       defender.aiState = "CIRCLING";
@@ -1150,34 +1170,34 @@ export default function ArenaCaPage() {
 
     const pushDir = defender.x >= (attacker?.x || 0) ? 1 : -1;
     const knockbackResistance = defender.fishClass === "TANKER" || defender.fishClass === "BOSS" ? 0.65 : 1.0;
-    defender.vx = pushDir * (isCrit ? 350 : 220) * knockbackResistance;
-    defender.vy = (Math.random() - 0.5) * 150;
+    defender.vx = pushDir * (isCrit ? 380 : 240) * knockbackResistance;
+    defender.vy = (Math.random() - 0.5) * 160;
 
-    bs.hitStopTimer = isCrit ? 0.04 : 0.02;
+    bs.hitStopTimer = isCrit ? 0.05 : 0.025;
     if (isCrit) {
-      triggerShake(14, 0.25);
-      spawnGlassCrack(defender.x + (Math.random() - 0.5) * 35, defender.y + (Math.random() - 0.5) * 35);
+      triggerShake(16, 0.28);
+      spawnGlassCrack(defender.x + (Math.random() - 0.5) * 40, defender.y + (Math.random() - 0.5) * 40);
     } else {
-      triggerShake(6, 0.12);
+      triggerShake(7, 0.14);
     }
 
     const midX = ((attacker?.x || defender.x) + defender.x) / 2;
     const midY = ((attacker?.y || defender.y) + defender.y) / 2;
-    spawnShockwave(defender.x, defender.y, isCrit ? "#facc15" : "#38bdf8", isCrit ? 130 : 80);
-    spawnParticles(midX, midY, attacker?.auraColor || "#38bdf8", isCrit ? 26 : 14, isCrit ? 1.3 : 1.0);
+    spawnShockwave(defender.x, defender.y, isCrit ? "#facc15" : "#38bdf8", isCrit ? 140 : 90);
+    spawnParticles(midX, midY, attacker?.auraColor || "#38bdf8", isCrit ? 30 : 16, isCrit ? 1.4 : 1.1);
 
     spawnFloatingText(
       defender.x,
-      defender.y - 42,
+      defender.y - 45,
       customLabel || (isCrit ? `💥 CHÍ MẠNG! -${finalDamage}` : `-${finalDamage}`),
       isCrit ? "#facc15" : "#ffffff",
-      isCrit ? 21 : 16
+      isCrit ? 22 : 17
     );
 
     if (defender.hp <= 0) {
       defender.hp = 0;
       defender.isAlive = false;
-      spawnFloatingText(defender.x, defender.y - 58, "💀 GỤC NGÃ!", "#f43f5e", 20);
+      spawnFloatingText(defender.x, defender.y - 62, "💀 GỤC NGÃ!", "#f43f5e", 22);
     }
     updateHUD();
   }
@@ -1186,19 +1206,19 @@ export default function ArenaCaPage() {
     const bs = battleRef.current;
     bs.gameOver = true;
     setLastMatchWon(playerWon);
-    triggerFlash(playerWon ? "#22c55e" : "#ef4444", 0.55);
+    triggerFlash(playerWon ? "#22c55e" : "#ef4444", 0.6);
     if (hudRefs.current.resultOverlay) hudRefs.current.resultOverlay.classList.remove("hidden");
 
     if (playerWon) {
       const isBossWin = Boolean(currentEnemyCfg?.isBossBattle);
-      const bonusWeight = isBossWin ? 1.5 : 0.8;
+      const bonusWeight = isBossWin ? 1.8 : 0.9;
 
       const currentStreak = winStreak + 1;
       setWinStreak(currentStreak);
       if (hudRefs.current.streakText) hudRefs.current.streakText.textContent = `Chuỗi: ${currentStreak}🔥`;
 
-      const baseCoins = isBossWin ? 1500 : 500;
-      const streakBonus = isBossWin ? (currentStreak - 1) * 400 : (currentStreak - 1) * 150;
+      const baseCoins = isBossWin ? 1800 : 600;
+      const streakBonus = isBossWin ? (currentStreak - 1) * 450 : (currentStreak - 1) * 180;
 
       let bonusCoins = baseCoins + streakBonus;
       if (isHardcoreMode) {
@@ -1311,19 +1331,23 @@ export default function ArenaCaPage() {
     const totalHpE = bs.teamRival.reduce((sum, f) => sum + f.hp, 0);
     const maxTotalHpE = bs.teamRival.reduce((sum, f) => sum + f.maxHp, 0) || 1;
 
-    if (hudRefs.current.pName) hudRefs.current.pName.textContent = `${leadP.name} (${alivePlayers.length}/${bs.teamPlayer.length} sống)`;
-    if (hudRefs.current.pWeight) hudRefs.current.pWeight.textContent = formatFishWeight(leadP.weight);
+    // TỔNG CÂN NẶNG CỦA CẢ TEAM (tính bằng kg hoặc tấn)
+    const totalPlayerWeightKg = bs.teamPlayer.reduce((sum, f) => sum + Number(f.weight || 0), 0);
+    const totalRivalWeightKg = bs.teamRival.reduce((sum, f) => sum + Number(f.weight || 0), 0);
+
+    if (hudRefs.current.pName) hudRefs.current.pName.textContent = `Đội Nhà (${alivePlayers.length}/${bs.teamPlayer.length} sống)`;
+    if (hudRefs.current.pWeight) hudRefs.current.pWeight.textContent = formatFishWeight(totalPlayerWeightKg);
     if (hudRefs.current.pHpBar) hudRefs.current.pHpBar.style.width = `${Math.max(0, (totalHpP / maxTotalHpP) * 100)}%`;
-    if (hudRefs.current.pHpText) hudRefs.current.pHpText.textContent = `Tổng HP: ${totalHpP} / ${maxTotalHpP}`;
+    if (hudRefs.current.pHpText) hudRefs.current.pHpText.textContent = `Tổng HP: ${totalHpP.toLocaleString()} / ${maxTotalHpP.toLocaleString()}`;
     if (hudRefs.current.pKiBar) {
       hudRefs.current.pKiBar.style.width = `${Math.max(0, (leadP.ki / leadP.maxKi) * 100)}%`;
       hudRefs.current.pKiBar.classList.toggle("ki-full", leadP.ki >= 85);
     }
 
     if (hudRefs.current.eName) hudRefs.current.eName.textContent = `${leadE.name} (${aliveRivals.length}/${bs.teamRival.length} sống)`;
-    if (hudRefs.current.eWeight) hudRefs.current.eWeight.textContent = formatFishWeight(leadE.weight);
+    if (hudRefs.current.eWeight) hudRefs.current.eWeight.textContent = formatFishWeight(totalRivalWeightKg);
     if (hudRefs.current.eHpBar) hudRefs.current.eHpBar.style.width = `${Math.max(0, (totalHpE / maxTotalHpE) * 100)}%`;
-    if (hudRefs.current.eHpText) hudRefs.current.eHpText.textContent = `Tổng HP: ${totalHpE} / ${maxTotalHpE}`;
+    if (hudRefs.current.eHpText) hudRefs.current.eHpText.textContent = `Tổng HP: ${totalHpE.toLocaleString()} / ${maxTotalHpE.toLocaleString()}`;
     if (hudRefs.current.eKiBar) {
       hudRefs.current.eKiBar.style.width = `${Math.max(0, (leadE.ki / leadE.maxKi) * 100)}%`;
       hudRefs.current.eKiBar.classList.toggle("ki-full", leadE.ki >= 85);
@@ -1387,21 +1411,20 @@ export default function ArenaCaPage() {
       if (ft.life <= 0) bs.floatingTexts.splice(i, 1);
     }
 
-    // Xử lý đạn chưởng lực & va chạm ĐỌ KI giữa hai luồng đạn ngược chiều
     for (let i = bs.projectiles.length - 1; i >= 0; i--) {
       const proj = bs.projectiles[i];
       proj.life -= dt;
       proj.x += proj.vx * dt;
       proj.y += proj.vy * dt;
-      spawnParticles(proj.x, proj.y, proj.color, 1, 0.3);
+      spawnParticles(proj.x, proj.y, proj.color, 1, 0.4);
 
       for (let j = i - 1; j >= 0; j--) {
         const otherProj = bs.projectiles[j];
         if (proj.ownerIsPlayer !== otherProj.ownerIsPlayer) {
-          if (Math.hypot(proj.x - otherProj.x, proj.y - otherProj.y) < 40) {
-            spawnShockwave((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "#facc15", 110);
-            spawnFloatingText((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "⚡ ĐỌ KI!", "#facc15", 20);
-            triggerShake(10, 0.2);
+          if (Math.hypot(proj.x - otherProj.x, proj.y - otherProj.y) < 45) {
+            spawnShockwave((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "#facc15", 120);
+            spawnFloatingText((proj.x + otherProj.x) / 2, (proj.y + otherProj.y) / 2, "⚡ ĐỌ KI!", "#facc15", 22);
+            triggerShake(12, 0.22);
             bs.projectiles.splice(i, 1);
             bs.projectiles.splice(j, 1);
             break;
@@ -1415,15 +1438,15 @@ export default function ArenaCaPage() {
 
       let hitTarget = null;
       for (const t of targets) {
-        if (t.isAlive && Math.hypot(proj.x - t.x, proj.y - t.y) < t.radius + 22) {
+        if (t.isAlive && Math.hypot(proj.x - t.x, proj.y - t.y) < t.radius + 24) {
           hitTarget = t;
           break;
         }
       }
 
       if (!bs.gameOver && hitTarget) {
-        spawnShockwave(proj.x, proj.y, proj.color, 85);
-        spawnParticles(proj.x, proj.y, proj.color, 16, 1.0);
+        spawnShockwave(proj.x, proj.y, proj.color, 90);
+        spawnParticles(proj.x, proj.y, proj.color, 18, 1.1);
         applyDamage(attacker, hitTarget, proj.damage, false, `🔥 -${proj.damage}`);
         bs.projectiles.splice(i, 1);
         continue;
@@ -1462,7 +1485,7 @@ export default function ArenaCaPage() {
 
   function updateFighterTeamMode(fish: any, aliveEnemies: any[], dt: number) {
     const bs = battleRef.current;
-    fish.swimPhase += dt * (fish.aiState === "CHARGING" ? 20 : 8);
+    fish.swimPhase += dt * (fish.aiState === "CHARGING" ? 22 : 9);
     if (fish.flashTimer > 0) fish.flashTimer = Math.max(0, fish.flashTimer - dt);
     fish.currentScale += (fish.baseScale - fish.currentScale) * 5 * dt;
     if (fish.skillCooldown > 0) fish.skillCooldown -= dt;
@@ -1491,8 +1514,8 @@ export default function ArenaCaPage() {
         const maxSteps = fish.comboMaxSteps || 3;
         if (fish.comboStep <= maxSteps && opponent.isAlive) {
           const side = fish.comboStep % 2 === 1 ? -1 : 1;
-          const offsetY = (fish.comboStep - 2) * 32;
-          fish.x = opponent.x + side * 60;
+          const offsetY = (fish.comboStep - 2) * 35;
+          fish.x = opponent.x + side * 65;
           fish.y = opponent.y + offsetY;
           fish.dir = -side;
 
@@ -1503,14 +1526,14 @@ export default function ArenaCaPage() {
             scale: fish.currentScale,
             filename: fish.filename,
             color: fish.auraColor,
-            life: 0.25,
-            maxLife: 0.25,
+            life: 0.28,
+            maxLife: 0.28,
           });
 
           const mult = fish.activeSkill?.powerMult || 1.45;
           const hitDmg = Math.round((fish.atk * mult * fish.powerBuff) / maxSteps);
           const isFinisher = fish.comboStep === maxSteps;
-          spawnSlashArc(opponent.x, opponent.y, fish.auraColor, side * 0.6);
+          spawnSlashArc(opponent.x, opponent.y, fish.auraColor, side * 0.65);
           applyDamage(
             fish,
             opponent,
@@ -1523,7 +1546,7 @@ export default function ArenaCaPage() {
           fish.powerBuff = 1.0;
           fish.aiState = "CIRCLING";
           fish.aiTimer = 0.45;
-          fish.vx = (fish.isPlayer ? -1 : 1) * 280;
+          fish.vx = (fish.isPlayer ? -1 : 1) * 300;
         }
       }
       return;
@@ -1540,21 +1563,21 @@ export default function ArenaCaPage() {
           scale: fish.currentScale,
           filename: fish.filename,
           color: fish.auraColor,
-          life: 0.2,
-          maxLife: 0.2,
+          life: 0.22,
+          maxLife: 0.22,
         });
       }
 
-      if (!bs.gameOver && minDst < 75) {
+      if (!bs.gameOver && minDst < 80) {
         fish.aiState = "CIRCLING";
         fish.aiTimer = 0.5 + Math.random() * 0.35;
-        fish.vx = (fish.isPlayer ? -1 : 1) * 240;
+        fish.vx = (fish.isPlayer ? -1 : 1) * 260;
         const mult = fish.activeSkill?.powerMult || 1.25;
         const critChance = 0.15 + (fish.fishClass === "ASSASSIN" ? 0.25 : 0.0);
         const isCrit = fish.powerBuff > 1.15 || Math.random() < critChance;
-        const dmg = Math.round(fish.atk * mult * fish.powerBuff * (isCrit ? 1.4 : 1));
+        const dmg = Math.round(fish.atk * mult * fish.powerBuff * (isCrit ? 1.45 : 1));
         fish.powerBuff = 1.0;
-        spawnSlashArc(opponent.x, opponent.y, fish.auraColor, 0.35);
+        spawnSlashArc(opponent.x, opponent.y, fish.auraColor, 0.4);
         applyDamage(fish, opponent, dmg, isCrit, isCrit ? `💥 CHÍ MẠNG! -${dmg}` : `-${dmg}`);
       }
     }
@@ -1574,42 +1597,39 @@ export default function ArenaCaPage() {
 
     if (fish.aiState !== "DASH_ATTACK") {
       const hpRatio = fish.hp / fish.maxHp;
-      const targetRange = hpRatio < 0.25 ? 140 : 90;
+      const targetRange = hpRatio < 0.25 ? 150 : 95;
 
       if (minDst > targetRange) {
         const angle = Math.atan2(opponent.y - fish.y, opponent.x - fish.x);
-        fish.vx = Math.cos(angle) * 190;
-        fish.vy = Math.sin(angle) * 190;
+        fish.vx = Math.cos(angle) * 210;
+        fish.vy = Math.sin(angle) * 210;
       } else if (minDst < 55) {
         const angle = Math.atan2(fish.y - opponent.y, fish.x - opponent.x);
-        fish.vx = Math.cos(angle) * 160;
-        fish.vy = Math.sin(angle) * 160;
+        fish.vx = Math.cos(angle) * 180;
+        fish.vy = Math.sin(angle) * 180;
       } else {
-        const bobX = Math.cos(fish.swimPhase * 0.8) * 40;
-        const bobY = Math.sin(fish.swimPhase * 1.1) * 40;
+        const bobX = Math.cos(fish.swimPhase * 0.8) * 45;
+        const bobY = Math.sin(fish.swimPhase * 1.1) * 45;
         fish.vx += (bobX - fish.vx) * 5 * dt;
         fish.vy += (bobY - fish.vy) * 5 * dt;
 
-        // ĐẤM THƯỜNG / CẬN CHIẾN: NHỊP LÙI RA RỒI ĐÂM VÀO + 15% CRIT + RUNG MÀN HÌNH
-        if (!bs.gameOver && Math.random() < 0.035) {
+        if (!bs.gameOver && Math.random() < 0.04) {
           const critChance = 0.15 + (fish.fishClass === "ASSASSIN" ? 0.25 : 0.0);
           const isCrit = Math.random() < critChance;
-          const dmg = Math.round(fish.atk * (isCrit ? 1.4 : 0.9));
+          const dmg = Math.round(fish.atk * (isCrit ? 1.45 : 0.95));
 
-          // Nhịp lùi ra sau
           const retreatDir = fish.x >= opponent.x ? 1 : -1;
-          fish.vx = retreatDir * 180;
-          fish.vy = (Math.random() - 0.5) * 80;
+          fish.vx = retreatDir * 200;
+          fish.vy = (Math.random() - 0.5) * 90;
 
           setTimeout(() => {
             if (fish.isAlive && opponent.isAlive) {
-              // Đâm vào
               const lungeDir = opponent.x >= fish.x ? 1 : -1;
-              fish.vx = lungeDir * 320;
-              spawnSlashArc((fish.x + opponent.x) / 2, (fish.y + opponent.y) / 2, fish.auraColor, 0.3);
+              fish.vx = lungeDir * 350;
+              spawnSlashArc((fish.x + opponent.x) / 2, (fish.y + opponent.y) / 2, fish.auraColor, 0.35);
               applyDamage(fish, opponent, dmg, isCrit, isCrit ? `👊 CRIT ĐẤM: -${dmg}` : `👊 ĐẤM THƯỜNG: -${dmg}`);
             }
-          }, 180);
+          }, 160);
         }
       }
       fish.dir = opponent.x >= fish.x ? 1 : -1;
@@ -1618,8 +1638,9 @@ export default function ArenaCaPage() {
     fish.x += fish.vx * dt;
     fish.y += fish.vy * dt;
 
-    const marginX = 60;
-    const marginY = 50;
+    // KHẮC PHỤC TRIỆT ĐỂ LỖI CÁ VĂNG TUỐT GÓC TRÁI DƯỚI (CLAMP BIÊN AN TOÀN)
+    const marginX = 70;
+    const marginY = 60;
     const { width, height } = bs;
     fish.x = Math.max(marginX, Math.min(width - marginX, fish.x));
     fish.y = Math.max(marginY, Math.min(height - marginY, fish.y));
@@ -1654,7 +1675,7 @@ export default function ArenaCaPage() {
     for (let i = 0; i < 5; i++) {
       const rayX = width * (0.15 + i * 0.18) + Math.sin(time * 0.7 + i) * 25;
       const rayGrad = ctx.createLinearGradient(rayX, 0, rayX + 40, height * 0.85);
-      rayGrad.addColorStop(0, "rgba(186, 230, 253, 0.18)");
+      rayGrad.addColorStop(0, "rgba(186, 230, 253, 0.2)");
       rayGrad.addColorStop(1, "rgba(186, 230, 253, 0)");
       ctx.fillStyle = rayGrad;
       ctx.beginPath();
@@ -1672,15 +1693,15 @@ export default function ArenaCaPage() {
     for (const b of bs.bubbles) {
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(224, 242, 254, 0.5)";
-      ctx.lineWidth = 1.3;
+      ctx.strokeStyle = "rgba(224, 242, 254, 0.55)";
+      ctx.lineWidth = 1.4;
       ctx.stroke();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
       ctx.fill();
     }
 
     for (const ai of bs.afterimages) {
-      const alpha = Math.max(0, ai.life / ai.maxLife) * 0.5;
+      const alpha = Math.max(0, ai.life / ai.maxLife) * 0.55;
       ctx.save();
       ctx.translate(ai.x, ai.y);
       ctx.scale(-ai.dir * ai.scale, ai.scale);
@@ -1688,7 +1709,7 @@ export default function ArenaCaPage() {
       const img = getCachedFishImage(ai.filename);
       if (img && img.complete && img.naturalWidth !== 0) {
         const ratio = img.naturalWidth / img.naturalHeight;
-        const drawW = 90;
+        const drawW = 95;
         const drawH = drawW / (ratio || 1.33);
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
       }
@@ -1704,13 +1725,13 @@ export default function ArenaCaPage() {
 
     for (const proj of bs.projectiles) {
       ctx.save();
-      const grad = ctx.createRadialGradient(proj.x, proj.y, 2, proj.x, proj.y, proj.radius * 2.0);
+      const grad = ctx.createRadialGradient(proj.x, proj.y, 2, proj.x, proj.y, proj.radius * 2.2);
       grad.addColorStop(0, "#ffffff");
       grad.addColorStop(0.4, proj.color);
       grad.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(proj.x, proj.y, proj.radius * 2.0, 0, Math.PI * 2);
+      ctx.arc(proj.x, proj.y, proj.radius * 2.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -1722,16 +1743,16 @@ export default function ArenaCaPage() {
       ctx.rotate(sl.angle);
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = sl.color;
-      ctx.lineWidth = 9 * alpha + 3;
+      ctx.lineWidth = 10 * alpha + 3;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.arc(0, 0, sl.radius, -1.0, 1.0);
+      ctx.arc(0, 0, sl.radius, -1.1, 1.1);
       ctx.stroke();
 
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 4 * alpha + 1;
+      ctx.lineWidth = 4.5 * alpha + 1;
       ctx.beginPath();
-      ctx.arc(0, 0, sl.radius, -0.8, 0.8);
+      ctx.arc(0, 0, sl.radius, -0.9, 0.9);
       ctx.stroke();
       ctx.restore();
     }
@@ -1745,7 +1766,7 @@ export default function ArenaCaPage() {
       ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
       ctx.strokeStyle = sw.color;
       ctx.globalAlpha = alpha;
-      ctx.lineWidth = 5 * alpha + 1;
+      ctx.lineWidth = 6 * alpha + 1;
       ctx.stroke();
       ctx.restore();
     }
@@ -1774,8 +1795,8 @@ export default function ArenaCaPage() {
       ctx.globalAlpha = alpha;
       ctx.font = `800 ${ft.size}px "Chakra Petch", sans-serif`;
       ctx.textAlign = "center";
-      ctx.lineWidth = 4.5;
-      ctx.strokeStyle = "rgba(2, 6, 23, 0.9)";
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(2, 6, 23, 0.95)";
       ctx.strokeText(ft.text, ft.x, ft.y);
       ctx.fillStyle = ft.color;
       ctx.fillText(ft.text, ft.x, ft.y);
@@ -1785,7 +1806,7 @@ export default function ArenaCaPage() {
     for (const crack of bs.glassCracks) {
       ctx.save();
       ctx.strokeStyle = `rgba(255, 255, 255, ${crack.alpha})`;
-      ctx.lineWidth = 1.8;
+      ctx.lineWidth = 2;
       for (const l of crack.lines) {
         ctx.beginPath();
         ctx.moveTo(l.x1, l.y1);
@@ -1812,15 +1833,15 @@ export default function ArenaCaPage() {
 
     for (const sw of battleRef.current.seaweeds) {
       ctx.save();
-      ctx.strokeStyle = `hsl(${sw.hue}, 70%, 38%)`;
-      ctx.lineWidth = 7;
+      ctx.strokeStyle = `hsl(${sw.hue}, 75%, 40%)`;
+      ctx.lineWidth = 7.5;
       ctx.lineCap = "round";
       ctx.beginPath();
       let px = sw.x;
       let py = floorY + 8;
       ctx.moveTo(px, py);
       for (let s = 1; s <= sw.segments; s++) {
-        const sway = Math.sin(time * 2.2 + sw.phase + s * 0.55) * (s * 2.4);
+        const sway = Math.sin(time * 2.2 + sw.phase + s * 0.55) * (s * 2.6);
         px = sw.x + sway;
         py -= sw.segLen;
         ctx.lineTo(px, py);
@@ -1856,24 +1877,24 @@ export default function ArenaCaPage() {
       return;
     }
 
-    const barW = 50;
+    const barW = 52;
     const hpPercent = Math.max(0, fish.hp / fish.maxHp);
-    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-    ctx.fillRect(-barW / 2, -42, barW, 6);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+    ctx.fillRect(-barW / 2, -44, barW, 6.5);
     ctx.fillStyle = fish.isPlayer ? "#4ade80" : "#f43f5e";
-    ctx.fillRect(-barW / 2, -42, barW * hpPercent, 6);
+    ctx.fillRect(-barW / 2, -44, barW * hpPercent, 6.5);
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "700 10px 'Chakra Petch', sans-serif";
+    ctx.font = "700 10.5px 'Chakra Petch', sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(fish.name, 0, -47);
+    ctx.fillText(fish.name, 0, -49);
 
     const kiRatio = fish.ki / fish.maxKi;
     const isCharging = fish.aiState === "CHARGING";
     const showAura = kiRatio > 0.35 || isCharging || fish.powerBuff > 1.1;
 
     if (showAura) {
-      const auraScale = (isCharging ? 1.3 : 0.9 + kiRatio * 0.3) * fish.currentScale;
+      const auraScale = (isCharging ? 1.35 : 0.95 + kiRatio * 0.3) * fish.currentScale;
       ctx.save();
       ctx.scale(auraScale, auraScale);
 
@@ -1881,9 +1902,9 @@ export default function ArenaCaPage() {
       ctx.beginPath();
       for (let i = 0; i <= flameCount; i++) {
         const angle = (i / flameCount) * Math.PI * 2;
-        const flicker = Math.sin(time * 24 + i * 1.7) * 10;
-        const radX = 60 + flicker;
-        const radY = 40 + flicker * 0.7;
+        const flicker = Math.sin(time * 26 + i * 1.7) * 11;
+        const radX = 62 + flicker;
+        const radY = 42 + flicker * 0.7;
         const px = Math.cos(angle) * radX;
         const py = Math.sin(angle) * radY - 4;
         if (i === 0) ctx.moveTo(px, py);
@@ -1891,25 +1912,25 @@ export default function ArenaCaPage() {
       }
       ctx.closePath();
 
-      const auraGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 72);
+      const auraGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 75);
       auraGrad.addColorStop(0, "#ffffff");
       auraGrad.addColorStop(0.4, fish.auraColor);
       auraGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = auraGrad;
-      ctx.globalAlpha = isCharging ? 0.9 : 0.6;
+      ctx.globalAlpha = isCharging ? 0.95 : 0.65;
       ctx.fill();
       ctx.restore();
     }
 
     ctx.scale(-fish.dir * fish.currentScale, fish.currentScale);
-    if (fish.flashTimer > 0) ctx.filter = "brightness(2.5)";
+    if (fish.flashTimer > 0) ctx.filter = "brightness(2.6)";
 
     ctx.imageSmoothingEnabled = false;
 
     const img = getCachedFishImage(fish.filename);
     if (img && img.complete && img.naturalWidth !== 0) {
       const ratio = img.naturalWidth / img.naturalHeight;
-      const drawW = 90;
+      const drawW = 95;
       const drawH = drawW / (ratio || 1.33);
       ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
     } else {
@@ -1929,19 +1950,19 @@ export default function ArenaCaPage() {
     if (vfx.type === "lightning" && vfx.bolts) {
       for (const pts of vfx.bolts) {
         ctx.strokeStyle = vfx.color;
-        ctx.lineWidth = 12 * alpha + 3;
+        ctx.lineWidth = 14 * alpha + 3;
         ctx.lineCap = "round";
         ctx.beginPath();
         pts.forEach((p: any, idx: number) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
         ctx.stroke();
 
         ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 5 * alpha + 1;
+        ctx.lineWidth = 6 * alpha + 1;
         ctx.beginPath();
         pts.forEach((p: any, idx: number) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
         ctx.stroke();
       }
-      const boomR = 35 + progress * 110;
+      const boomR = 40 + progress * 120;
       const boomGrad = ctx.createRadialGradient(vfx.x2, vfx.y2, 5, vfx.x2, vfx.y2, boomR);
       boomGrad.addColorStop(0, "#ffffff");
       boomGrad.addColorStop(0.5, vfx.color);
@@ -1956,7 +1977,7 @@ export default function ArenaCaPage() {
         const cx = m.sx + (m.tx - m.sx) * t;
         const cy = m.sy + (m.ty - m.sy) * t;
         ctx.strokeStyle = vfx.color;
-        ctx.lineWidth = m.r * 1.3;
+        ctx.lineWidth = m.r * 1.4;
         ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(m.sx, m.sy);
@@ -1965,20 +1986,20 @@ export default function ArenaCaPage() {
 
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(cx, cy, m.r * 0.8, 0, Math.PI * 2);
+        ctx.arc(cx, cy, m.r * 0.85, 0, Math.PI * 2);
         ctx.fill();
       }
     } else {
       ctx.lineCap = "round";
       ctx.strokeStyle = vfx.color;
-      ctx.lineWidth = 58 * alpha + 16;
+      ctx.lineWidth = 64 * alpha + 18;
       ctx.beginPath();
       ctx.moveTo(vfx.x1, vfx.y1);
       ctx.lineTo(vfx.x2, vfx.y2);
       ctx.stroke();
 
       ctx.strokeStyle = vfx.core || "#ffffff";
-      ctx.lineWidth = 26 * alpha + 6;
+      ctx.lineWidth = 30 * alpha + 7;
       ctx.beginPath();
       ctx.moveTo(vfx.x1, vfx.y1);
       ctx.lineTo(vfx.x2, vfx.y2);
@@ -1993,18 +2014,18 @@ export default function ArenaCaPage() {
     const { width } = battleRef.current;
 
     ctx.save();
-    ctx.font = '700 12px "Chakra Petch", sans-serif';
+    ctx.font = '700 12.5px "Chakra Petch", sans-serif';
     const padX = 10;
     const textW = ctx.measureText(text).width;
     const boxW = textW + padX * 2;
     const boxH = 26;
 
     let bx = fish.x - boxW / 2;
-    let by = fish.y - 72;
+    let by = fish.y - 75;
     bx = Math.max(8, Math.min(width - boxW - 8, bx));
     by = Math.max(8, by);
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
     ctx.strokeStyle = "#0f172a";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -2028,11 +2049,22 @@ export default function ArenaCaPage() {
       setActiveBattleTeam(activeBattleTeam.filter((f) => f.id !== fish.id));
     } else {
       if (activeBattleTeam.length >= battleMode) {
-        alert(`Chế độ hiện tại (${battleMode}v${battleMode}) chỉ cho phép chọn tối đa ${battleMode} con cá khác nhau trong đội hình!`);
+        alert(`Chế độ hiện tại (${battleMode}v${battleMode}) chỉ cho phép chọn tối đa ${battleMode} con cá trong đội hình!`);
         return;
       }
       setActiveBattleTeam([...activeBattleTeam, fish]);
     }
+  }
+
+  // HÀM SẮP XẾP VỊ TRÍ ĐỘI HÌNH TRONG MỤC CHỌN CÁ
+  function moveTeamMemberIndex(index: number, direction: -1 | 1) {
+    const newIdx = index + direction;
+    if (newIdx < 0 || newIdx >= activeBattleTeam.length) return;
+    const updated = [...activeBattleTeam];
+    const temp = updated[index];
+    updated[index] = updated[newIdx];
+    updated[newIdx] = temp;
+    setActiveBattleTeam(updated);
   }
 
   return (
@@ -2040,19 +2072,19 @@ export default function ArenaCaPage() {
       className="fixed inset-0 h-[100dvh] w-screen overflow-hidden bg-slate-950 font-sans pointer-events-auto select-none flex flex-col justify-between p-1.5 sm:p-2.5 text-white"
       style={{ touchAction: "none" }}
     >
-      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE (MỞ SẴN KHI VỪA VÀO TRANG) */}
+      {/* 🐟 MODAL CHỌN ĐỘI HÌNH PVE */}
       {isFishPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-slate-900 border-2 border-emerald-400/70 w-full max-w-6xl h-[90dvh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(16,185,129,0.35)] flex flex-col">
+          <div className="bg-slate-900 border-2 border-emerald-400/70 w-full max-w-6xl h-[92dvh] rounded-3xl p-4 sm:p-6 shadow-[0_0_40px_rgba(16,185,129,0.35)] flex flex-col">
             <div className="flex justify-between items-center pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🐟</span>
                 <div>
                   <h2 className="text-base sm:text-xl font-black text-emerald-300 uppercase tracking-wider">
-                    Chọn Đội Hình Xuất Trận ({activeBattleTeam.length}/{battleMode} con)
+                    Chọn &amp; Sắp Xếp Đội Hình Xuất Trận ({activeBattleTeam.length}/{battleMode} con)
                   </h2>
                   <p className="text-[11px] text-slate-400 font-semibold">
-                    Chọn các con cá khác nhau từ hồ cá &amp; kho cá cho chế độ {battleMode}v{battleMode} (Không trùng lặp)!
+                    Nhấn vào cá để chọn, sử dụng nút ⬆️ ⬇️ để sắp xếp thứ tự đội hình {battleMode}v{battleMode}!
                   </p>
                 </div>
               </div>
@@ -2067,7 +2099,43 @@ export default function ArenaCaPage() {
               </button>
             </div>
 
-            <div className="flex gap-2 my-3">
+            {/* KHU VỰC SẮP XẾP THỨ TỰ ĐỘI HÌNH ACTIVE */}
+            <div className="my-2 bg-slate-950 border border-emerald-500/40 rounded-2xl p-3">
+              <div className="text-xs font-bold text-emerald-300 mb-1.5">👑 Thứ Tự Đội Hình Đang Chọn (Chủ lực số 1 ở vị trí đầu tiên):</div>
+              <div className="flex flex-wrap gap-2">
+                {activeBattleTeam.map((fish, idx) => (
+                  <div key={fish.id} className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs">
+                    <span className="font-arcade font-bold text-amber-400">#{idx + 1}</span>
+                    <span className="font-bold truncate max-w-[110px]">{fish.name}</span>
+                    <span className="text-[10px] text-slate-400">({formatFishWeight(fish.weight)})</span>
+                    <div className="flex items-center gap-1 ml-1">
+                      <button
+                        onClick={() => moveTeamMemberIndex(idx, -1)}
+                        disabled={idx === 0}
+                        className="w-5 h-5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded text-[10px] flex items-center justify-center cursor-pointer"
+                      >
+                        ⬆️
+                      </button>
+                      <button
+                        onClick={() => moveTeamMemberIndex(idx, 1)}
+                        disabled={idx === activeBattleTeam.length - 1}
+                        className="w-5 h-5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded text-[10px] flex items-center justify-center cursor-pointer"
+                      >
+                        ⬇️
+                      </button>
+                      <button
+                        onClick={() => handleToggleBattleTeamMember(fish)}
+                        className="w-5 h-5 bg-rose-900/60 hover:bg-rose-800 rounded text-[10px] text-rose-300 flex items-center justify-center cursor-pointer ml-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 my-2">
               {[
                 { key: "all", label: `Tất Cả (${playerRoster.length})` },
                 { key: "aquarium", label: `🌊 Hồ Cá (${playerRoster.filter((f) => f._source === "aquarium").length})` },
@@ -2076,7 +2144,7 @@ export default function ArenaCaPage() {
                 <button
                   key={tab.key}
                   onClick={() => setPickerFilter(tab.key as any)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-black transition cursor-pointer ${
+                  className={`flex-1 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
                     pickerFilter === tab.key
                       ? "bg-emerald-500 text-slate-950 shadow-lg"
                       : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
@@ -2147,10 +2215,10 @@ export default function ArenaCaPage() {
         </div>
       )}
 
-      {/* TOP HEADER HUDS */}
+      {/* TOP HEADER HUDS - HIỂN THỊ TÊN TEAM VÀ TỔNG CÂN NẶNG CẢ TEAM */}
       <header className="w-full mx-auto z-10 bg-slate-900/85 backdrop-blur-md border border-cyan-500/30 rounded-xl px-2.5 py-1.5 shadow-md">
         <div className="flex items-center justify-between gap-2">
-          {/* PLAYER FISH HUD */}
+          {/* PLAYER TEAM HUD */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-1 mb-0.5">
               <div className="flex items-center gap-1.5 truncate">
@@ -2181,7 +2249,7 @@ export default function ArenaCaPage() {
                 }}
                 className="text-[10px] font-semibold text-emerald-300 shrink-0"
               >
-                0 kg
+                0 tấn
               </span>
             </div>
             <div className="w-full h-3 bg-slate-800 rounded-full p-0.5 border border-slate-700 overflow-hidden relative">
@@ -2226,7 +2294,7 @@ export default function ArenaCaPage() {
             </span>
           </div>
 
-          {/* ENEMY FISH HUD */}
+          {/* ENEMY TEAM / LEADER HUD */}
           <div className="flex-1 min-w-0 text-right">
             <div className="flex items-center justify-between gap-1 mb-0.5 flex-row-reverse">
               <div className="flex items-center gap-1.5 truncate flex-row-reverse">
@@ -2251,7 +2319,7 @@ export default function ArenaCaPage() {
                 }}
                 className="text-[10px] font-semibold text-red-300 shrink-0"
               >
-                0 kg
+                0 tấn
               </span>
             </div>
             <div className="w-full h-3 bg-slate-800 rounded-full p-0.5 border border-slate-700 overflow-hidden relative">
@@ -2302,14 +2370,14 @@ export default function ArenaCaPage() {
             const tapX = (e.clientX - rect.left) * scaleX;
             const tapY = (e.clientY - rect.top) * scaleY;
 
-            spawnShockwave(tapX, tapY, "#bae6fd", 60);
-            spawnParticles(tapX, tapY, "#fde047", 10, 0.6);
+            spawnShockwave(tapX, tapY, "#bae6fd", 70);
+            spawnParticles(tapX, tapY, "#fde047", 12, 0.7);
             const bs = battleRef.current;
             if (!bs.gameOver && !isScanning && bs.teamPlayer.length > 0) {
               bs.teamPlayer.forEach((f) => {
-                if (f.isAlive) f.ki = Math.min(f.maxKi, f.ki + 10);
+                if (f.isAlive) f.ki = Math.min(f.maxKi, f.ki + 12);
               });
-              spawnFloatingText(tapX, tapY - 14, "+10% Ki", "#fde047", 14);
+              spawnFloatingText(tapX, tapY - 14, "+12% Ki", "#fde047", 14);
               updateHUD();
             }
           }}
@@ -2325,8 +2393,8 @@ export default function ArenaCaPage() {
           <div className="relative w-24 h-24 rounded-full border-2 border-cyan-400/60 flex items-center justify-center mb-3 bg-cyan-950/40 shadow-[0_0_30px_rgba(34,211,238,0.3)]">
             <span className="text-3xl">📡</span>
           </div>
-          <div className="font-arcade font-bold text-lg sm:text-2xl text-cyan-300 tracking-wide">ĐANG QUÉT ĐỘI HÌNH ĐỊCH...</div>
-          <p className="text-xs text-slate-400 mt-1">Tìm kiếm đối thủ {battleMode}v{battleMode} hoàn toàn ngẫu nhiên</p>
+          <div className="font-arcade font-bold text-lg sm:text-2xl text-cyan-300 tracking-wide">ĐANG GHÉP ĐỘI HÌNH ĐỊCH (±50 TẤN)...</div>
+          <p className="text-xs text-slate-400 mt-1">Tìm kiếm đối thủ {battleMode}v{battleMode} cân bằng trọng lượng</p>
         </div>
 
         {/* VICTORY / DEFEAT BANNER */}
@@ -2399,19 +2467,19 @@ export default function ArenaCaPage() {
                   onClick={scanRandomEnemy}
                   className="bg-gradient-to-b from-cyan-400 to-blue-600 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-blue-900 text-xs cursor-pointer"
                 >
-                  📡 Quét Địch Ngẫu Nhiên
+                  📡 Quét Địch (±50 Tấn)
                 </button>
                 <button
                   onClick={scanBossEnemy}
                   className="bg-gradient-to-b from-rose-500 to-red-700 text-white font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-red-950 text-xs cursor-pointer"
                 >
-                  👑 Săn Boss (+1,500 Xu)
+                  👑 Săn Boss (+1,800 Xu)
                 </button>
                 <button
                   onClick={() => setIsFishPickerOpen(true)}
                   className="bg-gradient-to-b from-amber-400 to-orange-500 text-slate-950 font-arcade font-bold px-4 py-2 rounded-xl shadow-lg border-b-4 border-orange-800 text-xs cursor-pointer"
                 >
-                  🐟 Đổi Đội Hình
+                  🐟 Sắp Xếp Đội Hình
                 </button>
               </>
             )}
@@ -2459,7 +2527,7 @@ export default function ArenaCaPage() {
             }`}
           >
             <span>🤖</span>
-            <span className="truncate">{isAutoFarm ? "Auto Farm: BẬT" : "Auto Farm: TẮT"}</span>
+            <span className="truncate">{isAutoFarm ? "Auto: BẬT" : "Auto: TẮT"}</span>
           </button>
 
           <button
@@ -2467,7 +2535,7 @@ export default function ArenaCaPage() {
             className="flex items-center justify-center gap-1 bg-gradient-to-b from-cyan-400 to-blue-600 border-b-2 border-blue-900 rounded-lg py-1.5 px-1 text-white font-arcade font-bold text-[10px] sm:text-xs cursor-pointer active:scale-95 transition truncate"
           >
             <span>📡</span>
-            <span className="truncate">Quét PvE</span>
+            <span className="truncate">Ghép Địch</span>
           </button>
 
           <button
@@ -2484,7 +2552,7 @@ export default function ArenaCaPage() {
               }}
               className="truncate"
             >
-              Chọn Đội ({activeBattleTeam.length})
+              Đội Hình ({activeBattleTeam.length})
             </span>
           </button>
 
@@ -2525,7 +2593,7 @@ export default function ArenaCaPage() {
             </div>
 
             <p className="text-xs text-slate-300 mb-4">
-              Chọn phòng, thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp), đợi người chơi thứ 2 rồi bấm Sẵn Sàng!
+              Chọn phòng, thả cá xuống hồ chờ (tối đa {battleMode} con), sắp xếp đội hình và bấm Sẵn Sàng!
             </p>
 
             <div className="flex flex-col gap-3">
@@ -2571,7 +2639,7 @@ export default function ArenaCaPage() {
                 <h3 className="text-lg font-arcade font-bold text-yellow-400">
                   🏟️ HỒ CHỜ PHÒNG: {currentRoomId} ({battleMode}v{battleMode})
                 </h3>
-                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ (tối đa {battleMode} con không trùng lặp) rồi bấm Sẵn Sàng!</p>
+                <p className="text-xs text-slate-300">Thả cá xuống hồ chờ (tối đa {battleMode} con) rồi bấm Sẵn Sàng!</p>
               </div>
               <button
                 onClick={() => setRoomFishPickerOpen(false)}
