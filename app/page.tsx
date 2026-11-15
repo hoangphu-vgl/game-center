@@ -26,7 +26,7 @@ const AURA_QUOTES = [
   "🥋 'Võ thuật lôi đài không phải để đánh bại kẻ thù, mà là để hoàn thiện bản thân.' - Thần Rùa",
   "🔥 'Hàng tỷ thiên hà trong vũ trụ, và ta chính là Bá Chủ Đại Hội Võ Thuật!' - Broly",
   "⚡ 'Một chiến binh thực sự không bao giờ cúi đầu trước lôi đài số phận!' - Vegeta",
-  "🐉 'Bản Năng Vô Thượng... trạng thái khi 13 Ấn Ký tự động phản ứng!' - Whis",
+  "🐉 'Bản Năng Vô Thượng... trạng thái khi Ki tự động phản ứng!' - Whis",
 ];
 
 const getSaiyanLevel = (power: number) => {
@@ -62,7 +62,6 @@ export default function Home() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  const [dragonBallsCount, setDragonBallsCount] = useState<number>(0);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [dailyQuote, setDailyQuote] = useState("");
@@ -128,7 +127,6 @@ export default function Home() {
         setPoints(0);
         setLuckySpins(3);
         setLastCheckIn("");
-        setDragonBallsCount(0);
         setInventory({});
         setLoading(false);
         return;
@@ -176,9 +174,6 @@ export default function Home() {
           setDisplayName(activeName);
           setAvatarUrl(activeAvatar);
         }
-
-        const savedBalls = localStorage.getItem(`dragon_balls_${currentUser.id}`);
-        setDragonBallsCount(savedBalls ? parseInt(savedBalls) : 0);
 
         const todayStr = getTodayString();
         const hideNoticeDate = localStorage.getItem(`hide_notice_${currentUser.id}`);
@@ -237,33 +232,6 @@ export default function Home() {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  const handleExchangeBalls = (type: 'single' | 'all') => {
-    if (!user) return;
-    if (type === 'single') {
-      if (dragonBallsCount < 1) {
-        alert("🛡️ Bạn chưa có viên Ngọc Rồng nào để đổi!");
-        return;
-      }
-      if (confirm("Xác nhận quy đổi 1 Viên Ngọc Rồng lấy 10.000 VNĐ tiền mặt?")) {
-        const newCount = dragonBallsCount - 1;
-        setDragonBallsCount(newCount);
-        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
-        alert("🎉 Quy đổi thành công! Nhận ngay 10.000 VNĐ (Liên hệ Admin để nhận thưởng nhé)!");
-      }
-    } else if (type === 'all') {
-      if (dragonBallsCount < 7) {
-        alert("🐉 Bạn cần sưu tập đủ đúng 7 Viên Ngọc Rồng để thực hiện Điều Ước Rồng Thần nhận 100k VNĐ!");
-        return;
-      }
-      if (confirm("🌟 THỰC HIỆN ĐIỀU ƯỚC RỒNG THẦN! Dùng đủ 7 Viên Ngọc Rồng để nhận ngay 100.000 VNĐ?")) {
-        const newCount = dragonBallsCount - 7;
-        setDragonBallsCount(newCount);
-        localStorage.setItem(`dragon_balls_${user.id}`, newCount.toString());
-        alert("🐲 ĐIỀU ƯỚC ĐÃ THỰC HIỆN! Chúc mừng bạn húp trọn 100.000 VNĐ từ Rồng Thần (Chụp màn hình và báo Admin nhận thưởng ngay)!");
-      }
-    }
-  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -500,12 +468,6 @@ export default function Home() {
           <Link href="/baccarat" className="bg-indigo-950 hover:bg-indigo-900 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🎲 Baccarat Thần Thánh
           </Link>
-          <Link href="/tienlen" className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            ⚔️ Võ Thuật 13 Ấn Ký
-          </Link>
-          <Link href="/poker" className="bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-500/50 px-3 py-1 rounded-lg transition text-[11px]">
-            ♠️ Sòng Poker Whis
-          </Link>
           <Link href="/jackpot" className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-500/50 px-3 py-1 rounded-lg transition text-[11px]">
             🔮 Jackpot Rồng Thần
           </Link>
@@ -521,13 +483,13 @@ export default function Home() {
             
             <div className="text-center space-y-1 border-b border-slate-800 pb-2">
               <div className="flex justify-center">
-                <img src="/assets/home/dragonball.png" alt="Dragon Ball" className="w-10 h-10 object-contain animate-spin-slow" />
+                <img src="/assets/home/shenron.png" alt="Dragon" className="w-10 h-10 object-contain animate-bounce" />
               </div>
               <span className="text-[9px] bg-amber-500/20 text-amber-400 font-black px-2.5 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-widest">
                 ⚡ Sắc Lệnh Từ Thần Hủy Diệt ⚡
               </span>
               <h2 className="text-base sm:text-lg font-black text-yellow-300 mt-1">
-                LUẬT CHƠI VÀ SĂN NGỌC RỒNG VŨ TRỤ
+                LUẬT CHƠI & CHUỖI TỤ KI VŨ TRỤ
               </h2>
             </div>
 
@@ -550,18 +512,6 @@ export default function Home() {
                   🔥 <b className="text-yellow-400">Chủ Nhật: +100k Ki khủng!</b><br/>
                   <i className="text-slate-500">* Đúng 00:00 sáng Thứ Hai Điểm Ki tự động reset về 0.</i>
                 </p>
-              </div>
-
-              <div className="bg-gradient-to-r from-amber-950/40 via-yellow-950/30 to-amber-950/40 p-2.5 rounded-xl border border-amber-500/50 space-y-1 shadow-md">
-                <h3 className="font-bold text-yellow-400 flex items-center gap-1 text-xs">
-                  <img src="/assets/home/dragon-ball-7.png" alt="Ball" className="w-4 h-4 object-contain" /> SĂN 7 VIÊN NGỌC RỒNG - ĐỔI 100K VNĐ!
-                </h3>
-                <p className="text-amber-200/90 leading-tight">
-                  Chiến binh đạt <b className="text-white">Sức Mạnh cao nhất tuần</b> nhận ngay <b className="text-yellow-400">1 Viên Ngọc Rồng</b>! 
-                </p>
-                <div className="text-[10px] text-amber-300 pt-0.5 font-semibold">
-                  ✨ Đổi lẻ <b className="text-white">10k VNĐ/viên</b> hoặc đủ <b className="text-white">7 Viên</b> nhận ngay <b className="text-amber-400 underline">100.000 VNĐ</b>!
-                </div>
               </div>
             </div>
 
@@ -664,7 +614,7 @@ export default function Home() {
                 onClick={() => setShowNoticeModal(true)}
                 className="text-xs text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer bg-slate-900/90 px-4 py-1.5 rounded-xl border border-amber-500/40 transition shadow-lg inline-flex items-center gap-2 active:scale-95"
               >
-                <img src="/assets/home/dragonball.png" alt="Ball" className="w-4 h-4 object-contain animate-pulse" /> Xem Chuỗi Tụ Ki ({todayReward.dayName}: +{(todayReward.ki/1000).toFixed(0)}k Ki) & Săn Ngọc Rồng
+                Xem Chuỗi Tụ Ki ({todayReward.dayName}: +{(todayReward.ki/1000).toFixed(0)}k Ki)
               </button>
             </div>
           </div>
@@ -674,7 +624,7 @@ export default function Home() {
           
           <div className="lg:col-span-2 space-y-5">
             
-            {/* SẢNH NỔI BẬT VŨ TRỤ (CẦN THỦ VŨ TRỤ & ĐẠI CHIẾN BẮN CÁ ĐẶT KẾ BÊN NHAU) */}
+            {/* SẢNH NỔI BẬT VŨ TRỤ */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-amber-400 tracking-wider uppercase flex items-center gap-2">
@@ -682,7 +632,7 @@ export default function Home() {
                 </h2>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4">
 
                 {/* 1. CẦN THỦ VŨ TRỤ */}
                 <Link
@@ -706,7 +656,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 2. ĐẠI CHIẾN BẮN CÁ (NẰM NGAY KẾ BÊN CẦN THỦ VŨ TRỤ) */}
+                {/* 2. ĐẠI CHIẾN BẮN CÁ */}
                 <Link
                   href="/banca"
                   className="bg-slate-900/90 border-2 border-cyan-400 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-xl relative overflow-hidden hover:border-cyan-300 flex flex-col justify-between ring-2 ring-cyan-500/30"
@@ -769,15 +719,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* MỤC: THẦN ĐIỆN & KHO BẢO */}
+            {/* MỤC: VÒNG QUAY & SHOP VÕ ĐẠO */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-l-4 border-purple-500 pl-3">
                 <h2 className="text-base sm:text-lg font-black text-purple-400 tracking-wider uppercase flex items-center gap-2">
-                  🔮 Thần Điện & Kho Báu Võ Đạo
+                  🔮 Vòng Quay & Shop Võ Đạo
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* 1. VÒNG QUAY CAPSULE */}
                 <Link
@@ -796,24 +746,7 @@ export default function Home() {
                   </div>
                 </Link>
 
-                {/* 2. THẦN ĐIỆN KỸ NĂNG (SHOP SKILL) */}
-                <Link
-                  href="/shopskill"
-                  className="bg-slate-900/90 border border-emerald-500/50 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
-                >
-                  <div className="absolute right-2 -bottom-2 opacity-15">
-                    <img src="/assets/home/dragonball.png" alt="Skill" className="w-20 h-20 object-contain" />
-                  </div>
-                  <h3 className="text-sm sm:text-base font-black text-emerald-400 flex items-center gap-2">
-                    <img src="/assets/home/dragonball.png" alt="Skill" className="w-6 h-6 object-contain" /> Thần Điện Kỹ Năng (Shop Skill)
-                  </h3>
-                  <p className="text-slate-300 text-xs mt-1 italic font-medium">🔮 'Lĩnh ngộ kỹ năng tối thượng hỗ trợ chiến đấu trong ván Bài Tiến Lên & Poker!'</p>
-                  <div className="mt-3 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-slate-950 font-black py-2 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO THẦN ĐIỆN SKILL ⚔️
-                  </div>
-                </Link>
-
-                {/* 3. SHOP VÕ ĐẠO SAIYAN */}
+                {/* 2. SHOP VÕ ĐẠO SAIYAN */}
                 <Link
                   href="/shop"
                   className="bg-slate-900/90 border border-yellow-500/40 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-yellow-400"
@@ -833,51 +766,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* MỤC: LÔI ĐÀI VÕ ĐẠO SÁT PHẠT */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
-                <h2 className="text-base sm:text-lg font-black text-emerald-400 tracking-wider uppercase flex items-center gap-2">
-                  <img src="/assets/home/shenron.png" alt="Game" className="w-5 h-5 object-contain" /> Lôi Đài Võ Đạo Sát Phạt
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Link
-                  href="/tienlen"
-                  className="bg-slate-900/90 border-2 border-emerald-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-emerald-400"
-                >
-                  <div className="flex items-center gap-2">
-                    <img src="/assets/home/dragonball.png" alt="Card" className="w-6 h-6 object-contain" />
-                    <h3 className="text-sm sm:text-base font-black text-emerald-400">Đại Hội 13 Ấn Ký</h3>
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Lôi Đài</span>
-                  </div>
-                  <p className="text-slate-300 text-xs mt-2 italic font-medium leading-relaxed bg-black/40 p-2 rounded-xl border border-emerald-500/20">
-                    🌀 "Dồn 13 Ấn Ký vào tay bài, giải phóng Ki bùng nổ, chặt heo đoạt mệnh đối thủ!"
-                  </p>
-                  <div className="mt-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-green-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow">
-                    BƯỚC VÀO LÔI ĐÀI ⚔️
-                  </div>
-                </Link>
-
-                <Link
-                  href="/poker"
-                  className="bg-slate-900/90 border-2 border-blue-500/60 rounded-2xl p-4 active:scale-[0.98] transition block group shadow-lg relative overflow-hidden hover:border-blue-400"
-                >
-                  <div className="flex items-center gap-2">
-                    <img src="/assets/home/dragonball.png" alt="Card" className="w-6 h-6 object-contain" />
-                    <h3 className="text-sm sm:text-base font-black text-blue-400">Sòng Poker Whis</h3>
-                    <span className="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-full font-bold uppercase ml-auto animate-pulse">Thần Thánh</span>
-                  </div>
-                  <p className="text-slate-300 text-xs mt-2 italic font-medium leading-relaxed bg-black/40 p-2 rounded-xl border border-blue-500/20">
-                    ⚡ "Whis lật bài phân định cao thấp, All-In vận Ki áp đảo Thần Hủy Diệt húp trọn Pot!"
-                  </p>
-                  <div className="mt-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-600 text-slate-950 font-black py-2.5 px-3 rounded-xl text-center text-xs shadow">
-                    VÀO SÒNG POKER ♠️
-                  </div>
-                </Link>
-              </div>
-            </div>
-
           </div>
 
           <div className="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 shadow-xl space-y-4 h-fit">
@@ -885,9 +773,6 @@ export default function Home() {
               <h2 className="text-sm sm:text-base font-black text-orange-400 tracking-wider uppercase">
                 🏆 Top 5 Võ Đạo Vũ Trụ
               </h2>
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
-                <img src="/assets/home/dragonball.png" alt="Ball" className="w-3.5 h-3.5 object-contain" /> Ngọc Rồng
-              </span>
             </div>
             <div className="space-y-2.5">
               {leaderboard.length === 0 ? (
@@ -941,7 +826,7 @@ export default function Home() {
             <div className="flex justify-between items-center border-b border-slate-800 pb-2">
               <div className="flex items-center gap-1.5">
                 <span className="text-lg">🛡️</span>
-                <h3 className="text-xs sm:text-sm font-black text-amber-400">HỒ SƠ & SƯU TẬP NGỌC RỒNG</h3>
+                <h3 className="text-xs sm:text-sm font-black text-amber-400">HỒ SƠ CHIẾN BINH</h3>
               </div>
               <button
                 onClick={() => setProfileModalOpen(false)}
@@ -964,57 +849,6 @@ export default function Home() {
                   <span className="flex items-center gap-1"><img src="/assets/home/dausenzu.png" alt="Ki" className="w-3.5 h-3.5 object-contain" /> {points.toLocaleString()} Ki</span>
                   <span className="flex items-center gap-1"><img src="/assets/home/capsule.png" alt="Ticket" className="w-3.5 h-3.5 object-contain" /> {luckySpins} Lượt</span>
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-2">
-              <div className="flex justify-between items-center">
-                <h4 className="text-[10px] font-black text-amber-400 uppercase tracking-wide flex items-center gap-1">
-                  <img src="/assets/home/dragonball.png" alt="Ball" className="w-3.5 h-3.5 object-contain" /> Kho Ngọc Rồng ({dragonBallsCount}/7)
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 py-1">
-                {[1, 2, 3, 4, 5, 6, 7].map((starNum) => {
-                  const isUnlocked = starNum <= dragonBallsCount;
-                  const ballImageSrc = `/assets/home/dragon-ball-${starNum}.png`;
-                  return (
-                    <div
-                      key={starNum}
-                      className={`flex flex-col items-center justify-center p-1 rounded-lg border transition-all ${
-                        isUnlocked
-                          ? "bg-gradient-to-t from-amber-600 to-yellow-400 border-yellow-200 shadow scale-105"
-                          : "bg-slate-900 border-slate-800 opacity-40 grayscale"
-                      }`}
-                    >
-                      <img src={ballImageSrc} alt={`${starNum} Star`} className="w-6 h-6 object-contain drop-shadow" />
-                      <span className={`text-[8px] font-black mt-0.5 ${isUnlocked ? 'text-slate-950' : 'text-slate-500'}`}>
-                        {starNum}⭐
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleExchangeBalls('single')}
-                  className="bg-slate-900 hover:bg-slate-800 border border-emerald-500/50 text-emerald-400 font-bold text-[10px] py-1.5 rounded-lg cursor-pointer"
-                >
-                  Đổi 1 Viên = 10k VNĐ 💵
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleExchangeBalls('all')}
-                  className={`font-black text-[10px] py-1.5 rounded-lg cursor-pointer shadow ${
-                    dragonBallsCount >= 7
-                      ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 animate-pulse"
-                      : "bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed"
-                  }`}
-                >
-                  Đủ 7 Viên Ước 100k VNĐ 🌟
-                </button>
               </div>
             </div>
 
